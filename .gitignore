@@ -1,0 +1,47 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node.js
+node_modules/
+.next/
+dist/
+coverage/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java / Kotlin / Gradle
+.gradle/
+build/
+target/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# Local Kyrion data
+data/
+secrets/
