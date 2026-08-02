@@ -254,6 +254,32 @@ button { color: inherit; }
 .setting-group select:focus { box-shadow: 0 0 0 3px var(--primary-soft); }
 .setting-group select:disabled { opacity: .55; cursor: not-allowed; }
 .setting-group small { color: var(--text-muted); font-size: 10px; }
+.settings-grid { display: grid; gap: 12px; margin-bottom: 30px; text-align: left; }
+.settings-link-card { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); transition: .2s ease; }
+.settings-link-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.settings-link-card > svg { width: 22px; color: var(--primary); }
+.settings-link-card span, .settings-link-card strong, .settings-link-card small { display: block; }
+.settings-link-card small { margin-top: 4px; color: var(--text-muted); }
+.models-stage { flex: 1; min-height: 0; padding: 40px; overflow: auto; }
+.models-header { width: min(980px, 100%); display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 0 auto 26px; }
+.models-header h1 { margin: 0; font-size: clamp(32px, 4vw, 48px); letter-spacing: -.04em; }
+.models-header > div > p:last-child { max-width: 660px; margin: 12px 0 0; color: var(--text-muted); line-height: 1.6; }
+.model-grid { width: min(980px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0 auto; }
+.model-card { display: flex; flex-direction: column; gap: 18px; min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.model-card.selected { border-color: var(--border-strong); box-shadow: var(--shadow), inset 0 0 0 1px var(--primary-soft); }
+.model-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.model-card-heading > div:first-child { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.model-card-heading svg { width: 20px; color: var(--primary); }
+.model-card h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; font-size: 18px; white-space: nowrap; }
+.model-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.model-badges span, .capability-list span { padding: 4px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 9px; font-weight: 700; text-transform: capitalize; }
+.model-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--border); }
+.model-card dl div { padding: 11px; background: var(--surface-muted); }
+.model-card dt { color: var(--text-muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.model-card dd { margin: 4px 0 0; color: var(--text); font-size: 13px; font-weight: 650; }
+.capability-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.model-card button { min-height: 42px; margin-top: auto; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--primary-soft); color: var(--primary); cursor: pointer; font-weight: 700; }
+.model-card button:disabled { border-color: var(--border); color: var(--text-muted); cursor: default; opacity: .7; }
 
 @keyframes breathe { 50% { transform: scale(1.12) rotate(8deg); filter: brightness(1.15); } }
 @keyframes orbit { to { transform: rotate(360deg); } }
@@ -269,6 +295,7 @@ button { color: inherit; }
   .chat-stage { padding: 30px 20px 18px; }
   .placeholder-stage { padding: 24px 20px; }
   .settings-stage { padding: 24px 20px; }
+  .models-stage { padding: 30px 20px; }
 }
 
 @media (max-width: 620px) {
@@ -284,6 +311,9 @@ button { color: inherit; }
   .composer { border-radius: 16px; }
   .placeholder-stage { padding: 18px 14px; }
   .settings-stage { padding: 18px 14px; }
+  .models-stage { padding: 24px 14px; }
+  .models-header { align-items: flex-start; flex-direction: column; }
+  .model-grid { grid-template-columns: 1fr; }
 }
 
 @theme inline {
