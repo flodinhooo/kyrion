@@ -12,7 +12,7 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add polished styling for headings, paragraphs, lists, links, inline code
   and fenced code blocks in both themes.
 - [x] Improve spacing and readable line lengths for longer responses.
-- [ ] Keep the conversation scrolled to the newest content while a response is
+- [x] Keep the conversation scrolled to the newest content while a response is
   streaming, without overriding intentional user scrolling.
 - [ ] Add a Kyrion/Velora system prompt so the assistant identifies itself as
   Velora and describes its role accurately instead of repeating the base

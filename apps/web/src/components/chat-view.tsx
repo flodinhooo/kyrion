@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, UIEvent, useLayoutEffect, useRef, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { MarkdownMessage } from "@/components/markdown-message";
@@ -8,6 +8,7 @@ import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
 import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
 
 const chatTransport = new ApiChatTransport();
+const bottomThreshold = 80;
 const errorMessageKeys = {
   MODEL_UNAVAILABLE: "modelUnavailable",
   INVALID_REQUEST: "invalidChatRequest",
@@ -26,6 +27,21 @@ export function ChatView() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
+  const chatStage = useRef<HTMLElement | null>(null);
+  const shouldFollowConversation = useRef(true);
+
+  useLayoutEffect(() => {
+    const stage = chatStage.current;
+    if (!stage || !shouldFollowConversation.current) return;
+
+    stage.scrollTop = stage.scrollHeight;
+  }, [chatMessages, streamError]);
+
+  function handleChatScroll(event: UIEvent<HTMLElement>) {
+    const stage = event.currentTarget;
+    const distanceFromBottom = stage.scrollHeight - stage.scrollTop - stage.clientHeight;
+    shouldFollowConversation.current = distanceFromBottom <= bottomThreshold;
+  }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,6 +58,7 @@ export function ChatView() {
     };
     const controller = new AbortController();
     activeRequest.current = controller;
+    shouldFollowConversation.current = true;
     setChatMessages((current) => [...current, userMessage]);
     setInput("");
     setStreamError(null);
@@ -74,7 +91,11 @@ export function ChatView() {
   }
 
   return (
-    <section className={`chat-stage ${chatMessages.length ? "has-messages" : ""}`}>
+    <section
+      className={`chat-stage ${chatMessages.length ? "has-messages" : ""}`}
+      onScroll={handleChatScroll}
+      ref={chatStage}
+    >
       {chatMessages.length === 0 ? (
         <div className="welcome">
           <div className="velora-orb"><div className="orb-core" /><div className="orb-ring" /></div>
