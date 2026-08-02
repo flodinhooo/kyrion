@@ -1,5 +1,7 @@
+from kyrion_ai.contracts import ChatMessage, ChatRequest
 from kyrion_ai.providers.ollama import (
     _average,
+    _chat_payload,
     _context_length,
     _nanoseconds_to_milliseconds,
     _OllamaChatMessage,
@@ -39,3 +41,19 @@ def test_tokens_per_second_handles_missing_eval_duration() -> None:
     result = _OllamaChatResult(message=_OllamaChatMessage())
 
     assert _tokens_per_second(result) == 0.0
+
+
+def test_chat_payload_streams_without_hidden_model_thinking() -> None:
+    request = ChatRequest(
+        locale="de",
+        modelId="qwen3:8b",
+        messages=[ChatMessage(role="user", content="Erkläre Relativität.")],
+    )
+
+    payload = _chat_payload(request, "gemma3:4b")
+
+    assert payload["model"] == "qwen3:8b"
+    assert payload["stream"] is True
+    assert payload["think"] is False
+    assert payload["keep_alive"] == "10m"
+    assert payload["options"] == {"num_ctx": 4096}
