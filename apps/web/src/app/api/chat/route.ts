@@ -6,6 +6,14 @@ function isChatRequest(value: unknown): value is ChatRequest {
   if (!value || typeof value !== "object") return false;
   const request = value as Partial<ChatRequest>;
   return (request.locale === "de" || request.locale === "en")
+    && (request.conversationId === undefined
+      || (typeof request.conversationId === "string"
+        && request.conversationId.trim().length > 0
+        && request.conversationId.length <= 128))
+    && (request.modelId === undefined
+      || (typeof request.modelId === "string"
+        && request.modelId.trim().length > 0
+        && request.modelId.length <= 128))
     && Array.isArray(request.messages)
     && request.messages.length > 0
     && request.messages.length <= 200
