@@ -233,7 +233,7 @@ button { color: inherit; }
 .voice-mode { position: fixed; z-index: 100; inset: 0; display: grid; grid-template-rows: auto 1fr auto; padding: 28px; overflow: auto; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--secondary) 30%, transparent), transparent 34%), color-mix(in srgb, var(--canvas) 96%, transparent); backdrop-filter: blur(22px); }
 .voice-close { width: 44px; height: 44px; display: grid; place-items: center; justify-self: end; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; }
 .voice-close svg { width: 20px; }
-.voice-mode-content { width: min(700px, 100%); align-self: center; justify-self: center; text-align: center; }
+.voice-mode-content { width: min(980px, 100%); align-self: center; justify-self: center; text-align: center; }
 .voice-mode-content h2 { margin: 0; font-size: clamp(30px, 5vw, 58px); letter-spacing: -.04em; }
 .voice-orb { position: relative; width: 190px; height: 190px; display: grid; place-items: center; margin: 0 auto 32px; }
 .voice-orb .orb-core { width: 88px; height: 88px; }
@@ -244,7 +244,10 @@ button { color: inherit; }
 .voice-thinking .voice-orb, .voice-starting .voice-orb { animation: voice-think 2s ease-in-out infinite; }
 .voice-speaking .voice-orb > span { animation-duration: 1.15s; }
 .voice-paused .voice-orb, .voice-error .voice-orb { filter: grayscale(.7); opacity: .65; }
-.voice-transcript { min-height: 54px; max-height: 180px; margin: 22px auto 10px; overflow: auto; color: var(--text-muted); font-size: 16px; line-height: 1.65; white-space: pre-wrap; }
+.voice-transcript { min-height: 92px; max-height: min(32vh, 290px); margin: 26px auto 14px; padding: 20px 26px; overflow: auto; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--surface) 78%, transparent); color: var(--text-muted); font-size: clamp(17px, 1.7vw, 21px); line-height: 1.75; text-align: left; white-space: pre-wrap; scroll-behavior: smooth; }
+.voice-transcript p { margin: 0; }
+.voice-transcript mark { padding: 2px 3px; border-radius: 5px; background: var(--primary); color: var(--canvas); box-shadow: 0 0 16px var(--glow); }
+.voice-spoken { color: color-mix(in srgb, var(--text-muted) 55%, transparent); }
 .voice-privacy { max-width: 620px; margin: 0 auto; color: var(--text-muted); font-size: 10px; line-height: 1.5; }
 .voice-controls { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 24px; }
 .voice-controls button { min-height: 48px; display: flex; align-items: center; gap: 9px; padding: 0 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; font-weight: 650; }
