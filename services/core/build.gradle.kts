@@ -25,6 +25,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.springframework.security:spring-security-crypto")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation(kotlin("reflect"))
     runtimeOnly("org.postgresql:postgresql")
