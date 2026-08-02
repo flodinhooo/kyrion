@@ -1,9 +1,17 @@
 "use client";
 
-import { FormEvent, UIEvent, useLayoutEffect, useRef, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  UIEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { MarkdownMessage } from "@/components/markdown-message";
+import { VoiceMode } from "@/components/voice-mode";
 import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
 import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
 
@@ -20,17 +28,26 @@ function createMessage(role: ChatMessage["role"], content: string, id = crypto.r
   return { id, role, content, createdAt: new Date().toISOString() };
 }
 
+function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "assistant") return messages[index] ?? null;
+  }
+  return null;
+}
+
 export function ChatView() {
-  const { locale, selectedModelId, t } = useWorkspace();
+  const { locale, selectedModelId, selectedVoiceUri, speechRate, t } = useWorkspace();
   const [conversationId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
   const [wasStopped, setWasStopped] = useState(false);
+  const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const chatStage = useRef<HTMLElement | null>(null);
   const shouldFollowConversation = useRef(true);
+  const previousScrollTop = useRef(0);
 
   useLayoutEffect(() => {
     const stage = chatStage.current;
@@ -42,12 +59,18 @@ export function ChatView() {
   function handleChatScroll(event: UIEvent<HTMLElement>) {
     const stage = event.currentTarget;
     const distanceFromBottom = stage.scrollHeight - stage.scrollTop - stage.clientHeight;
-    shouldFollowConversation.current = distanceFromBottom <= bottomThreshold;
+    const isScrollingUp = stage.scrollTop < previousScrollTop.current;
+
+    if (isScrollingUp) {
+      shouldFollowConversation.current = false;
+    } else if (distanceFromBottom <= bottomThreshold) {
+      shouldFollowConversation.current = true;
+    }
+    previousScrollTop.current = stage.scrollTop;
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const content = input.trim();
+  async function submitMessage(rawContent: string): Promise<void> {
+    const content = rawContent.trim();
     if (!content || isStreaming) return;
 
     const userMessage = createMessage("user", content);
@@ -96,6 +119,11 @@ export function ChatView() {
     }
   }
 
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitMessage(input);
+  }
+
   function stopResponse() {
     if (!activeRequest.current) return;
 
@@ -106,6 +134,18 @@ export function ChatView() {
     activeRequest.current.abort();
   }
 
+  function handleInputKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter"
+      || event.shiftKey
+      || event.nativeEvent.isComposing
+      || isStreaming
+    ) return;
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
   return (
     <section
       className={`chat-stage ${chatMessages.length ? "has-messages" : ""}`}
@@ -114,7 +154,15 @@ export function ChatView() {
     >
       {chatMessages.length === 0 ? (
         <div className="welcome">
-          <div className="velora-orb"><div className="orb-core" /><div className="orb-ring" /></div>
+          <button
+            className="velora-orb"
+            type="button"
+            aria-label={t.voiceOpen}
+            title={t.voiceOpen}
+            onClick={() => setIsVoiceModeOpen(true)}
+          >
+            <div className="orb-core" /><div className="orb-ring" />
+          </button>
           <p className="eyebrow">{t.welcomeEyebrow}</p>
           <h1>{t.welcomeTitle}</h1>
           <p className="welcome-copy">{t.welcomeBody}</p>
@@ -153,7 +201,7 @@ export function ChatView() {
 
       <div className="composer-wrap">
         <form className="composer" onSubmit={sendMessage}>
-          <textarea aria-label={t.inputPlaceholder} placeholder={t.inputPlaceholder} value={input} onChange={(event) => setInput(event.target.value)} rows={1} disabled={isStreaming} />
+          <textarea aria-label={t.inputPlaceholder} placeholder={t.inputPlaceholder} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleInputKeyDown} rows={1} disabled={isStreaming} />
           {isStreaming ? (
             <button type="button" aria-label={t.stop} onClick={stopResponse}><Icons.stop /></button>
           ) : (
@@ -162,6 +210,19 @@ export function ChatView() {
         </form>
         <p>{t.inputHint}</p>
       </div>
+      {isVoiceModeOpen && (
+        <VoiceMode
+          isStreaming={isStreaming}
+          latestAssistantMessage={latestAssistant(chatMessages)}
+          locale={locale}
+          selectedVoiceUri={selectedVoiceUri}
+          speechRate={speechRate}
+          streamFailed={streamError !== null}
+          t={t}
+          onClose={() => setIsVoiceModeOpen(false)}
+          onSubmit={submitMessage}
+        />
+      )}
     </section>
   );
 }
