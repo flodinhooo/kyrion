@@ -49,10 +49,12 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Add interruption, local wake-word detection and voice-device settings.
 - [x] Add `/activity` to the primary navigation with an honest Core-bound empty
   state.
-- [ ] Define the Core-owned activity event contract and append-only log.
-- [ ] Connect `/activity` to persisted Core events without exposing sensitive
+- [x] Define the Core-owned activity event contract and append-only log.
+- [x] Connect `/activity` to persisted Core events without exposing sensitive
   payloads.
 - [ ] Define the Core/database boundary for conversation persistence.
-- [ ] Add a local PostgreSQL development database after the first Core contracts
+- [x] Add a local PostgreSQL development database after the first Core contracts
   are stable.
+- [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
+  the activity log before treating it as a compliance audit trail.
 - [ ] Add PostgreSQL-backed conversation history and context compaction.
