@@ -4,7 +4,12 @@ from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from kyrion_ai.config import Settings
-from kyrion_ai.contracts import ChatRequest, ModelCatalog
+from kyrion_ai.contracts import (
+    ChatRequest,
+    ModelBenchmarkRequest,
+    ModelBenchmarkResult,
+    ModelCatalog,
+)
 from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
 
@@ -22,6 +27,17 @@ async def health() -> dict[str, str]:
 @app.get("/v1/models", response_model=ModelCatalog, response_model_by_alias=True)
 async def list_models() -> ModelCatalog:
     return await provider.list_models()
+
+
+@app.post(
+    "/v1/models/benchmark",
+    response_model=ModelBenchmarkResult,
+    response_model_by_alias=True,
+)
+async def benchmark_model(request: ModelBenchmarkRequest) -> ModelBenchmarkResult | Response:
+    if not provider.supports_model(request.model_id):
+        return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
+    return await provider.benchmark_model(request)
 
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
