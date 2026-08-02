@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/sheet";
 import { isAiServiceStatus, type AiServiceStatus } from "@/features/status/contracts";
 import { isModelCatalog, type ModelCatalog } from "@/features/models/contracts";
+import {
+  availableBrowserVoices,
+  preferredBrowserVoice,
+  type BrowserVoiceOption,
+} from "@/features/voice/browser-speech";
 import { Locale, messages } from "@/lib/messages";
 
 type WorkspaceContextValue = {
@@ -20,6 +25,11 @@ type WorkspaceContextValue = {
   modelCatalog: ModelCatalog | null;
   selectedModelId: string | null;
   selectModel: (modelId: string) => void;
+  selectedVoiceUri: string | null;
+  selectVoice: (voiceUri: string) => void;
+  speechRate: number;
+  setSpeechRate: (rate: number) => void;
+  speechVoices: BrowserVoiceOption[];
   t: (typeof messages)[Locale];
 };
 
@@ -31,6 +41,7 @@ const navigation = [
   ["home", Icons.home, "/home"],
   ["automations", Icons.spark, "/automations"],
   ["knowledge", Icons.book, "/knowledge"],
+  ["activity", Icons.activity, "/activity"],
 ] as const;
 
 export function useWorkspace() {
@@ -46,6 +57,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [aiStatus, setAiStatus] = useState<AiStatus>({ status: "checking" });
   const [modelCatalog, setModelCatalog] = useState<ModelCatalog | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [speechVoices, setSpeechVoices] = useState<BrowserVoiceOption[]>([]);
+  const [selectedVoiceUri, setSelectedVoiceUri] = useState<string | null>(null);
+  const [speechRate, setSpeechRateState] = useState(0.95);
   const t = messages[locale];
 
   useEffect(() => {
@@ -66,6 +80,31 @@ export function AppShell({ children }: { children: ReactNode }) {
       setLocale(nextLocale);
     });
   }, []);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = availableBrowserVoices();
+      if (voices.length > 0) setSpeechVoices(voices);
+    };
+    const savedRate = Number.parseFloat(localStorage.getItem("kyrion-speech-rate") ?? "");
+    if (Number.isFinite(savedRate) && savedRate >= 0.7 && savedRate <= 1.3) {
+      queueMicrotask(() => setSpeechRateState(savedRate));
+    }
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, []);
+
+  useEffect(() => {
+    if (speechVoices.length === 0) return;
+    const compatibleVoices = speechVoices.filter((voice) =>
+      voice.lang.toLowerCase().startsWith(locale),
+    );
+    const savedVoice = localStorage.getItem(`kyrion-voice-${locale}`);
+    const nextVoice = compatibleVoices.find((voice) => voice.voiceURI === savedVoice)
+      ?? preferredBrowserVoice(compatibleVoices, locale);
+    queueMicrotask(() => setSelectedVoiceUri(nextVoice?.voiceURI ?? null));
+  }, [locale, speechVoices]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -145,6 +184,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     localStorage.setItem("kyrion-model", modelId);
   }
 
+  function selectVoice(voiceUri: string) {
+    if (!speechVoices.some((voice) =>
+      voice.voiceURI === voiceUri && voice.lang.toLowerCase().startsWith(locale)
+    )) return;
+    setSelectedVoiceUri(voiceUri);
+    localStorage.setItem(`kyrion-voice-${locale}`, voiceUri);
+  }
+
+  function setSpeechRate(rate: number) {
+    if (!Number.isFinite(rate) || rate < 0.7 || rate > 1.3) return;
+    setSpeechRateState(rate);
+    localStorage.setItem("kyrion-speech-rate", String(rate));
+  }
+
   function sidebarContent() {
     return (
       <>
@@ -186,7 +239,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WorkspaceContext.Provider value={{ locale, modelCatalog, selectedModelId, selectModel, t }}>
+    <WorkspaceContext.Provider value={{
+      locale,
+      modelCatalog,
+      selectedModelId,
+      selectedVoiceUri,
+      selectModel,
+      selectVoice,
+      setSpeechRate,
+      speechRate,
+      speechVoices,
+      t,
+    }}>
       <div className="app-shell">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
