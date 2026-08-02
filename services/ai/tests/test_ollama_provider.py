@@ -10,6 +10,7 @@ def test_unreachable_ollama_returns_stable_error() -> None:
         Settings(
             ollama_base_url="http://127.0.0.1:1",
             ollama_model="test-model",
+            ollama_allowed_models=("test-model",),
             ollama_connect_timeout_seconds=0.1,
         )
     )
