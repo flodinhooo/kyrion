@@ -16,6 +16,13 @@ class OllamaProvider:
     def model(self) -> str:
         return self._settings.ollama_model
 
+    @property
+    def models(self) -> tuple[str, ...]:
+        return self._settings.ollama_allowed_models
+
+    def supports_model(self, model_id: str) -> bool:
+        return model_id in self.models
+
     async def stream_chat(self, request: ChatRequest) -> AsyncIterator[ChatEvent]:
         message_id = str(uuid4())
         timeout = httpx.Timeout(
@@ -25,7 +32,7 @@ class OllamaProvider:
             pool=5.0,
         )
         payload = {
-            "model": self._settings.ollama_model,
+            "model": request.model_id or self._settings.ollama_model,
             "messages": [message.model_dump() for message in request.messages],
             "stream": True,
         }
