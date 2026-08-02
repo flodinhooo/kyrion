@@ -1,0 +1,122 @@
+"use client";
+
+import { FormEvent, useRef, useState } from "react";
+import { useWorkspace } from "@/components/app-shell";
+import { Icons } from "@/components/icons";
+import { MarkdownMessage } from "@/components/markdown-message";
+import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
+import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
+
+const chatTransport = new ApiChatTransport();
+const errorMessageKeys = {
+  MODEL_UNAVAILABLE: "modelUnavailable",
+  INVALID_REQUEST: "invalidChatRequest",
+  REQUEST_ABORTED: "streamError",
+  STREAM_FAILED: "streamError",
+} as const;
+
+function createMessage(role: ChatMessage["role"], content: string, id = crypto.randomUUID()): ChatMessage {
+  return { id, role, content, createdAt: new Date().toISOString() };
+}
+
+export function ChatView() {
+  const { locale, t } = useWorkspace();
+  const [input, setInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
+  const activeRequest = useRef<AbortController | null>(null);
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const content = input.trim();
+    if (!content || isStreaming) return;
+
+    const userMessage = createMessage("user", content);
+    const request: ChatRequest = {
+      locale,
+      messages: [...chatMessages, userMessage].map(({ role, content: messageContent }) => ({
+        role,
+        content: messageContent,
+      })),
+    };
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    setChatMessages((current) => [...current, userMessage]);
+    setInput("");
+    setStreamError(null);
+    setIsStreaming(true);
+
+    try {
+      for await (const chatEvent of chatTransport.stream(request, { signal: controller.signal })) {
+        if (chatEvent.type === "message.started") {
+          setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
+        }
+        if (chatEvent.type === "message.delta") {
+          setChatMessages((current) => current.map((message) =>
+            message.id === chatEvent.messageId
+              ? { ...message, content: message.content + chatEvent.delta }
+              : message,
+          ));
+        }
+        if (chatEvent.type === "error") setStreamError(chatEvent.code);
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) setStreamError("STREAM_FAILED");
+    } finally {
+      activeRequest.current = null;
+      setIsStreaming(false);
+    }
+  }
+
+  function stopResponse() {
+    activeRequest.current?.abort();
+  }
+
+  return (
+    <section className={`chat-stage ${chatMessages.length ? "has-messages" : ""}`}>
+      {chatMessages.length === 0 ? (
+        <div className="welcome">
+          <div className="velora-orb"><div className="orb-core" /><div className="orb-ring" /></div>
+          <p className="eyebrow">{t.welcomeEyebrow}</p>
+          <h1>{t.welcomeTitle}</h1>
+          <p className="welcome-copy">{t.welcomeBody}</p>
+          <div className="suggestion-grid">
+            <button type="button" onClick={() => setInput(t.suggestionHomeDetail)}><Icons.home /><span><strong>{t.suggestionHome}</strong><small>{t.suggestionHomeDetail}</small></span></button>
+            <button type="button" onClick={() => setInput(t.suggestionPlanDetail)}><Icons.clock /><span><strong>{t.suggestionPlan}</strong><small>{t.suggestionPlanDetail}</small></span></button>
+            <button type="button" onClick={() => setInput(t.suggestionExploreDetail)}><Icons.spark /><span><strong>{t.suggestionExplore}</strong><small>{t.suggestionExploreDetail}</small></span></button>
+          </div>
+        </div>
+      ) : (
+        <div className="message-list" aria-live="polite" aria-busy={isStreaming}>
+          {chatMessages.map((message) => (
+            <article className={`message ${message.role}`} key={message.id}>
+              <div className="avatar">{message.role === "assistant" ? "V" : "K"}</div>
+              <div className="message-body">
+                <strong>{message.role === "assistant" ? t.velora : t.you}</strong>
+                {message.role === "assistant" && message.content ? (
+                  <MarkdownMessage>{message.content}</MarkdownMessage>
+                ) : (
+                  <p className="message-plain-text">{message.content || t.generating}</p>
+                )}
+              </div>
+            </article>
+          ))}
+          {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
+        </div>
+      )}
+
+      <div className="composer-wrap">
+        <form className="composer" onSubmit={sendMessage}>
+          <textarea aria-label={t.inputPlaceholder} placeholder={t.inputPlaceholder} value={input} onChange={(event) => setInput(event.target.value)} rows={1} disabled={isStreaming} />
+          {isStreaming ? (
+            <button type="button" aria-label={t.stop} onClick={stopResponse}><Icons.stop /></button>
+          ) : (
+            <button type="submit" aria-label={t.send} disabled={!input.trim()}><Icons.send /></button>
+          )}
+        </form>
+        <p>{t.inputHint}</p>
+      </div>
+    </section>
+  );
+}
