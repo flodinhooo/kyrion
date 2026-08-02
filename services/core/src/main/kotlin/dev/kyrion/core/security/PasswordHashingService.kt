@@ -15,7 +15,9 @@ class PasswordHashingService {
 
     fun hash(password: CharSequence): String {
         require(password.isNotEmpty()) { "Password must not be empty" }
-        return encoder.encode(password)
+        return requireNotNull(encoder.encode(password)) {
+            "Argon2 password encoder returned no hash"
+        }
     }
 
     fun matches(password: CharSequence, encodedPassword: String): Boolean =
