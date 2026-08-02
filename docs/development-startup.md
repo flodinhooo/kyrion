@@ -1,6 +1,6 @@
 # Local Development Startup
 
-This guide starts the complete local Kyrion text-chat stack on Windows.
+This guide starts the complete local Kyrion stack on Windows.
 
 ## Installed locations
 
@@ -11,9 +11,37 @@ This guide starts the complete local Kyrion text-chat stack on Windows.
 
 ## Start the complete stack
 
-Open three PowerShell windows.
+Open four PowerShell windows. Docker Desktop must also be running.
 
-### 1. Start Ollama
+### 1. Start PostgreSQL
+
+Create `infrastructure\.env` from `infrastructure\.env.example`, choose a
+local development password and keep the default data path on E:. Then run:
+
+```powershell
+Set-Location 'E:\dev\Kyrion\kyrion'
+docker compose -f infrastructure\compose.yml up -d postgres
+docker compose -f infrastructure\compose.yml ps
+```
+
+The database uses a bind mount at `E:\Kyrion\Data\postgres` by default. This
+is an ordinary E: directory, not an anonymous Docker volume on C:.
+
+### 2. Start Kyrion Core
+
+Use the same password selected in `infrastructure\.env`:
+
+```powershell
+Set-Location 'E:\dev\Kyrion\kyrion\services\core'
+$env:KYRION_DATABASE_PASSWORD = 'your-local-database-password'
+.\gradlew.bat bootRun
+```
+
+Leave this window open. Verify Core at
+`http://127.0.0.1:8080/actuator/health`. Recent persisted events are available
+at `http://127.0.0.1:8080/v1/activity`.
+
+### 3. Start Ollama
 
 ```powershell
 & 'E:\Ollama\App\ollama.exe' serve
@@ -29,7 +57,7 @@ Invoke-RestMethod http://127.0.0.1:11434/api/version
 & 'E:\Ollama\App\ollama.exe' list
 ```
 
-### 2. Start the Kyrion AI service
+### 4. Start the Kyrion AI service
 
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\services\ai'
@@ -47,7 +75,7 @@ $env:OLLAMA_MODEL = 'qwen3:8b'
 
 The environment variable must be set before starting the AI service.
 
-### 3. Start Kyrion Web
+### 5. Start Kyrion Web
 
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\apps\web'
@@ -58,10 +86,11 @@ Open `http://localhost:3000` and send a chat message.
 
 ## Request flow
 
-The browser calls only Next.js. Next.js forwards chat requests to the AI
-service using `AI_SERVICE_URL`, which defaults to `http://127.0.0.1:8000`. The
-AI service then calls Ollama using `OLLAMA_BASE_URL`, which defaults to
-`http://127.0.0.1:11434`.
+The browser calls only Next.js. Next.js reads trusted activity through Kyrion
+Core using `CORE_SERVICE_URL`, which defaults to `http://127.0.0.1:8080`, and
+forwards chat requests to the AI service using `AI_SERVICE_URL`, which defaults
+to `http://127.0.0.1:8000`. The AI service then calls Ollama using
+`OLLAMA_BASE_URL`, which defaults to `http://127.0.0.1:11434`.
 
 Configuration examples are stored in:
 
@@ -70,8 +99,14 @@ Configuration examples are stored in:
 
 ## Stop the stack
 
-Press `Ctrl+C` in the Web and AI PowerShell windows. Press `Ctrl+C` in the
-Ollama server window if it was started manually.
+Press `Ctrl+C` in the Web, Core and AI PowerShell windows. Press `Ctrl+C` in
+the Ollama server window if it was started manually. Stop PostgreSQL with:
+
+```powershell
+docker compose -f infrastructure\compose.yml stop postgres
+```
+
+Stopping the container does not remove the data stored on E:.
 
 ## Troubleshooting
 
