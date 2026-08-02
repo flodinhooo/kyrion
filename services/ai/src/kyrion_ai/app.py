@@ -1,10 +1,11 @@
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from kyrion_ai.config import Settings
 from kyrion_ai.contracts import ChatRequest
+from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
 
 settings = Settings.from_environment()
@@ -18,10 +19,23 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "provider": "ollama", "model": provider.model}
 
 
+@app.get("/v1/models")
+async def list_models() -> dict[str, str | list[dict[str, str]]]:
+    return {
+        "defaultModelId": provider.model,
+        "models": [{"id": model, "label": model} for model in provider.models],
+    }
+
+
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
-async def stream_chat(request: ChatRequest) -> StreamingResponse:
+async def stream_chat(request: ChatRequest) -> StreamingResponse | JSONResponse:
+    if request.model_id is not None and not provider.supports_model(request.model_id):
+        return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
+
+    prepared_request = prepare_chat_request(request)
+
     async def events() -> AsyncIterator[bytes]:
-        async for event in provider.stream_chat(request):
+        async for event in provider.stream_chat(prepared_request):
             yield event.to_ndjson()
 
     return StreamingResponse(
