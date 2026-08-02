@@ -22,10 +22,12 @@ function createMessage(role: ChatMessage["role"], content: string, id = crypto.r
 
 export function ChatView() {
   const { locale, t } = useWorkspace();
+  const [conversationId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
+  const [wasStopped, setWasStopped] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const chatStage = useRef<HTMLElement | null>(null);
   const shouldFollowConversation = useRef(true);
@@ -35,7 +37,7 @@ export function ChatView() {
     if (!stage || !shouldFollowConversation.current) return;
 
     stage.scrollTop = stage.scrollHeight;
-  }, [chatMessages, streamError]);
+  }, [chatMessages, streamError, wasStopped]);
 
   function handleChatScroll(event: UIEvent<HTMLElement>) {
     const stage = event.currentTarget;
@@ -50,6 +52,7 @@ export function ChatView() {
 
     const userMessage = createMessage("user", content);
     const request: ChatRequest = {
+      conversationId,
       locale,
       messages: [...chatMessages, userMessage].map(({ role, content: messageContent }) => ({
         role,
@@ -62,6 +65,7 @@ export function ChatView() {
     setChatMessages((current) => [...current, userMessage]);
     setInput("");
     setStreamError(null);
+    setWasStopped(false);
     setIsStreaming(true);
 
     try {
@@ -76,7 +80,12 @@ export function ChatView() {
               : message,
           ));
         }
-        if (chatEvent.type === "error") setStreamError(chatEvent.code);
+        if (chatEvent.type === "error") {
+          setChatMessages((current) => current.filter((message) =>
+            message.role !== "assistant" || message.content,
+          ));
+          setStreamError(chatEvent.code);
+        }
       }
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) setStreamError("STREAM_FAILED");
@@ -87,7 +96,13 @@ export function ChatView() {
   }
 
   function stopResponse() {
-    activeRequest.current?.abort();
+    if (!activeRequest.current) return;
+
+    setChatMessages((current) => current.filter((message) =>
+      message.role !== "assistant" || message.content,
+    ));
+    setWasStopped(true);
+    activeRequest.current.abort();
   }
 
   return (
@@ -117,13 +132,21 @@ export function ChatView() {
                 <strong>{message.role === "assistant" ? t.velora : t.you}</strong>
                 {message.role === "assistant" && message.content ? (
                   <MarkdownMessage>{message.content}</MarkdownMessage>
+                ) : message.role === "assistant" ? (
+                  <div className="generation-status" role="status">
+                    <span className="visually-hidden">{t.generating}</span>
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                  </div>
                 ) : (
-                  <p className="message-plain-text">{message.content || t.generating}</p>
+                  <p className="message-plain-text">{message.content}</p>
                 )}
               </div>
             </article>
           ))}
           {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
+          {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
         </div>
       )}
 
