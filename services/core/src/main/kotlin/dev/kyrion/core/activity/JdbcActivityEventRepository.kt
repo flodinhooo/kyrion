@@ -3,6 +3,7 @@ package dev.kyrion.core.activity
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
+import java.sql.Timestamp
 
 @Repository
 class JdbcActivityEventRepository(
@@ -21,7 +22,7 @@ class JdbcActivityEventRepository(
             """.trimIndent(),
         )
             .param("id", event.id)
-            .param("occurredAt", event.occurredAt)
+            .param("occurredAt", Timestamp.from(event.occurredAt))
             .param("category", event.category.name)
             .param("eventType", event.eventType)
             .param("status", event.status.name)
@@ -48,9 +49,8 @@ class JdbcActivityEventRepository(
         .query(::mapEvent)
         .list()
 
+    @Suppress("UNUSED_PARAMETER")
     private fun mapEvent(resultSet: ResultSet, rowNumber: Int): ActivityEvent {
-        @Suppress("UNUSED_VARIABLE")
-        val ignoredRowNumber = rowNumber
         return ActivityEvent(
             id = resultSet.getObject("id", java.util.UUID::class.java),
             occurredAt = resultSet.getTimestamp("occurred_at").toInstant(),
