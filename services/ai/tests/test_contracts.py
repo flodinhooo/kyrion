@@ -30,6 +30,18 @@ def test_chat_request_rejects_invalid_conversation_id(conversation_id: str) -> N
         )
 
 
+@pytest.mark.parametrize("model_id", ["", "x" * 129])
+def test_chat_request_rejects_invalid_model_id(model_id: str) -> None:
+    with pytest.raises(ValidationError):
+        ChatRequest.model_validate(
+            {
+                "modelId": model_id,
+                "messages": [{"role": "user", "content": "Hallo"}],
+                "locale": "de",
+            }
+        )
+
+
 def test_chat_event_serialises_web_contract_as_ndjson() -> None:
     event = ChatEvent(type="message.delta", message_id="message-1", delta="Hallo")
 

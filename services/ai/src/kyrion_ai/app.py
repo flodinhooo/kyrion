@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from kyrion_ai.config import Settings
@@ -28,7 +28,7 @@ async def list_models() -> dict[str, str | list[dict[str, str]]]:
 
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
-async def stream_chat(request: ChatRequest) -> StreamingResponse | JSONResponse:
+async def stream_chat(request: ChatRequest) -> Response:
     if request.model_id is not None and not provider.supports_model(request.model_id):
         return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
 
