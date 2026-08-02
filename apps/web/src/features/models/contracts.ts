@@ -1,6 +1,11 @@
 export type ModelOption = {
   id: string;
   label: string;
+  sizeBytes: number;
+  parameterSize: string;
+  quantization: string;
+  capabilities: string[];
+  contextLength?: number | null;
 };
 
 export type ModelCatalog = {
@@ -20,7 +25,16 @@ export function isModelCatalog(value: unknown): value is ModelCatalog {
       && typeof model.id === "string"
       && model.id.length > 0
       && typeof model.label === "string"
-      && model.label.length > 0,
+      && model.label.length > 0
+      && typeof model.sizeBytes === "number"
+      && model.sizeBytes >= 0
+      && typeof model.parameterSize === "string"
+      && typeof model.quantization === "string"
+      && Array.isArray(model.capabilities)
+      && model.capabilities.every((capability) => typeof capability === "string")
+      && (model.contextLength === undefined
+        || model.contextLength === null
+        || (typeof model.contextLength === "number" && model.contextLength > 0)),
     )
     && catalog.models.some((model) => model.id === catalog.defaultModelId);
 }
