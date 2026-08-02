@@ -29,6 +29,7 @@ type VoiceModeProps = {
     voiceSpeaking: string;
     voiceStart: string;
     voiceThinking: string;
+    voiceResponding: string;
     voiceUnsupported: string;
   };
   onClose: () => void;
@@ -48,8 +49,10 @@ export function VoiceMode({
 }: VoiceModeProps) {
   const [status, setStatus] = useState<VoiceStatus>("starting");
   const [transcript, setTranscript] = useState("");
+  const [spokenRange, setSpokenRange] = useState({ start: 0, end: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const recognition = useRef<BrowserSpeechRecognition | null>(null);
+  const currentWord = useRef<HTMLElement | null>(null);
   const active = useRef(true);
   const paused = useRef(false);
   const pendingResponse = useRef(false);
@@ -62,6 +65,12 @@ export function VoiceMode({
     submitRef.current = onSubmit;
     closeRef.current = onClose;
   }, [onClose, onSubmit]);
+
+  useEffect(() => {
+    if (status === "speaking") {
+      currentWord.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [spokenRange, status]);
 
   const startListening = useCallback(() => {
     if (!active.current || paused.current || pendingResponse.current) return;
@@ -141,6 +150,9 @@ export function VoiceMode({
   useEffect(() => {
     if (isStreaming && pendingResponse.current) {
       queueMicrotask(() => setStatus("thinking"));
+      if (latestAssistantMessage?.content) {
+        queueMicrotask(() => setTranscript(speechText(latestAssistantMessage.content)));
+      }
     }
     if (isStreaming || !pendingResponse.current) return;
 
@@ -173,9 +185,18 @@ export function VoiceMode({
     utterance.onstart = () => {
       setStatus("speaking");
       setTranscript(speechText(latestAssistantMessage.content));
+      setSpokenRange({ start: 0, end: 1 });
+    };
+    utterance.onboundary = (event) => {
+      if (event.name !== "word") return;
+      setSpokenRange({
+        start: event.charIndex,
+        end: event.charIndex + Math.max(event.charLength, 1),
+      });
     };
     utterance.onend = () => {
       setTranscript("");
+      setSpokenRange({ start: 0, end: 0 });
       startListeningRef.current();
     };
     utterance.onerror = () => {
@@ -208,7 +229,8 @@ export function VoiceMode({
   }
 
   const statusText = status === "listening" ? t.voiceListening
-    : status === "thinking" ? t.voiceThinking
+    : status === "thinking" && latestAssistantMessage?.content ? t.voiceResponding
+      : status === "thinking" ? t.voiceThinking
       : status === "speaking" ? t.voiceSpeaking
         : status === "paused" ? t.voicePaused
           : status === "error" ? errorMessage ?? t.voiceError
@@ -227,7 +249,13 @@ export function VoiceMode({
         </div>
         <p className="eyebrow">Velora Voice</p>
         <h2>{statusText}</h2>
-        <p className="voice-transcript">{transcript || "…"}</p>
+        <div className="voice-transcript" aria-live="polite">
+          {status === "speaking" && transcript ? <p>
+            <span className="voice-spoken">{transcript.slice(0, spokenRange.start)}</span>
+            <mark ref={currentWord}>{transcript.slice(spokenRange.start, spokenRange.end)}</mark>
+            <span>{transcript.slice(spokenRange.end)}</span>
+          </p> : <p>{transcript || "…"}</p>}
+        </div>
         <p className="voice-privacy">{t.voiceMicrophoneExternal}</p>
       </div>
       <div className="voice-controls">
