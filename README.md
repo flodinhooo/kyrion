@@ -139,8 +139,9 @@ access.
 
 `services/core`
 
-The planned central backend responsible for permissions, devices, integrations,
-commands, automations and audit logging.
+The Kotlin and Spring Boot central backend. Its first implemented slice owns a
+PostgreSQL-backed activity event log; permissions, devices, integrations,
+commands and automations remain planned responsibilities.
 
 `services/ai`
 
@@ -157,7 +158,8 @@ Shared API definitions and generated client contracts.
 
 `infrastructure`
 
-Future deployment, container, server, monitoring and backup configuration.
+Local PostgreSQL container configuration is implemented. Further deployment,
+monitoring and backup configuration remains planned.
 
 ### Documentation
 
