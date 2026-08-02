@@ -5,7 +5,26 @@ Last updated: 2026-08-02
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
 
-## Next session: Refine the chat experience
+## Next session: Complete local authentication
+
+- [x] Add an identity and session database schema without creating a default
+  user or exposing public registration.
+- [x] Hash passwords with Argon2id using unique salts.
+- [x] Generate opaque 256-bit session tokens and persist only SHA-256 hashes.
+- [x] Implement and test session creation, expiry, last-seen updates and
+  revocation in Core.
+- [ ] Add a one-time local-owner setup endpoint and setup screen.
+- [ ] Add Core login, current-user and logout endpoints.
+- [ ] Set the session through a same-origin `HttpOnly` and `SameSite` cookie;
+  use `Secure` whenever Kyrion is served over HTTPS.
+- [ ] Add CSRF protection to authenticated state-changing requests.
+- [ ] Protect private Core and Next.js routes and verify owner isolation.
+- [ ] Record authentication success, failure and logout as data-minimised
+  security activity events without logging credentials or raw tokens.
+- [ ] Add integration tests for cookie flags, invalid credentials, expiry,
+  revocation and session rotation.
+
+## Completed chat and voice refinement
 
 - [x] Render assistant responses as Markdown instead of displaying Markdown
   syntax such as `**bold**` as plain text.
@@ -44,6 +63,13 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add an initial browser-backed Voice Mode opened from the Velora orb.
 - [x] Add per-language browser voice selection, previews and speaking-rate
   controls.
+- [x] Stream visible answer tokens immediately for reasoning-capable models
+  without waiting for an invisible Qwen thinking pass.
+- [x] Begin speaking completed sentences while later answer text is still being
+  generated.
+- [x] Isolate voice turns so old messages and cancelled utterance callbacks do
+  not enter the next response queue.
+- [x] Add a centred, wider Voice Mode transcript with subtle spoken-word focus.
 - [ ] Replace prototype browser speech recognition and system TTS with
   explicitly selected local providers.
 - [ ] Add interruption, local wake-word detection and voice-device settings.
@@ -58,3 +84,5 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
   the activity log before treating it as a compliance audit trail.
 - [ ] Add PostgreSQL-backed conversation history and context compaction.
+- [ ] Add owner-scoped conversation and message persistence after the
+  authentication slice is complete.

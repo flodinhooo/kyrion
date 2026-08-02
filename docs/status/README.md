@@ -6,9 +6,9 @@ This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
 `README.md` and the relevant architecture documents before changing code.
 
-## Current vertical slice
+## Current vertical slices
 
-The first real text-chat path is implemented:
+The local text and voice path is implemented:
 
 ```text
 Browser on http://localhost:3000
@@ -26,6 +26,21 @@ Ollama on http://127.0.0.1:11434
 Configured local model
 ```
 
+The first trusted Core persistence path is also implemented:
+
+```text
+Browser /activity
+    |
+    v
+Next.js GET /api/activity
+    |
+    v
+Kyrion Core GET /v1/activity
+    |
+    v
+PostgreSQL on E:\Kyrion\Data\postgres
+```
+
 ## Completed
 
 ### Project and architecture
@@ -40,6 +55,12 @@ Configured local model
   correlation identifiers.
 - Flyway-managed database schema and an architecture decision record for the
   persistence boundary.
+- Identity and server-side session persistence schema prepared in Flyway V2.
+- Argon2id password hashing and opaque 256-bit session-token generation.
+- Only SHA-256 session-token hashes are designed to be stored; raw session
+  tokens are returned once for the future protected cookie.
+- Tested session lifecycle domain logic for creation, seven-day expiry,
+  last-seen updates, authentication and revocation.
 - AI actions remain proposals; future device actions must pass through Core.
 
 ### Web application
@@ -61,6 +82,12 @@ Configured local model
 - Initial conversational Voice Mode opened from the Velora orb, using browser
   speech recognition and system speech synthesis as transparent prototype
   providers.
+- Sentence-based streaming speech: completed sentences begin playing while the
+  model continues generating later sentences.
+- Voice turns are isolated by assistant message ID so prior conversation text
+  and cancelled browser utterances cannot enter a new response queue.
+- Centred Voice Mode layout with a wider transcript, automatic spoken-word
+  tracking and a subtle animated focus outline.
 - Dedicated voice settings with per-language browser voice selection, previews,
   local/online labels and a persisted speaking rate.
 - Primary Activity navigation backed by persisted Core events, including clear
@@ -74,6 +101,9 @@ Configured local model
 - Python 3.12 project using FastAPI, Pydantic, HTTPX and Uvicorn.
 - Provider-neutral `LanguageModelProvider` protocol.
 - Ollama provider using `/api/chat` with NDJSON streaming.
+- Reasoning-capable models use visible answer streaming without an invisible
+  thinking pass; models remain warm for ten minutes and use a 4096-token
+  runtime context for normal chat.
 - Stable Kyrion chat events and error codes.
 - Modular Kyrion-owned Velora system prompt with local-first and safety rules.
 - Request validation, health endpoint and tests.
@@ -100,11 +130,15 @@ Configured local model
 - `pnpm lint`: passed.
 - `pnpm build`: passed, including the dynamic chat and model benchmark routes.
 - Python Ruff checks: passed.
-- Python tests: 30 passed.
+- Python tests: 31 passed.
 - Kotlin Core tests and boot JAR build: passed.
-- Flyway migration, Core health and persisted startup event: passed against
-  PostgreSQL.
+- Flyway migrations V1 and V2, Core health and persisted startup events: passed
+  against PostgreSQL.
+- Password hashing, session-token hashing and session lifecycle tests: passed.
 - Web `/api/activity` end-to-end response: passed.
+- Warm `qwen3:8b` smoke test produced its first visible token in about 0.52
+  seconds and completed a short response in about 0.63 seconds on the current
+  machine; this is an observation, not a performance guarantee.
 - Ollama API health: passed.
 - `gemma3:4b` inference: passed.
 - `qwen3:8b` inference: passed.
@@ -114,8 +148,11 @@ Configured local model
 - Conversations exist only in React state and disappear when the chat page is
   unmounted or the browser is refreshed.
 - There is no conversation history or summarisation pipeline yet; the current
-  database stores only Core activity events.
-- There is no login or user model yet.
+  database stores Core activity events plus empty identity/session structures
+  prepared for the next authentication slice.
+- The identity and session security foundation exists, but there are no setup,
+  login, current-user or logout HTTP endpoints and no user has been created.
+- There is no protected session cookie or authenticated Web UI yet.
 - Core currently implements only the first activity vertical slice; it has no
   authentication, command execution or integration capabilities yet.
 - Activity actor ownership, retention and tamper-evidence are not implemented.
@@ -126,28 +163,37 @@ Configured local model
 - Voice Mode currently depends on browser speech APIs. Speech recognition may
   use an external browser service and is not yet Kyrion's planned local voice
   pipeline.
+- Voice interruption while Velora is actively speaking is not yet a complete
+  hands-free barge-in flow because continuous recognition could hear the
+  assistant's own browser speech.
 - Home, Automations and Knowledge are intentional placeholders.
 
 ## Recommended next step
 
-Define the Core/database boundary for conversation persistence:
+Complete the smallest authentication vertical slice before storing personal
+conversations:
 
-1. assign conversation ownership across Web, Core and AI;
-2. define the minimum conversation and message contracts;
-3. record the persistence decision before introducing PostgreSQL;
-4. keep voice interaction as a separate input/output layer that can reuse the
-   same conversation and capability contracts later.
+1. add a one-time local-owner setup flow without public registration;
+2. add Core `login`, `me` and `logout` endpoints;
+3. issue an opaque `HttpOnly`, `SameSite` session cookie through the same-origin
+   Next.js boundary and add CSRF protection for state-changing requests;
+4. add integration tests proving expiry, revocation, cookie flags and endpoint
+   ownership;
+5. then define owner-scoped conversation and message contracts.
 
-Do not introduce login, PostgreSQL, containers and the mobile application in a
-single change. Continue with one verified vertical slice at a time.
+Do not expose the prepared session repository directly and do not store tokens
+in browser local storage. Continue with one verified vertical slice at a time.
 
 ## How to resume
 
 In a new agent chat, use this prompt:
 
-> Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, and inspect
-> the current implementation. Start from `docs/status/README.md` and continue
-> the recommended next step without changing Kyrion's architecture boundaries.
+> Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
+> `docs/status/README.md`, `docs/status/TODO.md` and both ADRs. Inspect the
+> current implementation and uncommitted changes. Continue with the one-time
+> local-owner setup and authenticated session vertical slice. Preserve Core as
+> the authentication authority and do not store credentials or tokens in
+> browser local storage.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 

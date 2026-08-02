@@ -234,17 +234,22 @@ The first success criterion is simple:
 
 ## Project status
 
-Kyrion is currently in its foundation and prototype phase.
+Kyrion is currently in its foundation and working-prototype phase. The local
+text-chat and browser-backed voice path runs end to end, Kotlin Core persists a
+trusted activity log in PostgreSQL, and the identity/session security
+foundation is prepared without exposing an unfinished login flow.
 
 Current priorities:
 
-1. finalise project documentation;
-2. initialise the web application;
-3. identify and connect the Nanoleaf controller;
-4. implement the first local device commands;
-5. build the first bilingual dashboard.
+1. complete the one-time local-owner and authenticated session slice;
+2. persist owner-scoped conversations and messages;
+3. introduce controlled Core capability contracts;
+4. connect the first local device integration;
+5. replace prototype browser speech providers where a suitable local voice
+   stack is available.
 
-See the full [roadmap](docs/roadmap.md).
+See the full [roadmap](docs/roadmap.md) and the current
+[development status](docs/status/README.md).
 
 ## Licence
 
