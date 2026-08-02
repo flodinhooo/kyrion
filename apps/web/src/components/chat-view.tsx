@@ -21,7 +21,7 @@ function createMessage(role: ChatMessage["role"], content: string, id = crypto.r
 }
 
 export function ChatView() {
-  const { locale, t } = useWorkspace();
+  const { locale, selectedModelId, t } = useWorkspace();
   const [conversationId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -53,6 +53,7 @@ export function ChatView() {
     const userMessage = createMessage("user", content);
     const request: ChatRequest = {
       conversationId,
+      modelId: selectedModelId ?? undefined,
       locale,
       messages: [...chatMessages, userMessage].map(({ role, content: messageContent }) => ({
         role,

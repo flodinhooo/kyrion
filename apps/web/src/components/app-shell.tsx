@@ -12,10 +12,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { isAiServiceStatus, type AiServiceStatus } from "@/features/status/contracts";
+import { isModelCatalog, type ModelCatalog } from "@/features/models/contracts";
 import { Locale, messages } from "@/lib/messages";
 
 type WorkspaceContextValue = {
   locale: Locale;
+  modelCatalog: ModelCatalog | null;
+  selectedModelId: string | null;
+  selectModel: (modelId: string) => void;
   t: (typeof messages)[Locale];
 };
 
@@ -40,6 +44,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>("de");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [aiStatus, setAiStatus] = useState<AiStatus>({ status: "checking" });
+  const [modelCatalog, setModelCatalog] = useState<ModelCatalog | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const t = messages[locale];
 
   useEffect(() => {
@@ -59,6 +65,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       setTheme(nextTheme);
       setLocale(nextLocale);
     });
+  }, []);
+
+  useEffect(() => {
+    let isDisposed = false;
+
+    async function loadModels() {
+      try {
+        const response = await fetch("/api/models", { cache: "no-store" });
+        const catalog: unknown = await response.json();
+        if (!response.ok || !isModelCatalog(catalog)) throw new Error("Invalid model catalog");
+
+        const savedModel = localStorage.getItem("kyrion-model");
+        const nextModel = savedModel && catalog.models.some((model) => model.id === savedModel)
+          ? savedModel
+          : catalog.defaultModelId;
+        if (!isDisposed) {
+          setModelCatalog(catalog);
+          setSelectedModelId(nextModel);
+        }
+      } catch {
+        if (!isDisposed) {
+          setModelCatalog(null);
+          setSelectedModelId(null);
+        }
+      }
+    }
+
+    void loadModels();
+    return () => { isDisposed = true; };
   }, []);
 
   useEffect(() => {
@@ -87,7 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   const aiStatusText = aiStatus.status === "ready"
-    ? `${t.aiServiceReady} · ${aiStatus.model}`
+    ? `${t.aiServiceReady} · ${selectedModelId ?? aiStatus.model}`
     : aiStatus.status === "checking" ? t.aiServiceChecking : t.aiServiceUnavailable;
 
   function toggleTheme() {
@@ -102,6 +137,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     setLocale(nextLocale);
     document.documentElement.lang = nextLocale;
     localStorage.setItem("kyrion-locale", nextLocale);
+  }
+
+  function selectModel(modelId: string) {
+    if (!modelCatalog?.models.some((model) => model.id === modelId)) return;
+    setSelectedModelId(modelId);
+    localStorage.setItem("kyrion-model", modelId);
   }
 
   function sidebarContent() {
@@ -145,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WorkspaceContext.Provider value={{ locale, t }}>
+    <WorkspaceContext.Provider value={{ locale, modelCatalog, selectedModelId, selectModel, t }}>
       <div className="app-shell">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
