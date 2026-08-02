@@ -5,7 +5,8 @@ import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 
 export default function SettingsPage() {
-  const { selectedModelId, t } = useWorkspace();
+  const { selectedModelId, selectedVoiceUri, speechVoices, t } = useWorkspace();
+  const selectedVoice = speechVoices.find((voice) => voice.voiceURI === selectedVoiceUri);
 
   return (
     <section className="settings-stage">
@@ -19,6 +20,10 @@ export default function SettingsPage() {
           <Link className="settings-link-card" href="/settings/models">
             <Icons.spark />
             <span><strong>{t.modelsTitle}</strong><small>{selectedModelId ?? t.modelsUnavailable}</small></span>
+          </Link>
+          <Link className="settings-link-card" href="/settings/voice">
+            <Icons.mic />
+            <span><strong>{t.voiceSettingsTitle}</strong><small>{selectedVoice?.name ?? t.voiceNoVoices}</small></span>
           </Link>
         </div>
 
