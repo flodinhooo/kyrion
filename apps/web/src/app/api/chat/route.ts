@@ -47,6 +47,10 @@ export async function POST(incomingRequest: Request) {
       signal: incomingRequest.signal,
     });
 
+    if (response.status === 400) {
+      return Response.json({ code: "INVALID_REQUEST" }, { status: 400 });
+    }
+
     if (!response.ok || !response.body) {
       return Response.json({ code: "MODEL_UNAVAILABLE" }, { status: 503 });
     }
