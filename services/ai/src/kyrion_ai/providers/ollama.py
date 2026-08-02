@@ -210,11 +210,7 @@ class OllamaProvider:
             write=30.0,
             pool=5.0,
         )
-        payload = {
-            "model": request.model_id or self._settings.ollama_model,
-            "messages": [message.model_dump() for message in request.messages],
-            "stream": True,
-        }
+        payload = _chat_payload(request, self._settings.ollama_model)
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client, client.stream(
@@ -246,6 +242,19 @@ class OllamaProvider:
             yield ChatEvent(type="error", code="MODEL_UNAVAILABLE")
         except (httpx.HTTPError, json.JSONDecodeError):
             yield ChatEvent(type="error", code="STREAM_FAILED")
+
+
+def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]:
+    return {
+        "model": request.model_id or default_model,
+        "messages": [message.model_dump() for message in request.messages],
+        "stream": True,
+        # Reasoning-capable models otherwise finish an invisible thinking pass
+        # before emitting their user-facing answer.
+        "think": False,
+        "keep_alive": "10m",
+        "options": {"num_ctx": 4096},
+    }
 
 
 def _context_length(model_info: dict[str, int | float | str | bool | None]) -> int | None:
