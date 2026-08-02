@@ -11,6 +11,7 @@ export type ChatInputMessage = Pick<ChatMessage, "role" | "content">;
 
 export type ChatRequest = {
   conversationId?: string;
+  modelId?: string;
   messages: ChatInputMessage[];
   locale: "de" | "en";
 };
