@@ -11,6 +11,15 @@ import type { Locale } from "@/lib/messages";
 
 type VoiceStatus = "starting" | "listening" | "thinking" | "speaking" | "paused" | "error";
 
+function lastCompletedSentenceEnd(text: string): number {
+  const sentenceEnd = /[.!?](?:["')\]]+)?(?=\s|$)/g;
+  let completedUntil = 0;
+  for (const match of text.matchAll(sentenceEnd)) {
+    completedUntil = (match.index ?? 0) + match[0].length;
+  }
+  return completedUntil;
+}
+
 type VoiceModeProps = {
   isStreaming: boolean;
   latestAssistantMessage: { id: string; content: string } | null;
@@ -57,6 +66,9 @@ export function VoiceMode({
   const paused = useRef(false);
   const pendingResponse = useRef(false);
   const handledAssistantId = useRef(latestAssistantMessage?.id ?? null);
+  const queuedUntil = useRef(0);
+  const queuedUtterances = useRef(0);
+  const responseComplete = useRef(false);
   const startListeningRef = useRef<() => void>(() => undefined);
   const submitRef = useRef(onSubmit);
   const closeRef = useRef(onClose);
@@ -107,6 +119,9 @@ export function VoiceMode({
       if (!content || submitted) return;
       submitted = true;
       pendingResponse.current = true;
+      responseComplete.current = false;
+      queuedUntil.current = 0;
+      queuedUtterances.current = 0;
       setStatus("thinking");
       nextRecognition.stop();
       void submitRef.current(content);
@@ -148,16 +163,11 @@ export function VoiceMode({
   }, [startListening]);
 
   useEffect(() => {
-    if (isStreaming && pendingResponse.current) {
-      queueMicrotask(() => setStatus("thinking"));
-      if (latestAssistantMessage?.content) {
-        queueMicrotask(() => setTranscript(speechText(latestAssistantMessage.content)));
-      }
-    }
-    if (isStreaming || !pendingResponse.current) return;
+    if (!pendingResponse.current) return;
 
     if (streamFailed) {
       pendingResponse.current = false;
+      window.speechSynthesis.cancel();
       queueMicrotask(() => {
         setStatus("error");
         setErrorMessage(t.voiceError);
@@ -165,41 +175,72 @@ export function VoiceMode({
       return;
     }
 
-    if (
-      !latestAssistantMessage?.content
-      || latestAssistantMessage.id === handledAssistantId.current
-    ) return;
+    if (!latestAssistantMessage?.content) {
+      if (isStreaming && !window.speechSynthesis.speaking) queueMicrotask(() => setStatus("thinking"));
+      return;
+    }
 
-    pendingResponse.current = false;
-    handledAssistantId.current = latestAssistantMessage.id;
-    if (paused.current) return;
-    const utterance = new SpeechSynthesisUtterance(speechText(latestAssistantMessage.content));
-    const language = locale === "de" ? "de-DE" : "en-US";
-    utterance.lang = language;
+    if (latestAssistantMessage.id !== handledAssistantId.current) {
+      handledAssistantId.current = latestAssistantMessage.id;
+      queuedUntil.current = 0;
+      queuedUtterances.current = 0;
+      responseComplete.current = false;
+    }
+
+    const completeText = speechText(latestAssistantMessage.content);
+    queueMicrotask(() => setTranscript(completeText));
+    if (isStreaming && !window.speechSynthesis.speaking && queuedUtterances.current === 0) {
+      queueMicrotask(() => setStatus("thinking"));
+    }
+
+    responseComplete.current = !isStreaming;
+    const speakUntil = isStreaming ? lastCompletedSentenceEnd(completeText) : completeText.length;
+    if (paused.current || speakUntil <= queuedUntil.current) {
+      if (!isStreaming && queuedUtterances.current === 0) {
+        pendingResponse.current = false;
+        queueMicrotask(() => setTranscript(""));
+        startListeningRef.current();
+      }
+      return;
+    }
+
+    const chunkStart = queuedUntil.current;
+    const chunk = completeText.slice(chunkStart, speakUntil).trim();
+    queuedUntil.current = speakUntil;
+    if (!chunk) return;
+
+    const leadingWhitespace = completeText.slice(chunkStart, speakUntil).indexOf(chunk);
+    const globalOffset = chunkStart + Math.max(leadingWhitespace, 0);
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.lang = locale === "de" ? "de-DE" : "en-US";
     utterance.rate = speechRate;
     utterance.voice = window.speechSynthesis.getVoices().find((voice) =>
       voice.voiceURI === selectedVoiceUri,
     ) ?? window.speechSynthesis.getVoices().find((voice) =>
       voice.lang.toLowerCase().startsWith(locale),
     ) ?? null;
+    queuedUtterances.current += 1;
     utterance.onstart = () => {
       setStatus("speaking");
-      setTranscript(speechText(latestAssistantMessage.content));
-      setSpokenRange({ start: 0, end: 1 });
+      setSpokenRange({ start: globalOffset, end: globalOffset + 1 });
     };
     utterance.onboundary = (event) => {
       if (event.name !== "word") return;
       setSpokenRange({
-        start: event.charIndex,
-        end: event.charIndex + Math.max(event.charLength, 1),
+        start: globalOffset + event.charIndex,
+        end: globalOffset + event.charIndex + Math.max(event.charLength, 1),
       });
     };
     utterance.onend = () => {
+      queuedUtterances.current = Math.max(0, queuedUtterances.current - 1);
+      if (!responseComplete.current || queuedUtterances.current > 0) return;
+      pendingResponse.current = false;
       setTranscript("");
       setSpokenRange({ start: 0, end: 0 });
       startListeningRef.current();
     };
     utterance.onerror = () => {
+      queuedUtterances.current = Math.max(0, queuedUtterances.current - 1);
       if (!active.current || paused.current) return;
       setStatus("error");
       setErrorMessage(t.voiceError);
