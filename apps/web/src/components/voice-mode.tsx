@@ -66,9 +66,11 @@ export function VoiceMode({
   const paused = useRef(false);
   const pendingResponse = useRef(false);
   const handledAssistantId = useRef(latestAssistantMessage?.id ?? null);
+  const awaitingAssistantId = useRef(false);
   const queuedUntil = useRef(0);
   const queuedUtterances = useRef(0);
   const responseComplete = useRef(false);
+  const speechGeneration = useRef(0);
   const startListeningRef = useRef<() => void>(() => undefined);
   const submitRef = useRef(onSubmit);
   const closeRef = useRef(onClose);
@@ -118,7 +120,10 @@ export function VoiceMode({
       const content = finalTranscript.trim();
       if (!content || submitted) return;
       submitted = true;
+      window.speechSynthesis.cancel();
+      speechGeneration.current += 1;
       pendingResponse.current = true;
+      awaitingAssistantId.current = true;
       responseComplete.current = false;
       queuedUntil.current = 0;
       queuedUtterances.current = 0;
@@ -167,6 +172,8 @@ export function VoiceMode({
 
     if (streamFailed) {
       pendingResponse.current = false;
+      awaitingAssistantId.current = false;
+      speechGeneration.current += 1;
       window.speechSynthesis.cancel();
       queueMicrotask(() => {
         setStatus("error");
@@ -180,8 +187,21 @@ export function VoiceMode({
       return;
     }
 
+    // React still exposes the previous conversation turn until the stream's
+    // message.started event creates the new assistant message.
+    if (
+      awaitingAssistantId.current
+      && latestAssistantMessage.id === handledAssistantId.current
+    ) {
+      if (!window.speechSynthesis.speaking) queueMicrotask(() => setStatus("thinking"));
+      return;
+    }
+
     if (latestAssistantMessage.id !== handledAssistantId.current) {
+      speechGeneration.current += 1;
+      window.speechSynthesis.cancel();
       handledAssistantId.current = latestAssistantMessage.id;
+      awaitingAssistantId.current = false;
       queuedUntil.current = 0;
       queuedUtterances.current = 0;
       responseComplete.current = false;
@@ -212,6 +232,7 @@ export function VoiceMode({
     const leadingWhitespace = completeText.slice(chunkStart, speakUntil).indexOf(chunk);
     const globalOffset = chunkStart + Math.max(leadingWhitespace, 0);
     const utterance = new SpeechSynthesisUtterance(chunk);
+    const utteranceGeneration = speechGeneration.current;
     utterance.lang = locale === "de" ? "de-DE" : "en-US";
     utterance.rate = speechRate;
     utterance.voice = window.speechSynthesis.getVoices().find((voice) =>
@@ -221,10 +242,12 @@ export function VoiceMode({
     ) ?? null;
     queuedUtterances.current += 1;
     utterance.onstart = () => {
+      if (utteranceGeneration !== speechGeneration.current) return;
       setStatus("speaking");
       setSpokenRange({ start: globalOffset, end: globalOffset + 1 });
     };
     utterance.onboundary = (event) => {
+      if (utteranceGeneration !== speechGeneration.current) return;
       if (event.name !== "word") return;
       setSpokenRange({
         start: globalOffset + event.charIndex,
@@ -232,6 +255,7 @@ export function VoiceMode({
       });
     };
     utterance.onend = () => {
+      if (utteranceGeneration !== speechGeneration.current) return;
       queuedUtterances.current = Math.max(0, queuedUtterances.current - 1);
       if (!responseComplete.current || queuedUtterances.current > 0) return;
       pendingResponse.current = false;
@@ -240,6 +264,7 @@ export function VoiceMode({
       startListeningRef.current();
     };
     utterance.onerror = () => {
+      if (utteranceGeneration !== speechGeneration.current) return;
       queuedUtterances.current = Math.max(0, queuedUtterances.current - 1);
       if (!active.current || paused.current) return;
       setStatus("error");
@@ -264,6 +289,8 @@ export function VoiceMode({
       return;
     }
     paused.current = true;
+    speechGeneration.current += 1;
+    queuedUtterances.current = 0;
     recognition.current?.abort();
     window.speechSynthesis.cancel();
     setStatus("paused");
