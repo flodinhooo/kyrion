@@ -13,6 +13,22 @@ export type ModelCatalog = {
   models: ModelOption[];
 };
 
+export type ModelBenchmarkResult = {
+  modelId: string;
+  warmupLoadMs: number;
+  averageDurationMs: number;
+  averageTokensPerSecond: number;
+  checksPassed: number;
+  promptCount: number;
+  prompts: Array<{
+    promptId: string;
+    durationMs: number;
+    generatedTokens: number;
+    tokensPerSecond: number;
+    passed: boolean;
+  }>;
+};
+
 export function isModelCatalog(value: unknown): value is ModelCatalog {
   if (!value || typeof value !== "object") return false;
   const catalog = value as Partial<ModelCatalog>;
@@ -37,4 +53,35 @@ export function isModelCatalog(value: unknown): value is ModelCatalog {
         || (typeof model.contextLength === "number" && model.contextLength > 0)),
     )
     && catalog.models.some((model) => model.id === catalog.defaultModelId);
+}
+
+export function isModelBenchmarkResult(value: unknown): value is ModelBenchmarkResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Partial<ModelBenchmarkResult>;
+  return typeof result.modelId === "string"
+    && result.modelId.length > 0
+    && typeof result.warmupLoadMs === "number"
+    && result.warmupLoadMs >= 0
+    && typeof result.averageDurationMs === "number"
+    && result.averageDurationMs >= 0
+    && typeof result.averageTokensPerSecond === "number"
+    && result.averageTokensPerSecond >= 0
+    && Number.isInteger(result.checksPassed)
+    && Number.isInteger(result.promptCount)
+    && (result.promptCount ?? 0) > 0
+    && (result.checksPassed ?? -1) >= 0
+    && (result.checksPassed ?? 0) <= (result.promptCount ?? 0)
+    && Array.isArray(result.prompts)
+    && result.prompts.length === result.promptCount
+    && result.prompts.every((prompt) =>
+      !!prompt
+      && typeof prompt.promptId === "string"
+      && typeof prompt.durationMs === "number"
+      && prompt.durationMs >= 0
+      && Number.isInteger(prompt.generatedTokens)
+      && prompt.generatedTokens >= 0
+      && typeof prompt.tokensPerSecond === "number"
+      && prompt.tokensPerSecond >= 0
+      && typeof prompt.passed === "boolean",
+    );
 }
