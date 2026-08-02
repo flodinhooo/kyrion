@@ -43,6 +43,38 @@ class ModelCatalog(BaseModel):
     models: list[ModelInfo]
 
 
+class ModelBenchmarkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model_id: str = Field(alias="modelId", min_length=1, max_length=128)
+    locale: Literal["de", "en"]
+
+
+class BenchmarkPromptMetric(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt_id: str = Field(serialization_alias="promptId")
+    duration_ms: float = Field(serialization_alias="durationMs", ge=0)
+    generated_tokens: int = Field(serialization_alias="generatedTokens", ge=0)
+    tokens_per_second: float = Field(serialization_alias="tokensPerSecond", ge=0)
+    passed: bool
+
+
+class ModelBenchmarkResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model_id: str = Field(serialization_alias="modelId")
+    warmup_load_ms: float = Field(serialization_alias="warmupLoadMs", ge=0)
+    average_duration_ms: float = Field(serialization_alias="averageDurationMs", ge=0)
+    average_tokens_per_second: float = Field(
+        serialization_alias="averageTokensPerSecond",
+        ge=0,
+    )
+    checks_passed: int = Field(serialization_alias="checksPassed", ge=0)
+    prompt_count: int = Field(serialization_alias="promptCount", ge=1)
+    prompts: list[BenchmarkPromptMetric]
+
+
 ChatErrorCode = Literal[
     "MODEL_UNAVAILABLE",
     "REQUEST_ABORTED",
