@@ -13,7 +13,13 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    conversation_id: str | None = Field(default=None, alias="conversationId")
+    conversation_id: str | None = Field(
+        default=None,
+        alias="conversationId",
+        min_length=1,
+        max_length=128,
+    )
+    model_id: str | None = Field(default=None, alias="modelId", min_length=1, max_length=128)
     messages: list[ChatMessage] = Field(min_length=1, max_length=200)
     locale: Literal["de", "en"]
 
