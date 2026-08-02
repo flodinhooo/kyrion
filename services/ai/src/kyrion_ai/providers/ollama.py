@@ -6,8 +6,17 @@ from uuid import uuid4
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
+from kyrion_ai.benchmarks import benchmark_prompts, response_passes
 from kyrion_ai.config import Settings
-from kyrion_ai.contracts import ChatEvent, ChatRequest, ModelCatalog, ModelInfo
+from kyrion_ai.contracts import (
+    BenchmarkPromptMetric,
+    ChatEvent,
+    ChatRequest,
+    ModelBenchmarkRequest,
+    ModelBenchmarkResult,
+    ModelCatalog,
+    ModelInfo,
+)
 
 
 class _OllamaModelDetails(BaseModel):
@@ -39,6 +48,22 @@ class _OllamaModelShow(BaseModel):
     model_info: dict[str, int | float | str | bool | None] = Field(
         default_factory=dict
     )
+
+
+class _OllamaChatMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    content: str = ""
+
+
+class _OllamaChatResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    message: _OllamaChatMessage
+    total_duration: int = Field(default=0, ge=0)
+    load_duration: int = Field(default=0, ge=0)
+    eval_count: int = Field(default=0, ge=0)
+    eval_duration: int = Field(default=0, ge=0)
 
 
 class OllamaProvider:
@@ -104,6 +129,79 @@ class OllamaProvider:
         except (httpx.HTTPError, ValueError):
             return _OllamaModelShow()
 
+    async def benchmark_model(
+        self,
+        request: ModelBenchmarkRequest,
+    ) -> ModelBenchmarkResult:
+        timeout = httpx.Timeout(
+            connect=self._settings.ollama_connect_timeout_seconds,
+            read=120.0,
+            write=30.0,
+            pool=5.0,
+        )
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            warmup = await self._run_benchmark_prompt(
+                client,
+                request.model_id,
+                "Reply with OK.",
+                max_tokens=4,
+            )
+            metrics = []
+            for prompt in benchmark_prompts(request.locale):
+                result = await self._run_benchmark_prompt(
+                    client,
+                    request.model_id,
+                    prompt.content,
+                    max_tokens=96,
+                )
+                metrics.append(
+                    BenchmarkPromptMetric(
+                        prompt_id=prompt.id,
+                        duration_ms=_nanoseconds_to_milliseconds(result.total_duration),
+                        generated_tokens=result.eval_count,
+                        tokens_per_second=_tokens_per_second(result),
+                        passed=response_passes(prompt, result.message.content),
+                    )
+                )
+
+        return ModelBenchmarkResult(
+            model_id=request.model_id,
+            warmup_load_ms=_nanoseconds_to_milliseconds(warmup.load_duration),
+            average_duration_ms=_average([metric.duration_ms for metric in metrics]),
+            average_tokens_per_second=_average(
+                [metric.tokens_per_second for metric in metrics]
+            ),
+            checks_passed=sum(metric.passed for metric in metrics),
+            prompt_count=len(metrics),
+            prompts=metrics,
+        )
+
+    async def _run_benchmark_prompt(
+        self,
+        client: httpx.AsyncClient,
+        model_id: str,
+        prompt: str,
+        *,
+        max_tokens: int,
+    ) -> _OllamaChatResult:
+        response = await client.post(
+            f"{self._settings.ollama_base_url}/api/chat",
+            json={
+                "model": model_id,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "think": False,
+                "keep_alive": "5m",
+                "options": {
+                    "temperature": 0,
+                    "seed": 42,
+                    "num_predict": max_tokens,
+                },
+            },
+        )
+        response.raise_for_status()
+        return _OllamaChatResult.model_validate(response.json())
+
     async def stream_chat(self, request: ChatRequest) -> AsyncIterator[ChatEvent]:
         message_id = str(uuid4())
         timeout = httpx.Timeout(
@@ -155,3 +253,17 @@ def _context_length(model_info: dict[str, int | float | str | bool | None]) -> i
         if key.endswith(".context_length") and isinstance(value, int):
             return value
     return None
+
+
+def _nanoseconds_to_milliseconds(value: int) -> float:
+    return round(value / 1_000_000, 1)
+
+
+def _tokens_per_second(result: _OllamaChatResult) -> float:
+    if result.eval_duration == 0:
+        return 0.0
+    return round(result.eval_count / (result.eval_duration / 1_000_000_000), 1)
+
+
+def _average(values: list[float]) -> float:
+    return round(sum(values) / len(values), 1) if values else 0.0
