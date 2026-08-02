@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { isAiServiceStatus, type AiServiceStatus } from "@/features/status/contracts";
 import { Locale, messages } from "@/lib/messages";
 
 type WorkspaceContextValue = {
@@ -19,6 +20,7 @@ type WorkspaceContextValue = {
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+type AiStatus = AiServiceStatus | { status: "checking" };
 
 const navigation = [
   ["chat", Icons.chat, "/"],
@@ -37,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>("de");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [aiStatus, setAiStatus] = useState<AiStatus>({ status: "checking" });
   const t = messages[locale];
 
   useEffect(() => {
@@ -57,6 +60,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       setLocale(nextLocale);
     });
   }, []);
+
+  useEffect(() => {
+    let isDisposed = false;
+
+    async function refreshAiStatus() {
+      try {
+        const response = await fetch("/api/status", { cache: "no-store" });
+        const status: unknown = await response.json();
+        if (!response.ok || !isAiServiceStatus(status)) {
+          throw new Error("AI service status response is invalid");
+        }
+        if (!isDisposed) setAiStatus(status);
+      } catch {
+        if (!isDisposed) setAiStatus({ status: "unavailable" });
+      }
+    }
+
+    void refreshAiStatus();
+    const refreshInterval = window.setInterval(refreshAiStatus, 30_000);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(refreshInterval);
+    };
+  }, []);
+
+  const aiStatusText = aiStatus.status === "ready"
+    ? `${t.aiServiceReady} · ${aiStatus.model}`
+    : aiStatus.status === "checking" ? t.aiServiceChecking : t.aiServiceUnavailable;
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -103,7 +135,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="sidebar-footer">
           <Link className={`nav-item ${pathname === "/settings" ? "active" : ""}`} href="/settings"><Icons.settings /><span>{t.settings}</span></Link>
-          <div className="connection"><span className="status-dot" />{t.localStatus}</div>
+          <div className="connection" title={aiStatusText}>
+            <span className={`status-dot status-${aiStatus.status}`} />
+            <span>{aiStatusText}</span>
+          </div>
         </div>
       </>
     );
@@ -130,7 +165,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {sidebarContent()}
               </SheetContent>
             </Sheet>
-            <div className="topbar-title"><span className="status-dot" /><span>Velora</span><small>{t.localPreview}</small></div>
+            <div className="topbar-title" title={aiStatusText}>
+              <span className={`status-dot status-${aiStatus.status}`} />
+              <span>Velora</span>
+              <small>{t.localPreview}</small>
+            </div>
             <div className="topbar-actions">
               <button className="language-button" type="button" aria-label={t.language} onClick={toggleLocale}>{locale.toUpperCase()}</button>
               <button className="icon-button" type="button" aria-label={t.theme} onClick={toggleTheme}><Icons.sun /></button>
