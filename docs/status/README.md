@@ -34,7 +34,12 @@ Configured local model
 - Product vision, principles, architecture and roadmap documentation.
 - Root `AGENTS.md` with repository-wide quality and architecture rules.
 - Marketplace, plugin and enterprise vision.
-- Core remains planned as Kotlin and Spring Boot.
+- Kotlin and Spring Boot Core foundation with a PostgreSQL-backed, append-only
+  activity event log.
+- Core-owned `GET /v1/activity` contract with data-minimised events and
+  correlation identifiers.
+- Flyway-managed database schema and an architecture decision record for the
+  persistence boundary.
 - AI actions remain proposals; future device actions must pass through Core.
 
 ### Web application
@@ -58,8 +63,9 @@ Configured local model
   providers.
 - Dedicated voice settings with per-language browser voice selection, previews,
   local/online labels and a persisted speaking rate.
-- Primary Activity navigation and a Core-bound empty state that does not
-  fabricate browser-side audit events.
+- Primary Activity navigation backed by persisted Core events, including clear
+  loading, unavailable and empty states.
+- Runtime validation of Core responses in the Next.js server-side proxy.
 - Next.js server-side `/api/chat` proxy; Ollama is never called directly by the
   browser.
 
@@ -74,6 +80,10 @@ Configured local model
 - Local virtual environment at `services/ai/.venv` (ignored by Git).
 
 ### Local runtime
+
+- PostgreSQL 17 development container bound only to localhost.
+- PostgreSQL files stored through a bind mount at
+  `E:\Kyrion\Data\postgres`, not an anonymous Docker volume on C:.
 
 - Ollama 0.32.5 installed at `E:\Ollama\App`.
 - Physical model storage at `E:\Ollama\Models`.
@@ -91,6 +101,10 @@ Configured local model
 - `pnpm build`: passed, including the dynamic chat and model benchmark routes.
 - Python Ruff checks: passed.
 - Python tests: 30 passed.
+- Kotlin Core tests and boot JAR build: passed.
+- Flyway migration, Core health and persisted startup event: passed against
+  PostgreSQL.
+- Web `/api/activity` end-to-end response: passed.
 - Ollama API health: passed.
 - `gemma3:4b` inference: passed.
 - `qwen3:8b` inference: passed.
@@ -99,11 +113,12 @@ Configured local model
 
 - Conversations exist only in React state and disappear when the chat page is
   unmounted or the browser is refreshed.
-- There is no database, conversation history or summarisation pipeline yet.
+- There is no conversation history or summarisation pipeline yet; the current
+  database stores only Core activity events.
 - There is no login or user model yet.
-- There is no Kotlin Core implementation yet.
-- The Activity page is not connected to an event source until the Core activity
-  contract and persistence boundary exist.
+- Core currently implements only the first activity vertical slice; it has no
+  authentication, command execution or integration capabilities yet.
+- Activity actor ownership, retention and tamper-evidence are not implemented.
 - Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
   each browser can select one locally for its chat requests.
 - Model benchmark results currently live only in page state and are discarded
