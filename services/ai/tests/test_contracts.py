@@ -1,7 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from kyrion_ai.contracts import ChatEvent, ChatRequest, ModelCatalog, ModelInfo
+from kyrion_ai.contracts import (
+    BenchmarkPromptMetric,
+    ChatEvent,
+    ChatRequest,
+    ModelBenchmarkResult,
+    ModelCatalog,
+    ModelInfo,
+)
 
 
 def test_chat_request_accepts_web_contract() -> None:
@@ -80,3 +87,29 @@ def test_model_catalog_serialises_web_contract() -> None:
             }
         ],
     }
+
+
+def test_model_benchmark_serialises_web_contract() -> None:
+    result = ModelBenchmarkResult(
+        model_id="gemma3:4b",
+        warmup_load_ms=1200,
+        average_duration_ms=600,
+        average_tokens_per_second=50,
+        checks_passed=1,
+        prompt_count=1,
+        prompts=[
+            BenchmarkPromptMetric(
+                prompt_id="instruction",
+                duration_ms=600,
+                generated_tokens=30,
+                tokens_per_second=50,
+                passed=True,
+            )
+        ],
+    )
+
+    payload = result.model_dump(by_alias=True)
+
+    assert payload["modelId"] == "gemma3:4b"
+    assert payload["averageTokensPerSecond"] == 50
+    assert payload["prompts"][0]["promptId"] == "instruction"
