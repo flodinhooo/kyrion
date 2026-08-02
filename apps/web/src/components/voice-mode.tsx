@@ -1,0 +1,242 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Icons } from "@/components/icons";
+import {
+  createBrowserSpeechRecognition,
+  speechText,
+  type BrowserSpeechRecognition,
+} from "@/features/voice/browser-speech";
+import type { Locale } from "@/lib/messages";
+
+type VoiceStatus = "starting" | "listening" | "thinking" | "speaking" | "paused" | "error";
+
+type VoiceModeProps = {
+  isStreaming: boolean;
+  latestAssistantMessage: { id: string; content: string } | null;
+  locale: Locale;
+  selectedVoiceUri: string | null;
+  speechRate: number;
+  streamFailed: boolean;
+  t: {
+    voiceClose: string;
+    voiceError: string;
+    voiceListening: string;
+    voiceMicrophoneExternal: string;
+    voicePause: string;
+    voicePaused: string;
+    voiceResume: string;
+    voiceSpeaking: string;
+    voiceStart: string;
+    voiceThinking: string;
+    voiceUnsupported: string;
+  };
+  onClose: () => void;
+  onSubmit: (transcript: string) => Promise<void>;
+};
+
+export function VoiceMode({
+  isStreaming,
+  latestAssistantMessage,
+  locale,
+  selectedVoiceUri,
+  speechRate,
+  streamFailed,
+  t,
+  onClose,
+  onSubmit,
+}: VoiceModeProps) {
+  const [status, setStatus] = useState<VoiceStatus>("starting");
+  const [transcript, setTranscript] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const recognition = useRef<BrowserSpeechRecognition | null>(null);
+  const active = useRef(true);
+  const paused = useRef(false);
+  const pendingResponse = useRef(false);
+  const handledAssistantId = useRef(latestAssistantMessage?.id ?? null);
+  const startListeningRef = useRef<() => void>(() => undefined);
+  const submitRef = useRef(onSubmit);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    submitRef.current = onSubmit;
+    closeRef.current = onClose;
+  }, [onClose, onSubmit]);
+
+  const startListening = useCallback(() => {
+    if (!active.current || paused.current || pendingResponse.current) return;
+    window.speechSynthesis.cancel();
+
+    const nextRecognition = createBrowserSpeechRecognition();
+    if (!nextRecognition) {
+      setStatus("error");
+      setErrorMessage(t.voiceUnsupported);
+      return;
+    }
+
+    let submitted = false;
+    let failed = false;
+    nextRecognition.lang = locale === "de" ? "de-DE" : "en-US";
+    nextRecognition.continuous = false;
+    nextRecognition.interimResults = true;
+    nextRecognition.onstart = () => {
+      setStatus("listening");
+      setErrorMessage(null);
+    };
+    nextRecognition.onresult = (event) => {
+      let currentTranscript = "";
+      let finalTranscript = "";
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const text = result?.[0]?.transcript ?? "";
+        currentTranscript += text;
+        if (index >= event.resultIndex && result?.isFinal) finalTranscript += text;
+      }
+      setTranscript(currentTranscript.trim());
+
+      const content = finalTranscript.trim();
+      if (!content || submitted) return;
+      submitted = true;
+      pendingResponse.current = true;
+      setStatus("thinking");
+      nextRecognition.stop();
+      void submitRef.current(content);
+    };
+    nextRecognition.onerror = (event) => {
+      if (event.error === "aborted" || !active.current || paused.current) return;
+      failed = true;
+      setStatus("error");
+      setErrorMessage(t.voiceError);
+    };
+    nextRecognition.onend = () => {
+      if (recognition.current === nextRecognition) recognition.current = null;
+      if (!submitted && !failed && active.current && !paused.current && !pendingResponse.current) {
+        window.setTimeout(() => startListeningRef.current(), 250);
+      }
+    };
+    recognition.current = nextRecognition;
+    nextRecognition.start();
+  }, [locale, t.voiceError, t.voiceUnsupported]);
+
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
+
+  useEffect(() => {
+    active.current = true;
+    const startTimer = window.setTimeout(startListening, 0);
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") closeRef.current();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      active.current = false;
+      window.clearTimeout(startTimer);
+      recognition.current?.abort();
+      window.speechSynthesis.cancel();
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [startListening]);
+
+  useEffect(() => {
+    if (isStreaming && pendingResponse.current) {
+      queueMicrotask(() => setStatus("thinking"));
+    }
+    if (isStreaming || !pendingResponse.current) return;
+
+    if (streamFailed) {
+      pendingResponse.current = false;
+      queueMicrotask(() => {
+        setStatus("error");
+        setErrorMessage(t.voiceError);
+      });
+      return;
+    }
+
+    if (
+      !latestAssistantMessage?.content
+      || latestAssistantMessage.id === handledAssistantId.current
+    ) return;
+
+    pendingResponse.current = false;
+    handledAssistantId.current = latestAssistantMessage.id;
+    if (paused.current) return;
+    const utterance = new SpeechSynthesisUtterance(speechText(latestAssistantMessage.content));
+    const language = locale === "de" ? "de-DE" : "en-US";
+    utterance.lang = language;
+    utterance.rate = speechRate;
+    utterance.voice = window.speechSynthesis.getVoices().find((voice) =>
+      voice.voiceURI === selectedVoiceUri,
+    ) ?? window.speechSynthesis.getVoices().find((voice) =>
+      voice.lang.toLowerCase().startsWith(locale),
+    ) ?? null;
+    utterance.onstart = () => {
+      setStatus("speaking");
+      setTranscript(speechText(latestAssistantMessage.content));
+    };
+    utterance.onend = () => {
+      setTranscript("");
+      startListeningRef.current();
+    };
+    utterance.onerror = () => {
+      if (!active.current || paused.current) return;
+      setStatus("error");
+      setErrorMessage(t.voiceError);
+    };
+    window.speechSynthesis.speak(utterance);
+  }, [
+    isStreaming,
+    latestAssistantMessage,
+    locale,
+    selectedVoiceUri,
+    speechRate,
+    streamFailed,
+    t.voiceError,
+  ]);
+
+  function toggleListening(): void {
+    if (paused.current) {
+      paused.current = false;
+      setTranscript("");
+      startListeningRef.current();
+      return;
+    }
+    paused.current = true;
+    recognition.current?.abort();
+    window.speechSynthesis.cancel();
+    setStatus("paused");
+  }
+
+  const statusText = status === "listening" ? t.voiceListening
+    : status === "thinking" ? t.voiceThinking
+      : status === "speaking" ? t.voiceSpeaking
+        : status === "paused" ? t.voicePaused
+          : status === "error" ? errorMessage ?? t.voiceError
+            : t.voiceStart;
+
+  return (
+    <div className={`voice-mode voice-${status}`} role="dialog" aria-modal="true" aria-label={statusText}>
+      <button className="voice-close" type="button" aria-label={t.voiceClose} onClick={onClose} autoFocus>
+        <Icons.close />
+      </button>
+      <div className="voice-mode-content">
+        <div className="voice-orb" aria-hidden="true">
+          <div className="orb-core" />
+          <div className="orb-ring" />
+          <span /><span /><span />
+        </div>
+        <p className="eyebrow">Velora Voice</p>
+        <h2>{statusText}</h2>
+        <p className="voice-transcript">{transcript || "…"}</p>
+        <p className="voice-privacy">{t.voiceMicrophoneExternal}</p>
+      </div>
+      <div className="voice-controls">
+        <button type="button" onClick={toggleListening}>
+          {status === "paused" ? <Icons.mic /> : <Icons.stop />}
+          <span>{status === "paused" ? t.voiceResume : t.voicePause}</span>
+        </button>
+        <button type="button" onClick={onClose}><Icons.close /><span>{t.voiceClose}</span></button>
+      </div>
+    </div>
+  );
+}
