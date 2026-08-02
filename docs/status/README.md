@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -48,6 +48,18 @@ Configured local model
 - White/gold light theme and cyan/royal-blue dark theme.
 - Provider-neutral typed chat contracts.
 - Streaming chat UI with cancellation and translated errors.
+- Markdown rendering, intelligent autoscroll and refined stream states.
+- One validated conversation identifier per mounted chat session.
+- Live AI-service readiness and configured-model status.
+- Dedicated local-model page with validated Ollama metadata and per-device
+  selection.
+- Initial conversational Voice Mode opened from the Velora orb, using browser
+  speech recognition and system speech synthesis as transparent prototype
+  providers.
+- Dedicated voice settings with per-language browser voice selection, previews,
+  local/online labels and a persisted speaking rate.
+- Primary Activity navigation and a Core-bound empty state that does not
+  fabricate browser-side audit events.
 - Next.js server-side `/api/chat` proxy; Ollama is never called directly by the
   browser.
 
@@ -57,6 +69,7 @@ Configured local model
 - Provider-neutral `LanguageModelProvider` protocol.
 - Ollama provider using `/api/chat` with NDJSON streaming.
 - Stable Kyrion chat events and error codes.
+- Modular Kyrion-owned Velora system prompt with local-first and safety rules.
 - Request validation, health endpoint and tests.
 - Local virtual environment at `services/ai/.venv` (ignored by Git).
 
@@ -75,9 +88,9 @@ Configured local model
 ## Verification completed
 
 - `pnpm lint`: passed.
-- `pnpm build`: passed, including the dynamic `/api/chat` route.
+- `pnpm build`: passed, including the dynamic chat and model benchmark routes.
 - Python Ruff checks: passed.
-- Python tests: 3 passed.
+- Python tests: 30 passed.
 - Ollama API health: passed.
 - `gemma3:4b` inference: passed.
 - `qwen3:8b` inference: passed.
@@ -89,24 +102,29 @@ Configured local model
 - There is no database, conversation history or summarisation pipeline yet.
 - There is no login or user model yet.
 - There is no Kotlin Core implementation yet.
-- AI responses are not yet governed by a Kyrion system prompt.
-- Model selection is configured through `OLLAMA_MODEL`; it is not yet exposed
-  in Settings.
-- Home, Automations, Knowledge and Settings are intentional placeholders.
+- The Activity page is not connected to an event source until the Core activity
+  contract and persistence boundary exist.
+- Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
+  each browser can select one locally for its chat requests.
+- Model benchmark results currently live only in page state and are discarded
+  when the model page is left or reloaded.
+- Voice Mode currently depends on browser speech APIs. Speech recognition may
+  use an external browser service and is not yet Kyrion's planned local voice
+  pipeline.
+- Home, Automations and Knowledge are intentional placeholders.
 
 ## Recommended next step
 
-Complete and refine the Ollama chat vertical slice before adding persistence:
+Define the Core/database boundary for conversation persistence:
 
-1. test real conversations through `http://localhost:3000`;
-2. improve response rendering, autoscroll and input keyboard behaviour;
-3. add AI-service readiness to the web status indicator;
-4. add a controlled model selector or keep the model deployment-configured;
-5. introduce conversation identifiers and decide the Core/database boundary;
-6. then add PostgreSQL-backed conversation history and context compaction.
+1. assign conversation ownership across Web, Core and AI;
+2. define the minimum conversation and message contracts;
+3. record the persistence decision before introducing PostgreSQL;
+4. keep voice interaction as a separate input/output layer that can reuse the
+   same conversation and capability contracts later.
 
-Do not add authentication, PostgreSQL and Kotlin Core simultaneously. Continue
-with one verified vertical slice at a time.
+Do not introduce login, PostgreSQL, containers and the mobile application in a
+single change. Continue with one verified vertical slice at a time.
 
 ## How to resume
 
