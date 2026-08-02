@@ -348,6 +348,23 @@ It should not need to know whether the physical device is:
 
 Provider-specific behaviour belongs inside the integration adapter.
 
+## Future extension architecture
+
+Once the internal integration boundary is stable, Kyrion may expose it through
+a versioned plugin framework. Plugins can add integrations or complete feature
+modules without becoming part of Kyrion Core. Kyrion Core remains the trusted
+control plane: it owns authentication, authorisation, command validation,
+confirmation policies, persistence and audit logging.
+
+The AI service may additionally load knowledge packages. These packages enrich
+Velora with curated domain knowledge and tool descriptions, but they do not
+bypass Core or execute actions directly. Personal knowledge remains separate
+from shared packages and is scoped to the authorised user or household.
+
+The detailed long-term model, including marketplace governance, product
+editions and regulated domains, is documented in
+[Marketplace and Enterprise Vision](marketplace-enterprise.md).
+
 ## Internationalisation
 
 Kyrion supports German and English from the beginning.
@@ -636,7 +653,7 @@ The following topics remain intentionally undecided:
 - exact remote-access solution;
 - whether integrations run inside Kyrion Core or as separate processes;
 - whether an event broker becomes necessary;
-- whether the platform will later support third-party plugins.
+- the exact trust and isolation model for third-party plugins.
 
 These decisions should be documented through Architecture Decision Records when
 they become relevant.

@@ -103,6 +103,28 @@ The exact order depends on personal usefulness.
 - [ ] Add notifications
 - [ ] Evaluate speech input
 
+## Strategic Phase 5 — Marketplace and Enterprise Edition
+
+This phase begins only after Core, AI, automations and the main user interfaces
+are stable. Its sequence is deliberately incremental:
+
+- [ ] Stabilise internal integration and capability contracts
+- [ ] Define versioned plugin manifests and SDK contracts
+- [ ] Convert selected official integrations into first-party plugins
+- [ ] Add plugin permissions, lifecycle management and audit events
+- [ ] Define isolation, signing, review, update and rollback policies
+- [ ] Introduce personal knowledge bases with explicit access scopes
+- [ ] Define versioned knowledge-package contracts and evaluations
+- [ ] Validate official domain packages before allowing third parties
+- [ ] Design marketplace discovery, installation and licensing
+- [ ] Define Community, Pro and Enterprise edition boundaries
+- [ ] Add enterprise deployment, identity, support and compliance capabilities
+- [ ] Open the marketplace to reviewed third-party publishers only after the
+  security and compatibility model has proven reliable
+
+See [Marketplace and Enterprise Vision](marketplace-enterprise.md) for the
+architectural boundaries, possible domains and commercial direction.
+
 ## Future Ideas
 
 - automation editor;

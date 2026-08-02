@@ -67,3 +67,17 @@ Kyrion is not intended to replace every specialised platform.
 
 It should provide a coherent layer above them and make their capabilities
 accessible through one consistent system.
+
+## Platform direction
+
+After the foundational system is stable, Kyrion may become a modular platform
+for local AI and automation solutions. A plugin framework can allow users to
+install only the device integrations and domain features they need. Separate
+knowledge packages can give Velora curated expertise without changing the core
+system or bypassing its safety controls.
+
+This direction may support Community, Pro and Enterprise offerings as well as a
+reviewed third-party marketplace. It does not change Kyrion's foundations:
+local control, optional AI, explicit permissions, human confirmation and
+auditable execution remain central. See the
+[Marketplace and Enterprise Vision](marketplace-enterprise.md).
