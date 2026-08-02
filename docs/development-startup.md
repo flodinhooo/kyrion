@@ -95,7 +95,8 @@ to `http://127.0.0.1:8000`. The AI service then calls Ollama using
 Configuration examples are stored in:
 
 - `apps/web/.env.example`;
-- `services/ai/.env.example`.
+- `services/ai/.env.example`;
+- `infrastructure/.env.example`.
 
 ## Stop the stack
 
@@ -112,13 +113,27 @@ Stopping the container does not remove the data stored on E:.
 
 ### The web page says the local model is unavailable
 
-Check all three endpoints in order:
+Check all four endpoints in order:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:11434/api/version
 Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health
 Invoke-WebRequest http://localhost:3000
 ```
+
+### Core cannot connect to PostgreSQL
+
+Confirm that PostgreSQL is healthy and that Core uses the same password as
+`infrastructure\.env`:
+
+```powershell
+docker compose -f infrastructure\compose.yml ps
+$env:KYRION_DATABASE_PASSWORD = 'the-same-local-password'
+```
+
+Flyway currently applies the activity-log schema (V1) and the prepared identity
+and session schema (V2). No login user is created automatically.
 
 ### A model is missing
 
