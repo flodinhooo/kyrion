@@ -4,7 +4,7 @@ from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from kyrion_ai.config import Settings
-from kyrion_ai.contracts import ChatRequest
+from kyrion_ai.contracts import ChatRequest, ModelCatalog
 from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
 
@@ -19,12 +19,9 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "provider": "ollama", "model": provider.model}
 
 
-@app.get("/v1/models")
-async def list_models() -> dict[str, str | list[dict[str, str]]]:
-    return {
-        "defaultModelId": provider.model,
-        "models": [{"id": model, "label": model} for model in provider.models],
-    }
+@app.get("/v1/models", response_model=ModelCatalog, response_model_by_alias=True)
+async def list_models() -> ModelCatalog:
+    return await provider.list_models()
 
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
