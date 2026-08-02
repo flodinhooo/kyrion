@@ -24,6 +24,25 @@ class ChatRequest(BaseModel):
     locale: Literal["de", "en"]
 
 
+class ModelInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    size_bytes: int = Field(serialization_alias="sizeBytes")
+    parameter_size: str = Field(serialization_alias="parameterSize")
+    quantization: str
+    capabilities: list[str]
+    context_length: int | None = Field(default=None, serialization_alias="contextLength")
+
+
+class ModelCatalog(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    default_model_id: str = Field(serialization_alias="defaultModelId")
+    models: list[ModelInfo]
+
+
 ChatErrorCode = Literal[
     "MODEL_UNAVAILABLE",
     "REQUEST_ABORTED",
