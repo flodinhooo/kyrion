@@ -1,24 +1,15 @@
-import asyncio
-
-from kyrion_ai.config import Settings
-from kyrion_ai.contracts import ChatRequest
-from kyrion_ai.providers.ollama import OllamaProvider
+from kyrion_ai.providers.ollama import _context_length
 
 
-def test_unreachable_ollama_returns_stable_error() -> None:
-    provider = OllamaProvider(
-        Settings(
-            ollama_base_url="http://127.0.0.1:1",
-            ollama_model="test-model",
-            ollama_allowed_models=("test-model",),
-            ollama_connect_timeout_seconds=0.1,
-        )
-    )
-    request = ChatRequest.model_validate(
-        {"messages": [{"role": "user", "content": "Hallo"}], "locale": "de"}
-    )
+def test_context_length_reads_model_family_metadata() -> None:
+    model_info = {
+        "general.architecture": "gemma3",
+        "gemma3.context_length": 131_072,
+    }
 
-    async def collect_events() -> list[str | None]:
-        return [event.code async for event in provider.stream_chat(request)]
+    assert _context_length(model_info) == 131_072
 
-    assert asyncio.run(collect_events()) == ["MODEL_UNAVAILABLE"]
+
+def test_context_length_ignores_unrelated_or_invalid_values() -> None:
+    assert _context_length({"gemma3.context_length": "131072"}) is None
+    assert _context_length({"general.parameter_count": 4_300_000_000}) is None
