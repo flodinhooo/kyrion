@@ -14,6 +14,8 @@ import { MarkdownMessage } from "@/components/markdown-message";
 import { VoiceMode } from "@/components/voice-mode";
 import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
 import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
+import type { Conversation } from "@/features/conversations/contracts";
+import { csrfHeader } from "@/features/auth/csrf";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
@@ -35,11 +37,11 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
   return null;
 }
 
-export function ChatView() {
+export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
   const { locale, selectedModelId, selectedVoiceUri, speechRate, t } = useWorkspace();
-  const [conversationId] = useState(() => crypto.randomUUID());
+  const [conversationId] = useState(() => initialConversation?.id ?? crypto.randomUUID());
   const [input, setInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialConversation?.messages ?? []);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
   const [wasStopped, setWasStopped] = useState(false);
@@ -91,13 +93,16 @@ export function ChatView() {
     setStreamError(null);
     setWasStopped(false);
     setIsStreaming(true);
+    let assistantMessage: ChatMessage | null = null;
 
     try {
       for await (const chatEvent of chatTransport.stream(request, { signal: controller.signal })) {
         if (chatEvent.type === "message.started") {
+          assistantMessage = createMessage("assistant", "", chatEvent.messageId);
           setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
         }
         if (chatEvent.type === "message.delta") {
+          if (assistantMessage?.id === chatEvent.messageId) assistantMessage = { ...assistantMessage, content: assistantMessage.content + chatEvent.delta };
           setChatMessages((current) => current.map((message) =>
             message.id === chatEvent.messageId
               ? { ...message, content: message.content + chatEvent.delta }
@@ -116,6 +121,13 @@ export function ChatView() {
     } finally {
       activeRequest.current = null;
       setIsStreaming(false);
+      if (assistantMessage?.content) {
+        const persistedMessages = [...chatMessages, userMessage, assistantMessage];
+        void fetch(`/api/conversations/${conversationId}`, {
+          method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
+          body: JSON.stringify({ title: persistedMessages[0]?.content.slice(0, 80) ?? "Conversation", messages: persistedMessages }),
+        }).then((response) => { if (response.ok) window.dispatchEvent(new Event("kyrion:conversations-updated")); });
+      }
     }
   }
 
