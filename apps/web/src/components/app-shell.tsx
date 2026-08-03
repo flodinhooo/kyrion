@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icons } from "@/components/icons";
 import {
   Sheet,
@@ -55,6 +55,7 @@ export function useWorkspace() {
 
 export function AppShell({ children, username }: { children: ReactNode; username: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [locale, setLocale] = useState<Locale>("de");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [aiStatus, setAiStatus] = useState<AiStatus>({ status: "checking" });
@@ -64,7 +65,12 @@ export function AppShell({ children, username }: { children: ReactNode; username
   const [selectedVoiceUri, setSelectedVoiceUri] = useState<string | null>(null);
   const [speechRate, setSpeechRateState] = useState(0.95);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
   const t = messages[locale];
+  const activeConversationId = pathname.match(/^\/conversations\/([^/]+)$/)?.[1] ?? null;
 
   useEffect(() => {
     let disposed = false;
@@ -72,8 +78,9 @@ export function AppShell({ children, username }: { children: ReactNode; username
       try {
         const response = await fetch("/api/conversations", { cache: "no-store" });
         const value: unknown = await response.json();
-        if (response.ok && isConversationList(value) && !disposed) setConversations(value.items);
-      } catch { /* Core availability is represented by an empty history. */ }
+        if (!response.ok || !isConversationList(value)) throw new Error("Invalid conversation history");
+        if (!disposed) { setConversations(value.items); setHistoryStatus("ready"); }
+      } catch { if (!disposed) setHistoryStatus("error"); }
     }
     void loadConversations();
     window.addEventListener("kyrion:conversations-updated", loadConversations);
@@ -221,6 +228,33 @@ export function AppShell({ children, username }: { children: ReactNode; username
     window.location.assign("/login");
   }
 
+  function beginRename(conversation: ConversationSummary) {
+    setDeleteConfirmationId(null);
+    setEditingConversationId(conversation.id);
+    setEditingTitle(conversation.title);
+  }
+
+  async function renameConversation(event: React.FormEvent<HTMLFormElement>, id: string) {
+    event.preventDefault();
+    const title = editingTitle.trim();
+    if (!title) return;
+    const response = await fetch(`/api/conversations/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json", ...csrfHeader() }, body: JSON.stringify({ title }),
+    });
+    if (!response.ok) { setHistoryStatus("error"); return; }
+    setConversations((current) => current.map((item) => item.id === id ? { ...item, title } : item));
+    setEditingConversationId(null);
+    window.dispatchEvent(new CustomEvent("kyrion:conversation-renamed", { detail: { id, title } }));
+  }
+
+  async function deleteConversation(id: string) {
+    const response = await fetch(`/api/conversations/${id}`, { method: "DELETE", headers: csrfHeader() });
+    if (!response.ok) { setHistoryStatus("error"); return; }
+    setConversations((current) => current.filter((item) => item.id !== id));
+    setDeleteConfirmationId(null);
+    if (activeConversationId === id) router.replace("/");
+  }
+
   function sidebarContent() {
     return (
       <>
@@ -246,11 +280,33 @@ export function AppShell({ children, username }: { children: ReactNode; username
 
         <div className="recent-section">
           <p className="section-label">{t.recent}</p>
-          {conversations.map((conversation) => (
-            <Link className="history-item" href={`/conversations/${conversation.id}`} key={conversation.id}>
-              <span>{conversation.title}</span>
-              <small>{new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(new Date(conversation.updatedAt))}</small>
-            </Link>
+          {historyStatus === "loading" && <p className="history-state">{t.historyLoading}</p>}
+          {historyStatus === "error" && <p className="history-state error">{t.historyUnavailable}</p>}
+          {historyStatus === "ready" && conversations.length === 0 && <p className="history-state">{t.historyEmpty}</p>}
+          {conversations.map((conversation) => editingConversationId === conversation.id ? (
+            <form className="history-edit" onSubmit={(event) => void renameConversation(event, conversation.id)} key={conversation.id}>
+              <input value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} maxLength={160} aria-label={t.renameConversation} autoFocus />
+              <button type="submit" aria-label={t.saveConversationTitle}><Icons.check /></button>
+              <button type="button" aria-label={t.cancel} onClick={() => setEditingConversationId(null)}><Icons.close /></button>
+            </form>
+          ) : (
+            <div className={`history-row ${activeConversationId === conversation.id ? "active" : ""}`} key={conversation.id}>
+              <Link className="history-item" href={`/conversations/${conversation.id}`}>
+                <span>{conversation.title}</span>
+                <small>{new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(new Date(conversation.updatedAt))}</small>
+              </Link>
+              {deleteConfirmationId === conversation.id ? (
+                <div className="history-confirm" role="group" aria-label={t.confirmDeleteConversation}>
+                  <button type="button" className="danger" onClick={() => void deleteConversation(conversation.id)}>{t.delete}</button>
+                  <button type="button" onClick={() => setDeleteConfirmationId(null)}>{t.cancel}</button>
+                </div>
+              ) : (
+                <div className="history-actions">
+                  <button type="button" aria-label={t.renameConversation} onClick={() => beginRename(conversation)}><Icons.edit /></button>
+                  <button type="button" aria-label={t.deleteConversation} onClick={() => { setEditingConversationId(null); setDeleteConfirmationId(conversation.id); }}><Icons.trash /></button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
