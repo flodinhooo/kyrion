@@ -1,5 +1,6 @@
 import { isModelBenchmarkResult } from "@/features/models/contracts";
 import type { Locale } from "@/lib/messages";
+import { csrfIsValid, requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 
@@ -15,6 +16,9 @@ function isBenchmarkRequest(value: unknown): value is BenchmarkRequest {
 }
 
 export async function POST(incomingRequest: Request) {
+  const auth = await requireApiSession();
+  if (auth instanceof Response) return auth;
+  if (!(await csrfIsValid(incomingRequest))) return Response.json({ code: "CSRF_INVALID" }, { status: 403 });
   let body: unknown;
   try {
     body = await incomingRequest.json();
