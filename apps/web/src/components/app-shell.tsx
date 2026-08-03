@@ -19,8 +19,11 @@ import {
   type BrowserVoiceOption,
 } from "@/features/voice/browser-speech";
 import { Locale, messages } from "@/lib/messages";
+import { csrfHeader } from "@/features/auth/csrf";
+import { isConversationList, type ConversationSummary } from "@/features/conversations/contracts";
 
 type WorkspaceContextValue = {
+  username: string;
   locale: Locale;
   modelCatalog: ModelCatalog | null;
   selectedModelId: string | null;
@@ -50,7 +53,7 @@ export function useWorkspace() {
   return context;
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, username }: { children: ReactNode; username: string }) {
   const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>("de");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -60,7 +63,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [speechVoices, setSpeechVoices] = useState<BrowserVoiceOption[]>([]);
   const [selectedVoiceUri, setSelectedVoiceUri] = useState<string | null>(null);
   const [speechRate, setSpeechRateState] = useState(0.95);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const t = messages[locale];
+
+  useEffect(() => {
+    let disposed = false;
+    async function loadConversations() {
+      try {
+        const response = await fetch("/api/conversations", { cache: "no-store" });
+        const value: unknown = await response.json();
+        if (response.ok && isConversationList(value) && !disposed) setConversations(value.items);
+      } catch { /* Core availability is represented by an empty history. */ }
+    }
+    void loadConversations();
+    window.addEventListener("kyrion:conversations-updated", loadConversations);
+    return () => { disposed = true; window.removeEventListener("kyrion:conversations-updated", loadConversations); };
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("kyrion-theme");
@@ -198,6 +216,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     localStorage.setItem("kyrion-speech-rate", String(rate));
   }
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST", headers: csrfHeader() });
+    window.location.assign("/login");
+  }
+
   function sidebarContent() {
     return (
       <>
@@ -223,8 +246,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="recent-section">
           <p className="section-label">{t.recent}</p>
-          <Link className="history-item" href="/"><span>{t.conversationOne}</span><small>{t.today}</small></Link>
-          <Link className="history-item" href="/"><span>{t.conversationTwo}</span><small>{t.yesterday}</small></Link>
+          {conversations.map((conversation) => (
+            <Link className="history-item" href={`/conversations/${conversation.id}`} key={conversation.id}>
+              <span>{conversation.title}</span>
+              <small>{new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(new Date(conversation.updatedAt))}</small>
+            </Link>
+          ))}
         </div>
 
         <div className="sidebar-footer">
@@ -233,6 +260,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className={`status-dot status-${aiStatus.status}`} />
             <span>{aiStatusText}</span>
           </div>
+          <button className="logout-button" type="button" onClick={logout} title={username}>{t.logout}</button>
         </div>
       </>
     );
@@ -240,6 +268,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <WorkspaceContext.Provider value={{
+      username,
       locale,
       modelCatalog,
       selectedModelId,
@@ -276,6 +305,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <small>{t.localPreview}</small>
             </div>
             <div className="topbar-actions">
+              <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile" aria-label={t.profile} title={username}>
+                <span>{username.slice(0, 1).toUpperCase()}</span>
+                <Icons.user />
+              </Link>
               <button className="language-button" type="button" aria-label={t.language} onClick={toggleLocale}>{locale.toUpperCase()}</button>
               <button className="icon-button" type="button" aria-label={t.theme} onClick={toggleTheme}><Icons.sun /></button>
             </div>
