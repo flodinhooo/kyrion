@@ -33,11 +33,14 @@ type WorkspaceContextValue = {
   speechRate: number;
   setSpeechRate: (rate: number) => void;
   speechVoices: BrowserVoiceOption[];
+  textSize: TextSize;
+  setTextSize: (size: TextSize) => void;
   t: (typeof messages)[Locale];
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 type AiStatus = AiServiceStatus | { status: "checking" };
+export type TextSize = "standard" | "comfortable" | "large";
 
 const navigation = [
   ["chat", Icons.chat, "/"],
@@ -64,6 +67,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
   const [speechVoices, setSpeechVoices] = useState<BrowserVoiceOption[]>([]);
   const [selectedVoiceUri, setSelectedVoiceUri] = useState<string | null>(null);
   const [speechRate, setSpeechRateState] = useState(0.95);
+  const [textSize, setTextSizeState] = useState<TextSize>("comfortable");
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [historyStatus, setHistoryStatus] = useState<"loading" | "ready" | "error">("loading");
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
@@ -90,6 +94,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
   useEffect(() => {
     const savedTheme = localStorage.getItem("kyrion-theme");
     const savedLocale = localStorage.getItem("kyrion-locale");
+    const savedTextSize = localStorage.getItem("kyrion-text-size");
     const preferredDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const nextTheme = savedTheme === "light" || savedTheme === "dark"
       ? savedTheme
@@ -100,9 +105,14 @@ export function AppShell({ children, username }: { children: ReactNode; username
 
     document.documentElement.dataset.theme = nextTheme;
     document.documentElement.lang = nextLocale;
+    const nextTextSize: TextSize = savedTextSize === "standard" || savedTextSize === "large" || savedTextSize === "comfortable"
+      ? savedTextSize
+      : "comfortable";
+    document.documentElement.dataset.textSize = nextTextSize;
     queueMicrotask(() => {
       setTheme(nextTheme);
       setLocale(nextLocale);
+      setTextSizeState(nextTextSize);
     });
   }, []);
 
@@ -223,6 +233,12 @@ export function AppShell({ children, username }: { children: ReactNode; username
     localStorage.setItem("kyrion-speech-rate", String(rate));
   }
 
+  function setTextSize(size: TextSize) {
+    setTextSizeState(size);
+    document.documentElement.dataset.textSize = size;
+    localStorage.setItem("kyrion-text-size", size);
+  }
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST", headers: csrfHeader() });
     window.location.assign("/login");
@@ -334,6 +350,8 @@ export function AppShell({ children, username }: { children: ReactNode; username
       setSpeechRate,
       speechRate,
       speechVoices,
+      textSize,
+      setTextSize,
       t,
     }}>
       <div className="app-shell">
