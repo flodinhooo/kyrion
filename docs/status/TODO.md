@@ -13,12 +13,14 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Generate opaque 256-bit session tokens and persist only SHA-256 hashes.
 - [x] Implement and test session creation, expiry, last-seen updates and
   revocation in Core.
-- [ ] Add a one-time local-owner setup endpoint and setup screen.
-- [ ] Add Core login, current-user and logout endpoints.
-- [ ] Set the session through a same-origin `HttpOnly` and `SameSite` cookie;
+- [x] Add a one-time local-owner setup endpoint and setup screen.
+- [x] Add Core login, current-user and logout endpoints.
+- [x] Set the session through a same-origin `HttpOnly` and `SameSite` cookie;
   use `Secure` whenever Kyrion is served over HTTPS.
-- [ ] Add CSRF protection to authenticated state-changing requests.
-- [ ] Protect private Core and Next.js routes and verify owner isolation.
+- [x] Add CSRF protection to authenticated state-changing requests.
+- [x] Protect private Core and Next.js routes through authoritative session checks.
+- [ ] Add automated integration coverage that proves owner isolation with two users
+  before multi-user setup is introduced.
 - [ ] Record authentication success, failure and logout as data-minimised
   security activity events without logging credentials or raw tokens.
 - [ ] Add integration tests for cookie flags, invalid credentials, expiry,
@@ -83,6 +85,6 @@ session. The current implementation status is documented in [README.md](README.m
   are stable.
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
   the activity log before treating it as a compliance audit trail.
-- [ ] Add PostgreSQL-backed conversation history and context compaction.
-- [ ] Add owner-scoped conversation and message persistence after the
+- [ ] Add context compaction, conversation deletion and retention controls.
+- [x] Add owner-scoped PostgreSQL conversation and message persistence after the
   authentication slice is complete.

@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -61,6 +61,12 @@ PostgreSQL on E:\Kyrion\Data\postgres
   tokens are returned once for the future protected cookie.
 - Tested session lifecycle domain logic for creation, seven-day expiry,
   last-seen updates, authentication and revocation.
+- One-time local-owner setup, login, current-user and logout HTTP contracts.
+- Same-origin `HttpOnly`, `SameSite=Strict` session cookie and double-submit
+  CSRF protection at the Next.js boundary.
+- Authoritative protection for workspace pages, private Next.js APIs and Core
+  activity/conversation resources.
+- Owner-scoped PostgreSQL conversations and ordered messages through Flyway V3.
 - AI actions remain proposals; future device actions must pass through Core.
 
 ### Web application
@@ -132,7 +138,7 @@ PostgreSQL on E:\Kyrion\Data\postgres
 - Python Ruff checks: passed.
 - Python tests: 31 passed.
 - Kotlin Core tests and boot JAR build: passed.
-- Flyway migrations V1 and V2, Core health and persisted startup events: passed
+- Flyway migrations V1 through V3, Core health and persisted startup events: passed
   against PostgreSQL.
 - Password hashing, session-token hashing and session lifecycle tests: passed.
 - Web `/api/activity` end-to-end response: passed.
@@ -145,16 +151,14 @@ PostgreSQL on E:\Kyrion\Data\postgres
 
 ## Current limitations
 
-- Conversations exist only in React state and disappear when the chat page is
-  unmounted or the browser is refreshed.
-- There is no conversation history or summarisation pipeline yet; the current
-  database stores Core activity events plus empty identity/session structures
-  prepared for the next authentication slice.
-- The identity and session security foundation exists, but there are no setup,
-  login, current-user or logout HTTP endpoints and no user has been created.
-- There is no protected session cookie or authenticated Web UI yet.
-- Core currently implements only the first activity vertical slice; it has no
-  authentication, command execution or integration capabilities yet.
+- A conversation remains transient until a response produces visible assistant
+  content; completed and partially stopped visible transcripts are then
+  persisted per owner.
+- There is no context compaction, deletion or retention pipeline yet.
+- No owner has been created on the current development installation yet; the
+  one-time setup screen is ready at `/login`.
+- Core currently implements activity, local authentication and conversation
+  persistence; command execution and integration capabilities remain planned.
 - Activity actor ownership, retention and tamper-evidence are not implemented.
 - Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
   each browser can select one locally for its chat requests.
@@ -170,16 +174,14 @@ PostgreSQL on E:\Kyrion\Data\postgres
 
 ## Recommended next step
 
-Complete the smallest authentication vertical slice before storing personal
-conversations:
+Complete the live owner flow and harden the implemented slices:
 
-1. add a one-time local-owner setup flow without public registration;
-2. add Core `login`, `me` and `logout` endpoints;
-3. issue an opaque `HttpOnly`, `SameSite` session cookie through the same-origin
-   Next.js boundary and add CSRF protection for state-changing requests;
-4. add integration tests proving expiry, revocation, cookie flags and endpoint
+1. create the real local owner through `/login` and verify login/logout;
+2. send a chat turn, reload it from the sidebar and verify persistence;
+3. add integration tests proving cookie flags, expiry, revocation and endpoint
    ownership;
-5. then define owner-scoped conversation and message contracts.
+4. add login throttling before any remote exposure;
+5. add conversation deletion, retention and context compaction.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.
