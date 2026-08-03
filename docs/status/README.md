@@ -141,6 +141,10 @@ PostgreSQL on E:\Kyrion\Data\postgres
 - Flyway migrations V1 through V3, Core health and persisted startup events: passed
   against PostgreSQL.
 - Password hashing, session-token hashing and session lifecycle tests: passed.
+- Isolated PostgreSQL 17 integration tests for one-time setup, HTTP auth
+  contracts, password rotation and conversation owner isolation: passed.
+- Web authentication policy tests for `HttpOnly`, `SameSite`, `Secure` and CSRF
+  token matching: passed.
 - Web `/api/activity` end-to-end response: passed.
 - Warm `qwen3:8b` smoke test produced its first visible token in about 0.52
   seconds and completed a short response in about 0.63 seconds on the current
