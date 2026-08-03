@@ -8,6 +8,7 @@ import {
   isModelBenchmarkResult,
   type ModelBenchmarkResult,
 } from "@/features/models/contracts";
+import { csrfHeader } from "@/features/auth/csrf";
 
 function formatBytes(bytes: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
@@ -48,7 +49,7 @@ export function ModelSettingsView() {
       try {
         const response = await fetch("/api/models/benchmark", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...csrfHeader() },
           body: JSON.stringify({ modelId: model.id, locale }),
           signal: controller.signal,
         });
