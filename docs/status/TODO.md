@@ -23,8 +23,9 @@ session. The current implementation status is documented in [README.md](README.m
   before multi-user setup is introduced.
 - [ ] Record authentication success, failure and logout as data-minimised
   security activity events without logging credentials or raw tokens.
-- [ ] Add integration tests for cookie flags, invalid credentials, expiry,
-  revocation and session rotation.
+- [x] Add automated tests for cookie flags, CSRF validation, invalid
+  credentials, expiry, revocation, session rotation and PostgreSQL owner
+  isolation.
 - [x] Add authenticated password change with current-password verification,
   revocation of all existing sessions and a fresh session cookie.
 
