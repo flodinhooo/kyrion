@@ -18,6 +18,9 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.junit.jupiter.Container
@@ -133,6 +136,38 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(status().isNoContent)
         mockMvc.perform(get("/v1/auth/me").header("Authorization", "Bearer $token"))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `HTTP conversation lifecycle supports save rename and confirmed deletion semantics`() {
+        val token = setupToken()
+        val conversationId = UUID.randomUUID()
+        val messageId = UUID.randomUUID()
+        val createdAt = "2026-08-03T20:00:00Z"
+
+        mockMvc.perform(
+            put("/v1/conversations/$conversationId").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"title":"Initial title","messages":[{"id":"$messageId","role":"user","content":"Hello","createdAt":"$createdAt"}]}"""),
+        ).andExpect(status().isOk).andExpect(jsonPath("$.title").value("Initial title"))
+
+        mockMvc.perform(
+            patch("/v1/conversations/$conversationId").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"title":"Renamed title"}"""),
+        ).andExpect(status().isOk).andExpect(jsonPath("$.title").value("Renamed title"))
+
+        mockMvc.perform(delete("/v1/conversations/$conversationId").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNoContent)
+        mockMvc.perform(get("/v1/conversations/$conversationId").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("CONVERSATION_NOT_FOUND"))
+    }
+
+    private fun setupToken(): String {
+        val result = mockMvc.perform(
+            post("/v1/auth/setup").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"username":"flo","password":"$OLD_PASSWORD"}"""),
+        ).andExpect(status().isCreated).andReturn()
+        return Regex("\"sessionToken\":\"([^\"]+)\"").find(result.response.contentAsString)!!.groupValues[1]
     }
 
     private fun insertAdditionalOwner(username: String): UUID {
