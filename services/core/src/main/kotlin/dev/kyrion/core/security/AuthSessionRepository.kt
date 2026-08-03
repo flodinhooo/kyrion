@@ -10,4 +10,5 @@ interface AuthSessionRepository {
     fun updateLastSeen(tokenHash: String, lastSeenAt: Instant)
 
     fun revoke(tokenHash: String, revokedAt: Instant): Boolean
+    fun revokeAllForUser(userId: java.util.UUID, revokedAt: Instant): Int
 }
