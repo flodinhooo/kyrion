@@ -67,6 +67,10 @@ class JdbcAuthSessionRepository(
         .param("tokenHash", tokenHash)
         .update() == 1
 
+    override fun revokeAllForUser(userId: java.util.UUID, revokedAt: Instant): Int = jdbcClient.sql(
+        "UPDATE auth_session SET revoked_at = :revokedAt WHERE user_id = :userId AND revoked_at IS NULL",
+    ).param("revokedAt", Timestamp.from(revokedAt)).param("userId", userId).update()
+
     @Suppress("UNUSED_PARAMETER")
     private fun mapSession(resultSet: ResultSet, rowNumber: Int): AuthSession = AuthSession(
         id = resultSet.getObject("id", java.util.UUID::class.java),
