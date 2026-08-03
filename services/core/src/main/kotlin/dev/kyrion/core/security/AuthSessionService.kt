@@ -45,6 +45,8 @@ class AuthSessionService(
         revokedAt = clock.instant(),
     )
 
+    fun revokeAllForUser(userId: UUID): Int = repository.revokeAllForUser(userId, clock.instant())
+
     private companion object {
         val DEFAULT_LIFETIME: Duration = Duration.ofDays(7)
     }
