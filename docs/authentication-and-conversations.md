@@ -38,6 +38,8 @@ Authenticated Core endpoints:
 - `GET /v1/conversations`
 - `GET /v1/conversations/{id}`
 - `PUT /v1/conversations/{id}`
+- `PATCH /v1/conversations/{id}`
+- `DELETE /v1/conversations/{id}`
 
 The browser uses same-origin Next.js routes under `/api/auth` and
 `/api/conversations`; it does not receive the Core session token in JSON.
@@ -61,7 +63,10 @@ is retained when a stopped stream already produced visible text.
 - There is no password recovery or session-management screen.
 - Password change is implemented and rotates the current credential by
   revoking every existing owner session before returning a fresh session.
-- Conversation titles use the first user message and are not editable yet.
+- Conversation titles are derived from the first user sentence, shortened to a
+  readable length and capitalised. Owners can rename or delete conversations;
+  both operations enforce owner isolation and deletion requires confirmation in
+  the Web UI.
 - Transcript replacement is intentionally simple for the current single-client
   slice; concurrent editing and optimistic versioning are not implemented.
 - Context compaction, deletion and retention policies remain follow-up work.
@@ -72,7 +77,7 @@ Core integration tests run against a disposable PostgreSQL 17 Testcontainer;
 they never use the development database or owner account. They cover one-time
 setup closure, successful and rejected login, protected HTTP resources,
 logout/revocation, password rotation across multiple sessions, password hash
-persistence and owner-isolated conversation reads and updates.
+persistence and owner-isolated conversation reads, updates, renames and deletes.
 
 The Web test suite covers strict CSRF token comparison and the security policy
 for session and CSRF cookies. Run the suites with `gradlew.bat test` in
