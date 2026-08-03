@@ -5,7 +5,7 @@ import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 
 export default function SettingsPage() {
-  const { selectedModelId, selectedVoiceUri, speechVoices, t } = useWorkspace();
+  const { selectedModelId, selectedVoiceUri, speechVoices, textSize, setTextSize, t } = useWorkspace();
   const selectedVoice = speechVoices.find((voice) => voice.voiceURI === selectedVoiceUri);
 
   return (
@@ -17,6 +17,21 @@ export default function SettingsPage() {
         <p className="placeholder-copy">{t.settingsDescription}</p>
 
         <div className="settings-grid">
+          <div className="typography-setting">
+            <div className="typography-setting-heading">
+              <span className="typography-icon" aria-hidden="true">Aa</span>
+              <span><strong>{t.textSize}</strong><small>{t.textSizeDescription}</small></span>
+            </div>
+            <div className="text-size-options" role="group" aria-label={t.textSize}>
+              {(["standard", "comfortable", "large"] as const).map((size) => (
+                <button className={textSize === size ? "selected" : ""} type="button" onClick={() => setTextSize(size)} key={size}>
+                  <span className={`text-size-preview ${size}`}>Aa</span>
+                  <small>{t[size === "standard" ? "textSizeStandard" : size === "comfortable" ? "textSizeComfortable" : "textSizeLarge"]}</small>
+                </button>
+              ))}
+            </div>
+            <p>{t.textSizeStoredLocally}</p>
+          </div>
           <Link className="settings-link-card" href="/settings/models">
             <Icons.spark />
             <span><strong>{t.modelsTitle}</strong><small>{selectedModelId ?? t.modelsUnavailable}</small></span>
