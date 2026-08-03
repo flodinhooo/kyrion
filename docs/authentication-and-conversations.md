@@ -65,3 +65,15 @@ is retained when a stopped stream already produced visible text.
 - Transcript replacement is intentionally simple for the current single-client
   slice; concurrent editing and optimistic versioning are not implemented.
 - Context compaction, deletion and retention policies remain follow-up work.
+
+## Automated verification
+
+Core integration tests run against a disposable PostgreSQL 17 Testcontainer;
+they never use the development database or owner account. They cover one-time
+setup closure, successful and rejected login, protected HTTP resources,
+logout/revocation, password rotation across multiple sessions, password hash
+persistence and owner-isolated conversation reads and updates.
+
+The Web test suite covers strict CSRF token comparison and the security policy
+for session and CSRF cookies. Run the suites with `gradlew.bat test` in
+`services/core` and `pnpm test` in `apps/web`.
