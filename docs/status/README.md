@@ -41,6 +41,24 @@ Kyrion Core GET /v1/activity
 PostgreSQL on E:\Kyrion\Data\postgres
 ```
 
+Protected owner-scoped conversations are implemented as well:
+
+```text
+Authenticated browser
+    |
+    v
+Next.js same-origin session and CSRF boundary
+    |
+    v
+Kyrion Core owner validation
+    |
+    v
+PostgreSQL conversations and ordered messages
+```
+
+The detailed handoff for the latest approximately two-hour development session
+is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-session.md).
+
 ## Completed
 
 ### Project and architecture
@@ -166,8 +184,8 @@ PostgreSQL on E:\Kyrion\Data\postgres
   content; completed and partially stopped visible transcripts are then
   persisted per owner.
 - There is no context compaction or automatic retention pipeline yet.
-- No owner has been created on the current development installation yet; the
-  one-time setup screen is ready at `/login`.
+- The current development installation has one configured local owner; public
+  registration remains unavailable by design.
 - Core currently implements activity, local authentication and conversation
   persistence; command execution and integration capabilities remain planned.
 - Activity actor ownership, retention and tamper-evidence are not implemented.
@@ -185,14 +203,15 @@ PostgreSQL on E:\Kyrion\Data\postgres
 
 ## Recommended next step
 
-Complete the live owner flow and harden the implemented slices:
+Make persisted conversations the authoritative source for model context:
 
-1. create the real local owner through `/login` and verify login/logout;
-2. send a chat turn, reload it from the sidebar and verify persistence;
-3. add integration tests proving cookie flags, expiry, revocation and endpoint
-   ownership;
-4. add login throttling before any remote exposure;
-5. add conversation retention and context compaction.
+1. define the Core/AI contract for loading owner-scoped conversation context;
+2. stop trusting a browser-supplied full transcript as the long-term source of
+   conversation truth;
+3. introduce a transparent token budget and context-compaction strategy;
+4. then implement the explicitly confirmed personal-memory slice documented in
+   `docs/personal-memory.md`;
+5. add login throttling before any remote exposure.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.
@@ -203,10 +222,11 @@ In a new agent chat, use this prompt:
 
 > Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
 > `docs/status/README.md`, `docs/status/TODO.md` and both ADRs. Inspect the
-> current implementation and uncommitted changes. Continue with the one-time
-> local-owner setup and authenticated session vertical slice. Preserve Core as
-> the authentication authority and do not store credentials or tokens in
-> browser local storage.
+> current implementation and uncommitted changes. Read the latest dated session
+> handoff. Continue with server-owned conversation context and transparent
+> context compaction, then the explicitly confirmed personal-memory slice.
+> Preserve Core as the authority and never store credentials or session tokens
+> in browser local storage.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 
