@@ -23,6 +23,7 @@ data class SaveConversationRequest(
     @field:Size(min = 1, max = 200) @field:Valid val messages: List<ConversationMessageRequest>,
 )
 data class ConversationListResponse(val items: List<ConversationSummary>)
+data class RenameConversationRequest(@field:NotBlank @field:Size(max = 160) val title: String)
 
 @RestController
 @RequestMapping("/v1/conversations")
@@ -42,6 +43,18 @@ class ConversationController(
             id, body.title.trim(), existing?.createdAt ?: now, now,
             body.messages.map { ConversationMessage(it.id, it.role, it.content, it.createdAt) },
         ))
+    }
+
+    @PatchMapping("/{id}") fun rename(
+        @PathVariable id: UUID,
+        @Valid @RequestBody body: RenameConversationRequest,
+        request: HttpServletRequest,
+    ): ConversationSummary = repository.rename(request.ownerId(), id, body.title.trim(), clock.instant())
+        ?: throw ConversationNotFoundException()
+
+    @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(@PathVariable id: UUID, request: HttpServletRequest) {
+        if (!repository.delete(request.ownerId(), id)) throw ConversationNotFoundException()
     }
 
     private fun HttpServletRequest.ownerId(): UUID =
