@@ -1,16 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { CORE_SERVICE_URL, CSRF_COOKIE, secureCookie, SESSION_COOKIE } from "@/lib/server-auth";
+import { csrfCookieOptions, sessionCookieOptions } from "@/lib/auth-security";
 
 export async function setAuthCookies(sessionToken: string, expiresAt: string) {
   const store = await cookies();
   const secure = secureCookie();
-  store.set(SESSION_COOKIE, sessionToken, {
-    httpOnly: true, sameSite: "strict", secure, path: "/", expires: new Date(expiresAt),
-  });
-  store.set(CSRF_COOKIE, randomBytes(32).toString("base64url"), {
-    httpOnly: false, sameSite: "strict", secure, path: "/", expires: new Date(expiresAt),
-  });
+  const expires = new Date(expiresAt);
+  store.set(SESSION_COOKIE, sessionToken, sessionCookieOptions(expires, secure));
+  store.set(CSRF_COOKIE, randomBytes(32).toString("base64url"), csrfCookieOptions(expires, secure));
 }
 
 export async function clearAuthCookies() {

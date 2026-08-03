@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { timingSafeEqual } from "node:crypto";
+import { csrfTokensMatch } from "@/lib/auth-security";
 
 export const SESSION_COOKIE = "kyrion_session";
 export const CSRF_COOKIE = "kyrion_csrf";
@@ -55,10 +55,7 @@ export async function requireApiSession(): Promise<{ token: string; user: AuthUs
 export async function csrfIsValid(request: Request): Promise<boolean> {
   const cookieToken = (await cookies()).get(CSRF_COOKIE)?.value;
   const headerToken = request.headers.get("x-kyrion-csrf");
-  if (!cookieToken || !headerToken) return false;
-  const left = Buffer.from(cookieToken);
-  const right = Buffer.from(headerToken);
-  return left.length === right.length && timingSafeEqual(left, right);
+  return csrfTokensMatch(cookieToken, headerToken);
 }
 
 export function secureCookie() {
