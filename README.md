@@ -241,10 +241,12 @@ foundation is prepared without exposing an unfinished login flow.
 
 Current priorities:
 
-1. complete the one-time local-owner and authenticated session slice;
-2. persist owner-scoped conversations and messages;
-3. introduce controlled Core capability contracts;
-4. connect the first local device integration;
+1. make persisted owner-scoped conversations the authoritative source for AI
+   context;
+2. add transparent context budgeting and compaction for long conversations;
+3. implement explicitly confirmed, inspectable personal memory;
+4. introduce controlled Core capability contracts and the first local device
+   integration;
 5. replace prototype browser speech providers where a suitable local voice
    stack is available.
 
