@@ -1,11 +1,11 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
 
-## Next session: Complete local authentication
+## Completed: Local authentication and ownership
 
 - [x] Add an identity and session database schema without creating a default
   user or exposing public registration.
@@ -19,9 +19,9 @@ session. The current implementation status is documented in [README.md](README.m
   use `Secure` whenever Kyrion is served over HTTPS.
 - [x] Add CSRF protection to authenticated state-changing requests.
 - [x] Protect private Core and Next.js routes through authoritative session checks.
-- [ ] Add automated integration coverage that proves owner isolation with two users
-  before multi-user setup is introduced.
-- [ ] Record authentication success, failure and logout as data-minimised
+- [x] Add automated integration coverage that proves owner isolation with two
+  users before multi-user setup is introduced.
+- [x] Record authentication success, failure and logout as data-minimised
   security activity events without logging credentials or raw tokens.
 - [x] Add automated tests for cookie flags, CSRF validation, invalid
   credentials, expiry, revocation, session rotation and PostgreSQL owner
@@ -45,7 +45,10 @@ session. The current implementation status is documented in [README.md](README.m
   model's identity.
 - [x] Define sensible defaults for response language, tone and length.
 - [x] Refine the loading, stop-generation and error states.
-- [ ] Verify all changes in German and English as well as light and dark mode.
+- [x] Manually exercise the primary chat, history and authentication flows in
+  both light and dark mode.
+- [ ] Complete a systematic German and English visual pass for every settings
+  and error state.
 
 ## Verification
 
@@ -53,10 +56,11 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Run `pnpm build`.
 - [x] Start the full local stack using
   [Local Development Startup](../development-startup.md).
-- [ ] Send short, long, list-based and code-based prompts through
+- [x] Send short, long and list-based prompts through
   `http://localhost:3000`.
-- [ ] Confirm that streaming and cancellation still work after adding Markdown
-  rendering.
+- [ ] Add a dedicated code-block prompt to the next visual regression pass.
+- [x] Confirm that streaming and continued persisted conversations work after
+  adding Markdown rendering.
 
 ## After the chat refinement
 
@@ -85,15 +89,53 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Define the Core-owned activity event contract and append-only log.
 - [x] Connect `/activity` to persisted Core events without exposing sensitive
   payloads.
-- [ ] Define the Core/database boundary for conversation persistence.
+- [x] Define the Core/database boundary for conversation persistence.
 - [x] Add a local PostgreSQL development database after the first Core contracts
   are stable.
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
   the activity log before treating it as a compliance audit trail.
 - [x] Add active conversation highlighting, editable titles, confirmed
   deletion, history states and visible persistence errors.
-- [ ] Add context compaction and conversation retention controls.
-- [ ] Implement the explicitly confirmed owner-scoped personal-memory slice
-  described in `docs/personal-memory.md`.
 - [x] Add owner-scoped PostgreSQL conversation and message persistence after the
   authentication slice is complete.
+
+## Next session: Authoritative context and compaction
+
+- [ ] Document the typed contract for Core-owned conversation context supplied
+  to the AI service.
+- [ ] Load stored messages by authenticated owner and conversation ID instead of
+  treating a browser-supplied full transcript as authoritative.
+- [ ] Define a transparent context token budget per selected model.
+- [ ] Preserve the latest turns verbatim while compacting only older context.
+- [ ] Persist summaries with source ranges, versioning and regeneration rules.
+- [ ] Tell the user when older context was compacted.
+- [ ] Add tests for ordering, owner isolation, malformed model output and
+  deterministic context selection.
+
+## Then: Explicit personal memory
+
+- [ ] Record an ADR for personal-memory consent, sensitivity and ownership.
+- [ ] Add a profile-level opt-in with German and English explanations.
+- [ ] Support an explicit “remember this” request as the first extraction path.
+- [ ] Require confirmation before retaining sensitive memories such as religion,
+  health, relationships or political beliefs.
+- [ ] Add a profile view to inspect, correct and forget individual memories.
+- [ ] Retrieve only a small relevant set and make memory influence visible.
+- [ ] Keep memory records separate from conversation history and executable
+  plugin authority.
+
+## Security and operations follow-up
+
+- [ ] Add login throttling and temporary backoff before remote exposure.
+- [ ] Add active-session listing and selective session revocation to the profile.
+- [ ] Define conversation and activity retention policies.
+- [ ] Add activity actor scoping and tamper evidence before making compliance
+  claims.
+- [ ] Add backup and restore verification for PostgreSQL data.
+
+## Later product slices
+
+- [ ] Return to the first controlled integration and capability contract after
+  context and personal-memory foundations are stable.
+- [ ] Replace browser speech providers only after explicitly selecting suitable
+  local STT and TTS runtimes.
