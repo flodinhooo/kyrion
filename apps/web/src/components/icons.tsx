@@ -48,4 +48,7 @@ export const Icons = {
   clock: (props: IconProps) => <IconBase {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></IconBase>,
   user: (props: IconProps) => <IconBase {...props}><circle cx="12" cy="8" r="4" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></IconBase>,
   shield: (props: IconProps) => <IconBase {...props}><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></IconBase>,
+  edit: (props: IconProps) => <IconBase {...props}><path d="M4 20h4l11-11-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></IconBase>,
+  trash: (props: IconProps) => <IconBase {...props}><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></IconBase>,
+  check: (props: IconProps) => <IconBase {...props}><path d="m5 12 4 4L19 6" /></IconBase>,
 };
