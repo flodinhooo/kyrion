@@ -67,6 +67,11 @@ PostgreSQL on E:\Kyrion\Data\postgres
 - Authoritative protection for workspace pages, private Next.js APIs and Core
   activity/conversation resources.
 - Owner-scoped PostgreSQL conversations and ordered messages through Flyway V3.
+- Complete conversation-history interaction with active highlighting, inline
+  rename, confirmed deletion, explicit empty/error states and visible save
+  failures.
+- Readable automatic titles based on the first sentence, always beginning with
+  a capital letter.
 - AI actions remain proposals; future device actions must pass through Core.
 
 ### Web application
@@ -77,6 +82,8 @@ PostgreSQL on E:\Kyrion\Data\postgres
 - Chat, Home, Automations, Knowledge and Settings routes.
 - German and English UI resources.
 - Persistent light/dark theme selection.
+- Per-device typography selection with standard, comfortable and large scales
+  for body text, headings and display titles.
 - White/gold light theme and cyan/royal-blue dark theme.
 - Provider-neutral typed chat contracts.
 - Streaming chat UI with cancellation and translated errors.
@@ -158,7 +165,7 @@ PostgreSQL on E:\Kyrion\Data\postgres
 - A conversation remains transient until a response produces visible assistant
   content; completed and partially stopped visible transcripts are then
   persisted per owner.
-- There is no context compaction, deletion or retention pipeline yet.
+- There is no context compaction or automatic retention pipeline yet.
 - No owner has been created on the current development installation yet; the
   one-time setup screen is ready at `/login`.
 - Core currently implements activity, local authentication and conversation
@@ -185,7 +192,7 @@ Complete the live owner flow and harden the implemented slices:
 3. add integration tests proving cookie flags, expiry, revocation and endpoint
    ownership;
 4. add login throttling before any remote exposure;
-5. add conversation deletion, retention and context compaction.
+5. add conversation retention and context compaction.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.

@@ -36,6 +36,8 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add polished styling for headings, paragraphs, lists, links, inline code
   and fenced code blocks in both themes.
 - [x] Improve spacing and readable line lengths for longer responses.
+- [x] Add persistent standard, comfortable and large typography options that
+  scale body text, headings and page titles without enlarging layout chrome.
 - [x] Keep the conversation scrolled to the newest content while a response is
   streaming, without overriding intentional user scrolling.
 - [x] Add a Kyrion/Velora system prompt so the assistant identifies itself as
@@ -88,7 +90,9 @@ session. The current implementation status is documented in [README.md](README.m
   are stable.
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
   the activity log before treating it as a compliance audit trail.
-- [ ] Add context compaction, conversation deletion and retention controls.
+- [x] Add active conversation highlighting, editable titles, confirmed
+  deletion, history states and visible persistence errors.
+- [ ] Add context compaction and conversation retention controls.
 - [ ] Implement the explicitly confirmed owner-scoped personal-memory slice
   described in `docs/personal-memory.md`.
 - [x] Add owner-scoped PostgreSQL conversation and message persistence after the
