@@ -92,6 +92,11 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(conversations.recent(second, 30)).isEmpty()
         assertThatThrownBy { conversations.replace(second, conversation.copy(title = "stolen")) }
             .isInstanceOf(ConversationNotFoundException::class.java)
+        assertThat(conversations.rename(second, conversation.id, "stolen", now)).isNull()
+        assertThat(conversations.delete(second, conversation.id)).isFalse()
+        assertThat(conversations.rename(first.id, conversation.id, "Renamed", now.plusSeconds(1))?.title).isEqualTo("Renamed")
+        assertThat(conversations.delete(first.id, conversation.id)).isTrue()
+        assertThat(conversations.find(first.id, conversation.id)).isNull()
     }
 
     @Test
