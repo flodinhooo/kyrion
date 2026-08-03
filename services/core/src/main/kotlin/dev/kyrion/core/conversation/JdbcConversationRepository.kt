@@ -40,6 +40,19 @@ class JdbcConversationRepository(private val jdbc: JdbcClient, private val trans
         return Conversation(summary.id, summary.title, summary.createdAt, summary.updatedAt, messages)
     }
 
+    override fun rename(ownerId: UUID, id: UUID, title: String, updatedAt: java.time.Instant): ConversationSummary? {
+        val updated = jdbc.sql(
+            "UPDATE conversation SET title = :title, updated_at = :updatedAt WHERE id = :id AND owner_id = :ownerId",
+        ).param("title", title).param("updatedAt", Timestamp.from(updatedAt)).param("id", id).param("ownerId", ownerId).update()
+        return if (updated == 1) jdbc.sql(
+            "SELECT id, title, created_at, updated_at FROM conversation WHERE id = :id AND owner_id = :ownerId",
+        ).param("id", id).param("ownerId", ownerId).query(::summary).single() else null
+    }
+
+    override fun delete(ownerId: UUID, id: UUID): Boolean = jdbc.sql(
+        "DELETE FROM conversation WHERE id = :id AND owner_id = :ownerId",
+    ).param("id", id).param("ownerId", ownerId).update() == 1
+
     @Suppress("UNUSED_PARAMETER") private fun summary(rs: ResultSet, row: Int) = ConversationSummary(
         rs.getObject("id", UUID::class.java), rs.getString("title"), rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
     )
