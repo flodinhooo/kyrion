@@ -75,4 +75,10 @@ private class InMemoryAuthSessionRepository : AuthSessionRepository {
         session = current.copy(revokedAt = revokedAt)
         return true
     }
+
+    override fun revokeAllForUser(userId: UUID, revokedAt: Instant): Int {
+        val current = session?.takeIf { it.userId == userId && it.revokedAt == null } ?: return 0
+        session = current.copy(revokedAt = revokedAt)
+        return 1
+    }
 }
