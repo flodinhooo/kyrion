@@ -25,6 +25,8 @@ session. The current implementation status is documented in [README.md](README.m
   security activity events without logging credentials or raw tokens.
 - [ ] Add integration tests for cookie flags, invalid credentials, expiry,
   revocation and session rotation.
+- [x] Add authenticated password change with current-password verification,
+  revocation of all existing sessions and a fresh session cookie.
 
 ## Completed chat and voice refinement
 
@@ -86,5 +88,7 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
   the activity log before treating it as a compliance audit trail.
 - [ ] Add context compaction, conversation deletion and retention controls.
+- [ ] Implement the explicitly confirmed owner-scoped personal-memory slice
+  described in `docs/personal-memory.md`.
 - [x] Add owner-scoped PostgreSQL conversation and message persistence after the
   authentication slice is complete.
