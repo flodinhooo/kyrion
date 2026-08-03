@@ -1,4 +1,5 @@
 import type { AiServiceStatus } from "@/features/status/contracts";
+import { requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 const HEALTH_TIMEOUT_MS = 2_500;
@@ -20,6 +21,8 @@ function isAiHealthResponse(value: unknown): value is AiHealthResponse {
 }
 
 export async function GET() {
+  const auth = await requireApiSession();
+  if (auth instanceof Response) return auth;
   try {
     const response = await fetch(`${AI_SERVICE_URL}/health`, {
       cache: "no-store",
