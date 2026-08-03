@@ -5,9 +5,11 @@ import {
   KeyboardEvent,
   UIEvent,
   useLayoutEffect,
+  useEffect,
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { MarkdownMessage } from "@/components/markdown-message";
@@ -16,6 +18,7 @@ import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
 import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
 import type { Conversation } from "@/features/conversations/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import { createConversationTitle } from "@/features/conversations/title";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
@@ -38,18 +41,31 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
 }
 
 export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
+  const router = useRouter();
   const { locale, selectedModelId, selectedVoiceUri, speechRate, t } = useWorkspace();
   const [conversationId] = useState(() => initialConversation?.id ?? crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialConversation?.messages ?? []);
+  const [conversationTitle, setConversationTitle] = useState(initialConversation?.title ?? null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
   const [wasStopped, setWasStopped] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const chatStage = useRef<HTMLElement | null>(null);
   const shouldFollowConversation = useRef(true);
   const previousScrollTop = useRef(0);
+  const hasPersisted = useRef(Boolean(initialConversation));
+
+  useEffect(() => {
+    function updateRenamedTitle(event: Event) {
+      const detail = (event as CustomEvent<{ id: string; title: string }>).detail;
+      if (detail?.id === conversationId) setConversationTitle(detail.title);
+    }
+    window.addEventListener("kyrion:conversation-renamed", updateRenamedTitle);
+    return () => window.removeEventListener("kyrion:conversation-renamed", updateRenamedTitle);
+  }, [conversationId]);
 
   useLayoutEffect(() => {
     const stage = chatStage.current;
@@ -92,6 +108,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     setInput("");
     setStreamError(null);
     setWasStopped(false);
+    setSaveError(false);
     setIsStreaming(true);
     let assistantMessage: ChatMessage | null = null;
 
@@ -123,10 +140,23 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       setIsStreaming(false);
       if (assistantMessage?.content) {
         const persistedMessages = [...chatMessages, userMessage, assistantMessage];
-        void fetch(`/api/conversations/${conversationId}`, {
-          method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
-          body: JSON.stringify({ title: persistedMessages[0]?.content.slice(0, 80) ?? "Conversation", messages: persistedMessages }),
-        }).then((response) => { if (response.ok) window.dispatchEvent(new Event("kyrion:conversations-updated")); });
+        const title = conversationTitle ?? createConversationTitle(persistedMessages[0]?.content ?? "", locale);
+        if (!conversationTitle) setConversationTitle(title);
+        try {
+          const response = await fetch(`/api/conversations/${conversationId}`, {
+            method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
+            body: JSON.stringify({ title, messages: persistedMessages }),
+          });
+          if (!response.ok) throw new Error("Conversation persistence failed");
+          setSaveError(false);
+          window.dispatchEvent(new Event("kyrion:conversations-updated"));
+          if (!hasPersisted.current) {
+            hasPersisted.current = true;
+            router.replace(`/conversations/${conversationId}`);
+          }
+        } catch {
+          setSaveError(true);
+        }
       }
     }
   }
@@ -208,6 +238,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
           ))}
           {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
+          {saveError && <p className="stream-error" role="alert">{t.conversationSaveError}</p>}
         </div>
       )}
 
