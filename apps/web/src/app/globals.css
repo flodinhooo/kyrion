@@ -312,6 +312,17 @@ button { color: inherit; }
 .profile-card { width: min(680px, 100%); }
 .profile-avatar { width: 68px; height: 68px; display: grid; place-items: center; margin: 0 auto 20px; border: 1px solid var(--border-strong); border-radius: 22px; background: var(--primary-soft); color: var(--primary); font-size: 28px; font-weight: 800; box-shadow: 0 0 24px var(--glow); }
 .profile-placeholder { cursor: default; }
+.profile-security-panel { display: grid; grid-template-columns: 22px 1fr; cursor: default; }
+.profile-security-panel > svg { grid-row: 1; }
+.password-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--border); }
+.password-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.password-form label:first-child { grid-column: 1 / -1; }
+.password-form input { min-height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); color: var(--text); font: inherit; }
+.password-form input:focus { border-color: var(--border-strong); outline: 2px solid var(--primary-soft); }
+.password-form p { grid-column: 1 / -1; margin: 0; font-size: 12px; }
+.form-success { color: var(--primary); }
+.password-form button { grid-column: 1 / -1; min-height: 42px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--primary-soft); color: var(--primary); cursor: pointer; font-weight: 750; }
+.password-form button:disabled { cursor: wait; opacity: .65; }
 .settings-link-card { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); transition: .2s ease; }
 .settings-link-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
 .settings-link-card > svg { width: 22px; color: var(--primary); }
@@ -411,6 +422,8 @@ button { color: inherit; }
 }
 
 @media (max-width: 620px) {
+  .password-form { grid-template-columns: 1fr; }
+  .password-form label:first-child { grid-column: auto; }
   .topbar-title small { display: none; }
   .chat-stage { padding: 24px 14px 14px; }
   .welcome { padding-bottom: 24px; }
