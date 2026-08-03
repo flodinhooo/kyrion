@@ -1,5 +1,6 @@
 import type { ChatTransport, ChatStreamOptions } from "@/features/chat/client/chat-transport";
 import type { ChatEvent, ChatRequest } from "@/features/chat/contracts";
+import { csrfHeader } from "@/features/auth/csrf";
 
 function parseEvent(line: string): ChatEvent {
   return JSON.parse(line) as ChatEvent;
@@ -11,7 +12,7 @@ export class ApiChatTransport implements ChatTransport {
     try {
       response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
         body: JSON.stringify(request),
         signal: options?.signal,
       });

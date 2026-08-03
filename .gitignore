@@ -27,6 +27,7 @@ yarn-error.log*
 
 # Java / Kotlin / Gradle
 .gradle/
+.kotlin/
 build/
 target/
 
