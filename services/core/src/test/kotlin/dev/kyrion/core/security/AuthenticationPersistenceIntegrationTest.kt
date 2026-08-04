@@ -293,7 +293,21 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.usedMemories[0].id").value(memoryId.toString()))
             .andExpect(jsonPath("$.usedMemories[0].content").value("Kyrion is my local-first project"))
 
+        val conflictResult = mockMvc.perform(
+            post("/v1/memory/proposals").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"category":"project","content":"Kyrion is my new local-first project","sensitivity":"standard"}"""),
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.conflictsWithMemoryId").value(memoryId.toString())).andReturn()
+        val replacementId = UUID.fromString(Regex("\"id\":\"([^\"]+)\"").find(conflictResult.response.contentAsString)!!.groupValues[1])
+        mockMvc.perform(
+            post("/v1/memory/$replacementId/confirm?resolution=replace").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isOk).andExpect(jsonPath("$.status").value("confirmed"))
+        assertThat(memories.find(ownerId, memoryId)?.status?.name).isEqualTo("superseded")
+
         mockMvc.perform(delete("/v1/memory/$memoryId").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNoContent)
+        mockMvc.perform(delete("/v1/memory/$replacementId").header("Authorization", "Bearer $token"))
             .andExpect(status().isNoContent)
         assertThat(memories.find(ownerId, memoryId)).isNull()
     }
