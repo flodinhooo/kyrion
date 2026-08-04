@@ -17,14 +17,20 @@ import { VoiceMode } from "@/components/voice-mode";
 import { ApiChatTransport } from "@/features/chat/client/api-chat-transport";
 import type { ChatErrorCode, ChatMessage, ChatRequest } from "@/features/chat/contracts";
 import type { Conversation } from "@/features/conversations/contracts";
-import { csrfHeader } from "@/features/auth/csrf";
 import { createConversationTitle } from "@/features/conversations/title";
+import { csrfHeader } from "@/features/auth/csrf";
+import type { PersonalMemory } from "@/features/memory/contracts";
+import { isPersonalMemory } from "@/features/memory/contracts";
+import { explicitMemoryStatement } from "@/features/memory/explicit-request";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
 const errorMessageKeys = {
   MODEL_UNAVAILABLE: "modelUnavailable",
   INVALID_REQUEST: "invalidChatRequest",
+  CONVERSATION_NOT_FOUND: "historyUnavailable",
+  CONVERSATION_CONFLICT: "conversationSaveError",
+  CORE_UNAVAILABLE: "conversationSaveError",
   REQUEST_ABORTED: "streamError",
   STREAM_FAILED: "streamError",
 } as const;
@@ -51,6 +57,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const [streamError, setStreamError] = useState<ChatErrorCode | null>(null);
   const [wasStopped, setWasStopped] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [contextCompacted, setContextCompacted] = useState(false);
+  const [memoryProposal, setMemoryProposal] = useState<PersonalMemory | null>(null);
   const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const chatStage = useRef<HTMLElement | null>(null);
@@ -92,14 +100,20 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     if (!content || isStreaming) return;
 
     const userMessage = createMessage("user", content);
+    const title = conversationTitle ?? createConversationTitle(
+      chatMessages[0]?.content ?? userMessage.content,
+      locale,
+    );
     const request: ChatRequest = {
       conversationId,
+      title,
       modelId: selectedModelId ?? undefined,
       locale,
-      messages: [...chatMessages, userMessage].map(({ role, content: messageContent }) => ({
-        role,
-        content: messageContent,
-      })),
+      message: {
+        id: userMessage.id,
+        content: userMessage.content,
+        createdAt: userMessage.createdAt,
+      },
     };
     const controller = new AbortController();
     activeRequest.current = controller;
@@ -109,12 +123,19 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     setStreamError(null);
     setWasStopped(false);
     setSaveError(false);
+    setContextCompacted(false);
     setIsStreaming(true);
     let assistantMessage: ChatMessage | null = null;
+    let memoryWasProposed = false;
 
     try {
       for await (const chatEvent of chatTransport.stream(request, { signal: controller.signal })) {
+        if (chatEvent.type === "context.compacted") setContextCompacted(true);
         if (chatEvent.type === "message.started") {
+          if (!memoryWasProposed) {
+            memoryWasProposed = true;
+            void proposeExplicitMemory(content, userMessage);
+          }
           assistantMessage = createMessage("assistant", "", chatEvent.messageId);
           setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
         }
@@ -139,26 +160,40 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       activeRequest.current = null;
       setIsStreaming(false);
       if (assistantMessage?.content) {
-        const persistedMessages = [...chatMessages, userMessage, assistantMessage];
-        const title = conversationTitle ?? createConversationTitle(persistedMessages[0]?.content ?? "", locale);
         if (!conversationTitle) setConversationTitle(title);
-        try {
-          const response = await fetch(`/api/conversations/${conversationId}`, {
-            method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
-            body: JSON.stringify({ title, messages: persistedMessages }),
-          });
-          if (!response.ok) throw new Error("Conversation persistence failed");
-          setSaveError(false);
-          window.dispatchEvent(new Event("kyrion:conversations-updated"));
-          if (!hasPersisted.current) {
-            hasPersisted.current = true;
-            router.replace(`/conversations/${conversationId}`);
-          }
-        } catch {
-          setSaveError(true);
+        setSaveError(false);
+        window.dispatchEvent(new Event("kyrion:conversations-updated"));
+        if (!hasPersisted.current) {
+          hasPersisted.current = true;
+          router.replace(`/conversations/${conversationId}`);
         }
       }
     }
+  }
+
+  async function proposeExplicitMemory(content: string, sourceMessage: ChatMessage) {
+    const statement = explicitMemoryStatement(content, locale);
+    if (!statement) return;
+    try {
+      const response = await fetch("/api/memory", {
+        method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({
+          category: "other", content: statement, sensitivity: "sensitive",
+          sourceConversationId: conversationId, sourceMessageId: sourceMessage.id,
+        }),
+      });
+      const value: unknown = await response.json();
+      if (response.ok && isPersonalMemory(value)) setMemoryProposal(value);
+    } catch { /* Chat remains usable when optional memory is unavailable. */ }
+  }
+
+  async function resolveMemoryProposal(action: "confirm" | "forget") {
+    if (!memoryProposal) return;
+    const response = await fetch(
+      action === "confirm" ? `/api/memory/${memoryProposal.id}/confirm` : `/api/memory/${memoryProposal.id}`,
+      { method: action === "confirm" ? "POST" : "DELETE", headers: csrfHeader() },
+    );
+    if (response.ok) setMemoryProposal(null);
   }
 
   function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -238,6 +273,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
           ))}
           {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
+          {contextCompacted && <p className="stream-notice" role="status">{t.contextCompacted}</p>}
+          {memoryProposal && <div className="memory-proposal" role="status"><p>{t.chatMemoryProposed}: {memoryProposal.content}</p><div><button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryConfirm}</button><button type="button" onClick={() => void resolveMemoryProposal("forget")}>{t.memoryForget}</button></div></div>}
           {saveError && <p className="stream-error" role="alert">{t.conversationSaveError}</p>}
         </div>
       )}

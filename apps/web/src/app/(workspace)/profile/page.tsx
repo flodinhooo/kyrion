@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { PasswordChangeForm } from "@/components/password-change-form";
+import { MemoryPanel } from "@/components/memory-panel";
 
 export default function ProfilePage() {
   const { username, t } = useWorkspace();
@@ -20,6 +21,7 @@ export default function ProfilePage() {
             <Icons.user />
             <span><strong>{t.profileDetails}</strong><small>{t.profileDetailsPlaceholder}</small></span>
           </div>
+          <MemoryPanel />
           <div className="settings-link-card profile-security-panel">
             <Icons.shield />
             <span><strong>{t.profileSecurity}</strong><small>{t.profileSecurityDescription}</small></span>
