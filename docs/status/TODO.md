@@ -1,6 +1,6 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
@@ -101,27 +101,31 @@ session. The current implementation status is documented in [README.md](README.m
 
 ## Next session: Authoritative context and compaction
 
-- [ ] Document the typed contract for Core-owned conversation context supplied
+- [x] Document the typed contract for Core-owned conversation context supplied
   to the AI service.
-- [ ] Load stored messages by authenticated owner and conversation ID instead of
+- [x] Load stored messages by authenticated owner and conversation ID instead of
   treating a browser-supplied full transcript as authoritative.
-- [ ] Define a transparent context token budget per selected model.
-- [ ] Preserve the latest turns verbatim while compacting only older context.
-- [ ] Persist summaries with source ranges, versioning and regeneration rules.
-- [ ] Tell the user when older context was compacted.
-- [ ] Add tests for ordering, owner isolation, malformed model output and
-  deterministic context selection.
+- [x] Define a transparent context token budget for the selected models under
+  the current shared 4,096-token runtime configuration.
+- [x] Preserve the latest turns verbatim while compacting only older context.
+- [x] Persist summaries with source ranges, versioning and regeneration rules.
+- [x] Tell the user when older context was compacted.
+- [x] Add tests for ordering, owner isolation and deterministic context
+  selection. Malformed model-summary output is not applicable because the first
+  compaction algorithm is deterministic and does not invoke a model.
+- [x] Persist a visibly stopped partial assistant response through the new
+  authoritative turn contract.
 
 ## Then: Explicit personal memory
 
-- [ ] Record an ADR for personal-memory consent, sensitivity and ownership.
-- [ ] Add a profile-level opt-in with German and English explanations.
-- [ ] Support an explicit “remember this” request as the first extraction path.
-- [ ] Require confirmation before retaining sensitive memories such as religion,
+- [x] Record an ADR for personal-memory consent, sensitivity and ownership.
+- [x] Add a profile-level opt-in with German and English explanations.
+- [x] Support an explicit “remember this” request as the first extraction path.
+- [x] Require confirmation before retaining sensitive memories such as religion,
   health, relationships or political beliefs.
-- [ ] Add a profile view to inspect, correct and forget individual memories.
+- [x] Add a profile view to inspect, correct and forget individual memories.
 - [ ] Retrieve only a small relevant set and make memory influence visible.
-- [ ] Keep memory records separate from conversation history and executable
+- [x] Keep memory records separate from conversation history and executable
   plugin authority.
 
 ## Security and operations follow-up

@@ -241,13 +241,11 @@ foundation is prepared without exposing an unfinished login flow.
 
 Current priorities:
 
-1. make persisted owner-scoped conversations the authoritative source for AI
-   context;
-2. add transparent context budgeting and compaction for long conversations;
-3. implement explicitly confirmed, inspectable personal memory;
-4. introduce controlled Core capability contracts and the first local device
+1. retrieve a small relevant set of confirmed personal memories transparently;
+2. add memory conflict, supersession and retention rules;
+3. introduce controlled Core capability contracts and the first local device
    integration;
-5. replace prototype browser speech providers where a suitable local voice
+4. replace prototype browser speech providers where a suitable local voice
    stack is available.
 
 See the full [roadmap](docs/roadmap.md) and the current

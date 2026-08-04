@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -85,6 +85,14 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - Authoritative protection for workspace pages, private Next.js APIs and Core
   activity/conversation resources.
 - Owner-scoped PostgreSQL conversations and ordered messages through Flyway V3.
+- Core-owned chat turns and token-bounded context assembly; the browser no
+  longer supplies authoritative conversation history.
+- Flyway V4 persistence for deterministic context summaries with source ranges
+  and algorithm versions.
+- Flyway V5 turn lifecycle with explicit started, completed, stopped and failed
+  outcomes, including server-observed partial response persistence.
+- Flyway V6 owner-controlled personal memory with opt-in, explicit proposals,
+  confirmation, correction and deletion.
 - Complete conversation-history interaction with active highlighting, inline
   rename, confirmed deletion, explicit empty/error states and visible save
   failures.
@@ -180,10 +188,13 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 
 ## Current limitations
 
-- A conversation remains transient until a response produces visible assistant
-  content; completed and partially stopped visible transcripts are then
-  persisted per owner.
-- There is no context compaction or automatic retention pipeline yet.
+- New user turns are persisted before model invocation and completed assistant
+  responses are persisted before the browser receives the completion event.
+- A visibly stopped partial assistant response is persisted from the trusted
+  Next.js stream boundary.
+- Deterministic context compaction is implemented; automatic retention is not.
+- Personal memory supports explicit owner-controlled retention but confirmed
+  memories are not yet retrieved into model context.
 - The current development installation has one configured local owner; public
   registration remains unavailable by design.
 - Core currently implements activity, local authentication and conversation
@@ -203,15 +214,13 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 
 ## Recommended next step
 
-Make persisted conversations the authoritative source for model context:
+Continue from the completed authoritative-context and explicit-memory slices:
 
-1. define the Core/AI contract for loading owner-scoped conversation context;
-2. stop trusting a browser-supplied full transcript as the long-term source of
-   conversation truth;
-3. introduce a transparent token budget and context-compaction strategy;
-4. then implement the explicitly confirmed personal-memory slice documented in
-   `docs/personal-memory.md`;
-5. add login throttling before any remote exposure.
+1. complete the systematic German/English and code-block visual pass;
+2. retrieve a small relevant set of confirmed memories and visibly disclose
+   when memory influenced an answer;
+3. add conflict, supersession and retention rules for memory;
+4. add login throttling before any remote exposure.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.
@@ -221,10 +230,11 @@ in browser local storage. Continue with one verified vertical slice at a time.
 In a new agent chat, use this prompt:
 
 > Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
-> `docs/status/README.md`, `docs/status/TODO.md` and both ADRs. Inspect the
+> `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
 > current implementation and uncommitted changes. Read the latest dated session
-> handoff. Continue with server-owned conversation context and transparent
-> context compaction, then the explicitly confirmed personal-memory slice.
+> handoff. Verify the Core-owned context and compaction slice, finish
+> interrupted-response recovery, then continue with the explicitly confirmed
+> personal-memory slice.
 > Preserve Core as the authority and never store credentials or session tokens
 > in browser local storage.
 
