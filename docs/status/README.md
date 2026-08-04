@@ -93,6 +93,11 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
   outcomes, including server-observed partial response persistence.
 - Flyway V6 owner-controlled personal memory with opt-in, explicit proposals,
   confirmation, correction and deletion.
+- Flyway V7 conflict links and explicit replace/keep-both/forget resolution;
+  superseded memories remain inspectable but are excluded from retrieval.
+- Deterministic Core-owned retrieval supplies at most three relevant confirmed
+  memories, applies stricter matching to sensitive items and visibly discloses
+  every selected item in the chat.
 - Complete conversation-history interaction with active highlighting, inline
   rename, confirmed deletion, explicit empty/error states and visible save
   failures.
@@ -193,8 +198,8 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - A visibly stopped partial assistant response is persisted from the trusted
   Next.js stream boundary.
 - Deterministic context compaction is implemented; automatic retention is not.
-- Personal memory supports explicit owner-controlled retention but confirmed
-  memories are not yet retrieved into model context.
+- Personal memory supports explicit owner-controlled retention and transparent
+  retrieval; semantic retrieval and retention expiry are not implemented.
 - The current development installation has one configured local owner; public
   registration remains unavailable by design.
 - Core currently implements activity, local authentication and conversation
@@ -217,9 +222,8 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 Continue from the completed authoritative-context and explicit-memory slices:
 
 1. complete the systematic German/English and code-block visual pass;
-2. retrieve a small relevant set of confirmed memories and visibly disclose
-   when memory influenced an answer;
-3. add conflict, supersession and retention rules for memory;
+2. evaluate retrieval quality and tune deterministic matching with real use;
+3. define memory retention expiry and archival rules;
 4. add login throttling before any remote exposure.
 
 Do not expose the prepared session repository directly and do not store tokens

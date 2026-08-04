@@ -241,8 +241,8 @@ foundation is prepared without exposing an unfinished login flow.
 
 Current priorities:
 
-1. retrieve a small relevant set of confirmed personal memories transparently;
-2. add memory conflict, supersession and retention rules;
+1. evaluate confirmed-memory retrieval quality with real conversations;
+2. add personal-memory retention and archival rules;
 3. introduce controlled Core capability contracts and the first local device
    integration;
 4. replace prototype browser speech providers where a suitable local voice

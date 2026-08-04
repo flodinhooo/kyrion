@@ -124,7 +124,7 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Require confirmation before retaining sensitive memories such as religion,
   health, relationships or political beliefs.
 - [x] Add a profile view to inspect, correct and forget individual memories.
-- [ ] Retrieve only a small relevant set and make memory influence visible.
+- [x] Retrieve only a small relevant set and make memory influence visible.
 - [x] Keep memory records separate from conversation history and executable
   plugin authority.
 
@@ -133,6 +133,7 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Add login throttling and temporary backoff before remote exposure.
 - [ ] Add active-session listing and selective session revocation to the profile.
 - [ ] Define conversation and activity retention policies.
+- [ ] Define personal-memory retention expiry and archival policy.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
   claims.
 - [ ] Add backup and restore verification for PostgreSQL data.

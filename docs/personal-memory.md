@@ -59,6 +59,9 @@ every proposal requires confirmation, sensitive proposals are visibly marked,
 and the profile supports inspection, correction and forgetting. Memory actions
 produce data-minimised activity events without recording remembered content.
 
-Relevant retrieval and visible disclosure when a confirmed memory influenced a
-response remain the next memory slice. Automatic inference remains deliberately
-unimplemented.
+Core now retrieves at most three deterministically relevant confirmed memories,
+uses stricter matching for sensitive records, counts them against the context
+budget and makes every selected item visible in the chat. Flyway V7 adds linked
+conflicts and an explicit replace/keep-both/forget decision. Superseded records
+remain inspectable but no longer influence responses. Automatic inference and
+retention expiry remain deliberately unimplemented.

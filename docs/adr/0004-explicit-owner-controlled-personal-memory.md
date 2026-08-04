@@ -29,8 +29,17 @@ first slice; sensitive proposals are visually identified.
 Core owns opt-in, validation, persistence, confirmation, correction and
 deletion. The browser uses authenticated, CSRF-protected same-origin routes.
 The AI service receives no database access and does not automatically extract
-memories. Confirmed memories are not yet injected into prompts; relevant
-retrieval and visible influence require a separate evaluated slice.
+memories. Confirmed memories may be selected by a deterministic Core-owned
+relevance rule. At most three are supplied, their estimated size counts against
+the chat context budget, and sensitive memories require stronger term overlap
+than standard memories. The AI service embeds them only in a Kyrion-owned
+system section that labels their content as quoted user data rather than
+instructions. The Web interface discloses every selected item.
+
+When a new proposal substantially overlaps a confirmed memory in the same
+category, Core links it as a conflict. The owner must explicitly replace the
+previous item, keep both, or delete the proposal. Replaced memories remain
+inspectable with `superseded` status but are excluded from retrieval.
 
 Forgetting physically deletes the selected memory in this local prototype.
 Data-minimised activity events record setting changes, proposal, confirmation,
@@ -43,5 +52,5 @@ correction and deletion without recording memory content.
 - No memory is retained merely because a model inferred it.
 - Disabling memory prevents new proposals but does not silently delete existing
   records; the profile continues to expose them for review or deletion.
-- Relevant retrieval, conflict/supersession handling and retention expiry are
-  deliberate follow-up work.
+- Retention expiry and more advanced semantic retrieval remain deliberate
+  follow-up work.
