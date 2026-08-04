@@ -36,9 +36,16 @@ export default function ActivityPage() {
     timeStyle: "medium",
   });
 
-  const summary = (event: ActivityEvent) => event.summaryCode === "activity.core.started"
-    ? t.activityCoreStarted
-    : event.eventType;
+  const summary = (event: ActivityEvent) => ({
+    "activity.core.started": t.activityCoreStarted,
+    "memory.enabled": t.activityMemoryEnabled,
+    "memory.disabled": t.activityMemoryDisabled,
+    "memory.proposed": t.activityMemoryProposed,
+    "memory.confirmed": t.activityMemoryConfirmed,
+    "memory.updated": t.activityMemoryUpdated,
+    "memory.deleted": t.activityMemoryDeleted,
+    "memory.replaced": t.activityMemoryReplaced,
+  })[event.summaryCode] ?? event.eventType;
 
   const statusLabel = (status: ActivityEvent["status"]) => ({
     PROPOSED: t.activityStatusProposed,

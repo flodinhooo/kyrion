@@ -59,6 +59,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const [saveError, setSaveError] = useState(false);
   const [contextCompacted, setContextCompacted] = useState(false);
   const [memoryProposal, setMemoryProposal] = useState<PersonalMemory | null>(null);
+  const [memoryProposalUnavailable, setMemoryProposalUnavailable] = useState(false);
+  const [usedMemories, setUsedMemories] = useState<Array<{ id: string; category: string; content: string; sensitivity: "standard" | "sensitive" }>>([]);
   const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const chatStage = useRef<HTMLElement | null>(null);
@@ -124,18 +126,21 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     setWasStopped(false);
     setSaveError(false);
     setContextCompacted(false);
+    setMemoryProposalUnavailable(false);
+    setUsedMemories([]);
     setIsStreaming(true);
     let assistantMessage: ChatMessage | null = null;
     let memoryWasProposed = false;
 
     try {
       for await (const chatEvent of chatTransport.stream(request, { signal: controller.signal })) {
+        if (!memoryWasProposed) {
+          memoryWasProposed = true;
+          void proposeExplicitMemory(content, userMessage);
+        }
         if (chatEvent.type === "context.compacted") setContextCompacted(true);
+        if (chatEvent.type === "memory.used") setUsedMemories(chatEvent.items);
         if (chatEvent.type === "message.started") {
-          if (!memoryWasProposed) {
-            memoryWasProposed = true;
-            void proposeExplicitMemory(content, userMessage);
-          }
           assistantMessage = createMessage("assistant", "", chatEvent.messageId);
           setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
         }
@@ -184,14 +189,15 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       });
       const value: unknown = await response.json();
       if (response.ok && isPersonalMemory(value)) setMemoryProposal(value);
-    } catch { /* Chat remains usable when optional memory is unavailable. */ }
+      else setMemoryProposalUnavailable(true);
+    } catch { setMemoryProposalUnavailable(true); }
   }
 
-  async function resolveMemoryProposal(action: "confirm" | "forget") {
+  async function resolveMemoryProposal(action: "confirm" | "replace" | "forget") {
     if (!memoryProposal) return;
     const response = await fetch(
-      action === "confirm" ? `/api/memory/${memoryProposal.id}/confirm` : `/api/memory/${memoryProposal.id}`,
-      { method: action === "confirm" ? "POST" : "DELETE", headers: csrfHeader() },
+      action === "forget" ? `/api/memory/${memoryProposal.id}` : `/api/memory/${memoryProposal.id}/confirm?resolution=${action === "replace" ? "replace" : "keep"}`,
+      { method: action === "forget" ? "DELETE" : "POST", headers: csrfHeader() },
     );
     if (response.ok) setMemoryProposal(null);
   }
@@ -274,7 +280,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
           {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
           {contextCompacted && <p className="stream-notice" role="status">{t.contextCompacted}</p>}
-          {memoryProposal && <div className="memory-proposal" role="status"><p>{t.chatMemoryProposed}: {memoryProposal.content}</p><div><button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryConfirm}</button><button type="button" onClick={() => void resolveMemoryProposal("forget")}>{t.memoryForget}</button></div></div>}
+          {memoryProposal && <div className="memory-proposal" role="status"><p>{t.chatMemoryProposed}: {memoryProposal.content}</p>{memoryProposal.conflictsWithMemoryId && <p>{t.memoryConflict}</p>}<div>{memoryProposal.conflictsWithMemoryId ? <><button type="button" onClick={() => void resolveMemoryProposal("replace")}>{t.memoryReplace}</button><button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryKeepBoth}</button></> : <button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryConfirm}</button>}<button type="button" onClick={() => void resolveMemoryProposal("forget")}>{t.memoryForget}</button></div></div>}
+          {memoryProposalUnavailable && <p className="stream-notice" role="status">{t.chatMemoryUnavailable}</p>}
+          {usedMemories.length > 0 && <details className="memory-used"><summary>{t.memoryUsed.replace("{count}", String(usedMemories.length))}</summary><ul>{usedMemories.map((memory) => <li key={memory.id}><span>{memory.sensitivity === "sensitive" ? t.memorySensitive : t.memoryStandard}</span>{memory.content}</li>)}</ul></details>}
           {saveError && <p className="stream-error" role="alert">{t.conversationSaveError}</p>}
         </div>
       )}
