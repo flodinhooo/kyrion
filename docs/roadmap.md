@@ -24,13 +24,16 @@ Goal: establish the identity and basic structure of Kyrion.
 
 Goal: control an existing Nanoleaf installation from Kyrion.
 
-- [ ] Identify the exact Nanoleaf model
-- [ ] Confirm that the panels are connected to the local network
-- [ ] Discover or configure the controller IP address
+- [x] Identify connected controllers through advertised model/name data
+- [x] Confirm that the panels are connected to the local network
+- [x] Discover or configure the controller IP address
 - [x] Generate and securely persist a local API authentication token
 - [x] Read the current device state
 - [x] Switch the panels on and off
-- [ ] Change brightness
+- [x] Change brightness
+- [x] Change colour and colour temperature
+- [x] List and activate stored scenes
+- [x] Persist rooms and device assignments
 - [x] Display meaningful connection and API errors
 - [x] Build a minimal Kyrion dashboard
 - [x] Add German and English translations
@@ -46,10 +49,10 @@ Success criterion:
 
 Goal: separate device-specific communication from the user interface.
 
-- [ ] Define a generic device model
-- [ ] Define integration capabilities
+- [ ] Define a provider-neutral generic device model
+- [ ] Stabilise provider-neutral integration capabilities
 - [x] Move Nanoleaf logic behind an integration interface
-- [ ] Add command execution results
+- [x] Add command execution results
 - [x] Add basic activity logging
 - [x] Decide whether the dedicated Kyrion Core service is now justified
 

@@ -50,33 +50,37 @@ Kyrion is guided by the following principles:
 
 Read all [project principles](docs/principles.md).
 
-## Initial use case
+## Implemented first use case
 
-The first Kyrion prototype will control an existing Nanoleaf installation
-through its local network API.
+Kyrion controls existing Nanoleaf installations through the official local
+OpenAPI. The current development installation runs this slice end to end.
 
-The initial scope includes:
+Implemented behaviour includes:
 
-- discovering or configuring the Nanoleaf controller;
+- automatic controller discovery through mDNS/Bonjour;
+- owner-specific physical API authorisation;
 - reading the current device state;
 - switching the panels on and off;
 - changing brightness;
+- setting colour and colour temperature;
+- listing and activating controller-stored scenes with palette previews;
+- encrypted persistence of per-owner controller credentials;
+- persistent rooms and device-to-room assignments;
+- a room dashboard with live status, quick actions and device dialogs;
 - displaying connection and API errors;
-- providing a minimal web dashboard;
 - supporting German and English user interfaces.
 
-The first prototype does not require:
+The current slice deliberately does not provide:
 
 - a dedicated mobile application;
-- a separate AI service;
-- a database;
-- Docker;
-- user authentication;
+- Nanoleaf cloud-account or undocumented cloud API access;
+- public registration or public internet exposure;
+- a general third-party plugin runtime or public marketplace;
 - remote access.
 
 These components will only be introduced when a real use case requires them.
 
-## Planned architecture
+## Current architecture
 
 ```text
 ┌─────────────────────┐
@@ -94,13 +98,15 @@ These components will only be introduced when a real use case requires them.
 └─────────┘ └──────────────┘
 ```
 
-During the first prototype, the web application may communicate with the
-Nanoleaf local API through server-side Next.js functionality.
-
-A dedicated Kyrion Core service will be introduced once multiple integrations,
-users, permissions or complex workflows justify the additional separation.
+The browser communicates only with same-origin Next.js routes. Kyrion Core owns
+users, sessions, rooms, integration connections, encrypted credentials,
+command validation and activity logging. Only Core communicates with the
+Nanoleaf local API. PostgreSQL persists owner-scoped state, while the optional
+AI service and Ollama remain outside the device-execution boundary.
 
 Read the full [architecture documentation](docs/architecture.md).
+For the implemented device slice, see the
+[Nanoleaf integration documentation](docs/nanoleaf-integration.md).
 
 ## Repository structure
 
@@ -139,14 +145,15 @@ access.
 
 `services/core`
 
-The Kotlin and Spring Boot central backend. Its first implemented slice owns a
-PostgreSQL-backed activity event log; permissions, devices, integrations,
-commands and automations remain planned responsibilities.
+The Kotlin and Spring Boot authoritative backend. It owns local authentication,
+sessions, conversations, personal memory, rooms, integration connections,
+encrypted credentials, validated Nanoleaf commands and the PostgreSQL-backed
+activity log.
 
 `services/ai`
 
-The planned optional AI service responsible for natural-language interpretation,
-tool selection and summarisation.
+The implemented optional AI service responsible for local chat streaming and
+model-provider abstraction. It does not execute device commands directly.
 
 ### Shared packages
 
@@ -234,17 +241,17 @@ The first success criterion is simple:
 
 ## Project status
 
-Kyrion is currently in its foundation and working-prototype phase. The local
-text-chat and browser-backed voice path runs end to end, Kotlin Core persists a
-trusted activity log in PostgreSQL, and the identity/session security
-foundation is prepared without exposing an unfinished login flow.
+Kyrion is currently a working local-first prototype. Local text chat,
+browser-backed voice, authentication, conversation persistence, explicit
+personal memory, the activity log, Nanoleaf control and the room dashboard run
+end to end.
 
 Current priorities:
 
-1. evaluate confirmed-memory retrieval quality with real conversations;
-2. add personal-memory retention and archival rules;
-3. introduce controlled Core capability contracts and the first local device
-   integration;
+1. stabilise provider-neutral device and capability contracts above Nanoleaf;
+2. refine dashboard status refresh, recovery after DHCP address changes and
+   scene/colour interaction;
+3. add retention, backup and login-throttling policies;
 4. replace prototype browser speech providers where a suitable local voice
    stack is available.
 

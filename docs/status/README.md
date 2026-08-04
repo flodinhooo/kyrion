@@ -68,8 +68,20 @@ Kyrion Core validation, confirmation and activity audit
 Encrypted per-owner credential + Nanoleaf local OpenAPI
 ```
 
-The detailed handoff for the latest approximately two-hour development session
-is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-session.md).
+The persistent home dashboard is implemented:
+
+```text
+Authenticated browser /home
+    |
+    v
+Owner-scoped rooms and device assignments in Core
+    |
+    v
+Live Nanoleaf status, quick actions and detailed controls
+```
+
+The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
+2026-08-04](2026-08-04-nanoleaf-home-dashboard.md).
 
 ## Completed
 
@@ -118,8 +130,12 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - AI actions remain proposals; future device actions must pass through Core.
 - Official Nanoleaf integration connections are owner-scoped, use physical
   local-controller pairing and keep API tokens encrypted in Core persistence.
-- Nanoleaf status and confirmed power commands run through Core and emit
-  integration activity events.
+- Nanoleaf power, brightness, colour, colour-temperature and scene commands run
+  through Core validation and emit integration activity events.
+- Flyway V8 persists encrypted owner-specific integration connections. The
+  AES-256-GCM installation key remains separate from PostgreSQL.
+- Flyway V9 persists owner-specific rooms and device assignments. Deleting a
+  room leaves its devices connected and unassigned.
 
 ### Web application
 
@@ -128,6 +144,10 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - Responsive sidebar and accessible mobile shadcn Sheet.
 - Chat, Home, Automations, Knowledge and Settings routes.
 - A Plugins catalog and an interactive Nanoleaf integration detail route.
+- A working Home dashboard with room management, persistent device assignment,
+  automatic status reads, quick actions and per-device control dialogs.
+- Nanoleaf discovery, editable names, colour controls and stored scenes with
+  controller-derived palette previews.
 - German and English UI resources.
 - Persistent light/dark theme selection.
 - Per-device typography selection with standard, comfortable and large scales
@@ -191,9 +211,9 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - `pnpm lint`: passed.
 - `pnpm build`: passed, including the dynamic chat and model benchmark routes.
 - Python Ruff checks: passed.
-- Python tests: 31 passed.
+- Python tests: 33 passed at the latest full AI-service verification.
 - Kotlin Core tests and boot JAR build: passed.
-- Flyway migrations V1 through V3, Core health and persisted startup events: passed
+- Flyway migrations V1 through V9, Core health and persisted startup events: passed
   against PostgreSQL.
 - Password hashing, session-token hashing and session lifecycle tests: passed.
 - Isolated PostgreSQL 17 integration tests for one-time setup, HTTP auth
@@ -219,9 +239,10 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
   retrieval; semantic retrieval and retention expiry are not implemented.
 - The current development installation has one configured local owner; public
   registration remains unavailable by design.
-- Core currently implements activity, local authentication, conversation and
-  memory persistence plus the first narrow Nanoleaf integration capability;
-  generic capability contracts and broader plugin lifecycle remain planned.
+- Core currently implements activity, local authentication, conversations,
+  personal memory, rooms and the first broad Nanoleaf integration slice;
+  provider-neutral capability contracts and broader plugin lifecycle remain
+  planned.
 - Activity actor ownership, retention and tamper-evidence are not implemented.
 - Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
   each browser can select one locally for its chat requests.
@@ -233,17 +254,20 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - Voice interruption while Velora is actively speaking is not yet a complete
   hands-free barge-in flow because continuous recognition could hear the
   assistant's own browser speech.
-- Home, Automations and Knowledge are intentional placeholders.
+- Automations and Knowledge are intentional placeholders. Home is implemented.
+- Controller addresses are not yet reconciled automatically after DHCP changes.
+- Dashboard status loads on page entry; polling and device events remain planned.
+- Removing a connection does not yet revoke its token on the physical controller.
 
 ## Recommended next step
 
-Continue from the completed authoritative-context, explicit-memory and first
-Nanoleaf slices:
+Continue from the completed authoritative-context, explicit-memory, Nanoleaf
+and room-dashboard slices:
 
-1. pair and smoke-test the actual Nanoleaf controller on the local network;
-2. add brightness as the next typed Nanoleaf capability;
-3. define the provider-neutral capability contract above the first integration;
-4. add login throttling before any remote exposure.
+1. define provider-neutral device state and capability contracts;
+2. add controlled background status refresh and DHCP-address recovery;
+3. revoke controller tokens when removing reachable connections;
+4. add login throttling and backup verification before remote exposure.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.
@@ -255,9 +279,9 @@ In a new agent chat, use this prompt:
 > Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
 > `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
 > current implementation and uncommitted changes. Read the latest dated session
-> handoff. Verify the Core-owned context and compaction slice, finish
-> interrupted-response recovery, then continue with the explicitly confirmed
-> personal-memory slice.
+> handoff. Verify the running stack, the two persisted Nanoleaf connections and
+> the `/home` room dashboard. Continue with provider-neutral device capability
+> contracts, bounded status refresh and connection recovery.
 > Preserve Core as the authority and never store credentials or session tokens
 > in browser local storage.
 

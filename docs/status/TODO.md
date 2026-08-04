@@ -140,7 +140,23 @@ session. The current implementation status is documented in [README.md](README.m
 
 ## Later product slices
 
-- [ ] Return to the first controlled integration and capability contract after
-  context and personal-memory foundations are stable.
+- [x] Add an official internal Plugins catalog and Nanoleaf detail page.
+- [x] Discover Nanoleaf controllers through mDNS with a manual private-IPv4 fallback.
+- [x] Persist owner-specific connections and AES-GCM-encrypted credentials in Core.
+- [x] Add editable persistent device names and confirmed connection removal.
+- [x] Control power, brightness, colour, colour temperature and stored scenes.
+- [x] Show controller-derived palette previews for compatible scenes.
+- [x] Add owner-specific rooms and persistent device assignments.
+- [x] Replace the Home placeholder with live room/device cards, quick actions
+  and detailed controller dialogs.
+- [ ] Define provider-neutral device-state and capability contracts above the
+  current Nanoleaf-specific routes.
+- [ ] Add bounded background status refresh or device events.
+- [ ] Reconcile connections automatically after DHCP address changes.
+- [ ] Revoke physical-controller tokens when removing reachable connections.
+- [ ] Add focused Core HTTP integration tests for room ownership, cross-owner
+  assignment rejection and Nanoleaf command validation.
+- [ ] Complete a responsive German/English visual pass for Plugins and Home in
+  both themes.
 - [ ] Replace browser speech providers only after explicitly selecting suitable
   local STT and TTS runtimes.
