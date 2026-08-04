@@ -44,6 +44,6 @@ class JdbcIntegrationConnectionRepository(private val jdbc: JdbcClient) : Integr
         rs.getObject("id", UUID::class.java), rs.getObject("owner_id", UUID::class.java), rs.getString("provider"),
         rs.getString("display_name"), rs.getString("endpoint_host"), rs.getBytes("credential_ciphertext"),
         rs.getBytes("credential_nonce"), rs.getInt("credential_version"), rs.getTimestamp("created_at").toInstant(),
-        rs.getTimestamp("updated_at").toInstant(),
+        rs.getTimestamp("updated_at").toInstant(), rs.getObject("room_id", UUID::class.java),
     )
 }

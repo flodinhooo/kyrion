@@ -14,6 +14,7 @@ data class IntegrationConnection(
     val credentialVersion: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val roomId: UUID? = null,
 )
 
 data class IntegrationConnectionView(
@@ -22,6 +23,7 @@ data class IntegrationConnectionView(
     val displayName: String,
     val endpointHost: String,
     val createdAt: Instant,
+    val roomId: UUID?,
 )
 
-fun IntegrationConnection.view() = IntegrationConnectionView(id, provider, displayName, endpointHost, createdAt)
+fun IntegrationConnection.view() = IntegrationConnectionView(id, provider, displayName, endpointHost, createdAt, roomId)
