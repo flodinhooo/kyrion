@@ -10,6 +10,15 @@ class ChatMessage(BaseModel):
     content: str = Field(min_length=1, max_length=100_000)
 
 
+class MemoryContextItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=128)
+    category: Literal["preference", "person", "project", "value", "other"]
+    content: str = Field(min_length=1, max_length=1_000)
+    sensitivity: Literal["standard", "sensitive"]
+
+
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -21,6 +30,11 @@ class ChatRequest(BaseModel):
     )
     model_id: str | None = Field(default=None, alias="modelId", min_length=1, max_length=128)
     messages: list[ChatMessage] = Field(min_length=1, max_length=200)
+    memory_context: list[MemoryContextItem] = Field(
+        default_factory=list,
+        alias="memoryContext",
+        max_length=3,
+    )
     locale: Literal["de", "en"]
 
 
