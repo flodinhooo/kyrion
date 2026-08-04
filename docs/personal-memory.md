@@ -49,3 +49,16 @@ history.
 This feature should precede broad external integrations only if the immediate
 product priority remains a deeply personal local assistant. It does not replace
 conversation context compaction; the two mechanisms solve different problems.
+
+## Implemented first slice
+
+Flyway V6 and the authenticated Core memory API now implement the first five
+steps through explicit retention control: memory is disabled by default,
+German and English explicit remember requests create owner-scoped proposals,
+every proposal requires confirmation, sensitive proposals are visibly marked,
+and the profile supports inspection, correction and forgetting. Memory actions
+produce data-minimised activity events without recording remembered content.
+
+Relevant retrieval and visible disclosure when a confirmed memory influenced a
+response remain the next memory slice. Automatic inference remains deliberately
+unimplemented.
