@@ -11,6 +11,7 @@ type CoreContext = {
   estimatedTokens: number;
   tokenBudget: number;
   compacted: boolean;
+  usedMemories: Array<{ id: string; category: string; content: string; sensitivity: "standard" | "sensitive" }>;
 };
 
 function isCoreContext(value: unknown): value is CoreContext {
@@ -27,7 +28,14 @@ function isCoreContext(value: unknown): value is CoreContext {
     )
     && typeof context.estimatedTokens === "number"
     && typeof context.tokenBudget === "number"
-    && typeof context.compacted === "boolean";
+    && typeof context.compacted === "boolean"
+    && Array.isArray(context.usedMemories)
+    && context.usedMemories.length <= 3
+    && context.usedMemories.every((memory) =>
+      !!memory && typeof memory.id === "string" && typeof memory.category === "string"
+      && typeof memory.content === "string"
+      && (memory.sensitivity === "standard" || memory.sensitivity === "sensitive"),
+    );
 }
 
 function isChatRequest(value: unknown): value is ChatRequest {
@@ -102,6 +110,7 @@ export async function POST(incomingRequest: Request) {
         modelId: body.modelId,
         locale: body.locale,
         messages: contextValue.messages,
+        memoryContext: contextValue.usedMemories,
       }),
       cache: "no-store",
       signal: incomingRequest.signal,
@@ -122,6 +131,7 @@ export async function POST(incomingRequest: Request) {
       body.conversationId,
       auth.token,
       contextValue.turnId,
+      contextValue.usedMemories,
       contextValue.compacted ? {
         estimatedTokens: contextValue.estimatedTokens,
         tokenBudget: contextValue.tokenBudget,
@@ -149,6 +159,7 @@ function persistAssistantStream(
   conversationId: string,
   token: string,
   turnId: string,
+  usedMemories: CoreContext["usedMemories"],
   compaction: { estimatedTokens: number; tokenBudget: number } | null,
 ) {
   const decoder = new TextDecoder();
@@ -190,6 +201,9 @@ function persistAssistantStream(
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      if (usedMemories.length > 0) controller.enqueue(encoder.encode(`${JSON.stringify({
+        type: "memory.used", items: usedMemories,
+      })}\n`));
       if (compaction) controller.enqueue(encoder.encode(`${JSON.stringify({
         type: "context.compacted",
         ...compaction,

@@ -26,6 +26,7 @@ export type ChatErrorCode =
 
 export type ChatEvent =
   | { type: "context.compacted"; estimatedTokens: number; tokenBudget: number }
+  | { type: "memory.used"; items: Array<{ id: string; category: string; content: string; sensitivity: "standard" | "sensitive" }> }
   | { type: "message.started"; messageId: string }
   | { type: "message.delta"; messageId: string; delta: string }
   | { type: "message.completed"; messageId: string }

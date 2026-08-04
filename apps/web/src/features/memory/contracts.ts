@@ -1,6 +1,6 @@
 export type MemoryCategory = "preference" | "person" | "project" | "value" | "other";
 export type MemorySensitivity = "standard" | "sensitive";
-export type MemoryStatus = "proposed" | "confirmed";
+export type MemoryStatus = "proposed" | "confirmed" | "superseded";
 
 export type PersonalMemory = {
   id: string;
@@ -14,6 +14,7 @@ export type PersonalMemory = {
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
+  conflictsWithMemoryId: string | null;
 };
 
 export type MemoryProfile = {
@@ -29,7 +30,8 @@ export function isPersonalMemory(value: unknown): value is PersonalMemory {
   return typeof item.id === "string" && categories.has(item.category ?? "")
     && typeof item.content === "string"
     && (item.sensitivity === "standard" || item.sensitivity === "sensitive")
-    && (item.status === "proposed" || item.status === "confirmed");
+    && (item.status === "proposed" || item.status === "confirmed" || item.status === "superseded")
+    && (item.conflictsWithMemoryId === null || typeof item.conflictsWithMemoryId === "string");
 }
 
 export function isMemoryProfile(value: unknown): value is MemoryProfile {
