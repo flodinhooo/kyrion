@@ -27,15 +27,15 @@ Goal: control an existing Nanoleaf installation from Kyrion.
 - [ ] Identify the exact Nanoleaf model
 - [ ] Confirm that the panels are connected to the local network
 - [ ] Discover or configure the controller IP address
-- [ ] Generate a local API authentication token
-- [ ] Read the current device state
-- [ ] Switch the panels on and off
+- [x] Generate and securely persist a local API authentication token
+- [x] Read the current device state
+- [x] Switch the panels on and off
 - [ ] Change brightness
-- [ ] Display meaningful connection and API errors
-- [ ] Build a minimal Kyrion dashboard
-- [ ] Add German and English translations
-- [ ] Add a language selector
-- [ ] Persist the selected language locally
+- [x] Display meaningful connection and API errors
+- [x] Build a minimal Kyrion dashboard
+- [x] Add German and English translations
+- [x] Add a language selector
+- [x] Persist the selected language locally
 
 Success criterion:
 
@@ -48,10 +48,10 @@ Goal: separate device-specific communication from the user interface.
 
 - [ ] Define a generic device model
 - [ ] Define integration capabilities
-- [ ] Move Nanoleaf logic behind an integration interface
+- [x] Move Nanoleaf logic behind an integration interface
 - [ ] Add command execution results
-- [ ] Add basic activity logging
-- [ ] Decide whether the dedicated Kyrion Core service is now justified
+- [x] Add basic activity logging
+- [x] Decide whether the dedicated Kyrion Core service is now justified
 
 ## Milestone 3 — Text Assistant
 

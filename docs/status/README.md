@@ -56,6 +56,18 @@ Kyrion Core owner validation
 PostgreSQL conversations and ordered messages
 ```
 
+The first owner-scoped integration slice is implemented:
+
+```text
+Authenticated browser /plugins/nanoleaf
+    |
+    v
+Kyrion Core validation, confirmation and activity audit
+    |
+    v
+Encrypted per-owner credential + Nanoleaf local OpenAPI
+```
+
 The detailed handoff for the latest approximately two-hour development session
 is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-session.md).
 
@@ -104,6 +116,10 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - Readable automatic titles based on the first sentence, always beginning with
   a capital letter.
 - AI actions remain proposals; future device actions must pass through Core.
+- Official Nanoleaf integration connections are owner-scoped, use physical
+  local-controller pairing and keep API tokens encrypted in Core persistence.
+- Nanoleaf status and confirmed power commands run through Core and emit
+  integration activity events.
 
 ### Web application
 
@@ -111,6 +127,7 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 - Persistent shared application shell using a workspace route group.
 - Responsive sidebar and accessible mobile shadcn Sheet.
 - Chat, Home, Automations, Knowledge and Settings routes.
+- A Plugins catalog and an interactive Nanoleaf integration detail route.
 - German and English UI resources.
 - Persistent light/dark theme selection.
 - Per-device typography selection with standard, comfortable and large scales
@@ -202,8 +219,9 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
   retrieval; semantic retrieval and retention expiry are not implemented.
 - The current development installation has one configured local owner; public
   registration remains unavailable by design.
-- Core currently implements activity, local authentication and conversation
-  persistence; command execution and integration capabilities remain planned.
+- Core currently implements activity, local authentication, conversation and
+  memory persistence plus the first narrow Nanoleaf integration capability;
+  generic capability contracts and broader plugin lifecycle remain planned.
 - Activity actor ownership, retention and tamper-evidence are not implemented.
 - Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
   each browser can select one locally for its chat requests.
@@ -219,11 +237,12 @@ is recorded in [Evening Session Handoff — 2026-08-03](2026-08-03-evening-sessi
 
 ## Recommended next step
 
-Continue from the completed authoritative-context and explicit-memory slices:
+Continue from the completed authoritative-context, explicit-memory and first
+Nanoleaf slices:
 
-1. complete the systematic German/English and code-block visual pass;
-2. evaluate retrieval quality and tune deterministic matching with real use;
-3. define memory retention expiry and archival rules;
+1. pair and smoke-test the actual Nanoleaf controller on the local network;
+2. add brightness as the next typed Nanoleaf capability;
+3. define the provider-neutral capability contract above the first integration;
 4. add login throttling before any remote exposure.
 
 Do not expose the prepared session repository directly and do not store tokens
