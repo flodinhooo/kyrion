@@ -27,6 +27,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.security:spring-security-crypto")
     implementation("org.bouncycastle:bcprov-jdk18on:1.84")
+    implementation("org.jmdns:jmdns:3.6.3")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation(kotlin("reflect"))
     runtimeOnly("org.postgresql:postgresql")
