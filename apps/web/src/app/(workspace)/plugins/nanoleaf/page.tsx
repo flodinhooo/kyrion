@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
-import { DiscoveredNanoleaf, IntegrationConnection, isConnection, isConnectionList, isDiscoveredNanoleafList, isNanoleafState, NanoleafState } from "@/features/integrations/contracts";
+import { DiscoveredNanoleaf, IntegrationConnection, isConnection, isConnectionList, isDiscoveredNanoleafList, isNanoleafScenes, isNanoleafState, NanoleafScenes, NanoleafState } from "@/features/integrations/contracts";
 
 export default function NanoleafPage() {
   const { t } = useWorkspace();
@@ -17,6 +18,7 @@ export default function NanoleafPage() {
   const [selectedHost, setSelectedHost] = useState("");
   const [editingNames, setEditingNames] = useState<Record<string, string>>({});
   const [brightnessValues, setBrightnessValues] = useState<Record<string, number>>({});
+  const [scenes, setScenes] = useState<Record<string, NanoleafScenes>>({});
   const selectedDevice = discovered?.find((device) => device.host === selectedHost);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -79,9 +81,21 @@ export default function NanoleafPage() {
     if (response.ok && isNanoleafState(state)) setStates((current) => ({ ...current, [id]: state })); else setError(t.nanoleafError);
     setPending(false);
   }
+  async function loadScenes(id: string) {
+    setPending(true); const response = await fetch(`/api/integrations/nanoleaf/connections/${id}/scenes`, { cache: "no-store" });
+    const value: unknown = await response.json().catch(() => null);
+    if (response.ok && isNanoleafScenes(value)) setScenes((current) => ({ ...current, [id]: value })); else setError(t.nanoleafError);
+    setPending(false);
+  }
+  async function selectScene(id: string, name: string) {
+    setPending(true); const response = await fetch(`/api/integrations/nanoleaf/connections/${id}/scenes/select`, { method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() }, body: JSON.stringify({ name, confirmed: true }) });
+    const value: unknown = await response.json().catch(() => null);
+    if (response.ok && isNanoleafScenes(value)) setScenes((current) => ({ ...current, [id]: value })); else setError(t.nanoleafError);
+    setPending(false);
+  }
   async function remove(id: string) {
     setPending(true); const response = await fetch(`/api/integrations/nanoleaf/connections/${id}`, { method: "DELETE", headers: csrfHeader() });
-    if (response.ok) await load(); else setError(t.nanoleafError); setPending(false);
+    if (response.ok) { setRemoveConfirmation(null); await load(); } else setError(t.nanoleafError); setPending(false);
   }
   return <section className="plugins-stage nanoleaf-stage">
     <Link className="back-link" href="/plugins">← {t.nanoleafBack}</Link>
@@ -100,7 +114,9 @@ export default function NanoleafPage() {
       <div className="connection-heading">{editingNames[connection.id] !== undefined ? <input aria-label={t.nanoleafName} autoFocus value={editingNames[connection.id]} onChange={(event) => setEditingNames((current) => ({ ...current, [connection.id]: event.target.value }))} /> : <div><h3>{connection.displayName}</h3><code>{connection.endpointHost}</code></div>}<button type="button" onClick={() => editingNames[connection.id] !== undefined ? void rename(connection.id) : setEditingNames((current) => ({ ...current, [connection.id]: connection.displayName }))}>{editingNames[connection.id] !== undefined ? t.nanoleafSaveName : t.nanoleafRename}</button></div>
       {states[connection.id] !== undefined && <p>{states[connection.id] ? `${t.nanoleafOnline} · ${states[connection.id]?.brightness ?? "–"}%` : t.nanoleafOffline}</p>}
       <div className="brightness-control"><label><span>{t.nanoleafBrightness}</span><strong>{brightnessValues[connection.id] ?? states[connection.id]?.brightness ?? 50}%</strong><input type="range" min="0" max="100" value={brightnessValues[connection.id] ?? states[connection.id]?.brightness ?? 50} onChange={(event) => setBrightnessValues((current) => ({ ...current, [connection.id]: Number(event.target.value) }))} /></label><button disabled={pending} onClick={() => void brightness(connection.id)}>{t.nanoleafApplyBrightness}</button></div>
-      <div className="connection-actions"><button disabled={pending} onClick={() => void refresh(connection.id)}>{t.nanoleafRefresh}</button><button disabled={pending} onClick={() => void power(connection.id, true)}>{t.nanoleafTurnOn}</button><button disabled={pending} onClick={() => void power(connection.id, false)}>{t.nanoleafTurnOff}</button>{removeConfirmation === connection.id ? <><button className="danger" disabled={pending} onClick={() => void remove(connection.id)}>{t.delete}</button><button disabled={pending} onClick={() => setRemoveConfirmation(null)}>{t.cancel}</button></> : <button className="danger" disabled={pending} onClick={() => setRemoveConfirmation(connection.id)}>{t.nanoleafRemove}</button>}</div>
+      <div className="scene-control"><div><strong>{t.nanoleafScenes}</strong><button disabled={pending} onClick={() => void loadScenes(connection.id)}>{t.nanoleafLoadScenes}</button></div>{scenes[connection.id] && (scenes[connection.id].items.length === 0 ? <p>{t.nanoleafNoScenes}</p> : <div className="scene-list">{scenes[connection.id].items.map((scene) => { const colors=scenes[connection.id].previews[scene]??[]; return <button className={`${scenes[connection.id].active === scene ? "active" : ""} ${colors.length ? "has-preview" : ""}`} style={colors.length ? { backgroundImage: `linear-gradient(135deg, ${colors.join(", ")})` } : undefined} disabled={pending} key={scene} onClick={() => void selectScene(connection.id, scene)}><span>{scene}</span>{scenes[connection.id].active === scene && <small>✓ {t.nanoleafActiveScene}</small>}</button>;})}</div>)}</div>
+      <div className="connection-actions"><button disabled={pending} onClick={() => void refresh(connection.id)}>{t.nanoleafRefresh}</button><button disabled={pending} onClick={() => void power(connection.id, true)}>{t.nanoleafTurnOn}</button><button disabled={pending} onClick={() => void power(connection.id, false)}>{t.nanoleafTurnOff}</button><button className="danger" disabled={pending} onClick={() => setRemoveConfirmation(connection.id)}>{t.nanoleafRemove}</button></div>
     </article>)}</div>}
+    <ConfirmDialog open={removeConfirmation !== null} onOpenChange={(open) => { if (!open) setRemoveConfirmation(null); }} title={t.nanoleafRemoveTitle} description={t.nanoleafRemoveDescription.replace("{name}", connections.find((item) => item.id === removeConfirmation)?.displayName ?? "Nanoleaf")} confirmLabel={t.nanoleafRemoveConfirm} cancelLabel={t.cancel} pending={pending} onConfirm={() => { if (removeConfirmation) void remove(removeConfirmation); }} />
   </section>;
 }
