@@ -92,6 +92,30 @@ class NanoleafIntegrationService(
         }
     }
 
+    fun scenes(ownerId: UUID, id: UUID): NanoleafScenes {
+        val connection = owned(ownerId, id)
+        return gateway.scenes(connection.endpointHost, cipher.reveal(connection))
+    }
+
+    fun selectScene(ownerId: UUID, id: UUID, name: String, confirmed: Boolean): NanoleafScenes {
+        if (!confirmed) throw IntegrationConfirmationRequiredException()
+        val scene = name.trim()
+        if (scene.isBlank() || scene.length > 160) throw IntegrationInvalidSceneException()
+        val connection = owned(ownerId, id)
+        val correlationId = UUID.randomUUID()
+        record(ownerId, "integration.nanoleaf.scene", ActivityStatus.CONFIRMED, "nanoleaf.scene.confirmed", correlationId)
+        return try {
+            val token = cipher.reveal(connection)
+            gateway.selectScene(connection.endpointHost, token, scene)
+            gateway.scenes(connection.endpointHost, token).also {
+                record(ownerId, "integration.nanoleaf.scene", ActivityStatus.SUCCEEDED, "nanoleaf.scene.selected", correlationId)
+            }
+        } catch (exception: RuntimeException) {
+            record(ownerId, "integration.nanoleaf.scene", ActivityStatus.FAILED, "nanoleaf.scene.failed", correlationId)
+            throw exception
+        }
+    }
+
     private fun owned(ownerId: UUID, id: UUID) = repository.find(ownerId, id)?.takeIf { it.provider == PROVIDER }
         ?: throw IntegrationNotFoundException()
 
@@ -115,3 +139,4 @@ class IntegrationInvalidHostException : RuntimeException()
 class IntegrationConfirmationRequiredException : RuntimeException()
 class IntegrationInvalidNameException : RuntimeException()
 class IntegrationInvalidBrightnessException : RuntimeException()
+class IntegrationInvalidSceneException : RuntimeException()

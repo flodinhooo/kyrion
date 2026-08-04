@@ -16,6 +16,7 @@ data class PairNanoleafRequest(
 data class NanoleafPowerRequest(val on: Boolean, val confirmed: Boolean)
 data class NanoleafBrightnessRequest(val brightness: Int, val confirmed: Boolean)
 data class RenameIntegrationRequest(@field:NotBlank @field:Size(max = 160) val displayName: String)
+data class NanoleafSceneRequest(@field:NotBlank @field:Size(max = 160) val name: String, val confirmed: Boolean)
 
 @RestController
 @RequestMapping("/v1/integrations/nanoleaf")
@@ -45,6 +46,13 @@ class NanoleafIntegrationController(
     fun brightness(@PathVariable id: UUID, @RequestBody body: NanoleafBrightnessRequest, request: HttpServletRequest) =
         service.brightness(request.ownerId(), id, body.brightness, body.confirmed)
 
+    @GetMapping("/connections/{id}/scenes")
+    fun scenes(@PathVariable id: UUID, request: HttpServletRequest) = service.scenes(request.ownerId(), id)
+
+    @PutMapping("/connections/{id}/scenes/select")
+    fun selectScene(@PathVariable id: UUID, @Valid @RequestBody body: NanoleafSceneRequest, request: HttpServletRequest) =
+        service.selectScene(request.ownerId(), id, body.name, body.confirmed)
+
     @DeleteMapping("/connections/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun remove(@PathVariable id: UUID, request: HttpServletRequest) = service.remove(request.ownerId(), id)
 
@@ -62,7 +70,7 @@ class IntegrationErrorHandler {
     fun invalidHost() = mapOf("code" to "INTEGRATION_INVALID_HOST")
     @ExceptionHandler(IntegrationConfirmationRequiredException::class) @ResponseStatus(HttpStatus.CONFLICT)
     fun confirmation() = mapOf("code" to "CONFIRMATION_REQUIRED")
-    @ExceptionHandler(IntegrationInvalidNameException::class, IntegrationInvalidBrightnessException::class) @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(IntegrationInvalidNameException::class, IntegrationInvalidBrightnessException::class, IntegrationInvalidSceneException::class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun invalidValue() = mapOf("code" to "INVALID_REQUEST")
     @ExceptionHandler(NanoleafPairingWindowClosedException::class) @ResponseStatus(HttpStatus.CONFLICT)
     fun pairingWindow() = mapOf("code" to "NANOLEAF_PAIRING_WINDOW_CLOSED")

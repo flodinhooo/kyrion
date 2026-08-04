@@ -74,4 +74,6 @@ private class FakeNanoleafGateway : NanoleafGateway {
     override fun state(host: String, token: String) = NanoleafDeviceState("Test panels", "NL42", "serial", on, 55)
     override fun setPower(host: String, token: String, on: Boolean) { this.on = on }
     override fun setBrightness(host: String, token: String, brightness: Int) = Unit
+    override fun scenes(host: String, token: String) = NanoleafScenes("Forest", listOf("Forest", "Northern Lights"))
+    override fun selectScene(host: String, token: String, name: String) = Unit
 }
