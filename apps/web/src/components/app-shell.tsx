@@ -47,6 +47,7 @@ const navigation = [
   ["home", Icons.home, "/home"],
   ["automations", Icons.spark, "/automations"],
   ["knowledge", Icons.book, "/knowledge"],
+  ["plugins", Icons.plugins, "/plugins"],
   ["activity", Icons.activity, "/activity"],
 ] as const;
 
@@ -287,7 +288,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
         <nav aria-label={t.navigation}>
           <p className="section-label">{t.navigation}</p>
           {navigation.map(([key, Icon, href]) => (
-            <Link className={`nav-item ${pathname === href ? "active" : ""}`} href={href} key={key}>
+            <Link className={`nav-item ${pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "active" : ""}`} href={href} key={key}>
               <Icon />
               <span>{t[key]}</span>
             </Link>
