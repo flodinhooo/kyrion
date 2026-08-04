@@ -54,4 +54,5 @@ export const Icons = {
   edit: (props: IconProps) => <IconBase {...props}><path d="M4 20h4l11-11-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></IconBase>,
   trash: (props: IconProps) => <IconBase {...props}><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></IconBase>,
   check: (props: IconProps) => <IconBase {...props}><path d="m5 12 4 4L19 6" /></IconBase>,
+  power: (props: IconProps) => <IconBase {...props}><path d="M12 2v10" /><path d="M18.4 6.6a8 8 0 1 1-12.8 0" /></IconBase>,
 };
