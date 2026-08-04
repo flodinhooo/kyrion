@@ -17,6 +17,8 @@ data class NanoleafPowerRequest(val on: Boolean, val confirmed: Boolean)
 data class NanoleafBrightnessRequest(val brightness: Int, val confirmed: Boolean)
 data class RenameIntegrationRequest(@field:NotBlank @field:Size(max = 160) val displayName: String)
 data class NanoleafSceneRequest(@field:NotBlank @field:Size(max = 160) val name: String, val confirmed: Boolean)
+data class NanoleafColorRequest(val hue: Int, val saturation: Int, val confirmed: Boolean)
+data class NanoleafColorTemperatureRequest(val kelvin: Int, val confirmed: Boolean)
 
 @RestController
 @RequestMapping("/v1/integrations/nanoleaf")
@@ -53,6 +55,9 @@ class NanoleafIntegrationController(
     fun selectScene(@PathVariable id: UUID, @Valid @RequestBody body: NanoleafSceneRequest, request: HttpServletRequest) =
         service.selectScene(request.ownerId(), id, body.name, body.confirmed)
 
+    @PutMapping("/connections/{id}/color") fun color(@PathVariable id: UUID, @RequestBody body: NanoleafColorRequest, request: HttpServletRequest) = service.color(request.ownerId(), id, body.hue, body.saturation, body.confirmed)
+    @PutMapping("/connections/{id}/color-temperature") fun colorTemperature(@PathVariable id: UUID, @RequestBody body: NanoleafColorTemperatureRequest, request: HttpServletRequest) = service.colorTemperature(request.ownerId(), id, body.kelvin, body.confirmed)
+
     @DeleteMapping("/connections/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun remove(@PathVariable id: UUID, request: HttpServletRequest) = service.remove(request.ownerId(), id)
 
@@ -70,7 +75,7 @@ class IntegrationErrorHandler {
     fun invalidHost() = mapOf("code" to "INTEGRATION_INVALID_HOST")
     @ExceptionHandler(IntegrationConfirmationRequiredException::class) @ResponseStatus(HttpStatus.CONFLICT)
     fun confirmation() = mapOf("code" to "CONFIRMATION_REQUIRED")
-    @ExceptionHandler(IntegrationInvalidNameException::class, IntegrationInvalidBrightnessException::class, IntegrationInvalidSceneException::class) @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(IntegrationInvalidNameException::class, IntegrationInvalidBrightnessException::class, IntegrationInvalidSceneException::class, IntegrationInvalidColorException::class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun invalidValue() = mapOf("code" to "INVALID_REQUEST")
     @ExceptionHandler(NanoleafPairingWindowClosedException::class) @ResponseStatus(HttpStatus.CONFLICT)
     fun pairingWindow() = mapOf("code" to "NANOLEAF_PAIRING_WINDOW_CLOSED")

@@ -116,6 +116,25 @@ class NanoleafIntegrationService(
         }
     }
 
+    fun color(ownerId: UUID, id: UUID, hue: Int, saturation: Int, confirmed: Boolean): NanoleafDeviceState {
+        if (!confirmed) throw IntegrationConfirmationRequiredException()
+        if (hue !in 0..359 || saturation !in 0..100) throw IntegrationInvalidColorException()
+        return executeStateCommand(ownerId, id, "color", "nanoleaf.color.changed") { host, token -> gateway.setColor(host, token, hue, saturation) }
+    }
+
+    fun colorTemperature(ownerId: UUID, id: UUID, kelvin: Int, confirmed: Boolean): NanoleafDeviceState {
+        if (!confirmed) throw IntegrationConfirmationRequiredException()
+        if (kelvin !in 1200..6500) throw IntegrationInvalidColorException()
+        return executeStateCommand(ownerId, id, "color-temperature", "nanoleaf.color-temperature.changed") { host, token -> gateway.setColorTemperature(host, token, kelvin) }
+    }
+
+    private fun executeStateCommand(ownerId: UUID, id: UUID, type: String, summary: String, command: (String, String) -> Unit): NanoleafDeviceState {
+        val connection = owned(ownerId, id); val correlationId = UUID.randomUUID()
+        record(ownerId, "integration.nanoleaf.$type", ActivityStatus.CONFIRMED, "nanoleaf.$type.confirmed", correlationId)
+        return try { val token = cipher.reveal(connection); command(connection.endpointHost, token); gateway.state(connection.endpointHost, token).also { record(ownerId, "integration.nanoleaf.$type", ActivityStatus.SUCCEEDED, summary, correlationId) } }
+        catch (exception: RuntimeException) { record(ownerId, "integration.nanoleaf.$type", ActivityStatus.FAILED, "nanoleaf.$type.failed", correlationId); throw exception }
+    }
+
     private fun owned(ownerId: UUID, id: UUID) = repository.find(ownerId, id)?.takeIf { it.provider == PROVIDER }
         ?: throw IntegrationNotFoundException()
 
@@ -140,3 +159,4 @@ class IntegrationConfirmationRequiredException : RuntimeException()
 class IntegrationInvalidNameException : RuntimeException()
 class IntegrationInvalidBrightnessException : RuntimeException()
 class IntegrationInvalidSceneException : RuntimeException()
+class IntegrationInvalidColorException : RuntimeException()

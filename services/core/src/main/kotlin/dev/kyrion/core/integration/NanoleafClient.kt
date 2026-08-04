@@ -8,7 +8,10 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-data class NanoleafDeviceState(val name: String, val model: String?, val serialNumber: String?, val on: Boolean, val brightness: Int?)
+data class NanoleafDeviceState(
+    val name: String, val model: String?, val serialNumber: String?, val on: Boolean, val brightness: Int?,
+    val hue: Int? = null, val saturation: Int? = null, val colorTemperature: Int? = null, val colorMode: String? = null,
+)
 data class NanoleafScenes(val active: String?, val items: List<String>, val previews: Map<String, List<String>> = emptyMap())
 
 interface NanoleafGateway {
@@ -18,6 +21,8 @@ interface NanoleafGateway {
     fun setBrightness(host: String, token: String, brightness: Int)
     fun scenes(host: String, token: String): NanoleafScenes
     fun selectScene(host: String, token: String, name: String)
+    fun setColor(host: String, token: String, hue: Int, saturation: Int)
+    fun setColorTemperature(host: String, token: String, kelvin: Int)
 }
 
 @Component
@@ -41,6 +46,10 @@ class NanoleafClient : NanoleafGateway {
             root.path("name").asText("Nanoleaf"), root.path("model").asText(null), root.path("serialNo").asText(null),
             root.path("state").path("on").path("value").asBoolean(false),
             root.path("state").path("brightness").path("value").takeUnless { it.isMissingNode }?.asInt(),
+            root.path("state").path("hue").path("value").takeUnless { it.isMissingNode }?.asInt(),
+            root.path("state").path("sat").path("value").takeUnless { it.isMissingNode }?.asInt(),
+            root.path("state").path("ct").path("value").takeUnless { it.isMissingNode }?.asInt(),
+            root.path("state").path("colorMode").asText(null),
         )
     }
 
@@ -73,6 +82,16 @@ class NanoleafClient : NanoleafGateway {
     override fun selectScene(host: String, token: String, name: String) {
         val body = objectMapper.writeValueAsString(mapOf("select" to name))
         val response = send(host, "/api/v1/$token/effects", "PUT", body)
+        if (response.statusCode() !in 200..299) throw NanoleafUnavailableException()
+    }
+
+    override fun setColor(host: String, token: String, hue: Int, saturation: Int) {
+        val response = send(host, "/api/v1/$token/state", "PUT", "{\"hue\":{\"value\":$hue},\"sat\":{\"value\":$saturation}}")
+        if (response.statusCode() !in 200..299) throw NanoleafUnavailableException()
+    }
+
+    override fun setColorTemperature(host: String, token: String, kelvin: Int) {
+        val response = send(host, "/api/v1/$token/state", "PUT", "{\"ct\":{\"value\":$kelvin}}")
         if (response.statusCode() !in 200..299) throw NanoleafUnavailableException()
     }
 
