@@ -6,6 +6,25 @@ function parseEvent(line: string): ChatEvent {
   return JSON.parse(line) as ChatEvent;
 }
 
+const responseErrorCodes = new Set([
+  "MODEL_UNAVAILABLE",
+  "INVALID_REQUEST",
+  "CONVERSATION_NOT_FOUND",
+  "CONVERSATION_CONFLICT",
+  "CORE_UNAVAILABLE",
+]);
+
+async function responseErrorCode(response: Response): Promise<ChatEvent & { type: "error" }> {
+  try {
+    const value: unknown = await response.json();
+    const code = value && typeof value === "object" ? (value as { code?: unknown }).code : undefined;
+    if (typeof code === "string" && responseErrorCodes.has(code)) {
+      return { type: "error", code: code as Extract<ChatEvent, { type: "error" }>["code"] };
+    }
+  } catch { /* fall through to the stable transport error */ }
+  return { type: "error", code: response.status === 400 ? "INVALID_REQUEST" : "MODEL_UNAVAILABLE" };
+}
+
 export class ApiChatTransport implements ChatTransport {
   async *stream(request: ChatRequest, options?: ChatStreamOptions): AsyncIterable<ChatEvent> {
     let response: Response;
@@ -23,10 +42,7 @@ export class ApiChatTransport implements ChatTransport {
     }
 
     if (!response.ok || !response.body) {
-      yield {
-        type: "error",
-        code: response.status === 400 ? "INVALID_REQUEST" : "MODEL_UNAVAILABLE",
-      };
+      yield await responseErrorCode(response);
       return;
     }
 

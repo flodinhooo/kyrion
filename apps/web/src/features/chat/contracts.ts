@@ -7,12 +7,11 @@ export type ChatMessage = {
   createdAt: string;
 };
 
-export type ChatInputMessage = Pick<ChatMessage, "role" | "content">;
-
 export type ChatRequest = {
-  conversationId?: string;
+  conversationId: string;
+  title: string;
   modelId?: string;
-  messages: ChatInputMessage[];
+  message: Pick<ChatMessage, "id" | "content" | "createdAt">;
   locale: "de" | "en";
 };
 
@@ -20,9 +19,13 @@ export type ChatErrorCode =
   | "MODEL_UNAVAILABLE"
   | "REQUEST_ABORTED"
   | "INVALID_REQUEST"
+  | "CONVERSATION_NOT_FOUND"
+  | "CONVERSATION_CONFLICT"
+  | "CORE_UNAVAILABLE"
   | "STREAM_FAILED";
 
 export type ChatEvent =
+  | { type: "context.compacted"; estimatedTokens: number; tokenBudget: number }
   | { type: "message.started"; messageId: string }
   | { type: "message.delta"; messageId: string; delta: string }
   | { type: "message.completed"; messageId: string }
