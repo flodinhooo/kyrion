@@ -34,6 +34,7 @@ data class MemoryUpdateRequest(
 @RequestMapping("/v1/memory")
 class PersonalMemoryController(
     private val repository: PersonalMemoryRepository,
+    private val selector: MemoryContextSelector,
     private val conversations: ConversationRepository,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
@@ -57,12 +58,14 @@ class PersonalMemoryController(
         if (!repository.settings(ownerId).enabled) throw MemoryDisabledException()
         validateSource(ownerId, body.sourceConversationId, body.sourceMessageId)
         val now = clock.instant()
+        val category = MemoryCategory.valueOf(body.category)
+        val conflict = selector.conflict(ownerId, body.content, category)
         val memory = repository.create(
             ownerId,
             PersonalMemory(
-                UUID.randomUUID(), MemoryCategory.valueOf(body.category), body.content.trim(),
+                UUID.randomUUID(), category, body.content.trim(),
                 MemorySensitivity.valueOf(body.sensitivity), "explicit", MemoryStatus.proposed,
-                body.sourceConversationId, body.sourceMessageId, now, now, null,
+                body.sourceConversationId, body.sourceMessageId, now, now, null, conflict?.id,
             ),
         )
         record(ownerId, "memory.proposed", "memory.proposed", ActivityStatus.PROPOSED, memory.id)
@@ -70,12 +73,21 @@ class PersonalMemoryController(
     }
 
     @PostMapping("/{id}/confirm")
-    fun confirm(@PathVariable id: UUID, request: HttpServletRequest): PersonalMemory {
+    fun confirm(
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "keep") resolution: String,
+        request: HttpServletRequest,
+    ): PersonalMemory {
         val ownerId = request.ownerId()
         val memory = repository.find(ownerId, id) ?: throw MemoryNotFoundException()
         if (memory.status != MemoryStatus.proposed) throw MemoryConflictException()
-        val confirmed = repository.confirm(ownerId, id, clock.instant()) ?: throw MemoryNotFoundException()
-        record(ownerId, "memory.confirmed", "memory.confirmed", ActivityStatus.CONFIRMED, id)
+        if (resolution !in setOf("keep", "replace")) throw MemoryInvalidRequestException()
+        val confirmed = repository.confirm(ownerId, id, clock.instant(), resolution == "replace") ?: throw MemoryNotFoundException()
+        record(
+            ownerId, "memory.confirmed",
+            if (resolution == "replace") "memory.replaced" else "memory.confirmed",
+            ActivityStatus.CONFIRMED, id,
+        )
         return confirmed
     }
 

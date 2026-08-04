@@ -5,7 +5,7 @@ import java.util.UUID
 
 enum class MemoryCategory { preference, person, project, value, other }
 enum class MemorySensitivity { standard, sensitive }
-enum class MemoryStatus { proposed, confirmed }
+enum class MemoryStatus { proposed, confirmed, superseded }
 
 data class MemorySettings(val enabled: Boolean, val updatedAt: Instant?)
 
@@ -21,6 +21,7 @@ data class PersonalMemory(
     val createdAt: Instant,
     val updatedAt: Instant,
     val confirmedAt: Instant?,
+    val conflictsWithMemoryId: UUID? = null,
 )
 
 data class MemoryProfile(val settings: MemorySettings, val items: List<PersonalMemory>)

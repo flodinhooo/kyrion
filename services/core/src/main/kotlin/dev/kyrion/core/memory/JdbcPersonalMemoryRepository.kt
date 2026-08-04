@@ -2,13 +2,17 @@ package dev.kyrion.core.memory
 
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.support.TransactionTemplate
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
 @Repository
-class JdbcPersonalMemoryRepository(private val jdbc: JdbcClient) : PersonalMemoryRepository {
+class JdbcPersonalMemoryRepository(
+    private val jdbc: JdbcClient,
+    private val transactions: TransactionTemplate,
+) : PersonalMemoryRepository {
     override fun settings(ownerId: UUID): MemorySettings = jdbc.sql(
         "SELECT enabled, updated_at FROM owner_memory_settings WHERE owner_id = :ownerId",
     ).param("ownerId", ownerId).query { rs, _ -> MemorySettings(rs.getBoolean("enabled"), rs.getTimestamp("updated_at").toInstant()) }
@@ -28,19 +32,25 @@ class JdbcPersonalMemoryRepository(private val jdbc: JdbcClient) : PersonalMemor
            ORDER BY updated_at DESC LIMIT :limit""",
     ).param("ownerId", ownerId).param("limit", limit).query { rs, _ -> memory(rs) }.list()
 
+    override fun confirmed(ownerId: UUID, limit: Int): List<PersonalMemory> = jdbc.sql(
+        """SELECT * FROM personal_memory WHERE owner_id = :ownerId AND status = 'confirmed'
+           ORDER BY updated_at DESC LIMIT :limit""",
+    ).param("ownerId", ownerId).param("limit", limit).query { rs, _ -> memory(rs) }.list()
+
     override fun create(ownerId: UUID, memory: PersonalMemory): PersonalMemory {
         jdbc.sql(
             """INSERT INTO personal_memory
                (id, owner_id, category, content, sensitivity, origin, status, source_conversation_id,
-                source_message_id, created_at, updated_at, confirmed_at)
+                source_message_id, created_at, updated_at, confirmed_at, conflicts_with_memory_id)
                VALUES (:id, :ownerId, :category, :content, :sensitivity, :origin, :status,
-                       :sourceConversationId, :sourceMessageId, :createdAt, :updatedAt, :confirmedAt)""",
+                       :sourceConversationId, :sourceMessageId, :createdAt, :updatedAt, :confirmedAt, :conflictsWithMemoryId)""",
         ).param("id", memory.id).param("ownerId", ownerId).param("category", memory.category.name)
             .param("content", memory.content).param("sensitivity", memory.sensitivity.name)
             .param("origin", memory.origin).param("status", memory.status.name)
             .param("sourceConversationId", memory.sourceConversationId).param("sourceMessageId", memory.sourceMessageId)
             .param("createdAt", Timestamp.from(memory.createdAt)).param("updatedAt", Timestamp.from(memory.updatedAt))
-            .param("confirmedAt", memory.confirmedAt?.let(Timestamp::from)).update()
+            .param("confirmedAt", memory.confirmedAt?.let(Timestamp::from))
+            .param("conflictsWithMemoryId", memory.conflictsWithMemoryId).update()
         return memory
     }
 
@@ -48,12 +58,22 @@ class JdbcPersonalMemoryRepository(private val jdbc: JdbcClient) : PersonalMemor
         "SELECT * FROM personal_memory WHERE id = :id AND owner_id = :ownerId",
     ).param("id", id).param("ownerId", ownerId).query { rs, _ -> memory(rs) }.optional().orElse(null)
 
-    override fun confirm(ownerId: UUID, id: UUID, confirmedAt: Instant): PersonalMemory? {
+    override fun confirm(ownerId: UUID, id: UUID, confirmedAt: Instant, replaceConflict: Boolean): PersonalMemory? =
+        transactions.execute {
+        val proposed = find(ownerId, id) ?: return@execute null
+        if (proposed.status != MemoryStatus.proposed) return@execute proposed
+        if (replaceConflict && proposed.conflictsWithMemoryId != null) {
+            jdbc.sql(
+                """UPDATE personal_memory SET status = 'superseded', updated_at = :updatedAt
+                   WHERE id = :conflictId AND owner_id = :ownerId AND status = 'confirmed'""",
+            ).param("updatedAt", Timestamp.from(confirmedAt)).param("conflictId", proposed.conflictsWithMemoryId)
+                .param("ownerId", ownerId).update()
+        }
         jdbc.sql(
             """UPDATE personal_memory SET status = 'confirmed', confirmed_at = :confirmedAt, updated_at = :confirmedAt
                WHERE id = :id AND owner_id = :ownerId AND status = 'proposed'""",
         ).param("confirmedAt", Timestamp.from(confirmedAt)).param("id", id).param("ownerId", ownerId).update()
-        return find(ownerId, id)
+        find(ownerId, id)
     }
 
     override fun update(
@@ -83,5 +103,6 @@ class JdbcPersonalMemoryRepository(private val jdbc: JdbcClient) : PersonalMemor
         rs.getObject("source_conversation_id", UUID::class.java), rs.getObject("source_message_id", UUID::class.java),
         rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
         rs.getTimestamp("confirmed_at")?.toInstant(),
+        rs.getObject("conflicts_with_memory_id", UUID::class.java),
     )
 }

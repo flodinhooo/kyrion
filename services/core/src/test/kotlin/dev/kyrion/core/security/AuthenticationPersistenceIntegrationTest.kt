@@ -284,6 +284,15 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(memories.find(secondOwner, memoryId)).isNull()
         assertThat(memories.find(ownerId, memoryId)?.status?.name).isEqualTo("confirmed")
 
+        val relevantTurn = UUID.randomUUID()
+        mockMvc.perform(
+            post("/v1/conversations/$conversationId/turns").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"title":"Lifecycle","tokenBudget":3072,"message":{"id":"$relevantTurn","role":"user","content":"How is the Kyrion project going?","createdAt":"$createdAt"}}"""),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.usedMemories[0].id").value(memoryId.toString()))
+            .andExpect(jsonPath("$.usedMemories[0].content").value("Kyrion is my local-first project"))
+
         mockMvc.perform(delete("/v1/memory/$memoryId").header("Authorization", "Bearer $token"))
             .andExpect(status().isNoContent)
         assertThat(memories.find(ownerId, memoryId)).isNull()

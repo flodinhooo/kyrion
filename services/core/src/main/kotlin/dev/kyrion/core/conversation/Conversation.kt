@@ -8,6 +8,7 @@ data class ConversationMessage(val id: UUID, val role: String, val content: Stri
 data class Conversation(val id: UUID, val title: String, val createdAt: Instant, val updatedAt: Instant, val messages: List<ConversationMessage>)
 
 data class ConversationContextMessage(val role: String, val content: String)
+data class ConversationMemoryContext(val id: UUID, val category: String, val content: String, val sensitivity: String)
 
 data class ConversationContext(
     val conversationId: UUID,
@@ -16,6 +17,7 @@ data class ConversationContext(
     val estimatedTokens: Int,
     val tokenBudget: Int,
     val compacted: Boolean,
+    val usedMemories: List<ConversationMemoryContext>,
 )
 
 enum class ConversationTurnStatus { started, completed, stopped, failed }
