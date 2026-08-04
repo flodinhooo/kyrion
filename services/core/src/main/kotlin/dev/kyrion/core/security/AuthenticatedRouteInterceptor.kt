@@ -34,6 +34,6 @@ class AuthenticatedRouteConfiguration(
     private val interceptor: AuthenticatedRouteInterceptor,
 ) : WebMvcConfigurer {
     override fun addInterceptors(registry: InterceptorRegistry) {
-        registry.addInterceptor(interceptor).addPathPatterns("/v1/activity/**", "/v1/conversations/**")
+        registry.addInterceptor(interceptor).addPathPatterns("/v1/activity/**", "/v1/conversations/**", "/v1/memory/**")
     }
 }

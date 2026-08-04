@@ -40,6 +40,14 @@ Authenticated Core endpoints:
 - `PUT /v1/conversations/{id}`
 - `PATCH /v1/conversations/{id}`
 - `DELETE /v1/conversations/{id}`
+- `POST /v1/conversations/{id}/turns`
+- `POST /v1/conversations/{id}/turns/complete`
+- `GET /v1/memory`
+- `PUT /v1/memory/settings`
+- `POST /v1/memory/proposals`
+- `POST /v1/memory/{id}/confirm`
+- `PATCH /v1/memory/{id}`
+- `DELETE /v1/memory/{id}`
 
 The browser uses same-origin Next.js routes under `/api/auth` and
 `/api/conversations`; it does not receive the Core session token in JSON.
@@ -51,10 +59,17 @@ has a required `owner_id`; all reads and updates combine the requested ID with
 the authenticated owner ID. Messages have stable UUIDs, an explicit order and
 validated `user` or `assistant` roles.
 
-After a successful assistant stream, the Web application persists the complete
-visible transcript. The sidebar reads the current owner's recent conversations,
-and `/conversations/{id}` restores a saved transcript. Partial assistant output
-is retained when a stopped stream already produced visible text.
+The browser submits exactly one new user message. Core appends it, creates an
+explicit `started` turn and supplies the owner-scoped, token-bounded context.
+Next.js persists server-observed assistant output before forwarding completion.
+Completed, visibly stopped and failed turns are recorded distinctly. The
+sidebar reads the current owner's recent conversations, and
+`/conversations/{id}` restores a saved transcript.
+
+Flyway V6 adds opt-in personal memory as a separate owner-scoped store. Explicit
+German or English remember requests create proposals only after opt-in. Every
+proposal requires confirmation and remains inspectable, correctable and
+deletable through the profile.
 
 ## Current limitations
 
@@ -67,9 +82,10 @@ is retained when a stopped stream already produced visible text.
   readable length and capitalised. Owners can rename or delete conversations;
   both operations enforce owner isolation and deletion requires confirmation in
   the Web UI.
-- Transcript replacement is intentionally simple for the current single-client
-  slice; concurrent editing and optimistic versioning are not implemented.
-- Context compaction, deletion and retention policies remain follow-up work.
+- Legacy transcript replacement remains available for the existing management
+  contract but is no longer used by chat generation.
+- Confirmed-memory retrieval, memory conflicts/supersession and retention
+  policies remain follow-up work.
 
 ## Automated verification
 
@@ -78,7 +94,10 @@ they never use the development database or owner account. They cover one-time
 setup closure, successful and rejected login, protected HTTP resources,
 logout/revocation, password rotation across multiple sessions, password hash
 persistence and owner-isolated conversation reads, updates, renames and deletes.
+Turn lifecycle, context compaction and the memory
+opt-in/proposal/confirmation/update/deletion flow are covered as well.
 
-The Web test suite covers strict CSRF token comparison and the security policy
-for session and CSRF cookies. Run the suites with `gradlew.bat test` in
+The Web test suite covers strict CSRF token comparison, explicit German and
+English memory-request recognition and the security policy for session and
+CSRF cookies. Run the suites with `gradlew.bat test` in
 `services/core` and `pnpm test` in `apps/web`.
