@@ -24,6 +24,59 @@ Kyrion should be:
 - usable without artificial intelligence;
 - expandable without requiring a complete rewrite.
 
+## Product architecture position
+
+Kyrion is the trusted orchestration and operations layer, not a replacement for
+every mature integration or protocol implementation. Core owns the stable
+device model, household identity, permissions, policies, command decisions,
+diagnostics, persistence and audit. Adapters supply connectivity and translate
+external ecosystems into that model.
+
+Home Assistant is an important optional adapter for integration breadth. Its
+onboarding offers Observe, Control and Manage profiles backed by granular
+Core-owned permissions. Home Assistant entity identifiers and service calls
+never become Kyrion's public domain contract, and no arbitrary service call may
+bypass Core policy even under Manage access. Native integrations remain
+appropriate when they
+prove Kyrion contracts, improve local reliability or diagnosis, support a
+strategic capability, or are required by a managed gateway.
+
+Material integration and device changes use a Core-orchestrated pre-change
+restore point. One manifest records the applicable Core, provider, coordinator
+and gateway backups plus coverage and restore-verification status. A created
+backup is never presented as recoverable until its restore path has been
+verified. See
+[ADR 0006](adr/0006-integration-access-profiles-and-pre-change-restore-points.md).
+
+The protected onboarding sequence is:
+
+```text
+Preflight and supported-backup discovery
+                    |
+                    v
+Create restore-point manifest and component backups
+                    |
+                    v
+Select access profile, household/device scope and confirmations
+                    |
+                    v
+Inspect devices, rooms, provenance and duplicates
+                    |
+                    v
+Owner approves import or migration plan
+                    |
+                    v
+Apply through Core, validate result and append correlated audit events
+```
+
+The onboarding UI explains who may see the integration, which rooms and devices
+are in scope, whether Velora may only explain or also propose supported actions,
+and which actions require confirmation. Failed required protection blocks the
+change. Partial or unsupported external backup coverage is identified precisely
+and never represented as a complete rollback path.
+
+See [Product Strategy](product-strategy.md) for the product-level rationale.
+
 ## System overview
 
 Kyrion is planned as a modular platform consisting of user-facing applications,
@@ -255,7 +308,8 @@ AI service interprets the request
 AI service proposes a structured tool call
     │
     ▼
-Kyrion Core validates permissions and arguments
+Kyrion Core resolves owner-visible targets and validates permissions,
+capabilities, arguments and confirmation policy
     │
     ▼
 Integration executes the command
@@ -277,7 +331,10 @@ Example tool proposal:
 ```
 
 The AI service proposes actions. Kyrion Core remains responsible for deciding
-whether an action is valid and permitted.
+whether an action is valid and permitted. Text chat and voice use the same
+proposal contract. Core must reject unknown targets and request clarification
+when a natural-language room or device selector matches zero or multiple
+plausible targets rather than allowing the model to guess.
 
 ## Integrations
 
@@ -299,6 +356,24 @@ Possible integrations include:
 - local file storage.
 
 Each integration should expose capabilities through a common internal model.
+
+Every provider-neutral device projection also exposes one of four availability
+states:
+
+- `online`: a sufficiently recent provider observation confirmed reachability;
+- `offline`: a sufficiently recent provider observation confirmed the device
+  was unreachable;
+- `degraded`: the device is reachable but one or more expected functions are
+  impaired;
+- `unknown`: Kyrion has no sufficiently recent observation.
+
+An availability value includes an observation timestamp when it is based on a
+real check. `unknown` is not equivalent to `offline`, and Core must not invent a
+timestamp or carry an old state forward without an explicit staleness policy.
+Confirmed command execution is also a real observation: success records
+`online`, confirmed provider unavailability records `offline`, and other
+adapter failures record `degraded`. Failure to persist this secondary
+observation must not rewrite a confirmed physical command as failed.
 
 Example capabilities:
 
@@ -332,6 +407,11 @@ An integration adapter should be responsible for:
 ### Integration boundaries
 
 The web application should not need to understand manufacturer-specific APIs.
+
+Provider-neutral command selectors may address either a room-wide group or one
+stable owner-visible device identifier. Exactly one target form is accepted per
+command. Core resolves the identifier within the authenticated owner scope and
+never trusts the browser or AI service to establish ownership.
 
 For example, the web application should request:
 
@@ -489,8 +569,9 @@ These technologies should only be added when their advantages are required.
 
 ## Persistence
 
-PostgreSQL is the preferred relational database once persistent state becomes
-necessary.
+PostgreSQL is the implemented authoritative relational store. Flyway manages
+identity, sessions, activity, conversations, personal memory, integration
+connections, rooms, device assignments and bounded device observations.
 
 Possible stored data includes:
 
@@ -506,10 +587,8 @@ Possible stored data includes:
 - permissions;
 - audit logs.
 
-The first Nanoleaf prototype does not require a database.
-
-Configuration can initially be provided through environment variables or a local
-development configuration that is excluded from Git.
+Nanoleaf credentials are encrypted before persistence. The installation
+encryption key remains separate from PostgreSQL as recorded in ADR 0005.
 
 ## Configuration and secrets
 
@@ -529,8 +608,8 @@ Local development configuration may use environment variables.
 Example:
 
 ```text
-NANOLEAF_HOST=192.168.1.50
-NANOLEAF_TOKEN=local-secret-token
+KYRION_DATABASE_PASSWORD=local-secret-password
+KYRION_CREDENTIAL_KEY_FILE=E:/Kyrion/Data/secrets/credential.key
 ```
 
 An `.env.example` file may document required variable names without containing
@@ -583,7 +662,11 @@ Services are started individually during development.
 
 ### Future always-on deployment
 
-A later deployment may use an always-on mini PC running Linux.
+The first always-on gateway hardware has been selected and ordered: a
+Raspberry Pi 5 (8 GB) with dedicated Zigbee and Thread radios. It has not yet
+arrived or been validated. The Pi is intended to host radio-facing adapters,
+OTBR and the first Velora voice satellite. The final placement of Core, Web,
+PostgreSQL and the AI service remains to be validated separately.
 
 Possible hosted components include:
 
@@ -595,6 +678,9 @@ Possible hosted components include:
 - Jellyfin;
 - monitoring;
 - backup services.
+
+See the [Development Hardware Roadmap](hardware-roadmap.md) for the ordered
+equipment, target gateway boundary and validation plan.
 
 ### Containers
 
@@ -623,20 +709,22 @@ Nanoleaf local API
 Nanoleaf controller and panels
 ```
 
-Initial supported actions:
+Implemented actions:
 
-- configure the Nanoleaf controller address;
-- authenticate against the local API;
+- discover or manually configure the controller address;
+- authorise an owner-specific local API token;
 - read the current state;
-- switch the panels on;
-- switch the panels off;
+- switch the panels on and off;
 - change brightness;
+- change colour and colour temperature;
+- list and activate controller-stored scenes;
+- organise persistent devices into owner-specific rooms;
 - display meaningful errors;
 - display the interface in German and English.
 
 ## First success criterion
 
-The first milestone is complete when:
+The first milestone success criterion has been reached:
 
 > A user can open Kyrion Web, select German or English and reliably control the
 > existing Nanoleaf panels without using the official Nanoleaf application.
@@ -645,13 +733,10 @@ The first milestone is complete when:
 
 The following topics remain intentionally undecided:
 
-- exact authentication solution;
-- exact database access technology;
-- exact local AI model runtime;
 - exact mobile navigation architecture;
 - exact plugin distribution format;
 - exact remote-access solution;
-- whether integrations run inside Kyrion Core or as separate processes;
+- how future third-party integrations are isolated from Core;
 - whether an event broker becomes necessary;
 - the exact trust and isolation model for third-party plugins.
 
