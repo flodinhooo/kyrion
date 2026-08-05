@@ -35,6 +35,9 @@ Authenticated Core endpoints:
 - `POST /v1/auth/logout`
 - `POST /v1/auth/password`
 - `GET /v1/activity`
+- `GET /v1/devices`
+- `POST /v1/devices/observations/refresh`
+- `POST /v1/device-commands`
 - `GET /v1/conversations`
 - `GET /v1/conversations/{id}`
 - `PUT /v1/conversations/{id}`

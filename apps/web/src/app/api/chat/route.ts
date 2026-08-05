@@ -1,4 +1,5 @@
 import type { ChatRequest } from "@/features/chat/contracts";
+import { isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
@@ -12,6 +13,22 @@ type CoreContext = {
   tokenBudget: number;
   compacted: boolean;
   usedMemories: Array<{ id: string; category: string; content: string; sensitivity: "standard" | "sensitive" }>;
+};
+
+type DeviceCommandProposal = {
+  capability: "power.set" | "light.setBrightness";
+  selector: { provider: "nanoleaf"; roomName?: string; deviceId?: string };
+  arguments: { on?: boolean; brightness?: number };
+};
+
+type DeviceCommandResult = {
+  capability: DeviceCommandProposal["capability"];
+  roomName: string;
+  requested: number;
+  succeeded: number;
+  failed: number;
+  outcomes: Array<{ deviceId: string; displayName: string; status: "succeeded" | "unavailable" | "failed" }>;
+  correlationId: string;
 };
 
 function isCoreContext(value: unknown): value is CoreContext {
@@ -102,6 +119,41 @@ export async function POST(incomingRequest: Request) {
     }
     startedTurn = { conversationId: body.conversationId, turnId: contextValue.turnId, token: auth.token };
 
+    const devices = await loadDeviceCatalog(auth.token, incomingRequest.signal);
+    const proposal = await proposeDeviceCommand(
+      body.message.content,
+      body.locale,
+      devices,
+      contextValue.messages.slice(0, -1).slice(-6),
+      incomingRequest.signal,
+    );
+    if (proposal) {
+      const commandResponse = await executeDeviceCommand(proposal, auth.token, incomingRequest.signal);
+      const commandMessage = commandResponse.ok
+        ? commandResultMessage(commandResponse.result, proposal, body.locale)
+        : commandErrorMessage(commandResponse.code, proposal, body.locale);
+      const commandStream = assistantMessageStream(commandMessage);
+      const persistedStream = persistAssistantStream(
+        commandStream,
+        body.conversationId,
+        auth.token,
+        contextValue.turnId,
+        contextValue.usedMemories,
+        contextValue.compacted ? {
+          estimatedTokens: contextValue.estimatedTokens,
+          tokenBudget: contextValue.tokenBudget,
+        } : null,
+      );
+      return new Response(persistedStream, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/x-ndjson",
+          "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
     const response = await fetch(`${AI_SERVICE_URL}/v1/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,6 +204,188 @@ export async function POST(incomingRequest: Request) {
     if (startedTurn) await failTurn(startedTurn, incomingRequest.signal.aborted ? "REQUEST_ABORTED" : "STREAM_FAILED");
     return Response.json({ code: "MODEL_UNAVAILABLE" }, { status: 503 });
   }
+}
+
+async function proposeDeviceCommand(
+  message: string,
+  locale: "de" | "en",
+  devices: RuntimeDevice[],
+  priorMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  signal: AbortSignal,
+): Promise<DeviceCommandProposal | null> {
+  try {
+    const response = await fetch(`${AI_SERVICE_URL}/v1/device-commands/propose`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        locale,
+        priorMessages,
+        devices: devices.map((device) => ({
+          id: device.id,
+          provider: device.provider,
+          displayName: device.displayName,
+          roomName: device.room?.name,
+          capabilities: device.capabilities,
+          availability: device.availability,
+          observedAt: device.observedAt,
+        })),
+      }),
+      cache: "no-store",
+      signal,
+    });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    if (!value || typeof value !== "object") return null;
+    const proposal = (value as { proposal?: unknown }).proposal;
+    return isDeviceCommandProposal(proposal) ? proposal : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadDeviceCatalog(token: string, signal: AbortSignal): Promise<RuntimeDevice[]> {
+  try {
+    const response = await fetch(`${CORE_SERVICE_URL}/v1/devices`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal,
+    });
+    if (!response.ok) return [];
+    const value: unknown = await response.json();
+    return isRuntimeDeviceList(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function isDeviceCommandProposal(value: unknown): value is DeviceCommandProposal {
+  if (!value || typeof value !== "object") return false;
+  const proposal = value as Partial<DeviceCommandProposal>;
+  const selector = proposal.selector as Partial<DeviceCommandProposal["selector"]> | undefined;
+  const args = proposal.arguments as Partial<DeviceCommandProposal["arguments"]> | undefined;
+  if ((proposal.capability !== "power.set" && proposal.capability !== "light.setBrightness")
+    || !selector || selector.provider !== "nanoleaf" || !args) return false;
+  const hasRoom = typeof selector.roomName === "string"
+    && selector.roomName.trim().length > 0 && selector.roomName.length <= 120;
+  const hasDevice = typeof selector.deviceId === "string"
+    && selector.deviceId.trim().length > 0 && selector.deviceId.length <= 128;
+  if (hasRoom === hasDevice) return false;
+  return proposal.capability === "power.set"
+    ? typeof args.on === "boolean" && args.brightness === undefined
+    : Number.isInteger(args.brightness) && (args.brightness ?? -1) >= 0
+      && (args.brightness ?? 101) <= 100 && args.on === undefined;
+}
+
+async function executeDeviceCommand(
+  proposal: DeviceCommandProposal,
+  token: string,
+  signal: AbortSignal,
+): Promise<{ ok: true; result: DeviceCommandResult } | { ok: false; code: string }> {
+  try {
+    const response = await fetch(`${CORE_SERVICE_URL}/v1/device-commands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(proposal),
+      cache: "no-store",
+      signal,
+    });
+    if (!response.ok) {
+      const value: unknown = await response.json().catch(() => null);
+      const code = value && typeof value === "object" && typeof (value as { code?: unknown }).code === "string"
+        ? (value as { code: string }).code : "DEVICE_COMMAND_FAILED";
+      return { ok: false, code };
+    }
+    const value: unknown = await response.json();
+    return isDeviceCommandResult(value)
+      ? { ok: true, result: value }
+      : { ok: false, code: "DEVICE_COMMAND_FAILED" };
+  } catch {
+    return { ok: false, code: "DEVICE_COMMAND_FAILED" };
+  }
+}
+
+function isDeviceCommandResult(value: unknown): value is DeviceCommandResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Partial<DeviceCommandResult>;
+  return (result.capability === "power.set" || result.capability === "light.setBrightness")
+    && typeof result.roomName === "string" && typeof result.requested === "number"
+    && typeof result.succeeded === "number" && typeof result.failed === "number"
+    && Array.isArray(result.outcomes) && typeof result.correlationId === "string";
+}
+
+function commandResultMessage(
+  result: DeviceCommandResult,
+  proposal: DeviceCommandProposal,
+  locale: "de" | "en",
+): string {
+  const exactDevice = proposal.selector.deviceId !== undefined && result.requested === 1
+    ? result.outcomes[0]?.displayName
+    : undefined;
+  if (result.succeeded === result.requested) {
+    if (proposal.capability === "light.setBrightness") {
+      if (exactDevice) {
+        return locale === "de"
+          ? `„${exactDevice}“ ist jetzt auf ${proposal.arguments.brightness} % eingestellt.`
+          : `“${exactDevice}” is now set to ${proposal.arguments.brightness}%.`;
+      }
+      return locale === "de"
+        ? `Die Nanoleafs im ${result.roomName} sind jetzt auf ${proposal.arguments.brightness} % eingestellt.`
+        : `The Nanoleafs in ${result.roomName} are now set to ${proposal.arguments.brightness}%.`;
+    }
+    const on = proposal.arguments.on === true;
+    if (exactDevice) {
+      return locale === "de"
+        ? `„${exactDevice}“ ist jetzt ${on ? "eingeschaltet" : "ausgeschaltet"}.`
+        : `“${exactDevice}” is now turned ${on ? "on" : "off"}.`;
+    }
+    return locale === "de"
+      ? `Die Nanoleafs im ${result.roomName} sind jetzt ${on ? "eingeschaltet" : "ausgeschaltet"}.`
+      : `The Nanoleafs in ${result.roomName} are now turned ${on ? "on" : "off"}.`;
+  }
+  const failedNames = result.outcomes.filter((outcome) => outcome.status !== "succeeded")
+    .map((outcome) => `„${outcome.displayName}“`).join(", ");
+  if (result.succeeded === 0) {
+    return locale === "de"
+      ? `Ich konnte die Nanoleafs im ${result.roomName} nicht steuern. Nicht erreichbar: ${failedNames}.`
+      : `I could not control the Nanoleafs in ${result.roomName}. Unavailable: ${failedNames}.`;
+  }
+  return locale === "de"
+    ? `${result.succeeded} von ${result.requested} Nanoleafs im ${result.roomName} wurden eingestellt. Nicht erreichbar: ${failedNames}.`
+    : `${result.succeeded} of ${result.requested} Nanoleafs in ${result.roomName} were updated. Unavailable: ${failedNames}.`;
+}
+
+function commandErrorMessage(code: string, proposal: DeviceCommandProposal, locale: "de" | "en"): string {
+  const room = proposal.selector.roomName;
+  if (proposal.selector.deviceId) {
+    return locale === "de"
+      ? "Ich konnte das ausgewählte Gerät nicht steuern."
+      : "I could not control the selected device.";
+  }
+  if (code === "DEVICE_TARGET_NOT_FOUND") {
+    return locale === "de"
+      ? `Ich finde keine Nanoleafs, die dem Raum „${room}“ zugeordnet sind.`
+      : `I cannot find any Nanoleafs assigned to the room “${room}”.`;
+  }
+  return locale === "de"
+    ? `Ich konnte die Nanoleafs im Raum „${room}“ nicht steuern.`
+    : `I could not control the Nanoleafs in “${room}”.`;
+}
+
+function assistantMessageStream(content: string): ReadableStream<Uint8Array> {
+  const messageId = crypto.randomUUID();
+  const encoder = new TextEncoder();
+  const events = [
+    { type: "message.started", messageId },
+    { type: "message.delta", messageId, delta: content },
+    { type: "message.completed", messageId },
+  ];
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const event of events) controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      controller.close();
+    },
+  });
 }
 
 function persistAssistantStream(
