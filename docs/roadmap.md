@@ -1,142 +1,184 @@
-
----
-
-# 5. `docs/roadmap.md`
 # Kyrion Roadmap
 
-This roadmap describes direction rather than fixed deadlines.
+This roadmap describes outcome-oriented direction rather than fixed deadlines.
+It implements the priorities in [Product Strategy](product-strategy.md): build
+the trustworthy orchestration layer first, then daily usability, followed by
+energy and operational differentiation. Integration breadth must not outrun
+permissions, diagnosis, audit and recovery.
 
 ## Milestone 0 — Foundation
 
-Goal: establish the identity and basic structure of Kyrion.
+Goal: establish Kyrion's identity, structure and architectural boundaries.
 
 - [x] Create the monorepo structure
-- [ ] Define the internationalisation strategy
-- [ ] Define product vision
-- [ ] Define project principles
-- [ ] Document the initial architecture
-- [ ] Create the root README
-- [ ] Initialise Git
-- [ ] Create the remote GitHub repository
-- [ ] Make the initial commit
+- [x] Define internationalisation, vision and principles
+- [x] Document the initial architecture
+- [x] Create the repository and initial project documentation
 
-## Milestone 1 — Nanoleaf Prototype
+## Milestone 1 — Native Nanoleaf Reference Slice
 
-Goal: control an existing Nanoleaf installation from Kyrion.
+Goal: prove a local, owner-scoped integration end to end.
 
-- [x] Identify connected controllers through advertised model/name data
-- [x] Confirm that the panels are connected to the local network
-- [x] Discover or configure the controller IP address
-- [x] Generate and securely persist a local API authentication token
-- [x] Read the current device state
-- [x] Switch the panels on and off
-- [x] Change brightness
-- [x] Change colour and colour temperature
-- [x] List and activate stored scenes
+- [x] Discover and authorise local Nanoleaf controllers
+- [x] Encrypt and persist owner-scoped credentials
+- [x] Read state and control power, brightness, colour, temperature and scenes
 - [x] Persist rooms and device assignments
-- [x] Display meaningful connection and API errors
-- [x] Build a minimal Kyrion dashboard
-- [x] Add German and English translations
-- [x] Add a language selector
-- [x] Persist the selected language locally
+- [x] Build German and English integration and Home surfaces
+- [x] Route Web and bounded Velora power commands through Core
+- [x] Add persistent bounded availability observations
+- [ ] Complete physical German and English text/Voice verification
+- [ ] Complete focused HTTP boundary and failure tests
+
+Nanoleaf remains the native reference adapter used to prove generic contracts;
+it is not a reason to reproduce every manufacturer integration.
+
+## Milestone 2 — Trustworthy Orchestration Foundation
+
+Goal: make Core the provider-neutral trust and operations layer.
+
+- [ ] Stabilise device identity, state, availability, capability, event,
+  command and result contracts
+- [ ] Implement a Core-owned Device Manager and target resolution
+- [ ] Model households, members and initial owner/member/guest roles
+- [ ] Define routine, confirmation-required, high-risk and forbidden action
+  policy classes
+- [ ] Define Observe, Control and Manage integration profiles backed by granular
+  Core permissions and scoped to approved households, rooms and devices
+- [ ] Record proposed, rejected, confirmation-required and executed actions
+  with actor, source and correlation ID
+- [ ] Define integration health and diagnostic reason contracts
+- [ ] Separate discovered candidates from explicitly approved devices
+- [ ] Define a versioned internal adapter contract before a public plugin API
+- [ ] Add cross-owner, ambiguity, malformed-output and adapter-failure tests
 
 Success criterion:
 
-> A user can open Kyrion Web and reliably control the existing Nanoleaf panels
-> without using the official Nanoleaf application.
+> Web, Velora and integrations use the same Core-owned identity, capability,
+> policy and audit path without exposing provider credentials or trusting an
+> adapter to establish authority.
 
-## Milestone 2 — Integration Boundary
+## Milestone 3 — Safe Integration Breadth Without Lock-In
 
-Goal: separate device-specific communication from the user interface.
+Goal: connect mature ecosystems without making any one of them Kyrion Core.
 
-- [ ] Define a provider-neutral generic device model
-- [ ] Stabilise provider-neutral integration capabilities
-- [x] Move Nanoleaf logic behind an integration interface
-- [x] Add command execution results
-- [x] Add basic activity logging
-- [x] Decide whether the dedicated Kyrion Core service is now justified
+- [ ] Add an optional Home Assistant adapter with selectable Observe, Control
+  and Manage profiles
+- [ ] Translate bounded HA devices, areas, capabilities, state and health into
+  Kyrion models without exposing HA entity semantics to consumers
+- [ ] Create a pre-change restore point before adapter onboarding and permission
+  elevation, then show backup coverage and restore-verification status
+- [ ] Diagnose adapter availability, stale state and mapping failures
+- [ ] Allow Control and Manage operations only through typed Core commands,
+  granular permissions and policy validation
+- [ ] Import external identity and provenance without silently deleting HA
+  entities or automations
+- [ ] Classify automation migration as fully translatable, partial or
+  unsupported before any owner-approved cutover
+- [ ] Add Wake-on-LAN as a small native infrastructure integration
+- [ ] Define criteria for native integration versus ecosystem adapter work
+- [ ] Add bounded background observations or device events
+- [ ] Reconcile provider addresses safely after network changes
 
-## Milestone 3 — Text Assistant
+Home Assistant provides early integration breadth. It remains optional,
+replaceable and subordinate to Kyrion identity, policy, audit and UX.
 
-Goal: control an existing integration using natural language.
+## Milestone 4 — Managed Gateway and Operational Safety
 
-- [ ] Create the AI service
-- [ ] Connect a local or optional remote model
-- [ ] Define a tool schema
-- [ ] Convert text requests into structured tool calls
-- [ ] Validate all tool calls in Kyrion Core
-- [ ] Display action results in the web interface
+Goal: operate the ordered Raspberry Pi as a secure edge node while Core remains
+on the development PC or a later server.
 
-Example:
+- [x] Select and order the Raspberry Pi 5 and dedicated Zigbee/Thread hardware
+- [ ] Define authenticated gateway registration, identity, heartbeat and health
+- [ ] Define stable adapter identity without fixed USB device-path assumptions
+- [ ] Buffer bounded state and events during temporary network interruption
+- [ ] Validate Raspberry Pi, Zigbee, Thread, Bluetooth and USB voice hardware
+- [ ] Deploy and monitor the gateway agent and OTBR safely
+- [ ] Implement Core-owned restore-point manifests across applicable database,
+  provider, coordinator and gateway backups
+- [ ] Establish retention, integrity checks and verified-restore procedures
+- [ ] Define signed update channels and rollback foundations
+- [ ] Configure secure local and later remote access without exposing device
+  control endpoints publicly
 
-> “Set the Nanoleaf brightness to 30 percent.”
+Continuing local automation during Core outages is a later policy replication
+slice, not an initial gateway promise.
 
-## Milestone 4 — Always-On Host
+## Milestone 5 — Understandable Daily Product
 
-Goal: run Kyrion independently of the gaming computer.
+Goal: make a heterogeneous home simple for every authorised household member.
 
-- [ ] Evaluate mini-PC hardware
-- [ ] Install a Linux server operating system
-- [ ] Define service deployment
-- [ ] Introduce Docker or another suitable deployment mechanism
-- [ ] Configure backups
-- [ ] Configure secure local and remote access
-- [ ] Add monitoring and health checks
+- [ ] Build provider-neutral room, device, favourite and scene views
+- [ ] Add Simple Mode and Expert Mode over the same authoritative data
+- [ ] Build an Integration Manager, discovery inbox and health explanations
+- [ ] Add clear pairing and approval flows
+- [ ] Show Observe, Control and Manage access plus granular scopes and backup
+  coverage during integration onboarding
+- [ ] Build an automation editor using capabilities rather than protocols
+- [ ] Add a human-readable execution timeline and “Why did this not run?”
+  explanations
+- [ ] Add explicit ambiguity clarification in text and voice conversations
+- [ ] Complete responsive German and English UX in both themes
+- [ ] Add safe remote access after throttling, session controls and audit exist
 
-## Milestone 5 — Device and Media Expansion
+## Milestone 6 — Hardware and Protocol Validation
 
-Possible integrations:
+Goal: prove the abstractions against the ordered devices as separate vertical
+slices rather than claiming success from pairing alone.
 
-- [ ] Wake-on-LAN
-- [ ] Jellyfin
-- [ ] Home Assistant
-- [ ] smart lights
-- [ ] network status
-- [ ] photovoltaic data
+- [ ] Zigbee lamps, button and motion events through the dedicated coordinator
+- [ ] Matter-over-Thread contact events through OTBR and the dedicated adapter
+- [ ] Bluetooth discovery and bounded device access through the gateway
+- [ ] Shelly and myStrom Wi-Fi state and capabilities
+- [ ] Voice satellite capture, playback, health and Core-confirmed actions
+- [ ] Restart, temporary-network-loss and unavailable-device recovery tests
 
-The exact order depends on personal usefulness.
+Kyrion uses mature radio stacks and does not implement its own Zigbee, Thread
+or Matter protocol stack.
 
-## Milestone 6 — Mobile Application
+## Milestone 7 — Energy and Operational Differentiation
 
-- [ ] Create the Expo application
-- [ ] Add authentication
-- [ ] Show device status
-- [ ] Execute quick actions
-- [ ] Add assistant chat
-- [ ] Add notifications
-- [ ] Evaluate speech input
+Goal: deliver measurable household value and verifiable trust features.
 
-## Strategic Phase 5 — Marketplace and Enterprise Edition
+- [ ] Integrate Solar Manager without reproducing its control algorithms
+- [ ] Combine energy state with authorised household and device automations
+- [ ] Add energy dashboards and explanations
+- [ ] Add a Privacy Receipt showing relevant external data flows
+- [ ] Complete child, guest, technician and time-limited support roles
+- [ ] Verify signed update rollback and automated restore tests
+- [ ] Add Docker, Proxmox and NAS monitoring as integrations, not replacement
+  platforms
+- [ ] Pilot Kyrion in approximately five to ten representative households
 
-This phase begins only after Core, AI, automations and the main user interfaces
-are stable. Its sequence is deliberately incremental:
+The initial target is technically interested Swiss homeowners with multiple
+systems, household members who need simple operation and potential energy
+assets such as PV, batteries, wallboxes or heat pumps.
 
-- [ ] Stabilise internal integration and capability contracts
-- [ ] Define versioned plugin manifests and SDK contracts
-- [ ] Convert selected official integrations into first-party plugins
-- [ ] Add plugin permissions, lifecycle management and audit events
-- [ ] Define isolation, signing, review, update and rollback policies
-- [ ] Introduce personal knowledge bases with explicit access scopes
-- [ ] Define versioned knowledge-package contracts and evaluations
-- [ ] Validate official domain packages before allowing third parties
-- [ ] Design marketplace discovery, installation and licensing
-- [ ] Define Community, Pro and Enterprise edition boundaries
-- [ ] Add enterprise deployment, identity, support and compliance capabilities
-- [ ] Open the marketplace to reviewed third-party publishers only after the
-  security and compatibility model has proven reliable
+## Milestone 8 — Mobile and Local Voice Refinement
 
-See [Marketplace and Enterprise Vision](marketplace-enterprise.md) for the
-architectural boundaries, possible domains and commercial direction.
+- [ ] Create the Expo mobile application
+- [ ] Add authentication, device state, quick actions and notifications
+- [ ] Add assistant access under the same Core policies
+- [ ] Replace prototype browser STT/TTS with explicitly selected local providers
+- [ ] Add wake-word, interruption and voice-device management
+- [ ] Keep Ollama and other model runtimes optional and replaceable
 
-## Future Ideas
+## Later Platform and Commercial Phases
 
-- automation editor;
-- email summaries;
-- calendar summaries;
-- local document search;
-- voice personalities such as Velora;
-- household users and permissions;
-- plugin developer SDK;
-- backup and restore;
-- energy-aware automation;
-- commercial or managed deployment options.
+Only after the contracts and operating model are proven:
+
+- [ ] Stabilise versioned plugin manifests and SDK contracts
+- [ ] Prove plugin permissions, isolation, signing, updates and rollback with
+  official first-party plugins
+- [ ] Add Jellyfin and media scenes
+- [ ] Evaluate pre-installed Kyrion hardware
+- [ ] Evaluate installer and managed-support offerings
+- [ ] Explore hospitality pilots, followed only later by suitable business use
+  cases
+- [ ] Keep medical, care and legal functionality behind dedicated expert,
+  regulatory and safety review
+- [ ] Open a reviewed marketplace only after lifecycle and compatibility are
+  operationally proven
+
+Kyrion will not initially build its own NAS operating system, hypervisor, media
+server, VPN or cryptographic primitives, general-purpose AI model, medical
+diagnostics, autonomous legal advice or complete commercial appliance.

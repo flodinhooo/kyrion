@@ -1,6 +1,6 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
@@ -138,6 +138,153 @@ session. The current implementation status is documented in [README.md](README.m
   claims.
 - [ ] Add backup and restore verification for PostgreSQL data.
 
+## Next vertical slice: Velora device control through Core
+
+Current planning checkpoint: implementation may continue on the software-only
+items below while physical Nanoleaf verification is deferred until the owner
+completes physical testing. The market and user-needs analysis now prioritises
+Kyrion's trustworthy orchestration and operations layer over raw integration
+breadth, without bypassing Core authority or the local-first boundary. See
+[Product Strategy](../product-strategy.md).
+
+- [x] Add the first bounded German and English proposal schema for room-scoped
+  Nanoleaf power and brightness commands.
+- [x] Resolve exact owner-visible room names in Core and apply a command to all
+  matching owner-scoped Nanoleaf connections without an unnecessary follow-up.
+- [x] Return and persist deterministic text/Voice Mode feedback derived from
+  the Core execution result rather than model-generated success claims.
+- [x] Reject descriptive questions and out-of-range brightness values instead
+  of treating them as executable commands.
+- [x] Expose an owner-scoped Core runtime catalog containing safe device, room
+  and capability metadata without provider hosts or credentials.
+- [x] Supply the runtime catalog to the AI service and suppress proposals for
+  capabilities that are not currently available to the owner.
+- [x] Define provider-neutral `online`, `offline`, `degraded` and `unknown`
+  availability with an optional observation timestamp; report `unknown` until
+  Core has a real sufficiently recent observation.
+- [x] Refuse device-specific qualifiers in the initial room-wide parser instead
+  of silently discarding them and controlling every device in the room.
+- [x] Persist the latest owner-scoped device observation through Flyway V10.
+- [x] Add a CSRF-protected explicit refresh capped at 20 devices; keep catalog
+  reads side-effect free and expire observations to `unknown` after 60 seconds.
+- [x] Connect Home to passive catalog reads and a visible German/English status
+  refresh with unknown, online, offline, degraded and last-observed display.
+- [x] Persist availability observations from Velora command outcomes without
+  allowing secondary observation-storage failure to falsify command results.
+- [x] Add exact owner-scoped stable-device selectors and move Home quick-power
+  actions onto the same provider-neutral Core command path as Velora.
+- [x] Let Velora address one device by an exact, unique catalog display name;
+  pass only its stable owner-scoped ID to Core and refuse partial or duplicate
+  name matches instead of guessing.
+- [ ] Define provider-neutral device identity, state, capability, command and
+  command-result contracts above the working Nanoleaf implementation.
+- [ ] Expose an owner-scoped Core inventory that can resolve devices by stable
+  ID and natural-language selectors such as room, display name and capability.
+- [x] Define a bounded tool catalogue from the capabilities currently available
+  to the authenticated owner; do not give the AI service provider credentials
+  or arbitrary network access.
+- [x] Let Velora propose typed commands while keeping target resolution,
+  argument validation and execution authoritative in Core.
+- [ ] Add explicit clarification UX for plausible ambiguous rooms or devices;
+  the current exact-name slice safely refuses duplicate, partial and invented
+  device names without executing them.
+- [ ] Define permission and confirmation policy for routine, destructive,
+  costly, privacy-sensitive and safety-relevant capabilities.
+- [x] Execute accepted proposals through the same integration command path used
+  by Web controls and return a typed result to text and voice conversations.
+- [ ] Record proposed, rejected, confirmation-required and executed actions with
+  actor, source and one correlation identifier without logging private prompts
+  or secrets.
+- [ ] Prove the first end-to-end action with German and English requests to turn
+  on the existing Nanoleaf devices in the living room.
+- [ ] Add tests for successful execution, ambiguity, missing capability,
+  unavailable devices, cross-owner access, malformed model output and adapter
+  failure.
+
+Success criterion:
+
+> An authenticated owner can ask Velora by text or browser-backed voice to turn
+> on the Nanoleafs in the living room. Core resolves and validates the targets,
+> executes through the Nanoleaf adapter, records the correlated outcome and
+> returns an accurate result without exposing credentials to Web or AI.
+
+## Ordered gateway hardware preparation
+
+- [x] Record the August 2026 Raspberry Pi, radio, voice and smart-home hardware
+  order in the [Development Hardware Roadmap](../hardware-roadmap.md).
+- [ ] Define authenticated gateway registration, identity, heartbeat and health
+  contracts before implementing radio-specific control.
+- [ ] Separate discovered candidates from owner-approved, paired devices.
+- [ ] Define stable USB adapter identity/configuration without assuming device
+  paths before the Raspberry Pi and radios are available.
+- [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
+  inbox and gateway/voice-satellite health views in German and English.
+- [ ] After delivery, validate the Raspberry Pi 5, Sonoff ZBDongle-E, Home
+  Assistant Connect ZBT-2, integrated Bluetooth and USB voice hardware.
+- [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
+  end-to-end slices; do not mark an integration complete based only on pairing
+  or discovery.
+
+## Current open-work grouping
+
+### Implementable now
+
+- [ ] Stabilise the provider-neutral device and capability contracts.
+- [ ] Centralise stable-ID, exact-room, exact-name and capability target
+  resolution in a Core-owned Device Manager.
+- [ ] Introduce households, members and initial owner/member/guest roles above
+  the current single-owner foundation.
+- [ ] Define action permission and confirmation classes.
+- [ ] Implement Observe, Control and Manage integration profiles as presets over
+  granular permissions, including immediate reduction and confirmed elevation.
+- [ ] Audit proposed, rejected, confirmation-required and executed actions with
+  actor, source and correlation ID, without storing private prompts.
+- [ ] Define integration-health reason codes and user-facing diagnostic
+  explanations.
+- [ ] Add a Home Assistant adapter that maps bounded devices, areas, state,
+  capabilities and health into Kyrion-owned contracts and enforces the selected
+  Observe, Control or Manage profile.
+- [ ] Implement pre-change restore-point orchestration before integration
+  onboarding, permission elevation and material device lifecycle operations.
+- [ ] Add a Core restore-point manifest with `complete`, `partial`,
+  `unsupported` and `failed` coverage plus separate restore-verification state.
+- [ ] Add backup-provider adapters for Core/PostgreSQL, Home Assistant, gateway
+  configuration and supported Zigbee/Thread infrastructure.
+- [ ] Block protected changes after required backup failure and present exact
+  unsupported coverage before any limited owner-approved operation.
+- [ ] Add checkpoint retention, deduplication, integrity checks, storage quotas
+  and scheduled real restore exercises.
+- [ ] Preserve HA identities and automation provenance; classify migrations as
+  full, partial or unsupported and never silently delete source data.
+- [ ] Add a clarification response and continuation flow for ambiguous targets.
+- [ ] Complete boundary tests for ambiguity, missing capability, unavailable
+  devices, cross-owner access, malformed AI output and adapter failure.
+- [ ] Prepare German and English Device Manager, Integration Manager, discovery
+  inbox and gateway/voice-satellite health views.
+
+### Awaiting owner verification
+
+- [x] Physically verify fresh authentication and Home quick-power actions
+  against the existing Nanoleaf devices.
+- [ ] Repeat the German Velora text command after the unique `room`/`raum` alias
+  and contextual room-correction fix, then verify brightness, English and Voice
+  Mode commands.
+- [ ] Physically verify explicit status refresh and truthful
+  unavailable-controller feedback.
+
+### Awaiting hardware delivery
+
+- [ ] Validate the Raspberry Pi 5, Sonoff ZBDongle-E, Home Assistant Connect
+  ZBT-2, integrated Bluetooth and USB voice devices.
+- [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
+  behaviour on the real Raspberry Pi node.
+- [ ] Accept Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice independently
+  through recorded end-to-end results.
+
+This grouping is a status view over the authoritative tasks above and does not
+create duplicate scope. The priority order reflects the recorded market and
+user-needs analysis: trust foundation, daily usability, then differentiation.
+
 ## Later product slices
 
 - [x] Add an official internal Plugins catalog and Nanoleaf detail page.
@@ -149,8 +296,6 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add owner-specific rooms and persistent device assignments.
 - [x] Replace the Home placeholder with live room/device cards, quick actions
   and detailed controller dialogs.
-- [ ] Define provider-neutral device-state and capability contracts above the
-  current Nanoleaf-specific routes.
 - [ ] Add bounded background status refresh or device events.
 - [ ] Reconcile connections automatically after DHCP address changes.
 - [ ] Revoke physical-controller tokens when removing reachable connections.

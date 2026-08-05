@@ -31,6 +31,8 @@ The platform should:
 - provide a modern and intuitive user experience.
 
 Read the full [project vision](docs/vision.md).
+The market-informed product focus and build-versus-integrate boundary are
+defined in [Product Strategy](docs/product-strategy.md).
 
 ## Core principles
 
@@ -248,12 +250,14 @@ end to end.
 
 Current priorities:
 
-1. stabilise provider-neutral device and capability contracts above Nanoleaf;
-2. refine dashboard status refresh, recovery after DHCP address changes and
-   scene/colour interaction;
-3. add retention, backup and login-throttling policies;
-4. replace prototype browser speech providers where a suitable local voice
-   stack is available.
+1. stabilise the Core-owned provider-neutral device and capability model;
+2. add household roles, action policies, correlated audit and integration
+   health above the working Nanoleaf reference integration;
+3. introduce Home Assistant as an optional adapter with owner-selected Observe,
+   Control or Manage access without making it the platform core;
+4. prepare the authenticated Raspberry Pi gateway agent and verified backup,
+   update and recovery foundations;
+5. build Simple and Expert experiences only on the same authoritative state.
 
 See the full [roadmap](docs/roadmap.md) and the current
 [development status](docs/status/README.md).

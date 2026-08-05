@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -80,6 +80,62 @@ Owner-scoped rooms and device assignments in Core
 Live Nanoleaf status, quick actions and detailed controls
 ```
 
+The first bounded Velora device-control slice is implemented:
+
+```text
+Text or voice request to Velora
+    |
+    v
+Typed capability proposal
+    |
+    v
+Core-owned room/device resolution, permission and policy validation
+    |
+    v
+Existing integration command path and correlated activity result
+```
+
+Explicit German and English imperative requests can now set power or brightness
+for every Nanoleaf assigned to one owner-visible room or for one device whose
+catalog display name matches exactly and uniquely. For a named device the AI
+boundary passes its stable owner-scoped ID, never a provider address. Partial,
+duplicate and invented names are not guessed or executed. Core resolves the
+target and the existing Nanoleaf service executes the command with one
+correlation identifier. The Web chat path returns and persists a deterministic
+response based only on Core's result, so browser-backed Voice Mode uses the
+same path and never speaks an unconfirmed success.
+
+Core also exposes an authenticated owner-scoped runtime device catalog. It
+contains stable connection identity, provider, display name, room and declared
+capability identifiers, but no endpoint hosts or credentials. The chat boundary
+passes this bounded catalog to the AI service, which only proposes a command
+when the requested capability is actually present at runtime. Core still
+re-validates the proposal and remains the execution authority.
+
+The runtime catalog now carries typed `online`, `offline`, `degraded` and
+`unknown` availability plus an optional observation timestamp. Until a bounded
+refresh or event pipeline produces a real observation, existing connections
+honestly report `unknown`; Kyrion does not infer that configured means online.
+
+Flyway V10 persists the latest owner-scoped observation per connection. A
+CSRF-protected same-origin POST can explicitly refresh at most 20 devices;
+catalog reads never trigger provider traffic. Observations remain current for
+60 seconds, then the catalog returns `unknown` while retaining the last real
+observation timestamp for transparency. Automatic polling and device events
+remain planned.
+
+Velora command outcomes now update the same observation store immediately:
+successful execution records online, confirmed unavailability records offline
+and other adapter failures record degraded. Observation-storage failure remains
+secondary and cannot turn a physically successful command into a false failure.
+
+Development hardware for the next integration phase was ordered in August
+2026 but has not arrived or been validated. It includes a Raspberry Pi 5
+(8 GB), a dedicated Sonoff ZBDongle-E for Zigbee, a dedicated Home Assistant
+Connect ZBT-2 for Thread/OTBR, USB voice hardware and initial Zigbee, Wi-Fi and
+Matter-over-Thread test devices. See the
+[Development Hardware Roadmap](../hardware-roadmap.md).
+
 The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 2026-08-04](2026-08-04-nanoleaf-home-dashboard.md).
 
@@ -127,7 +183,8 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
   failures.
 - Readable automatic titles based on the first sentence, always beginning with
   a capital letter.
-- AI actions remain proposals; future device actions must pass through Core.
+- AI actions remain proposals and the first Nanoleaf power/brightness device
+  actions pass through Core-owned target resolution, validation and execution.
 - Official Nanoleaf integration connections are owner-scoped, use physical
   local-controller pairing and keep API tokens encrypted in Core persistence.
 - Nanoleaf power, brightness, colour, colour-temperature and scene commands run
@@ -145,7 +202,12 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 - Chat, Home, Automations, Knowledge and Settings routes.
 - A Plugins catalog and an interactive Nanoleaf integration detail route.
 - A working Home dashboard with room management, persistent device assignment,
-  automatic status reads, quick actions and per-device control dialogs.
+  explicit bounded status refresh, quick actions and per-device control dialogs.
+- Passive provider-neutral availability display with a visible bounded refresh,
+  last-observed timestamps and distinct unknown/degraded/offline states.
+- Home quick-power actions use the same provider-neutral `power.set` Core path
+  as Velora, selecting exactly one owner-scoped stable device identifier and
+  updating the shared observation store.
 - Nanoleaf discovery, editable names, colour controls and stored scenes with
   controller-derived palette previews.
 - German and English UI resources.
@@ -213,7 +275,7 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 - Python Ruff checks: passed.
 - Python tests: 33 passed at the latest full AI-service verification.
 - Kotlin Core tests and boot JAR build: passed.
-- Flyway migrations V1 through V9, Core health and persisted startup events: passed
+- Flyway migrations V1 through V10, Core health and persisted startup events: passed
   against PostgreSQL.
 - Password hashing, session-token hashing and session lifecycle tests: passed.
 - Isolated PostgreSQL 17 integration tests for one-time setup, HTTP auth
@@ -256,18 +318,96 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
   assistant's own browser speech.
 - Automations and Knowledge are intentional placeholders. Home is implemented.
 - Controller addresses are not yet reconciled automatically after DHCP changes.
-- Dashboard status loads on page entry; polling and device events remain planned.
+- Dashboard catalog status loads without provider traffic. A visible bounded
+  manual refresh and last-observed timestamps are implemented; automatic
+  polling and device events remain planned.
 - Removing a connection does not yet revoke its token on the physical controller.
+- Velora device commands currently support only explicit imperative German and
+  English Nanoleaf power/brightness phrases with exact room names or exact,
+  unique catalog device names. Colours, scenes, partial-name matching,
+  clarification dialogue and pronoun/context resolution remain planned. The
+  runtime catalog is still an internal first-party contract and needs
+  stabilisation before adapters or plugins may depend on it.
+- An individual qualifier such as "left" is not silently discarded. It is only
+  executable when it is the complete unique display name of a catalog device;
+  otherwise no device command is proposed.
+- The ordered Raspberry Pi, radio adapters, voice hardware and test devices are
+  planning inputs only until delivery and end-to-end validation.
 
 ## Recommended next step
 
-Continue from the completed authoritative-context, explicit-memory, Nanoleaf
-and room-dashboard slices:
+The market and user-needs analysis sharpened Kyrion's position: it should be an
+understandable, secure and reliably operated orchestration layer above existing
+systems, not a Home Assistant clone or an unrestricted assistant. Home
+Assistant will provide optional integration breadth through a bounded adapter;
+Kyrion continues to own identity, capabilities, household permissions, policy,
+diagnosis, audit and recovery. Native integrations remain selective, with
+Nanoleaf as the current reference adapter. The full rationale is recorded in
+[Product Strategy](../product-strategy.md).
 
-1. define provider-neutral device state and capability contracts;
-2. add controlled background status refresh and DHCP-address recovery;
-3. revoke controller tokens when removing reachable connections;
-4. add login throttling and backup verification before remote exposure.
+Integration onboarding will not force a read-only first phase. The owner will
+select Observe, Control or Manage access, implemented as granular Core-enforced
+permissions rather than unrestricted provider access. Material onboarding,
+permission elevation, pairing and migration will be protected by a pre-change
+restore point spanning every supported component. Backup coverage and actual
+restore verification remain separate visible facts. This accepted direction is
+recorded in
+[ADR 0006](../adr/0006-integration-access-profiles-and-pre-change-restore-points.md).
+
+The current planning checkpoint separates the remaining work into three
+dependency lanes.
+
+### Implementable before hardware delivery
+
+1. stabilise provider-neutral device identity, state, capability, command and
+   result contracts above the working Nanoleaf slice;
+2. implement the Core-owned Device Manager and household/member role foundation;
+3. define action policies, confirmations, correlated audit and integration
+   health explanations;
+4. add an optional Home Assistant adapter with owner-selected Observe, Control
+   or Manage access that translates into Kyrion-owned contracts;
+5. move natural-language target resolution into the Device Manager
+   that supports stable IDs, exact rooms, display names and capabilities;
+6. add an explicit clarification dialogue for genuinely ambiguous targets;
+7. add the remaining boundary tests for ambiguity, unavailable capability,
+   adapter failure, malformed AI output and cross-owner access;
+8. prepare provider-neutral Device Manager, Integration Manager, discovery
+   inbox and gateway/voice-satellite health surfaces in German and English.
+
+### Awaiting owner physical verification
+
+- fresh authentication and Home quick power control were physically verified
+  successfully on 2026-08-05;
+- repeat the German text command after the room-alias latency fix, then exercise
+  brightness, English and browser-backed Voice Mode commands;
+- verify explicit status refresh against the physical controllers;
+- verify accurate feedback when a controller is unavailable. This validation
+  is intentionally deferred until the owner resumes physical testing.
+
+The first German text test exposed that the spoken/written room variant
+`Gamingraum` did not match the stored `Gamingroom`. Core rejected the raw room
+quickly, but the subsequent correction fell through to the general model and
+produced a slow non-executing wait message. The bounded proposal path now maps
+`room`/`raum` variants only when exactly one capability-compatible catalog room
+matches and can apply an explicit room correction to the preceding command.
+This is covered by AI regression tests and a live proposal check; physical
+execution remains to be repeated by the owner.
+
+### Dependent on ordered hardware
+
+- validate the Raspberry Pi 5, dedicated Zigbee and Thread adapters, integrated
+  Bluetooth and USB voice hardware after delivery;
+- prove authenticated gateway registration, heartbeat and recovery on the real
+  node;
+- prove Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice as separate
+  end-to-end slices rather than treating discovery or pairing as completion.
+
+Cross-cutting follow-up remains local STT/TTS and wake-word interruption,
+bounded background device events, DHCP recovery, login throttling, session and
+retention controls, physical token revocation and implementation of the
+accepted restore-point and verified-restore design.
+This priority must not weaken Core authority, local-first operation or
+auditability.
 
 Do not expose the prepared session repository directly and do not store tokens
 in browser local storage. Continue with one verified vertical slice at a time.
@@ -282,8 +422,12 @@ In a new agent chat, use this prompt:
 > handoff. Verify the running stack, the two persisted Nanoleaf connections and
 > the `/home` room dashboard. Continue with provider-neutral device capability
 > contracts, bounded status refresh and connection recovery.
-> Preserve Core as the authority and never store credentials or session tokens
-> in browser local storage.
+> Preserve Core as the authority. Implement provider-neutral device/capability
+> contracts and the first Core-validated Velora device-control loop using the
+> existing Nanoleaf living-room devices. Then prepare authenticated Raspberry Pi
+> gateway, discovery and health contracts from `docs/hardware-roadmap.md`
+> without claiming unvalidated hardware support. Never store credentials or
+> session tokens in browser local storage.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 

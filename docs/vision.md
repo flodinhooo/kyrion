@@ -49,6 +49,16 @@ Every initial feature must solve a real problem or provide meaningful daily
 value. Features should not be implemented only because they appear impressive
 or technically interesting.
 
+The first external validation audience should be technically interested Swiss
+homeowners who combine multiple smart-home systems with family members who need
+simple daily operation. Homes with photovoltaic generation, batteries,
+wallboxes or heat pumps add a measurable coordination and energy use case.
+
+Kyrion should earn broader adoption by making existing technology
+understandable, safe and reliably operable, not by promising an unrestricted
+assistant or the largest integration catalogue. See
+[Product Strategy](product-strategy.md).
+
 ## Long-term direction
 
 In the long term, Kyrion may connect:
