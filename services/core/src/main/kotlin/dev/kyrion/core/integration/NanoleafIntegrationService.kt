@@ -52,10 +52,9 @@ class NanoleafIntegrationService(
         return connection.view()
     }
 
-    fun power(ownerId: UUID, id: UUID, on: Boolean, confirmed: Boolean): NanoleafDeviceState {
+    fun power(ownerId: UUID, id: UUID, on: Boolean, confirmed: Boolean, correlationId: UUID = UUID.randomUUID()): NanoleafDeviceState {
         if (!confirmed) throw IntegrationConfirmationRequiredException()
         val connection = owned(ownerId, id)
-        val correlationId = UUID.randomUUID()
         record(ownerId, "integration.nanoleaf.power", ActivityStatus.CONFIRMED, "nanoleaf.power.confirmed", correlationId)
         return try {
             val token = cipher.reveal(connection)
@@ -74,11 +73,10 @@ class NanoleafIntegrationService(
         record(ownerId, "integration.nanoleaf.removed", ActivityStatus.SUCCEEDED, "nanoleaf.removed", id)
     }
 
-    fun brightness(ownerId: UUID, id: UUID, brightness: Int, confirmed: Boolean): NanoleafDeviceState {
+    fun brightness(ownerId: UUID, id: UUID, brightness: Int, confirmed: Boolean, correlationId: UUID = UUID.randomUUID()): NanoleafDeviceState {
         if (!confirmed) throw IntegrationConfirmationRequiredException()
         if (brightness !in 0..100) throw IntegrationInvalidBrightnessException()
         val connection = owned(ownerId, id)
-        val correlationId = UUID.randomUUID()
         record(ownerId, "integration.nanoleaf.brightness", ActivityStatus.CONFIRMED, "nanoleaf.brightness.confirmed", correlationId)
         return try {
             val token = cipher.reveal(connection)

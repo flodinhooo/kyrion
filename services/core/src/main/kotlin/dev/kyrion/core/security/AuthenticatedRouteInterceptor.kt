@@ -36,6 +36,8 @@ class AuthenticatedRouteConfiguration(
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(interceptor).addPathPatterns(
             "/v1/activity/**", "/v1/conversations/**", "/v1/memory/**", "/v1/integrations/**", "/v1/home/**",
+            "/v1/device-commands/**",
+            "/v1/devices/**",
         )
     }
 }
