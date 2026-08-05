@@ -6,10 +6,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from kyrion_ai.config import Settings
 from kyrion_ai.contracts import (
     ChatRequest,
+    DeviceCommandProposalRequest,
+    DeviceCommandProposalResponse,
     ModelBenchmarkRequest,
     ModelBenchmarkResult,
     ModelCatalog,
 )
+from kyrion_ai.device_commands import propose_device_command
 from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
 
@@ -56,3 +59,13 @@ async def stream_chat(request: ChatRequest) -> Response:
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
     )
+
+
+@app.post(
+    "/v1/device-commands/propose",
+    response_model=DeviceCommandProposalResponse,
+    response_model_by_alias=True,
+    response_model_exclude_none=True,
+)
+async def propose_command(request: DeviceCommandProposalRequest) -> DeviceCommandProposalResponse:
+    return DeviceCommandProposalResponse(proposal=propose_device_command(request))

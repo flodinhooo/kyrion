@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ChatMessage(BaseModel):
@@ -36,6 +36,72 @@ class ChatRequest(BaseModel):
         max_length=3,
     )
     locale: Literal["de", "en"]
+
+
+class RuntimeDeviceCapability(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=80)
+
+
+class RuntimeDevice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=128)
+    provider: str = Field(min_length=1, max_length=60)
+    display_name: str = Field(alias="displayName", min_length=1, max_length=160)
+    room_name: str | None = Field(default=None, alias="roomName", max_length=120)
+    capabilities: list[RuntimeDeviceCapability] = Field(max_length=50)
+    availability: Literal["online", "offline", "degraded", "unknown"]
+    observed_at: str | None = Field(default=None, alias="observedAt", max_length=40)
+
+
+class DeviceCommandProposalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=2_000)
+    locale: Literal["de", "en"]
+    devices: list[RuntimeDevice] = Field(max_length=250)
+    prior_messages: list[ChatMessage] = Field(
+        default_factory=list,
+        alias="priorMessages",
+        max_length=6,
+    )
+
+
+class DeviceTargetSelector(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    room_name: str | None = Field(default=None, alias="roomName", min_length=1, max_length=120)
+    provider: Literal["nanoleaf"]
+    device_id: str | None = Field(default=None, alias="deviceId", min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def exactly_one_target(self) -> "DeviceTargetSelector":
+        if (self.room_name is None) == (self.device_id is None):
+            raise ValueError("exactly one device target is required")
+        return self
+
+
+class DeviceCommandArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    on: bool | None = None
+    brightness: int | None = Field(default=None, ge=0, le=100)
+
+
+class DeviceCommandProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    capability: Literal["power.set", "light.setBrightness"]
+    selector: DeviceTargetSelector
+    arguments: DeviceCommandArguments
+
+
+class DeviceCommandProposalResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    proposal: DeviceCommandProposal | None
 
 
 class ModelInfo(BaseModel):

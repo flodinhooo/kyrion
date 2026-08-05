@@ -7,3 +7,4 @@ def test_application_registers_model_and_chat_routes() -> None:
     assert "/v1/models" in paths
     assert "/v1/models/benchmark" in paths
     assert "/v1/chat/stream" in paths
+    assert "/v1/device-commands/propose" in paths
