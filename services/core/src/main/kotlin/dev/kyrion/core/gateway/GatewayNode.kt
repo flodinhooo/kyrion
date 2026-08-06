@@ -56,10 +56,19 @@ data class GatewayHealth(
     val ipv6: Boolean,
     val bluetooth: Boolean,
     val systemState: String,
+    val adapters: List<GatewayAdapterHealth>,
     val services: List<GatewayServiceHealth>,
 )
 
 data class GatewayInterfaceHealth(val present: Boolean, val connected: Boolean)
+data class GatewayAdapterHealth(
+    val id: String,
+    val protocol: String,
+    val vendor: String,
+    val model: String,
+    val serial: String,
+    val path: String,
+)
 data class GatewayServiceHealth(val id: String, val status: String)
 
 interface GatewayRepository {
@@ -210,6 +219,13 @@ class GatewayService(
         if (health.systemState !in setOf("running", "degraded", "maintenance", "unknown")) {
             throw GatewayHealthInvalidException()
         }
+        if (health.adapters.size > 16 || health.adapters.any {
+                it.id.length !in 1..200 || it.protocol !in setOf("zigbee", "thread") ||
+                    it.vendor.length !in 1..100 || it.model.length !in 1..160 ||
+                    it.serial.length !in 1..160 || it.path.length !in 1..300 ||
+                    !it.path.startsWith("/dev/serial/by-id/")
+            }
+        ) throw GatewayHealthInvalidException()
         if (health.services.size > 32 || health.services.any {
                 it.id.length !in 1..80 || !it.id.matches(Regex("^[a-z0-9.-]+$")) ||
                     it.status !in setOf("ready", "unavailable", "not_configured", "degraded", "unknown")

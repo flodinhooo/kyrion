@@ -69,7 +69,9 @@ class GatewayServiceTest {
     private fun validHealth() = GatewayHealth(
         42.2, false, 8_000, 7_000, 64_000, 48_000,
         GatewayInterfaceHealth(true, true), GatewayInterfaceHealth(true, false),
-        true, true, "running", listOf(GatewayServiceHealth("zigbee", "not_configured")),
+        true, true, "running",
+        listOf(GatewayAdapterHealth("sonoff", "zigbee", "Itead", "Sonoff", "serial", "/dev/serial/by-id/sonoff")),
+        listOf(GatewayServiceHealth("zigbee", "not_configured")),
     )
 
     private inner class FakeGatewayRepository : GatewayRepository {
