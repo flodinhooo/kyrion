@@ -36,6 +36,7 @@ export default function GatewaysPage() {
   const [commandPending, setCommandPending] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [brightness, setBrightness] = useState<Record<string, number>>({});
+  const [colors, setColors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const response = await fetch("/api/gateways", { cache: "no-store" });
@@ -141,7 +142,7 @@ export default function GatewaysPage() {
                   <div className="connection-heading"><div><h3>{device.vendor} {device.model}</h3><p>{device.description}</p><code>{device.ieeeAddress}</code></div><span className={`device-status ${device.on ? "online" : "unknown"}`}>{device.on === null ? t.gatewayServiceStatus_unknown : device.on ? t.zigbeeOn : t.zigbeeOff}</span></div>
                   <p>{t.zigbeeSignal}: {device.linkquality ?? "–"}</p>
                   <div className="brightness-control"><label><span>{t.nanoleafBrightness}</span><strong>{level}%</strong><input type="range" min="1" max="100" value={level} onChange={(event) => setBrightness((current) => ({ ...current, [device.ieeeAddress]: Number(event.target.value) }))} /></label><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "brightness", { deviceId: device.ieeeAddress, brightness: Math.round(level * 2.54) })}>{t.nanoleafApplyBrightness}</button></div>
-                  <div className="connection-actions"><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: true })}>{t.nanoleafTurnOn}</button><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: false })}>{t.nanoleafTurnOff}</button><label>{t.zigbeeColor}<input type="color" defaultValue="#ffffff" onChange={(event) => { const hue = hexHue(event.target.value); void zigbeeCommand(node.id, "color", { deviceId: device.ieeeAddress, hue, saturation: 100 }); }} /></label></div>
+                  <div className="connection-actions"><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: true })}>{t.nanoleafTurnOn}</button><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: false })}>{t.nanoleafTurnOff}</button><label>{t.zigbeeColor}<input type="color" value={colors[device.ieeeAddress] ?? "#ffffff"} onChange={(event) => setColors((current) => ({ ...current, [device.ieeeAddress]: event.target.value }))} /></label><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "color", { deviceId: device.ieeeAddress, hue: hexHue(colors[device.ieeeAddress] ?? "#ffffff"), saturation: 100 })}>{t.zigbeeApplyColor}</button></div>
                 </article>;
               })}</div>}
             </section>}
