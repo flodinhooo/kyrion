@@ -1,5 +1,5 @@
 server:
-  address: 127.0.0.1
+  address: ${KYRION_CORE_ADDRESS:127.0.0.1}
   port: 8080
 
 spring:
