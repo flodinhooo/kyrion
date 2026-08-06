@@ -89,7 +89,8 @@ def _request(
         with urlopen(request, timeout=10) as response:
             if not expect_json:
                 return None
-            return json.loads(response.read().decode("utf-8"))
+            body = response.read().decode("utf-8")
+            return json.loads(body) if body else None
     except HTTPError as error:
         raise CoreRequestError(f"Core rejected the request with HTTP {error.code}") from error
     except (URLError, TimeoutError, json.JSONDecodeError) as error:

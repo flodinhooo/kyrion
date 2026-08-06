@@ -50,10 +50,12 @@ def main() -> None:
     interval = max(5, min(args.interval, 60))
     while True:
         try:
-            heartbeat(config, collect_health())
-            command = next_command(config)
-            if command is not None:
+            for _ in range(5):
+                command = next_command(config)
+                if command is None:
+                    break
                 _execute_command(config, command)
+            heartbeat(config, collect_health())
             LOGGER.info("Gateway heartbeat completed")
         except CoreRequestError as error:
             LOGGER.warning("Gateway heartbeat failed: %s", error)
@@ -97,7 +99,9 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         if result.returncode != 0:
             raise RuntimeError("mqtt publish failed")
         complete_command(config, command_id, True)
-    except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError) as error:
+    except (
+        KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError
+    ) as error:
         LOGGER.warning(
             "Gateway command %s failed locally: %s %s",
             command_id, type(error).__name__, str(error)[:80],

@@ -8,7 +8,7 @@ Type=simple
 User=kyrion-gateway
 Group=kyrion-gateway
 Environment=PYTHONPATH=/opt/kyrion-gateway/src
-ExecStart=/usr/bin/python3 -m kyrion_gateway_agent.cli --config /etc/kyrion-gateway/agent.json run
+ExecStart=/usr/bin/python3 -m kyrion_gateway_agent.cli --config /etc/kyrion-gateway/agent.json run --interval 5
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

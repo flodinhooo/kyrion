@@ -4,6 +4,7 @@ import json
 import shutil
 import socket
 import subprocess
+import time
 from pathlib import Path
 from typing import Any  # noqa: UP035
 
@@ -142,6 +143,7 @@ def _zigbee_device_state(friendly_name: str) -> str:
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
         )
+        time.sleep(0.5)
         subprocess.run(
             [
                 "mosquitto_pub", "-h", "127.0.0.1", "-t",
