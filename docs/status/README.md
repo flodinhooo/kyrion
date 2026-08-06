@@ -129,11 +129,13 @@ successful execution records online, confirmed unavailability records offline
 and other adapter failures record degraded. Observation-storage failure remains
 secondary and cannot turn a physically successful command into a false failure.
 
-Development hardware for the next integration phase was ordered in August
-2026 but has not arrived or been validated. It includes a Raspberry Pi 5
-(8 GB), a dedicated Sonoff ZBDongle-E for Zigbee, a dedicated Home Assistant
-Connect ZBT-2 for Thread/OTBR, USB voice hardware and initial Zigbee, Wi-Fi and
-Matter-over-Thread test devices. See the
+Development hardware for the next integration phase arrived in August 2026.
+The Raspberry Pi 5 (8 GB) is now registered as the authenticated `kyrion-node`
+gateway and reports bounded health to Core every 15 seconds. Core persists the
+latest heartbeat, applies a 45-second offline threshold and exposes owner-scoped
+health through the German/English Web gateway view. The dedicated Sonoff
+ZBDongle-E, Home Assistant Connect ZBT-2, USB voice hardware and protocol test
+devices have not yet been attached or accepted. See the
 [Development Hardware Roadmap](../hardware-roadmap.md).
 
 The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
@@ -193,6 +195,13 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
   AES-256-GCM installation key remains separate from PostgreSQL.
 - Flyway V9 persists owner-specific rooms and device assignments. Deleting a
   room leaves its devices connected and unassigned.
+- Flyway V11 persists short-lived one-time gateway enrollments, hashed gateway
+  credentials and the latest typed node-health heartbeat.
+- The Debian ARM64 gateway agent is installed as a hardened unprivileged
+  systemd service on `kyrion-node`; it has no sudo, Docker socket or general
+  remote-command authority.
+- A source-restricted Windows firewall rule allows Core traffic on TCP 8080
+  only from the Pi's reserved Wi-Fi and Ethernet addresses.
 
 ### Web application
 
@@ -331,8 +340,11 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 - An individual qualifier such as "left" is not silently discarded. It is only
   executable when it is the complete unique display name of a catalog device;
   otherwise no device command is proposed.
-- The ordered Raspberry Pi, radio adapters, voice hardware and test devices are
-  planning inputs only until delivery and end-to-end validation.
+- Gateway heartbeat continuity across a full Pi reboot and temporary network
+  loss is not yet recorded. Wi-Fi is configured but currently disconnected;
+  its failed boot association remains a separate diagnostic follow-up.
+- Radio adapters, USB voice hardware and protocol test devices remain
+  unvalidated until each is attached and accepted end to end.
 
 ## Recommended next step
 
@@ -393,12 +405,11 @@ matches and can apply an explicit room correction to the preceding command.
 This is covered by AI regression tests and a live proposal check; physical
 execution remains to be repeated by the owner.
 
-### Dependent on ordered hardware
+### Physical gateway and protocol validation
 
-- validate the Raspberry Pi 5, dedicated Zigbee and Thread adapters, integrated
-  Bluetooth and USB voice hardware after delivery;
-- prove authenticated gateway registration, heartbeat and recovery on the real
-  node;
+- attach and validate the dedicated Zigbee and Thread adapters plus USB voice
+  hardware through stable device identities;
+- prove heartbeat recovery across a full Pi restart and temporary network loss;
 - prove Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice as separate
   end-to-end slices rather than treating discovery or pairing as completion.
 

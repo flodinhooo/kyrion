@@ -212,10 +212,11 @@ Success criterion:
 
 - [x] Record the August 2026 Raspberry Pi, radio, voice and smart-home hardware
   order in the [Development Hardware Roadmap](../hardware-roadmap.md).
-- [ ] Define authenticated gateway registration, identity, heartbeat and health
+- [x] Define and implement authenticated gateway registration, identity,
+  heartbeat and health
   contracts before implementing radio-specific control.
 - [ ] Separate discovered candidates from owner-approved, paired devices.
-- [ ] Define stable USB adapter identity/configuration without assuming device
+- [x] Define stable USB adapter identity/configuration without assuming device
   paths before the Raspberry Pi and radios are available.
 - [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
   inbox and gateway/voice-satellite health views in German and English.
@@ -224,6 +225,27 @@ Success criterion:
 - [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
   end-to-end slices; do not mark an integration complete based only on pairing
   or discovery.
+
+### Deferred gateway productisation
+
+The current SSH, `sudo`, firewall and command-line provisioning flow is an
+intentional development path, not the finished owner experience. Do not pause
+protocol validation to generalise it prematurely. After the planned gateway
+integrations work end to end:
+
+- [ ] Replace developer provisioning with a guided German/English Web
+  onboarding flow that requires no programming or terminal knowledge.
+- [ ] Package the gateway agent with installation, update, rollback and clean
+  removal support.
+- [ ] Add automatic local discovery, understandable physical confirmation and
+  a discovery inbox that separates detected candidates from approved devices.
+- [ ] Add guided Zigbee, Thread/Matter, Bluetooth and voice setup with safe
+  permissions, restore points and translated diagnostics.
+- [ ] Reset the development Raspberry Pi and perform a complete clean-room
+  onboarding test as a new owner would, recording every manual prerequisite,
+  failure and recovery step.
+- [ ] Do not call gateway onboarding product-ready until that clean-room test
+  succeeds without SSH, manual firewall editing or copied terminal commands.
 
 ## Current open-work grouping
 
@@ -272,12 +294,16 @@ Success criterion:
 - [ ] Physically verify explicit status refresh and truthful
   unavailable-controller feedback.
 
-### Awaiting hardware delivery
+### Physical gateway and hardware validation
 
-- [ ] Validate the Raspberry Pi 5, Sonoff ZBDongle-E, Home Assistant Connect
-  ZBT-2, integrated Bluetooth and USB voice devices.
+- [x] Validate the Raspberry Pi 5 host, storage, Ethernet, IPv6, temperature,
+  throttling and integrated Bluetooth inventory.
+- [ ] Validate the Sonoff ZBDongle-E, Home Assistant Connect ZBT-2 and USB voice
+  devices after attaching them.
 - [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
-  behaviour on the real Raspberry Pi node.
+  behaviour on the real Raspberry Pi node. Registration, repeated heartbeat
+  and agent-service restart are proven; Pi reboot and network-loss recovery
+  remain open.
 - [ ] Accept Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice independently
   through recorded end-to-end results.
 

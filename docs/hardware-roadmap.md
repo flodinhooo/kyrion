@@ -1,9 +1,9 @@
 # Development Hardware Roadmap
 
-This document records the hardware ordered in August 2026 for Kyrion's next
-local integration and infrastructure slices. The devices have not arrived yet.
-Everything described here is therefore planned unless explicitly marked as
-implemented elsewhere in the project documentation.
+This document records the hardware ordered and delivered in August 2026 for
+Kyrion's next local integration and infrastructure slices. The Raspberry Pi is
+now inventoried and registered; radio, protocol-test and USB voice hardware
+remain planned until explicitly validated below.
 
 The equipment is for Kyrion development and validation only. Its purpose is to
 prove provider-neutral device, event, automation and voice contracts against
@@ -112,8 +112,10 @@ Raspberry Pi gateway node
   `-- Velora voice satellite
 ```
 
-The exact deployment boundary between Core and the Raspberry Pi remains to be
-validated. Core may eventually run on the Pi, but integrations must still obey
+The first deployment boundary is now proven with Core on the development PC and
+an unprivileged native Python gateway agent on Debian 13 ARM64. The agent sends
+authenticated typed health heartbeats and has no sudo, Docker socket or general
+command surface. Core may eventually run on the Pi, but integrations must still obey
 the same logical trust boundary and must not bypass Core merely because
 processes share a host.
 
@@ -234,7 +236,9 @@ radio credentials, integration secrets or unrestricted gateway access.
 Hardware arrival does not by itself complete this roadmap. Each integration
 should be accepted through a narrow end-to-end test with recorded results:
 
-- the Raspberry Pi can register securely and report health to Core;
+- [x] the Raspberry Pi can register securely and report health to Core;
+- [x] the agent service restarts and resumes authenticated heartbeats;
+- [ ] a full Pi reboot and temporary network loss are visible and recover;
 - Zigbee devices can be discovered, explicitly paired, read and controlled;
 - the Thread network and OTBR can be commissioned and recovered safely;
 - the Matter sensor produces provider-neutral contact events;
