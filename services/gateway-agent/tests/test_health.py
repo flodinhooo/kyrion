@@ -29,6 +29,7 @@ def test_health_contract_contains_bounded_platform_values() -> None:
     assert 0 <= health["memoryAvailableBytes"] <= health["memoryTotalBytes"]
     assert health["storageTotalBytes"] > 0
     assert isinstance(health["services"], list)
+    assert isinstance(health["adapters"], list)
     assert {service["id"] for service in health["services"]} == {
         "home-assistant", "matter", "mqtt", "otbr", "voice", "zigbee"
     }
