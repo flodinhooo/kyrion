@@ -57,7 +57,9 @@ def next_command(config: AgentConfig) -> dict[str, Any] | None:
     return value if isinstance(value, dict) and isinstance(value.get("id"), str) else None
 
 
-def complete_command(config: AgentConfig, command_id: str, succeeded: bool, error: str | None = None) -> None:
+def complete_command(
+    config: AgentConfig, command_id: str, succeeded: bool, error: str | None = None
+) -> None:
     _request(
         f"{config.core_url}/v1/gateway-agent/commands/{command_id}/result",
         "POST", {"succeeded": succeeded, "error": error}, _auth(config), expect_json=False,

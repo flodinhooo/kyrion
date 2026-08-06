@@ -7,7 +7,13 @@ import subprocess
 import time
 from pathlib import Path
 
-from kyrion_gateway_agent.client import CoreRequestError, complete_command, enroll, heartbeat, next_command
+from kyrion_gateway_agent.client import (
+    CoreRequestError,
+    complete_command,
+    enroll,
+    heartbeat,
+    next_command,
+)
 from kyrion_gateway_agent.config import DEFAULT_CONFIG_PATH, AgentConfig
 from kyrion_gateway_agent.health import collect_health, platform_identity
 
@@ -76,7 +82,12 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             elif kind == "zigbee.brightness":
                 body = {"brightness": int(payload["brightness"])}
             else:
-                body = {"color": {"hue": int(payload["hue"]), "saturation": int(payload["saturation"])}}
+                body = {
+                    "color": {
+                        "hue": int(payload["hue"]),
+                        "saturation": int(payload["saturation"]),
+                    }
+                }
         else:
             raise ValueError("unsupported command")
         result = subprocess.run(

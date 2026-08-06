@@ -2,6 +2,7 @@ package dev.kyrion.core.gateway
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.ActivityActorType
 import dev.kyrion.core.activity.ActivityCategory
 import dev.kyrion.core.activity.ActivityService
@@ -18,7 +19,8 @@ import java.util.UUID
 data class GatewayCommand(val id: UUID, val type: String, val payload: JsonNode)
 
 @Repository
-class GatewayCommandRepository(private val jdbc: JdbcClient, private val mapper: ObjectMapper) {
+class GatewayCommandRepository(private val jdbc: JdbcClient) {
+    private val mapper: ObjectMapper = jacksonObjectMapper()
     fun create(id: UUID, nodeId: UUID, ownerId: UUID, type: String, payload: Map<String, Any>, now: Instant) {
         jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at)
             VALUES (:id,:nodeId,:ownerId,:type,CAST(:payload AS jsonb),'pending',:now)""")

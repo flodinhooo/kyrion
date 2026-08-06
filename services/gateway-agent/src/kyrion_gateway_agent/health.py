@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import shutil
 import json
+import shutil
 import socket
 import subprocess
 from pathlib import Path
@@ -71,7 +71,10 @@ def _serial_adapters() -> list[dict[str, str]]:
 
 def _zigbee_health() -> dict[str, Any] | None:
     raw_devices = _command(
-        ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/bridge/devices", "-C", "1", "-W", "2"],
+        [
+            "mosquitto_sub", "-h", "127.0.0.1", "-t",
+            "zigbee2mqtt/bridge/devices", "-C", "1", "-W", "2",
+        ],
         "",
     )
     raw_info = _command(
@@ -95,7 +98,10 @@ def _zigbee_health() -> dict[str, Any] | None:
         if not isinstance(friendly_name, str) or not isinstance(ieee_address, str):
             continue
         raw_state = _command(
-            ["mosquitto_sub", "-h", "127.0.0.1", "-t", f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "1"],
+            [
+                "mosquitto_sub", "-h", "127.0.0.1", "-t",
+                f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "1",
+            ],
             "",
         )
         try:
@@ -109,9 +115,21 @@ def _zigbee_health() -> dict[str, Any] | None:
             "model": str(definition.get("model", "Unknown"))[:100],
             "description": str(definition.get("description", "Zigbee device"))[:200],
             "supported": bool(item.get("supported", False)),
-            "on": state.get("state") == "ON" if isinstance(state, dict) and state.get("state") in {"ON", "OFF"} else None,
-            "brightness": state.get("brightness") if isinstance(state, dict) and isinstance(state.get("brightness"), int) else None,
-            "linkquality": state.get("linkquality") if isinstance(state, dict) and isinstance(state.get("linkquality"), int) else None,
+            "on": (
+                state.get("state") == "ON"
+                if isinstance(state, dict) and state.get("state") in {"ON", "OFF"}
+                else None
+            ),
+            "brightness": (
+                state.get("brightness")
+                if isinstance(state, dict) and isinstance(state.get("brightness"), int)
+                else None
+            ),
+            "linkquality": (
+                state.get("linkquality")
+                if isinstance(state, dict) and isinstance(state.get("linkquality"), int)
+                else None
+            ),
         })
     return {
         "permitJoin": bool(info.get("permit_join", False)),
