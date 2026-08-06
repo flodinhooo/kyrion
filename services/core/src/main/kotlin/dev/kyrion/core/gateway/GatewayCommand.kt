@@ -55,7 +55,7 @@ class GatewayCommandService(
         if (node.availability == "offline") throw GatewayCommandUnavailableException()
         val id = UUID.randomUUID()
         repository.create(id, nodeId, ownerId, type, payload, clock.instant())
-        activity.record(ActivityCategory.DEVICE, type, ActivityStatus.STARTED, ActivityActorType.USER,
+        activity.record(ActivityCategory.CAPABILITY, type, ActivityStatus.CONFIRMED, ActivityActorType.USER,
             "kyrion-core", type, nodeId.toString(), id)
         return id
     }
@@ -68,7 +68,7 @@ class GatewayCommandService(
     fun complete(nodeId: UUID, credential: String, id: UUID, succeeded: Boolean, error: String?) {
         val node = gateways.authenticate(nodeId, credential)
         if (!repository.complete(id, nodeId, succeeded, error?.take(80), clock.instant())) throw GatewayCommandInvalidException()
-        activity.record(ActivityCategory.DEVICE, "gateway.command.completed",
+        activity.record(ActivityCategory.CAPABILITY, "gateway.command.completed",
             if (succeeded) ActivityStatus.SUCCEEDED else ActivityStatus.FAILED,
             ActivityActorType.INTEGRATION, "kyrion-gateway", error ?: "gateway.command.completed",
             node.ownerId.toString(), id)
