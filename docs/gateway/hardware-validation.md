@@ -83,5 +83,7 @@ the profile remains intact for a later explicit fallback test.
   backup coverage, and recovery.
 - [ ] Validate authenticated gateway heartbeat, restart, update, rollback, and
   temporary-network-loss behaviour.
-- [ ] Expose only sanitised structured health and diagnostics through Core to
+- [x] Expose only sanitised structured health and diagnostics through Core to
   the Web application.
+- [x] Pair one real Hue colour lamp and control power, brightness and colour
+  from `/home` through the persisted Core command queue.

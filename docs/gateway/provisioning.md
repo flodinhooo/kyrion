@@ -9,8 +9,8 @@
 - SSH user: `flodinho`
 - Operating system: Debian GNU/Linux 13 (`trixie`), ARM64
 - Kernel: `6.18.39+rpt-rpi-2712`
-- Deployment state: Kyrion gateway agent registered and active; protocol
-  containers and Home Assistant are not installed
+- Deployment state: Kyrion gateway agent, native Zigbee2MQTT and Mosquitto
+  services are active; Home Assistant is not installed
 
 The address is operational metadata, not a public contract. Later gateway
 registration must use a stable cryptographic node identity rather than an IP
@@ -56,7 +56,15 @@ vertical slice that requires them.
 The `0.1.0` gateway agent is installed under `/opt/kyrion-gateway` and runs as
 the dedicated `kyrion-gateway` system identity. Its protected configuration is
 stored at `/etc/kyrion-gateway/agent.json`. The service is enabled as
-`kyrion-gateway-agent.service` and sends a heartbeat every 15 seconds.
+`kyrion-gateway-agent.service`, sends a heartbeat every 5 seconds and polls the
+Core-owned typed command queue over the same outbound authenticated channel.
+
+Zigbee2MQTT 2.10.1 is installed under `/opt/zigbee2mqtt`, keeps runtime data in
+`/var/lib/zigbee2mqtt` and runs as `zigbee2mqtt.service`. Mosquitto runs as a
+separate service bound only to `127.0.0.1:1883`; the Zigbee2MQTT frontend is
+disabled. The Sonoff coordinator uses its stable `/dev/serial/by-id` identity,
+the Ember driver, firmware 7.4.4 and channel 15. Root-only pre-pairing and
+post-Hue-pairing snapshots are under `/var/backups/kyrion/zigbee`.
 
 Kyrion Core currently runs at `192.168.1.107:8080`. A Windows firewall rule
 permits that port only from the Pi's reserved `192.168.1.115` Wi-Fi and

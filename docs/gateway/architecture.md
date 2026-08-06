@@ -3,8 +3,10 @@
 ## Status
 
 This document records the boundary for the authenticated Raspberry Pi gateway.
-The health agent and first Zigbee runtime are implemented; provider-neutral
-device contracts and Core-authorised Zigbee commands remain the next slice.
+The health agent and first Zigbee runtime are implemented. A Philips Hue lamp
+is represented in the shared Home catalog and accepts Core-authorised power,
+brightness and colour commands. Explicit device approval/lifecycle and a stable
+provider-neutral persistence contract remain the next slice.
 
 ## Boundary
 
@@ -75,8 +77,9 @@ group required for that serial device. Pairing is closed by default.
 
 The gateway heartbeat reports bounded adapter identity and service readiness to
 Core. Raw MQTT topics, network credentials and coordinator backups are not
-exposed to Web. Core-owned discovery, approval and command auditing remain
-required before this runtime becomes a user-facing integration.
+exposed to Web. Command validation and auditing are implemented and the runtime
+is user-facing. A separate discovery-candidate inbox and explicit owner
+approval, naming, rejection and removal remain required before productisation.
 
 The first owner-facing control path uses a persisted typed command queue. Web
 can request a bounded pairing window and power, brightness or colour commands.

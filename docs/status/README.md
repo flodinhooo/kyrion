@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-05
+Last updated: 2026-08-06
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -131,7 +131,7 @@ secondary and cannot turn a physically successful command into a false failure.
 
 Development hardware for the next integration phase arrived in August 2026.
 The Raspberry Pi 5 (8 GB) is now registered as the authenticated `kyrion-node`
-gateway and reports bounded health to Core every 15 seconds. Core persists the
+gateway and reports bounded health to Core every 5 seconds. Core persists the
 latest heartbeat, applies a 45-second offline threshold and exposes owner-scoped
 health through the German/English Web gateway view. The Sonoff ZBDongle-E now
 runs as an Ember Zigbee coordinator through loopback-only MQTT, and a Philips
@@ -153,8 +153,8 @@ on `/home`, support the existing persistent room assignment flow and expose
 power, brightness and colour controls there. Gateway settings retain pairing,
 radio status and diagnostics but are no longer a daily device-control surface.
 
-The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
-2026-08-04](2026-08-04-nanoleaf-home-dashboard.md).
+The latest detailed handoff is [Raspberry Pi, Zigbee and Home Integration
+Session — 2026-08-06](2026-08-06-raspberry-pi-zigbee-home.md).
 
 ## Completed
 
@@ -358,8 +358,13 @@ The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 - Gateway heartbeat continuity across a full Pi reboot and temporary network
   loss is not yet recorded. Wi-Fi is configured but currently disconnected;
   its failed boot association remains a separate diagnostic follow-up.
-- Radio adapters, USB voice hardware and protocol test devices remain
-  unvalidated until each is attached and accepted end to end.
+- The Sonoff Zigbee adapter and one Philips Hue colour lamp are accepted end to
+  end. The ZBT-2 Thread/Matter adapter and USB voice hardware remain
+  unvalidated.
+- Zigbee currently auto-imports supported paired devices. A discovery inbox
+  with explicit approval, naming, rejection, removal and re-pairing remains.
+- Zigbee Web commands currently wait synchronously for the outbound gateway
+  agent. An asynchronous command-status flow is required before scaling.
 
 ## Recommended next step
 
@@ -384,7 +389,7 @@ recorded in
 The current planning checkpoint separates the remaining work into three
 dependency lanes.
 
-### Implementable before hardware delivery
+### Implementable now
 
 1. stabilise provider-neutral device identity, state, capability, command and
    result contracts above the working Nanoleaf slice;
@@ -422,8 +427,9 @@ execution remains to be repeated by the owner.
 
 ### Physical gateway and protocol validation
 
-- attach and validate the dedicated Zigbee and Thread adapters plus USB voice
-  hardware through stable device identities;
+- the dedicated Sonoff Zigbee adapter and first Hue device are validated;
+  attach and validate the Thread adapter and USB voice hardware through stable
+  device identities;
 - prove heartbeat recovery across a full Pi restart and temporary network loss;
 - prove Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice as separate
   end-to-end slices rather than treating discovery or pairing as completion.
@@ -445,14 +451,12 @@ In a new agent chat, use this prompt:
 > Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
 > `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
 > current implementation and uncommitted changes. Read the latest dated session
-> handoff. Verify the running stack, the two persisted Nanoleaf connections and
-> the `/home` room dashboard. Continue with provider-neutral device capability
-> contracts, bounded status refresh and connection recovery.
-> Preserve Core as the authority. Implement provider-neutral device/capability
-> contracts and the first Core-validated Velora device-control loop using the
-> existing Nanoleaf living-room devices. Then prepare authenticated Raspberry Pi
-> gateway, discovery and health contracts from `docs/hardware-roadmap.md`
-> without claiming unvalidated hardware support. Never store credentials or
+> handoff. Verify Core and the three Pi services, then confirm the paired Hue is
+> visible and controllable on `/home`. Continue with explicit Zigbee
+> discovery/approval/name/remove lifecycle, asynchronous command status and
+> focused gateway-command tests. Preserve Core as authority and the
+> outbound-only agent boundary. Do not begin Thread/Matter until the Zigbee
+> lifecycle and recovery work is understood. Never store credentials or
 > session tokens in browser local storage.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).

@@ -222,8 +222,13 @@ Success criterion:
   inbox and gateway/voice-satellite health views in German and English.
 - [ ] Complete hardware acceptance: Raspberry Pi and Sonoff ZBDongle-E baseline
   validation is complete; ZBT-2, USB voice hardware and recovery drills remain.
-- [ ] Add the Core-owned Zigbee discovery inbox, explicit approval and stable
-  provider-neutral light capabilities before exposing device commands in Web.
+- [x] Expose the first stable owner-scoped Zigbee light capabilities and typed,
+  audited device commands in Web through Core.
+- [ ] Replace automatic post-pairing import with a Core-owned Zigbee discovery
+  inbox and explicit approve, name, reject, remove and re-pair lifecycle.
+- [ ] Replace synchronous Zigbee command waiting with an asynchronous status
+  contract and visible pending/failure UI; test ownership, timeout, malformed
+  payload, adapter failure, retry and idempotency boundaries.
 - [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
   end-to-end slices; do not mark an integration complete based only on pairing
   or discovery.
@@ -300,8 +305,10 @@ integrations work end to end:
 
 - [x] Validate the Raspberry Pi 5 host, storage, Ethernet, IPv6, temperature,
   throttling and integrated Bluetooth inventory.
-- [ ] Validate the Sonoff ZBDongle-E, Home Assistant Connect ZBT-2 and USB voice
-  devices after attaching them.
+- [x] Validate the Sonoff ZBDongle-E and first Philips Hue colour lamp through
+  real pairing, state reporting and reversible Web commands.
+- [ ] Validate the Home Assistant Connect ZBT-2 and USB voice devices after
+  attaching them.
 - [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
   behaviour on the real Raspberry Pi node. Registration, repeated heartbeat
   and agent-service restart are proven; Pi reboot and network-loss recovery
