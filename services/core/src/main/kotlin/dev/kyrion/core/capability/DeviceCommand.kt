@@ -39,6 +39,8 @@ data class DeviceTargetSelector(
 data class DeviceCommandArguments(
     val on: Boolean? = null,
     @field:Min(0) @field:Max(100) val brightness: Int? = null,
+    @field:Min(0) @field:Max(360) val hue: Int? = null,
+    @field:Min(0) @field:Max(100) val saturation: Int? = null,
 )
 
 data class ExecuteDeviceCommandRequest(
@@ -109,6 +111,9 @@ class DeviceCommandService(
                     BRIGHTNESS_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
                         executeZigbee(ownerId, target.endpointHost, "zigbee.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to (request.arguments.brightness!! * 254 / 100)))
                     } else nanoleaf.brightness(ownerId, target.id, request.arguments.brightness!!, true, correlationId)
+                    COLOR_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                        executeZigbee(ownerId, target.endpointHost, "zigbee.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!))
+                    } else throw DeviceCapabilityUnsupportedException()
                 }
                 observe(ownerId, target.id, DeviceAvailability.ONLINE)
                 DeviceCommandOutcome(target.id, target.displayName, "succeeded")
@@ -149,8 +154,9 @@ class DeviceCommandService(
 
     private fun validateArguments(request: ExecuteDeviceCommandRequest) {
         when (request.capability) {
-            POWER_SET -> if (request.arguments.on == null || request.arguments.brightness != null) throw DeviceCommandInvalidException()
-            BRIGHTNESS_SET -> if (request.arguments.brightness == null || request.arguments.on != null) throw DeviceCommandInvalidException()
+            POWER_SET -> if (request.arguments.on == null || request.arguments.brightness != null || request.arguments.hue != null || request.arguments.saturation != null) throw DeviceCommandInvalidException()
+            BRIGHTNESS_SET -> if (request.arguments.brightness == null || request.arguments.on != null || request.arguments.hue != null || request.arguments.saturation != null) throw DeviceCommandInvalidException()
+            COLOR_SET -> if (request.arguments.hue == null || request.arguments.saturation == null || request.arguments.on != null || request.arguments.brightness != null) throw DeviceCommandInvalidException()
             else -> throw DeviceCapabilityUnsupportedException()
         }
     }
@@ -158,6 +164,7 @@ class DeviceCommandService(
     companion object {
         const val POWER_SET = "power.set"
         const val BRIGHTNESS_SET = "light.setBrightness"
+        const val COLOR_SET = "light.setColour"
     }
 }
 

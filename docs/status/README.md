@@ -147,6 +147,12 @@ audited Core command queue polled by the authenticated gateway agent. Live
 power, brightness and link quality return through the bounded heartbeat; Web
 never receives MQTT access or gateway credentials.
 
+Paired supported Zigbee devices are automatically represented by stable
+owner-scoped entries in the shared Core device catalog. They therefore appear
+on `/home`, support the existing persistent room assignment flow and expose
+power, brightness and colour controls there. Gateway settings retain pairing,
+radio status and diagnostics but are no longer a daily device-control surface.
+
 The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 2026-08-04](2026-08-04-nanoleaf-home-dashboard.md).
 

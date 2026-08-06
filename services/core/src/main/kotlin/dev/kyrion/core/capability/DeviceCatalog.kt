@@ -81,7 +81,7 @@ class DeviceCatalogService(
         val NANOLEAF_CAPABILITIES = listOf(
             DeviceCommandService.POWER_SET,
             DeviceCommandService.BRIGHTNESS_SET,
-            "light.setColour",
+            DeviceCommandService.COLOR_SET,
             "light.setColourTemperature",
             "light.activateScene",
         )
