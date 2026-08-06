@@ -12,6 +12,7 @@ describe("gateway contracts", () => {
         storageTotalBytes: 64, storageAvailableBytes: 48,
         ethernet: { present: true, connected: true }, wifi: { present: true, connected: false },
         ipv6: true, bluetooth: true, systemState: "running",
+        adapters: [{ id: "sonoff", protocol: "zigbee", vendor: "Itead", model: "Sonoff", serial: "serial", path: "/dev/serial/by-id/sonoff" }],
         services: [{ id: "zigbee", status: "not_configured" }],
       },
     }])).toBe(true);

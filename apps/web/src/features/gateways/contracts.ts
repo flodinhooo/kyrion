@@ -13,6 +13,9 @@ export type GatewayHealth = {
   ipv6: boolean;
   bluetooth: boolean;
   systemState: "running" | "degraded" | "maintenance" | "unknown";
+  adapters: Array<{
+    id: string; protocol: "zigbee" | "thread"; vendor: string; model: string; serial: string; path: string;
+  }>;
   services: Array<{ id: string; status: GatewayServiceStatus }>;
 };
 
@@ -53,6 +56,12 @@ function isHealth(value: unknown): value is GatewayHealth {
     && typeof item.ipv6 === "boolean" && typeof item.bluetooth === "boolean"
     && (item.systemState === "running" || item.systemState === "degraded"
       || item.systemState === "maintenance" || item.systemState === "unknown")
+    && Array.isArray(item.adapters) && item.adapters.length <= 16
+    && item.adapters.every((adapter) => !!adapter && typeof adapter.id === "string"
+      && (adapter.protocol === "zigbee" || adapter.protocol === "thread")
+      && typeof adapter.vendor === "string" && typeof adapter.model === "string"
+      && typeof adapter.serial === "string" && typeof adapter.path === "string"
+      && adapter.path.startsWith("/dev/serial/by-id/"))
     && Array.isArray(item.services) && item.services.length <= 32
     && item.services.every((service) => !!service && typeof service.id === "string"
       && serviceStatuses.has(service.status));
