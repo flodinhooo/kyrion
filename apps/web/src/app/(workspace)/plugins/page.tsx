@@ -13,6 +13,11 @@ export default function PluginsPage() {
       <div className="plugin-badges"><span>{t.pluginOfficial}</span><span>{t.pluginAvailable}</span></div>
       <h2>Nanoleaf</h2><p>{t.pluginNanoleafDescription}</p>
       <Link href="/plugins/nanoleaf">{t.pluginOpen}</Link>
+    </article><article className="plugin-card">
+      <div className="plugin-mark"><Icons.plugins /></div>
+      <div className="plugin-badges"><span>{t.pluginOfficial}</span><span>{t.pluginConnected}</span></div>
+      <h2>Zigbee</h2><p>{t.pluginZigbeeDescription}</p>
+      <Link href="/settings/gateways">{t.pluginOpen}</Link>
     </article></div>
   </section>;
 }

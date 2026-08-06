@@ -77,3 +77,11 @@ The gateway heartbeat reports bounded adapter identity and service readiness to
 Core. Raw MQTT topics, network credentials and coordinator backups are not
 exposed to Web. Core-owned discovery, approval and command auditing remain
 required before this runtime becomes a user-facing integration.
+
+The first owner-facing control path uses a persisted typed command queue. Web
+can request a bounded pairing window and power, brightness or colour commands.
+Core validates owner/node scope, persists and audits the request, and the
+authenticated outbound-only agent claims and completes it. The agent exposes no
+inbound shell, HTTP or MQTT endpoint. Its heartbeat reports paired device
+metadata, live power, brightness and link quality for the bilingual gateway
+view.

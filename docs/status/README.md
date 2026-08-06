@@ -140,6 +140,13 @@ Assistant Connect ZBT-2 and USB voice hardware have not yet been accepted. See
 the
 [Development Hardware Roadmap](../hardware-roadmap.md).
 
+The gateway view now exposes an owner-triggered, time-bounded Zigbee search with
+a visible countdown and paired-device inventory. The Hue test lamp can be
+controlled from Web for power, brightness and colour through a persisted,
+audited Core command queue polled by the authenticated gateway agent. Live
+power, brightness and link quality return through the bounded heartbeat; Web
+never receives MQTT access or gateway credentials.
+
 The latest detailed handoff is [Nanoleaf and Home Dashboard Session —
 2026-08-04](2026-08-04-nanoleaf-home-dashboard.md).
 
