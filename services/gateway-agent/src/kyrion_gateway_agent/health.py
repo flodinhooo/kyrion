@@ -32,11 +32,39 @@ def collect_health() -> dict[str, Any]:
         "ipv6": _has_global_ipv6(),
         "bluetooth": Path("/sys/class/bluetooth").exists(),
         "systemState": _system_state(),
+        "adapters": _serial_adapters(),
         "services": [
             {"id": service_id, "status": _service_status(unit)}
             for service_id, unit in SERVICE_UNITS.items()
         ],
     }
+
+
+def _serial_adapters() -> list[dict[str, str]]:
+    serial_root = Path("/dev/serial/by-id")
+    try:
+        paths = sorted(serial_root.iterdir())
+    except OSError:
+        return []
+
+    adapters: list[dict[str, str]] = []
+    for path in paths[:16]:
+        name = path.name
+        if "Sonoff_Zigbee_3.0_USB_Dongle_Plus_V2" not in name:
+            continue
+        serial = name.removeprefix("usb-Itead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_V2_")
+        serial = serial.removesuffix("-if00-port0")
+        adapters.append(
+            {
+                "id": name,
+                "protocol": "zigbee",
+                "vendor": "Itead",
+                "model": "Sonoff Zigbee 3.0 USB Dongle Plus V2",
+                "serial": serial,
+                "path": str(path),
+            }
+        )
+    return adapters
 
 
 def platform_identity() -> dict[str, str]:
