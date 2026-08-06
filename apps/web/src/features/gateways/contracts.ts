@@ -16,6 +16,15 @@ export type GatewayHealth = {
   adapters: Array<{
     id: string; protocol: "zigbee" | "thread"; vendor: string; model: string; serial: string; path: string;
   }>;
+  zigbee: null | {
+    permitJoin: boolean;
+    channel: number;
+    devices: Array<{
+      ieeeAddress: string; friendlyName: string; vendor: string; model: string;
+      description: string; supported: boolean; on: boolean | null;
+      brightness: number | null; linkquality: number | null;
+    }>;
+  };
   services: Array<{ id: string; status: GatewayServiceStatus }>;
 };
 
@@ -62,6 +71,15 @@ function isHealth(value: unknown): value is GatewayHealth {
       && typeof adapter.vendor === "string" && typeof adapter.model === "string"
       && typeof adapter.serial === "string" && typeof adapter.path === "string"
       && adapter.path.startsWith("/dev/serial/by-id/"))
+    && (item.zigbee === null || (!!item.zigbee && typeof item.zigbee.permitJoin === "boolean"
+      && typeof item.zigbee.channel === "number" && Array.isArray(item.zigbee.devices)
+      && item.zigbee.devices.length <= 100 && item.zigbee.devices.every((device) =>
+        !!device && typeof device.ieeeAddress === "string" && typeof device.friendlyName === "string"
+        && typeof device.vendor === "string" && typeof device.model === "string"
+        && typeof device.description === "string" && typeof device.supported === "boolean"
+        && (device.on === null || typeof device.on === "boolean")
+        && (device.brightness === null || typeof device.brightness === "number")
+        && (device.linkquality === null || typeof device.linkquality === "number"))))
     && Array.isArray(item.services) && item.services.length <= 32
     && item.services.every((service) => !!service && typeof service.id === "string"
       && serviceStatuses.has(service.status));
