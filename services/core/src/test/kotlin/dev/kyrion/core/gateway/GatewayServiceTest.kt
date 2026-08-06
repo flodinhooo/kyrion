@@ -71,6 +71,7 @@ class GatewayServiceTest {
         GatewayInterfaceHealth(true, true), GatewayInterfaceHealth(true, false),
         true, true, "running",
         listOf(GatewayAdapterHealth("sonoff", "zigbee", "Itead", "Sonoff", "serial", "/dev/serial/by-id/sonoff")),
+        GatewayZigbeeHealth(false, 15, emptyList()),
         listOf(GatewayServiceHealth("zigbee", "not_configured")),
     )
 

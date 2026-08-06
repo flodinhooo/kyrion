@@ -57,6 +57,7 @@ data class GatewayHealth(
     val bluetooth: Boolean,
     val systemState: String,
     val adapters: List<GatewayAdapterHealth>,
+    val zigbee: GatewayZigbeeHealth?,
     val services: List<GatewayServiceHealth>,
 )
 
@@ -68,6 +69,22 @@ data class GatewayAdapterHealth(
     val model: String,
     val serial: String,
     val path: String,
+)
+data class GatewayZigbeeHealth(
+    val permitJoin: Boolean,
+    val channel: Int,
+    val devices: List<GatewayZigbeeDevice>,
+)
+data class GatewayZigbeeDevice(
+    val ieeeAddress: String,
+    val friendlyName: String,
+    val vendor: String,
+    val model: String,
+    val description: String,
+    val supported: Boolean,
+    val on: Boolean?,
+    val brightness: Int?,
+    val linkquality: Int?,
 )
 data class GatewayServiceHealth(val id: String, val status: String)
 
@@ -206,6 +223,10 @@ class GatewayService(
         }
     }
 
+    fun authenticate(nodeId: UUID, rawCredential: String): GatewayNode =
+        repository.findById(nodeId)?.takeIf { it.credentialHash == tokens.hash(rawCredential) }
+            ?: throw GatewayUnauthenticatedException()
+
     private fun validateHealth(health: GatewayHealth) {
         if (health.temperatureCelsius != null && health.temperatureCelsius !in -20.0..150.0) {
             throw GatewayHealthInvalidException()
@@ -226,6 +247,14 @@ class GatewayService(
                     !it.path.startsWith("/dev/serial/by-id/")
             }
         ) throw GatewayHealthInvalidException()
+        if (health.zigbee != null && (health.zigbee.channel !in 11..26 ||
+                health.zigbee.devices.size > 100 || health.zigbee.devices.any {
+                    !it.ieeeAddress.matches(Regex("^0x[0-9a-f]{16}$")) ||
+                        it.friendlyName.length !in 1..160 || it.vendor.length !in 1..100 ||
+                        it.model.length !in 1..100 || it.description.length !in 1..200 ||
+                        (it.brightness != null && it.brightness !in 0..254) ||
+                        (it.linkquality != null && it.linkquality !in 0..255)
+                })) throw GatewayHealthInvalidException()
         if (health.services.size > 32 || health.services.any {
                 it.id.length !in 1..80 || !it.id.matches(Regex("^[a-z0-9.-]+$")) ||
                     it.status !in setOf("ready", "unavailable", "not_configured", "degraded", "unknown")
