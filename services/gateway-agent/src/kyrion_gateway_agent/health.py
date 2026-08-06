@@ -147,7 +147,8 @@ def _zigbee_device_state(friendly_name: str) -> str:
         subprocess.run(
             [
                 "mosquitto_pub", "-h", "127.0.0.1", "-t",
-                f"zigbee2mqtt/{friendly_name}/get", "-m", "{}",
+                f"zigbee2mqtt/{friendly_name}/get", "-m",
+                '{"state":"","brightness":""}',
             ],
             capture_output=True, check=False, timeout=2,
         )
