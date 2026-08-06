@@ -40,6 +40,14 @@ profile are the relevant observed inputs. The Wi-Fi profile is a probable cause,
 but this has not been proven and is intentionally unchanged because it may
 later provide network fallback.
 
+The later NetworkManager journal confirmed the cause: Ethernet obtained its
+reserved lease and reached the activated state within about four seconds, while
+the Wi-Fi profile repeatedly failed association and eventually reported
+`no-secrets`. NetworkManager did not mark startup complete before that attempt
+ended. The agent reports the current Wi-Fi interface as disconnected and does
+not treat this historical wait-online failure alone as a live node degradation;
+the profile remains intact for a later explicit fallback test.
+
 ## Validation checklist
 
 - [x] Confirm exact operating-system release, kernel, and architecture.

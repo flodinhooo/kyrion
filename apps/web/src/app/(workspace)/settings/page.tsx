@@ -40,6 +40,10 @@ export default function SettingsPage() {
             <Icons.mic />
             <span><strong>{t.voiceSettingsTitle}</strong><small>{selectedVoice?.name ?? t.voiceNoVoices}</small></span>
           </Link>
+          <Link className="settings-link-card" href="/settings/gateways">
+            <Icons.shield />
+            <span><strong>{t.gatewayTitle}</strong><small>{t.gatewaySettingsDescription}</small></span>
+          </Link>
         </div>
 
         <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
