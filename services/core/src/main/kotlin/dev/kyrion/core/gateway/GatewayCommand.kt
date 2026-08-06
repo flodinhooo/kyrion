@@ -1,6 +1,5 @@
 package dev.kyrion.core.gateway
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.ActivityActorType
@@ -16,7 +15,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 
-data class GatewayCommand(val id: UUID, val type: String, val payload: JsonNode)
+data class GatewayCommand(val id: UUID, val type: String, val payload: Map<String, Any>)
 
 @Repository
 class GatewayCommandRepository(private val jdbc: JdbcClient) {
@@ -35,7 +34,11 @@ class GatewayCommandRepository(private val jdbc: JdbcClient) {
           ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
         RETURNING id,command_type,payload""")
         .param("nodeId", nodeId).param("now", Timestamp.from(now))
-        .query { rs, _ -> GatewayCommand(rs.getObject("id", UUID::class.java), rs.getString("command_type"), mapper.readTree(rs.getString("payload"))) }
+        .query { rs, _ ->
+            @Suppress("UNCHECKED_CAST")
+            val payload = mapper.readValue(rs.getString("payload"), Map::class.java) as Map<String, Any>
+            GatewayCommand(rs.getObject("id", UUID::class.java), rs.getString("command_type"), payload)
+        }
         .optional().orElse(null)
 
     fun complete(id: UUID, nodeId: UUID, succeeded: Boolean, error: String?, now: Instant): Boolean =

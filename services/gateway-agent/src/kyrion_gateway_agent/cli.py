@@ -98,7 +98,10 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             raise RuntimeError("mqtt publish failed")
         complete_command(config, command_id, True)
     except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError) as error:
-        LOGGER.warning("Gateway command %s failed locally: %s", command_id, type(error).__name__)
+        LOGGER.warning(
+            "Gateway command %s failed locally: %s %s",
+            command_id, type(error).__name__, str(error)[:80],
+        )
         complete_command(config, command_id, False, "EXECUTION_FAILED")
 
 
