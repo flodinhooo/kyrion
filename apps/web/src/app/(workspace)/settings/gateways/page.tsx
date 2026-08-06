@@ -99,6 +99,13 @@ export default function GatewaysPage() {
               <Metric label="IPv6" value={node.health.ipv6 ? t.gatewayReady : t.gatewayUnavailable} />
               <Metric label="Bluetooth" value={node.health.bluetooth ? t.gatewayReady : t.gatewayUnavailable} />
             </div>
+            <h3>{t.gatewayAdapters}</h3>
+            {node.health.adapters.length === 0
+              ? <p className="gateway-observed">{t.gatewayAdaptersEmpty}</p>
+              : <div className="gateway-services">{node.health.adapters.map((adapter) => <div key={adapter.id}>
+                <strong>{adapter.model}</strong>
+                <span className="device-status online">{adapter.protocol === "zigbee" ? t.gatewayAdapterZigbee : t.gatewayAdapterThread} · {t.gatewayDetected}</span>
+              </div>)}</div>}
             <h3>{t.gatewayServices}</h3>
             <div className="gateway-services">{serviceKeys.map((id) => {
               const service = node.health?.services.find((item) => item.id === id);
