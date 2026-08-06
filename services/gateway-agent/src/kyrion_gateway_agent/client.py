@@ -50,6 +50,24 @@ def heartbeat(config: AgentConfig, health: dict[str, Any]) -> None:
     )
 
 
+def next_command(config: AgentConfig) -> dict[str, Any] | None:
+    value = _request(
+        f"{config.core_url}/v1/gateway-agent/commands/next", "POST", {}, _auth(config)
+    )
+    return value if isinstance(value, dict) and isinstance(value.get("id"), str) else None
+
+
+def complete_command(config: AgentConfig, command_id: str, succeeded: bool, error: str | None = None) -> None:
+    _request(
+        f"{config.core_url}/v1/gateway-agent/commands/{command_id}/result",
+        "POST", {"succeeded": succeeded, "error": error}, _auth(config), expect_json=False,
+    )
+
+
+def _auth(config: AgentConfig) -> dict[str, str]:
+    return {"Authorization": f"Bearer {config.gateway_token}", "X-Kyrion-Node-Id": config.node_id}
+
+
 def _request(
     url: str,
     method: str,

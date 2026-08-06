@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import json
 import socket
 import subprocess
 from pathlib import Path
@@ -33,6 +34,7 @@ def collect_health() -> dict[str, Any]:
         "bluetooth": Path("/sys/class/bluetooth").exists(),
         "systemState": _system_state(),
         "adapters": _serial_adapters(),
+        "zigbee": _zigbee_health(),
         "services": [
             {"id": service_id, "status": _service_status(unit)}
             for service_id, unit in SERVICE_UNITS.items()
@@ -65,6 +67,57 @@ def _serial_adapters() -> list[dict[str, str]]:
             }
         )
     return adapters
+
+
+def _zigbee_health() -> dict[str, Any] | None:
+    raw_devices = _command(
+        ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/bridge/devices", "-C", "1", "-W", "2"],
+        "",
+    )
+    raw_info = _command(
+        ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/bridge/info", "-C", "1", "-W", "2"],
+        "",
+    )
+    try:
+        devices_value = json.loads(raw_devices)
+        info = json.loads(raw_info)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(devices_value, list) or not isinstance(info, dict):
+        return None
+    devices: list[dict[str, Any]] = []
+    for item in devices_value[:100]:
+        if not isinstance(item, dict) or item.get("type") == "Coordinator":
+            continue
+        definition = item.get("definition") if isinstance(item.get("definition"), dict) else {}
+        friendly_name = item.get("friendly_name")
+        ieee_address = item.get("ieee_address")
+        if not isinstance(friendly_name, str) or not isinstance(ieee_address, str):
+            continue
+        raw_state = _command(
+            ["mosquitto_sub", "-h", "127.0.0.1", "-t", f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "1"],
+            "",
+        )
+        try:
+            state = json.loads(raw_state)
+        except json.JSONDecodeError:
+            state = {}
+        devices.append({
+            "ieeeAddress": ieee_address,
+            "friendlyName": friendly_name,
+            "vendor": str(definition.get("vendor", "Unknown"))[:100],
+            "model": str(definition.get("model", "Unknown"))[:100],
+            "description": str(definition.get("description", "Zigbee device"))[:200],
+            "supported": bool(item.get("supported", False)),
+            "on": state.get("state") == "ON" if isinstance(state, dict) and state.get("state") in {"ON", "OFF"} else None,
+            "brightness": state.get("brightness") if isinstance(state, dict) and isinstance(state.get("brightness"), int) else None,
+            "linkquality": state.get("linkquality") if isinstance(state, dict) and isinstance(state.get("linkquality"), int) else None,
+        })
+    return {
+        "permitJoin": bool(info.get("permit_join", False)),
+        "channel": int(info.get("network", {}).get("channel", 0)),
+        "devices": devices,
+    }
 
 
 def platform_identity() -> dict[str, str]:
