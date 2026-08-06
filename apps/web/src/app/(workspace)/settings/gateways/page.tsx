@@ -35,8 +35,6 @@ export default function GatewaysPage() {
   const [error, setError] = useState(false);
   const [commandPending, setCommandPending] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [brightness, setBrightness] = useState<Record<string, number>>({});
-  const [colors, setColors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const response = await fetch("/api/gateways", { cache: "no-store" });
@@ -136,15 +134,10 @@ export default function GatewaysPage() {
                 <button disabled={commandPending || secondsLeft > 0} onClick={() => void startPairing(node.id)}>{secondsLeft > 0 ? t.zigbeeSearching.replace("{seconds}", String(secondsLeft)) : t.zigbeeStartSearch}</button>
               </div>
               <p className="gateway-observed">{secondsLeft > 0 || node.health.zigbee.permitJoin ? t.zigbeeSearchOpen : t.zigbeeSearchClosed}</p>
-              {node.health.zigbee.devices.length === 0 ? <p>{t.zigbeeNoDevices}</p> : <div className="connection-grid">{node.health.zigbee.devices.map((device) => {
-                const level = brightness[device.ieeeAddress] ?? Math.round((device.brightness ?? 127) / 2.54);
-                return <article className={`connection-card ${device.on ? "is-on" : ""}`} key={device.ieeeAddress}>
+              {node.health.zigbee.devices.length === 0 ? <p>{t.zigbeeNoDevices}</p> : <div className="connection-grid">{node.health.zigbee.devices.map((device) => <article className={`connection-card ${device.on ? "is-on" : ""}`} key={device.ieeeAddress}>
                   <div className="connection-heading"><div><h3>{device.vendor} {device.model}</h3><p>{device.description}</p><code>{device.ieeeAddress}</code></div><span className={`device-status ${device.on ? "online" : "unknown"}`}>{device.on === null ? t.gatewayServiceStatus_unknown : device.on ? t.zigbeeOn : t.zigbeeOff}</span></div>
                   <p>{t.zigbeeSignal}: {device.linkquality ?? "–"}</p>
-                  <div className="brightness-control"><label><span>{t.nanoleafBrightness}</span><strong>{level}%</strong><input type="range" min="1" max="100" value={level} onChange={(event) => setBrightness((current) => ({ ...current, [device.ieeeAddress]: Number(event.target.value) }))} /></label><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "brightness", { deviceId: device.ieeeAddress, brightness: Math.round(level * 2.54) })}>{t.nanoleafApplyBrightness}</button></div>
-                  <div className="connection-actions"><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: true })}>{t.nanoleafTurnOn}</button><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "power", { deviceId: device.ieeeAddress, on: false })}>{t.nanoleafTurnOff}</button><label>{t.zigbeeColor}<input type="color" value={colors[device.ieeeAddress] ?? "#ffffff"} onChange={(event) => setColors((current) => ({ ...current, [device.ieeeAddress]: event.target.value }))} /></label><button disabled={commandPending} onClick={() => void zigbeeCommand(node.id, "color", { deviceId: device.ieeeAddress, hue: hexHue(colors[device.ieeeAddress] ?? "#ffffff"), saturation: 100 })}>{t.zigbeeApplyColor}</button></div>
-                </article>;
-              })}</div>}
+                </article>)}</div>}
             </section>}
             <h3>{t.gatewayServices}</h3>
             <div className="gateway-services">{serviceKeys.map((id) => {
@@ -160,11 +153,4 @@ export default function GatewaysPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return <div><small>{label}</small><strong>{value}</strong></div>;
-}
-
-function hexHue(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255; const g = parseInt(hex.slice(3, 5), 16) / 255; const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b); const min = Math.min(r, g, b); if (max === min) return 0;
-  const delta = max - min; const value = max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
-  return Math.round((value * 60 + 360) % 360);
 }

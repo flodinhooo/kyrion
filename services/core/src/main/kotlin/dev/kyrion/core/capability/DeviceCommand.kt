@@ -64,11 +64,11 @@ class DeviceCommandService(
     private val rooms: RoomRepository,
     private val connections: IntegrationConnectionRepository,
     private val nanoleaf: NanoleafIntegrationService,
-    private val gateways: GatewayService,
-    private val gatewayCommands: GatewayCommandService,
     private val activity: ActivityService,
     private val observations: DeviceObservationRepository,
     private val clock: Clock = Clock.systemUTC(),
+    private val gateways: GatewayService? = null,
+    private val gatewayCommands: GatewayCommandService? = null,
 ) {
     fun execute(ownerId: UUID, request: ExecuteDeviceCommandRequest): DeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
@@ -133,10 +133,10 @@ class DeviceCommandService(
     }
 
     private fun executeZigbee(ownerId: UUID, ieeeAddress: String, type: String, payload: Map<String, Any>) {
-        val node = gateways.all(ownerId).singleOrNull { view ->
+        val node = gateways?.all(ownerId)?.singleOrNull { view ->
             view.health?.zigbee?.devices?.any { it.ieeeAddress == ieeeAddress } == true
         } ?: throw DeviceTargetNotFoundException()
-        if (!gatewayCommands.enqueueAndAwait(ownerId, node.id, type, payload)) throw RuntimeException("Gateway command failed")
+        if (gatewayCommands?.enqueueAndAwait(ownerId, node.id, type, payload) != true) throw RuntimeException("Gateway command failed")
     }
 
     private fun observe(ownerId: UUID, connectionId: UUID, availability: DeviceAvailability) {

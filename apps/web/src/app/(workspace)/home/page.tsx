@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
+import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isDeviceCommandResult, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
@@ -17,7 +18,7 @@ export default function HomePage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [devices, setDevices] = useState<RuntimeDevice[]>([]);
-  const [selected, setSelected] = useState<IntegrationConnection | null>(null);
+  const [selected, setSelected] = useState<RuntimeDevice | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [error, setError] = useState(false);
@@ -126,7 +127,7 @@ export default function HomePage() {
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({
         capability: "power.set",
-        selector: { provider: "nanoleaf", deviceId: id },
+        selector: { provider: devices.find((device) => device.id === id)?.provider ?? "", deviceId: id },
         arguments: { on },
       }),
     });
@@ -145,19 +146,18 @@ export default function HomePage() {
     setPending(false);
   }
 
-  const deviceById = new Map(devices.map((device) => [device.id, device]));
   const groups = [
     ...rooms.map((room) => ({
       id: room.id,
       name: room.name,
       room,
-      items: connections.filter((item) => item.roomId === room.id),
+      items: devices.filter((item) => item.room?.id === room.id),
     })),
     {
       id: "unassigned",
       name: t.homeUnassigned,
       room: null,
-      items: connections.filter((item) => !item.roomId),
+      items: devices.filter((item) => !item.room),
     },
   ];
 
@@ -193,23 +193,22 @@ export default function HomePage() {
         </>}</div>
       </div>
       {group.items.length === 0 ? <p className="room-empty">{t.homeNoDevices}</p> : <div className="room-devices">
-        {group.items.map((connection) => {
-          const device = deviceById.get(connection.id);
-          const availability = device?.availability ?? "unknown";
-          return <article key={connection.id} onClick={() => setSelected(connection)}>
+        {group.items.map((device) => {
+          const availability = device.availability;
+          return <article key={device.id} onClick={() => setSelected(device)}>
             <div>
-              <strong>{connection.displayName}</strong>
-              <small>Nanoleaf · {connection.endpointHost}</small>
+              <strong>{device.displayName}</strong>
+              <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : "Nanoleaf"}</small>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
             <button>{t.homeOpenControls}</button>
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
-              <button disabled={pending} onClick={() => void quickPower(connection.id, true)}>{t.nanoleafTurnOn}</button>
-              <button disabled={pending} onClick={() => void quickPower(connection.id, false)}>{t.nanoleafTurnOff}</button>
+              <button disabled={pending} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
+              <button disabled={pending} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
             </div>
             <label onClick={(event) => event.stopPropagation()}>{t.homeAssignRoom}
-              <select value={connection.roomId ?? ""} disabled={pending} onChange={(event) => void assign(connection.id, event.target.value || null)}>
+              <select value={device.room?.id ?? ""} disabled={pending} onChange={(event) => void assign(device.id, event.target.value || null)}>
                 <option value="">{t.homeUnassigned}</option>
                 {rooms.map((room) => <option value={room.id} key={room.id}>{room.name}</option>)}
               </select>
@@ -218,7 +217,8 @@ export default function HomePage() {
         })}
       </div>}
     </section>)}</div>
-    <DeviceControlDialog connection={selected} open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }} />
+    <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
+    <ZigbeeDeviceControlDialog device={selected?.provider === "zigbee" ? selected : null} open={selected?.provider === "zigbee"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <ConfirmDialog open={deleteRoom !== null} onOpenChange={(open) => { if (!open) setDeleteRoom(null); }} title={t.homeDeleteRoom} description={t.homeDeleteRoomDescription} confirmLabel={t.homeDeleteRoom} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeRoom()} />
   </section>;
 }
