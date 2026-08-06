@@ -133,9 +133,11 @@ Development hardware for the next integration phase arrived in August 2026.
 The Raspberry Pi 5 (8 GB) is now registered as the authenticated `kyrion-node`
 gateway and reports bounded health to Core every 15 seconds. Core persists the
 latest heartbeat, applies a 45-second offline threshold and exposes owner-scoped
-health through the German/English Web gateway view. The dedicated Sonoff
-ZBDongle-E, Home Assistant Connect ZBT-2, USB voice hardware and protocol test
-devices have not yet been attached or accepted. See the
+health through the German/English Web gateway view. The Sonoff ZBDongle-E now
+runs as an Ember Zigbee coordinator through loopback-only MQTT, and a Philips
+Hue colour bulb passed pairing and reversible command validation. The Home
+Assistant Connect ZBT-2 and USB voice hardware have not yet been accepted. See
+the
 [Development Hardware Roadmap](../hardware-roadmap.md).
 
 The latest detailed handoff is [Nanoleaf and Home Dashboard Session —

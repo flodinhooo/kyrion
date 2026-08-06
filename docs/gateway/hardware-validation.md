@@ -29,8 +29,16 @@ The read-only SSH inventory on 2026-08-06 confirmed:
 - 42.2 degrees Celsius, with no recorded throttling;
 - membership of `dialout`, `audio`, `video`, `plugdev`, `netdev`, GPIO, I2C,
   and SPI groups for the interactive owner account;
-- no Docker, Podman, Home Assistant, USB serial radio, USB microphone, or USB
-  speaker detected yet.
+- no Docker, Podman, Home Assistant, USB microphone, or USB speaker detected at
+  initial inventory time.
+
+On 2026-08-06 the Sonoff ZBDongle-E was accepted as the dedicated Zigbee
+coordinator. Zigbee2MQTT 2.10.1 completed an Ember handshake with firmware
+7.4.4, formed a channel-15 network, wrote a coordinator backup and connected to
+a loopback-only Mosquitto broker. A Philips Hue White and Color Ambiance A60 E27
+(1100 lm) paired successfully and passed a reversible off/on command test. An
+initial pre-pairing snapshot is stored root-only under
+`/var/backups/kyrion/zigbee`.
 
 The host reports a degraded system state only because
 `NetworkManager-wait-online.service` failed. Ethernet and SSH remained
@@ -63,12 +71,14 @@ the profile remains intact for a later explicit fallback test.
 - [x] Confirm Bluetooth controller. Bounded discovery remains pending.
 - [ ] Detect microphone and speakers and record stable ALSA/PipeWire identities.
 - [ ] Test capture and playback without retaining unnecessary voice recordings.
-- [ ] Attach the ZBDongle-E through a USB extension and record its stable USB
-  identity before configuring Zigbee.
+- [x] Attach the ZBDongle-E and record its stable USB identity before
+  configuring Zigbee. A USB extension remains recommended for final placement.
 - [ ] Attach the ZBT-2 through a separate USB extension and record its stable
   USB identity before configuring Thread/OTBR.
-- [ ] Validate Zigbee pairing, state, commands, events, coordinator backup, and
-  restore.
+- [x] Validate initial Zigbee pairing, state, commands, events and coordinator
+  backup.
+- [ ] Perform a destructive restore drill only with a documented safe fixture;
+  do not use the accepted development network for that drill.
 - [ ] Validate Thread formation, OTBR health, Matter commissioning, events,
   backup coverage, and recovery.
 - [ ] Validate authenticated gateway heartbeat, restart, update, rollback, and

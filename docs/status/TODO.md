@@ -220,8 +220,10 @@ Success criterion:
   paths before the Raspberry Pi and radios are available.
 - [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
   inbox and gateway/voice-satellite health views in German and English.
-- [ ] After delivery, validate the Raspberry Pi 5, Sonoff ZBDongle-E, Home
-  Assistant Connect ZBT-2, integrated Bluetooth and USB voice hardware.
+- [ ] Complete hardware acceptance: Raspberry Pi and Sonoff ZBDongle-E baseline
+  validation is complete; ZBT-2, USB voice hardware and recovery drills remain.
+- [ ] Add the Core-owned Zigbee discovery inbox, explicit approval and stable
+  provider-neutral light capabilities before exposing device commands in Web.
 - [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
   end-to-end slices; do not mark an integration complete based only on pairing
   or discovery.

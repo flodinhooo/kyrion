@@ -2,9 +2,9 @@
 
 ## Status
 
-This document records the initial boundary for the planned authenticated
-Raspberry Pi gateway. The gateway software and protocol adapters are not yet
-implemented.
+This document records the boundary for the authenticated Raspberry Pi gateway.
+The health agent and first Zigbee runtime are implemented; provider-neutral
+device contracts and Core-authorised Zigbee commands remain the next slice.
 
 ## Boundary
 
@@ -64,3 +64,16 @@ Core persists the latest bounded observation and applies an explicit staleness
 policy. Web reads Core state and never polls the node, Home Assistant, or a
 protocol container directly. Developer logs remain separate from owner-visible
 activity events and sanitised diagnostic summaries.
+
+## Implemented Zigbee runtime
+
+The development node runs Zigbee2MQTT 2.10.1 and Mosquitto as separate systemd
+services. Mosquitto binds only to loopback and the Zigbee2MQTT frontend is
+disabled. Zigbee2MQTT uses the Sonoff adapter's stable `/dev/serial/by-id` path
+with the `ember` driver; its dedicated service user receives only the `dialout`
+group required for that serial device. Pairing is closed by default.
+
+The gateway heartbeat reports bounded adapter identity and service readiness to
+Core. Raw MQTT topics, network credentials and coordinator backups are not
+exposed to Web. Core-owned discovery, approval and command auditing remain
+required before this runtime becomes a user-facing integration.
