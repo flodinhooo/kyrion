@@ -1,0 +1,27 @@
+[Unit]
+Description=Kyrion Gateway Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kyrion-gateway
+Group=kyrion-gateway
+Environment=PYTHONPATH=/opt/kyrion-gateway/src
+ExecStart=/usr/bin/python3 -m kyrion_gateway_agent.cli --config /etc/kyrion-gateway/agent.json run
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ReadWritePaths=/var/lib/kyrion-gateway
+
+[Install]
+WantedBy=multi-user.target

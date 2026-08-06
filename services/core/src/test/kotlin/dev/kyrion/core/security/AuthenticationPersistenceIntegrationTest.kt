@@ -45,7 +45,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     @BeforeEach
     fun cleanDatabase() {
         jdbc.sql(
-            "TRUNCATE TABLE personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event CASCADE",
+            "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event CASCADE",
         ).update()
     }
 
