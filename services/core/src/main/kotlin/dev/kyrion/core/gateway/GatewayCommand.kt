@@ -46,6 +46,9 @@ class GatewayCommandRepository(private val jdbc: JdbcClient) {
             WHERE id=:id AND node_id=:nodeId AND status='running'""")
             .param("status", if (succeeded) "succeeded" else "failed").param("error", error)
             .param("now", Timestamp.from(now)).param("id", id).param("nodeId", nodeId).update() == 1
+
+    fun status(id: UUID): String? = jdbc.sql("SELECT status FROM gateway_command WHERE id=:id")
+        .param("id", id).query(String::class.java).optional().orElse(null)
 }
 
 @Service
@@ -63,6 +66,18 @@ class GatewayCommandService(
         activity.record(ActivityCategory.CAPABILITY, type, ActivityStatus.CONFIRMED, ActivityActorType.USER,
             "kyrion-core", type, nodeId.toString(), id)
         return id
+    }
+
+    fun enqueueAndAwait(ownerId: UUID, nodeId: UUID, type: String, payload: Map<String, Any>): Boolean {
+        val id = enqueue(ownerId, nodeId, type, payload)
+        repeat(48) {
+            when (repository.status(id)) {
+                "succeeded" -> return true
+                "failed" -> return false
+            }
+            Thread.sleep(250)
+        }
+        return false
     }
 
     fun next(nodeId: UUID, credential: String): GatewayCommand? {

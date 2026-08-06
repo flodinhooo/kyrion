@@ -87,7 +87,11 @@ class GatewayOwnerController(private val service: GatewayService, private val co
 
 @RestController
 @RequestMapping("/v1/gateway-agent")
-class GatewayAgentController(private val service: GatewayService, private val commands: GatewayCommandService) {
+class GatewayAgentController(
+    private val service: GatewayService,
+    private val commands: GatewayCommandService,
+    private val zigbeeDevices: ZigbeeDeviceSyncService,
+) {
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
     fun enroll(@Valid @RequestBody body: GatewayEnrollRequest): GatewayEnrollResponse {
@@ -106,7 +110,9 @@ class GatewayAgentController(private val service: GatewayService, private val co
         @Valid @RequestBody body: GatewayHeartbeatRequest,
     ) {
         if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
-        service.heartbeat(nodeId, authorization.substring(7), body.health)
+        val credential = authorization.substring(7)
+        service.heartbeat(nodeId, credential, body.health)
+        zigbeeDevices.sync(service.authenticate(nodeId, credential), body.health)
     }
 
     @PostMapping("/commands/next")

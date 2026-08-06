@@ -8,6 +8,9 @@ import dev.kyrion.core.home.RoomRepository
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.integration.NanoleafIntegrationService
 import dev.kyrion.core.integration.NanoleafUnavailableException
+import dev.kyrion.core.gateway.GatewayCommandService
+import dev.kyrion.core.gateway.GatewayService
+import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -61,13 +64,17 @@ class DeviceCommandService(
     private val rooms: RoomRepository,
     private val connections: IntegrationConnectionRepository,
     private val nanoleaf: NanoleafIntegrationService,
+    private val gateways: GatewayService,
+    private val gatewayCommands: GatewayCommandService,
     private val activity: ActivityService,
     private val observations: DeviceObservationRepository,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     fun execute(ownerId: UUID, request: ExecuteDeviceCommandRequest): DeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
-        if (provider != NanoleafIntegrationService.PROVIDER) throw DeviceCapabilityUnsupportedException()
+        if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER)) {
+            throw DeviceCapabilityUnsupportedException()
+        }
         val roomName = request.selector.roomName?.trim()?.takeIf { it.isNotBlank() }
         if ((roomName == null) == (request.selector.deviceId == null)) throw DeviceCommandInvalidException()
         val room = roomName?.let { requestedName ->
@@ -96,8 +103,12 @@ class DeviceCommandService(
         val outcomes = targets.map { target ->
             try {
                 when (request.capability) {
-                    POWER_SET -> nanoleaf.power(ownerId, target.id, request.arguments.on!!, true, correlationId)
-                    BRIGHTNESS_SET -> nanoleaf.brightness(ownerId, target.id, request.arguments.brightness!!, true, correlationId)
+                    POWER_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                        executeZigbee(ownerId, target.endpointHost, "zigbee.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!))
+                    } else nanoleaf.power(ownerId, target.id, request.arguments.on!!, true, correlationId)
+                    BRIGHTNESS_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                        executeZigbee(ownerId, target.endpointHost, "zigbee.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to (request.arguments.brightness!! * 254 / 100)))
+                    } else nanoleaf.brightness(ownerId, target.id, request.arguments.brightness!!, true, correlationId)
                 }
                 observe(ownerId, target.id, DeviceAvailability.ONLINE)
                 DeviceCommandOutcome(target.id, target.displayName, "succeeded")
@@ -119,6 +130,13 @@ class DeviceCommandService(
             outcomes,
             correlationId,
         )
+    }
+
+    private fun executeZigbee(ownerId: UUID, ieeeAddress: String, type: String, payload: Map<String, Any>) {
+        val node = gateways.all(ownerId).singleOrNull { view ->
+            view.health?.zigbee?.devices?.any { it.ieeeAddress == ieeeAddress } == true
+        } ?: throw DeviceTargetNotFoundException()
+        if (!gatewayCommands.enqueueAndAwait(ownerId, node.id, type, payload)) throw RuntimeException("Gateway command failed")
     }
 
     private fun observe(ownerId: UUID, connectionId: UUID, availability: DeviceAvailability) {

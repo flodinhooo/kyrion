@@ -5,6 +5,7 @@ import dev.kyrion.core.home.RoomRepository
 import dev.kyrion.core.integration.IntegrationConnection
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.integration.NanoleafIntegrationService
+import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.stereotype.Service
@@ -71,6 +72,7 @@ class DeviceCatalogService(
 
     private fun capabilities(connection: IntegrationConnection): List<DeviceCapabilityView> = when (connection.provider) {
         NanoleafIntegrationService.PROVIDER -> NANOLEAF_CAPABILITIES.map(::DeviceCapabilityView)
+        ZigbeeDeviceSyncService.PROVIDER -> ZIGBEE_CAPABILITIES.map(::DeviceCapabilityView)
         else -> emptyList()
     }
 
@@ -82,6 +84,11 @@ class DeviceCatalogService(
             "light.setColour",
             "light.setColourTemperature",
             "light.activateScene",
+        )
+        val ZIGBEE_CAPABILITIES = listOf(
+            DeviceCommandService.POWER_SET,
+            DeviceCommandService.BRIGHTNESS_SET,
+            "light.setColour",
         )
     }
 }
