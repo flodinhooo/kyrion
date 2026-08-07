@@ -619,7 +619,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .device-live-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; color: var(--muted-foreground); font-size: .82rem; }
 .state-pill { border-radius: 999px; padding: 3px 8px; font-weight: 700; }
 .state-pill.is-on { color: #86efac; background: color-mix(in srgb, #22c55e 16%, transparent); }
-.state-pill.is-off { color: var(--muted-foreground); background: var(--secondary); }
+.state-pill.is-off { color: #fca5a5; background: color-mix(in srgb, #ef4444 18%, transparent); }
 .color-swatch { display: inline-block; width: 18px; height: 18px; margin-left: 5px; border: 1px solid color-mix(in srgb, white 38%, var(--border)); border-radius: 50%; vertical-align: middle; background: var(--secondary); }
 .pairing-card form { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-top: 16px; }
 .pairing-card label { display: grid; gap: 6px; font-size: .85rem; color: var(--muted-foreground); }

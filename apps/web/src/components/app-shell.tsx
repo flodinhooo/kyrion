@@ -78,6 +78,27 @@ export function AppShell({ children, username }: { children: ReactNode; username
   const activeConversationId = pathname.match(/^\/conversations\/([^/]+)$/)?.[1] ?? null;
 
   useEffect(() => {
+    const routeTitles: Array<[RegExp, string]> = [
+      [/^\/$/, t.chat],
+      [/^\/conversations\//, t.chat],
+      [/^\/home/, t.home],
+      [/^\/devices\/add/, t.addDevice],
+      [/^\/automations/, t.automations],
+      [/^\/knowledge/, t.knowledge],
+      [/^\/plugins\/nanoleaf/, t.nanoleafTitle],
+      [/^\/plugins/, t.plugins],
+      [/^\/activity/, t.activity],
+      [/^\/profile/, t.profile],
+      [/^\/settings\/gateways/, t.gatewayTitle],
+      [/^\/settings\/models/, t.modelsTitle],
+      [/^\/settings\/voice/, t.voiceSettingsTitle],
+      [/^\/settings/, t.settings],
+    ];
+    const pageTitle = routeTitles.find(([pattern]) => pattern.test(pathname))?.[1] ?? "Kyrion";
+    document.title = `${pageTitle} · Kyrion`;
+  }, [pathname, t]);
+
+  useEffect(() => {
     let disposed = false;
     async function loadConversations() {
       try {

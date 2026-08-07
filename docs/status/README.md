@@ -178,6 +178,13 @@ immutable hardware description alongside the owner-editable display name.
 Philips model, plus current power, brightness and a colour preview. MQTT topics
 and raw provider access remain hidden from Web.
 
+Home also performs a bounded automatic Nanoleaf state refresh for at most 20
+owner connections every ten seconds. The controller-reported name (for example
+the Light Panels family plus its short identifier), power, brightness and colour
+are displayed without requiring the manual global refresh button. Device power
+is presented consistently as a separate green On or red Off state; provider
+availability remains a distinct diagnostic signal.
+
 Paired supported Zigbee devices are automatically represented by stable
 owner-scoped entries in the shared Core device catalog. They therefore appear
 on `/home`, support the existing persistent room assignment flow and expose

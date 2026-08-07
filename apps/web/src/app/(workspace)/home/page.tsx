@@ -11,7 +11,7 @@ import { isDeviceCommandResult, isRuntimeDeviceList, type RuntimeDevice } from "
 import { isRoomList, type Room } from "@/features/home/contracts";
 import {
   type IntegrationConnection,
-  isConnectionList,
+  isConnectionList, isNanoleafState, type NanoleafState,
 } from "@/features/integrations/contracts";
 
 export default function HomePage() {
@@ -19,6 +19,7 @@ export default function HomePage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [devices, setDevices] = useState<RuntimeDevice[]>([]);
+  const [nanoleafStates, setNanoleafStates] = useState<Record<string, NanoleafState>>({});
   const [selected, setSelected] = useState<RuntimeDevice | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
@@ -50,6 +51,24 @@ export default function HomePage() {
     }, 0);
     return () => { disposed = true; window.clearTimeout(timeout); };
   }, [load]);
+
+  const refreshNanoleafStates = useCallback(async () => {
+    const entries = await Promise.all(connections.slice(0, 20).map(async (connection) => {
+      try {
+        const response = await fetch(`/api/integrations/nanoleaf/connections/${connection.id}/state`, { cache: "no-store" });
+        const value: unknown = await response.json();
+        return response.ok && isNanoleafState(value) ? [connection.id, value] as const : null;
+      } catch { return null; }
+    }));
+    setNanoleafStates(Object.fromEntries(entries.filter((entry): entry is readonly [string, NanoleafState] => entry !== null)));
+  }, [connections]);
+
+  useEffect(() => {
+    if (connections.length === 0) return;
+    const timeout = window.setTimeout(() => void refreshNanoleafStates(), 0);
+    const interval = window.setInterval(() => void refreshNanoleafStates(), 10_000);
+    return () => { window.clearTimeout(timeout); window.clearInterval(interval); };
+  }, [connections.length, refreshNanoleafStates]);
 
   async function refreshObservations() {
     setPending(true);
@@ -154,6 +173,7 @@ export default function HomePage() {
       setDevices((current) => current.map((device) => device.id === id
         ? { ...device, availability: "online", observedAt: new Date().toISOString(), state: device.state ? { ...device.state, on } : null }
         : device));
+      setNanoleafStates((current) => current[id] ? { ...current, [id]: { ...current[id], on } } : current);
     } else {
       const availability = value && typeof value === "object"
         && (value as { code?: unknown }).code === "NANOLEAF_UNAVAILABLE" ? "offline" : "degraded";
@@ -214,19 +234,28 @@ export default function HomePage() {
       {group.items.length === 0 ? <p className="room-empty">{t.homeNoDevices}</p> : <div className="room-devices">
         {group.items.map((device) => {
           const availability = device.availability;
+          const nanoleafState = nanoleafStates[device.id];
+          const liveState = nanoleafState ? {
+            on: nanoleafState.on,
+            brightness: nanoleafState.brightness,
+            hue: nanoleafState.hue,
+            saturation: nanoleafState.saturation,
+            colorTemperature: nanoleafState.colorTemperature,
+          } : device.state;
+          const hardwareName = nanoleafState?.name || device.hardwareName;
           return <article key={device.id} onClick={() => setSelected(device)}>
             <div>
               <strong>{device.displayName}</strong>
-              <small>{device.hardwareName}</small>
+              <small>{hardwareName}</small>
               <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : "Lokales Netzwerk · Nanoleaf"}</small>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
             <button>{t.homeOpenControls}</button>
-            {device.state && <div className="device-live-state" aria-label={t.homeCurrentState}>
-              <span className={`state-pill ${device.state.on ? "is-on" : "is-off"}`}>{device.state.on === null ? t.homeUnknown : device.state.on ? t.zigbeeOn : t.zigbeeOff}</span>
-              <span>{t.homeCurrentBrightness}: <strong>{device.state.brightness ?? "–"}%</strong></span>
-              <span>{t.homeCurrentColor}: <i className="color-swatch" style={device.state.hue !== null && device.state.saturation !== null ? { backgroundColor: `hsl(${device.state.hue} ${device.state.saturation}% 50%)` } : undefined} /></span>
+            {liveState && <div className="device-live-state" aria-label={t.homeCurrentState}>
+              <span className={`state-pill ${liveState.on ? "is-on" : "is-off"}`}>{liveState.on === null ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</span>
+              <span>{t.homeCurrentBrightness}: <strong>{liveState.brightness ?? "–"}%</strong></span>
+              <span>{t.homeCurrentColor}: <i className="color-swatch" style={liveState.hue !== null && liveState.saturation !== null ? { backgroundColor: `hsl(${liveState.hue} ${liveState.saturation}% 50%)` } : undefined} /></span>
             </div>}
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
