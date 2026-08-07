@@ -200,8 +200,8 @@ the lamp so their last colour and brightness survive a cold power cycle without
 Core, Web or the gateway being online. The pairing window was closed again
 immediately after verification.
 
-The latest detailed handoff is [Raspberry Pi, Zigbee and Home Integration
-Session — 2026-08-06](2026-08-06-raspberry-pi-zigbee-home.md).
+The latest detailed handoff is [Hue Lifecycle, Command Status and Branding
+Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
 
 ## Completed
 
@@ -268,6 +268,10 @@ Session — 2026-08-06](2026-08-06-raspberry-pi-zigbee-home.md).
 ### Web application
 
 - Next.js 16, React 19, TypeScript and Tailwind CSS foundation.
+- Route-specific browser titles replace the former shared product tagline.
+- Approved theme-aware Kyrion SVG assets are used consistently: the full
+  lockup in the sidebar, K-Core on the login surface and the transparent
+  small-size mark as favicon. `branding/brand-guide.md` is authoritative.
 - Persistent shared application shell using a workspace route group.
 - Responsive sidebar and accessible mobile shadcn Sheet.
 - Chat, Home, Automations, Knowledge and Settings routes.
