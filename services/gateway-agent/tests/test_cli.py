@@ -60,3 +60,22 @@ def test_hue_recover_command_is_bounded_to_the_device_topic(
     assert arguments[4] == "zigbee2mqtt/0x001788010fdcc07d/set"
     assert arguments[6] == '{"hue_power_on_behavior": "recover"}'
     completed.assert_called_once_with(config, "command-id", True)
+
+
+def test_zigbee_remove_uses_bounded_bridge_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
+    run = Mock(return_value=Mock(returncode=0))
+    monkeypatch.setattr(cli.subprocess, "run", run)
+    completed = Mock()
+    monkeypatch.setattr(cli, "complete_command", completed)
+
+    cli._execute_command(config, {
+        "id": "command-id",
+        "type": "zigbee.remove",
+        "payload": {"deviceId": "0x001788010fdcc07d"},
+    })
+
+    arguments = run.call_args.args[0]
+    assert arguments[4] == "zigbee2mqtt/bridge/request/device/remove"
+    assert arguments[6] == '{"id": "0x001788010fdcc07d", "force": true}'
+    completed.assert_called_once_with(config, "command-id", True)

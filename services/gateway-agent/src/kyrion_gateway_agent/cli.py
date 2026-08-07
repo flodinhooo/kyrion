@@ -83,6 +83,12 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             duration = int(payload["duration"])
             topic = "zigbee2mqtt/bridge/request/permit_join"
             body = {"value": duration > 0, "time": duration}
+        elif kind == "zigbee.remove":
+            device = str(payload["deviceId"])
+            if not device.startswith("0x") or len(device) != 18:
+                raise ValueError("invalid device")
+            topic = "zigbee2mqtt/bridge/request/device/remove"
+            body = {"id": device, "force": True}
         elif kind in {
             "zigbee.power", "zigbee.brightness", "zigbee.color",
             "zigbee.hue_power_on_recover",
