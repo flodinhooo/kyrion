@@ -147,6 +147,15 @@ audited Core command queue polled by the authenticated gateway agent. Live
 power, brightness and link quality return through the bounded heartbeat; Web
 never receives MQTT access or gateway credentials.
 
+Home now links to a dedicated German/English device-discovery page. It presents
+only currently available connection paths, starts Zigbee pairing or local
+Nanoleaf discovery after an explicit owner action and shows newly observed
+devices without exposing MQTT or provider credentials. Gateway command polling
+is separated from full health collection: commands are checked every 250 ms
+while bounded health remains on its five-second cadence. Deployment of the
+updated agent service to the physical node requires the owner's privileged
+installation approval.
+
 Paired supported Zigbee devices are automatically represented by stable
 owner-scoped entries in the shared Core device catalog. They therefore appear
 on `/home`, support the existing persistent room assignment flow and expose
