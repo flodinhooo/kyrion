@@ -20,6 +20,7 @@ import {
 } from "@/features/voice/browser-speech";
 import { Locale, messages } from "@/lib/messages";
 import { csrfHeader } from "@/features/auth/csrf";
+import { BrandAsset } from "@/components/brand-asset";
 import { isConversationList, type ConversationSummary } from "@/features/conversations/contracts";
 
 type WorkspaceContextValue = {
@@ -297,8 +298,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
     return (
       <>
         <div className="brand">
-          <div className="brand-mark"><span>K</span></div>
-          <div><strong>Kyrion</strong><small>{t.brandTagline}</small></div>
+          <BrandAsset variant="wordmark" priority />
         </div>
 
         <Link className="new-chat-button" href="/">

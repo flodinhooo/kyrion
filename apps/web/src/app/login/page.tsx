@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth-form";
+import { BrandAsset } from "@/components/brand-asset";
 import { currentUser, isSetupRequired } from "@/lib/server-auth";
 
 export default async function LoginPage() {
@@ -8,7 +9,7 @@ export default async function LoginPage() {
   return (
     <main className="auth-stage">
       <section className="auth-card">
-        <div className="brand-mark"><span>K</span></div>
+        <BrandAsset variant="mark" priority />
         <p className="eyebrow">{setupRequired ? "Einmalige Einrichtung" : "Willkommen zurück"}</p>
         <h1>{setupRequired ? "Dein lokales Kyrion" : "Bei Kyrion anmelden"}</h1>
         <p>{setupRequired === null ? "Kyrion Core ist momentan nicht erreichbar." : setupRequired

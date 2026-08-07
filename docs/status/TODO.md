@@ -230,14 +230,15 @@ Success criterion:
   validation is complete; ZBT-2, USB voice hardware and recovery drills remain.
 - [x] Expose the first stable owner-scoped Zigbee light capabilities and typed,
   audited device commands in Web through Core.
-- [ ] Replace automatic post-pairing import with a Core-owned Zigbee discovery
-  inbox and explicit approve, name, reject, remove and re-pair lifecycle.
-- [ ] Replace synchronous Zigbee command waiting with an asynchronous status
-  contract and visible pending/failure UI; test ownership, timeout, malformed
+- [x] Replace automatic post-pairing import with a Core-owned Zigbee discovery
+  inbox and explicit approve, name, remove and re-pair lifecycle. Rejection of
+  a discovered-but-unapproved candidate remains a small UX follow-up.
+- [ ] Harden the implemented asynchronous Zigbee command-status contract and
+  visible pending/failure UI; test ownership, timeout, malformed
   payload, adapter failure, retry and idempotency boundaries.
 - [x] Separate fast 250 ms gateway command polling from the five-second health
   heartbeat and add a Home entry point for explicit Zigbee or local-network
-  device discovery. Asynchronous command status remains open.
+  device discovery. The first asynchronous command-status slice is implemented.
 - [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
   end-to-end slices; do not mark an integration complete based only on pairing
   or discovery.

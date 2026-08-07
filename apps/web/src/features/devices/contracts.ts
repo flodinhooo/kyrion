@@ -57,3 +57,19 @@ export function isDeviceCommandResult(value: unknown): value is DeviceCommandRes
       && (outcome.status === "succeeded" || outcome.status === "unavailable" || outcome.status === "failed"))
     && typeof result.correlationId === "string";
 }
+
+export type AsyncDeviceCommand = { commandId: string; deviceId: string; status: "pending" };
+export type DeviceCommandStatus = { id: string; status: "pending" | "running" | "succeeded" | "failed"; errorCode: string | null };
+
+export function isAsyncDeviceCommand(value: unknown): value is AsyncDeviceCommand {
+  if (!value || typeof value !== "object") return false;
+  const command = value as Partial<AsyncDeviceCommand>;
+  return typeof command.commandId === "string" && typeof command.deviceId === "string" && command.status === "pending";
+}
+
+export function isDeviceCommandStatus(value: unknown): value is DeviceCommandStatus {
+  if (!value || typeof value !== "object") return false;
+  const command = value as Partial<DeviceCommandStatus>;
+  return typeof command.id === "string" && ["pending", "running", "succeeded", "failed"].includes(command.status ?? "")
+    && (command.errorCode === null || typeof command.errorCode === "string");
+}

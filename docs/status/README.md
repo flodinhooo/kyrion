@@ -192,10 +192,9 @@ power, brightness and colour controls there. Gateway settings retain pairing,
 radio status and diagnostics but are no longer a daily device-control surface.
 
 On 2026-08-07 a second Philips Hue LCA011 was paired successfully as
-`0x001788010fdcc07d`. Zigbee2MQTT completed its interview, Core automatically
-created a legacy auto-import entry, and that unassigned entry was deliberately
-removed after the explicit Add lifecycle was implemented. The paired device
-now remains a Core-reported candidate until the owner names and adds it. Both
+`0x001788010fdcc07d`, explicitly named and added by the owner, and assigned to
+the persisted `Gang` room. A direct database check confirmed that both Hue
+records retain their stable IEEE identity and room assignment. Both
 Hue lamps store `hue_power_on_behavior=recover` in
 the lamp so their last colour and brightness survive a cold power cycle without
 Core, Web or the gateway being online. The pairing window was closed again
@@ -406,13 +405,18 @@ Session — 2026-08-06](2026-08-06-raspberry-pi-zigbee-home.md).
 - Gateway heartbeat continuity across a full Pi reboot and temporary network
   loss is not yet recorded. Wi-Fi is configured but currently disconnected;
   its failed boot association remains a separate diagnostic follow-up.
-- The Sonoff Zigbee adapter and one Philips Hue colour lamp are accepted end to
+- The Sonoff Zigbee adapter and two Philips Hue colour lamps are accepted end to
   end. The ZBT-2 Thread/Matter adapter and USB voice hardware remain
   unvalidated.
-- Zigbee currently auto-imports supported paired devices. A discovery inbox
-  with explicit approval, naming, rejection, removal and re-pairing remains.
-- Zigbee Web commands currently wait synchronously for the outbound gateway
-  agent. An asynchronous command-status flow is required before scaling.
+- Zigbee discovery requires explicit approval and naming. Owner-confirmed
+  removal publishes the bounded Zigbee2MQTT remove request through the gateway,
+  deletes the Core record only after success and permits subsequent re-pairing.
+- Interactive Zigbee controls enqueue asynchronously and expose pending,
+  succeeded and failed gateway state. Broader retry, timeout and idempotency
+  hardening remains before scaling.
+- A 2026-08-07 Pi audio probe found no capture device or USB audio hardware;
+  only HDMI playback is present. Voice Satellite runtime installation therefore
+  remains intentionally blocked on connecting the selected microphone/speaker.
 
 ## Recommended next step
 
@@ -500,9 +504,9 @@ In a new agent chat, use this prompt:
 > `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
 > current implementation and uncommitted changes. Read the latest dated session
 > handoff. Verify Core and the three Pi services, then confirm the paired Hue is
-> visible and controllable on `/home`. Continue with explicit Zigbee
-> discovery/approval/name/remove lifecycle, asynchronous command status and
-> focused gateway-command tests. Preserve Core as authority and the
+> visible and controllable on `/home`. Verify the explicit remove/re-pair flow,
+> harden asynchronous command status with focused failure/retry tests, and begin
+> Voice Satellite acceptance once USB audio hardware is connected. Preserve Core as authority and the
 > outbound-only agent boundary. Do not begin Thread/Matter until the Zigbee
 > lifecycle and recovery work is understood. Never store credentials or
 > session tokens in browser local storage.

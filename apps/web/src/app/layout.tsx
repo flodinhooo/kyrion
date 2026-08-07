@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kyrion",
   description: "Your local-first platform for AI, devices, and automation.",
-  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: "/branding/favicon.svg", shortcut: "/branding/favicon.svg" },
 };
 
 export default function RootLayout({

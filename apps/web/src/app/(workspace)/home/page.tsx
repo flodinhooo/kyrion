@@ -7,7 +7,7 @@ import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isDeviceCommandResult, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
+import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
 import { isRoomList, type Room } from "@/features/home/contracts";
 import {
   type IntegrationConnection,
@@ -24,6 +24,8 @@ export default function HomePage() {
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
+  const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
+  const [commandStates, setCommandStates] = useState<Record<string, "pending" | "succeeded" | "failed">>({});
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -157,7 +159,38 @@ export default function HomePage() {
     setPending(false);
   }
 
+  async function removeZigbeeDevice() {
+    if (!removeDevice) return;
+    setPending(true); setError(false);
+    const response = await fetch(`/api/home/connections/${removeDevice.id}`, { method: "DELETE", headers: csrfHeader() });
+    if (response.ok) { setRemoveDevice(null); setSelected(null); await load(); } else setError(true);
+    setPending(false);
+  }
+
   async function quickPower(id: string, on: boolean) {
+    const device = devices.find((item) => item.id === id);
+    if (device?.provider === "zigbee") {
+      setCommandStates((current) => ({ ...current, [id]: "pending" }));
+      const response = await fetch("/api/device-commands/async", {
+        method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ capability: "power.set", selector: { provider: "zigbee", deviceId: id }, arguments: { on } }),
+      });
+      const value: unknown = await response.json().catch(() => null);
+      if (!response.ok || !isAsyncDeviceCommand(value)) { setCommandStates((current) => ({ ...current, [id]: "failed" })); return; }
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+        const statusResponse = await fetch(`/api/device-commands/${value.commandId}`, { cache: "no-store" });
+        const statusValue: unknown = await statusResponse.json().catch(() => null);
+        if (!statusResponse.ok || !isDeviceCommandStatus(statusValue) || statusValue.status === "failed") { setCommandStates((current) => ({ ...current, [id]: "failed" })); return; }
+        if (statusValue.status === "succeeded") {
+          setCommandStates((current) => ({ ...current, [id]: "succeeded" }));
+          setDevices((current) => current.map((item) => item.id === id ? { ...item, state: item.state ? { ...item.state, on } : null } : item));
+          return;
+        }
+      }
+      setCommandStates((current) => ({ ...current, [id]: "failed" }));
+      return;
+    }
     setPending(true);
     const response = await fetch("/api/device-commands", {
       method: "POST",
@@ -258,13 +291,15 @@ export default function HomePage() {
               <span>{t.homeCurrentColor}: <i className="color-swatch" style={liveState.hue !== null && liveState.saturation !== null ? { backgroundColor: `hsl(${liveState.hue} ${liveState.saturation}% 50%)` } : undefined} /></span>
             </div>}
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
-              <button disabled={pending} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
-              <button disabled={pending} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
+              <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
+              <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
             </div>
+            {commandStates[device.id] && <small className={commandStates[device.id] === "failed" ? "auth-error" : "command-status"} aria-live="polite">{commandStates[device.id] === "pending" ? t.commandPending : commandStates[device.id] === "succeeded" ? t.commandSucceeded : t.commandFailed}</small>}
             <div className="device-rename" onClick={(event) => event.stopPropagation()}>
               <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
               <button disabled={pending || deviceNames[device.id] === undefined} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
             </div>
+            {device.provider === "zigbee" && <button className="danger" disabled={pending} onClick={(event) => { event.stopPropagation(); setRemoveDevice(device); }}>{t.homeRemoveDevice}</button>}
             <label onClick={(event) => event.stopPropagation()}>{t.homeAssignRoom}
               <select value={device.room?.id ?? ""} disabled={pending} onChange={(event) => void assign(device.id, event.target.value || null)}>
                 <option value="">{t.homeUnassigned}</option>
@@ -278,5 +313,6 @@ export default function HomePage() {
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <ZigbeeDeviceControlDialog device={selected?.provider === "zigbee" ? selected : null} open={selected?.provider === "zigbee"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <ConfirmDialog open={deleteRoom !== null} onOpenChange={(open) => { if (!open) setDeleteRoom(null); }} title={t.homeDeleteRoom} description={t.homeDeleteRoomDescription} confirmLabel={t.homeDeleteRoom} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeRoom()} />
+    <ConfirmDialog open={removeDevice !== null} onOpenChange={(open) => { if (!open) setRemoveDevice(null); }} title={t.homeRemoveDevice} description={t.homeRemoveDeviceDescription} confirmLabel={t.homeRemoveDevice} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeZigbeeDevice()} />
   </section>;
 }

@@ -18,3 +18,17 @@ export async function PATCH(request: Request, context: RouteContext<"/api/home/c
     return response.ok && isConnection(value) ? Response.json(value) : Response.json(value, { status: response.status });
   } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503 }); }
 }
+
+export async function DELETE(request: Request, context: RouteContext<"/api/home/connections/[id]">) {
+  const auth = await requireApiSession();
+  if (auth instanceof Response) return auth;
+  if (!(await csrfIsValid(request))) return Response.json({ code: "CSRF_INVALID" }, { status: 403 });
+  const { id } = await context.params;
+  try {
+    const response = await fetch(`${CORE_SERVICE_URL}/v1/home/connections/${id}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${auth.token}` },
+    });
+    return response.ok ? new Response(null, { status: 204 })
+      : Response.json(await response.json().catch(() => ({})), { status: response.status });
+  } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503 }); }
+}
