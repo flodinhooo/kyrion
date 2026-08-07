@@ -85,6 +85,9 @@ data class GatewayZigbeeDevice(
     val on: Boolean?,
     val brightness: Int?,
     val linkquality: Int?,
+    val hue: Double? = null,
+    val saturation: Double? = null,
+    val colorTemperature: Int? = null,
 )
 data class GatewayServiceHealth(val id: String, val status: String)
 
@@ -253,6 +256,9 @@ class GatewayService(
                         it.friendlyName.length !in 1..160 || it.vendor.length !in 1..100 ||
                         it.model.length !in 1..100 || it.description.length !in 1..200 ||
                         (it.brightness != null && it.brightness !in 0..254) ||
+                        (it.hue != null && it.hue !in 0.0..360.0) ||
+                        (it.saturation != null && it.saturation !in 0.0..100.0) ||
+                        (it.colorTemperature != null && it.colorTemperature !in 1..1000) ||
                         (it.linkquality != null && it.linkquality !in 0..255)
                 })) throw GatewayHealthInvalidException()
         if (health.services.size > 32 || health.services.any {
