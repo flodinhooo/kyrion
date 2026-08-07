@@ -170,6 +170,14 @@ displays it automatically. Owner-managed names and room assignments are always
 persisted and survive browser, Core and gateway restarts; transient provider
 state remains a timestamped observation.
 
+The bounded Zigbee heartbeat now includes live power, percentage brightness,
+hue, saturation and colour-temperature values. The Core device catalog joins
+that state to approved devices by stable IEEE identity and exposes a separate
+immutable hardware description alongside the owner-editable display name.
+`/home` therefore shows names such as “Hue entrance” without hiding the actual
+Philips model, plus current power, brightness and a colour preview. MQTT topics
+and raw provider access remain hidden from Web.
+
 Paired supported Zigbee devices are automatically represented by stable
 owner-scoped entries in the shared Core device catalog. They therefore appear
 on `/home`, support the existing persistent room assignment flow and expose
@@ -178,8 +186,10 @@ radio status and diagnostics but are no longer a daily device-control surface.
 
 On 2026-08-07 a second Philips Hue LCA011 was paired successfully as
 `0x001788010fdcc07d`. Zigbee2MQTT completed its interview, Core automatically
-created the stable owner-scoped PostgreSQL entry, and the device entered
-`/home` as unassigned. Both Hue lamps store `hue_power_on_behavior=recover` in
+created a legacy auto-import entry, and that unassigned entry was deliberately
+removed after the explicit Add lifecycle was implemented. The paired device
+now remains a Core-reported candidate until the owner names and adds it. Both
+Hue lamps store `hue_power_on_behavior=recover` in
 the lamp so their last colour and brightness survive a cold power cycle without
 Core, Web or the gateway being online. The pairing window was closed again
 immediately after verification.
