@@ -22,6 +22,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -60,6 +62,7 @@ data class DeviceCommandResult(
     val outcomes: List<DeviceCommandOutcome>,
     val correlationId: UUID,
 )
+data class AsyncDeviceCommandResult(val commandId: UUID, val deviceId: UUID, val status: String = "pending")
 
 @Service
 class DeviceCommandService(
@@ -72,6 +75,27 @@ class DeviceCommandService(
     private val gateways: GatewayService? = null,
     private val gatewayCommands: GatewayCommandService? = null,
 ) {
+    fun enqueue(ownerId: UUID, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
+        if (request.selector.provider.trim().lowercase() != ZigbeeDeviceSyncService.PROVIDER
+            || request.selector.deviceId == null || request.selector.roomName != null) throw DeviceCommandInvalidException()
+        validateArguments(request)
+        val target = connections.find(ownerId, request.selector.deviceId)
+            ?.takeIf { it.provider == ZigbeeDeviceSyncService.PROVIDER } ?: throw DeviceTargetNotFoundException()
+        val node = gateways?.all(ownerId)?.singleOrNull { view ->
+            view.health?.zigbee?.devices?.any { it.ieeeAddress == target.endpointHost } == true
+        } ?: throw DeviceTargetNotFoundException()
+        val (type, payload) = when (request.capability) {
+            POWER_SET -> "zigbee.power" to mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!)
+            BRIGHTNESS_SET -> "zigbee.brightness" to mapOf("deviceId" to target.endpointHost, "brightness" to (request.arguments.brightness!! * 254 / 100))
+            COLOR_SET -> "zigbee.color" to mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!)
+            else -> throw DeviceCapabilityUnsupportedException()
+        }
+        val commandId = gatewayCommands?.enqueue(ownerId, node.id, type, payload) ?: throw DeviceCommandInvalidException()
+        return AsyncDeviceCommandResult(commandId, target.id)
+    }
+
+    fun status(ownerId: UUID, id: UUID) = gatewayCommands?.status(ownerId, id) ?: throw DeviceCommandInvalidException()
+
     fun execute(ownerId: UUID, request: ExecuteDeviceCommandRequest): DeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
         if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER)) {
@@ -174,6 +198,14 @@ class DeviceCommandController(private val commands: DeviceCommandService) {
     @PostMapping
     fun execute(@Valid @RequestBody body: ExecuteDeviceCommandRequest, request: HttpServletRequest) =
         commands.execute(request.ownerId(), body)
+
+    @PostMapping("/async")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun enqueue(@Valid @RequestBody body: ExecuteDeviceCommandRequest, request: HttpServletRequest) =
+        commands.enqueue(request.ownerId(), body)
+
+    @GetMapping("/{id}")
+    fun status(@PathVariable id: UUID, request: HttpServletRequest) = commands.status(request.ownerId(), id)
 
     private fun HttpServletRequest.ownerId() =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw DeviceCommandUnauthenticatedException()

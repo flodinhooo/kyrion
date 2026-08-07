@@ -16,6 +16,7 @@ import java.time.Instant
 import java.util.UUID
 
 data class GatewayCommand(val id: UUID, val type: String, val payload: Map<String, Any>)
+data class GatewayCommandStatus(val id: UUID, val status: String, val errorCode: String?)
 
 @Repository
 class GatewayCommandRepository(private val jdbc: JdbcClient) {
@@ -49,6 +50,12 @@ class GatewayCommandRepository(private val jdbc: JdbcClient) {
 
     fun status(id: UUID): String? = jdbc.sql("SELECT status FROM gateway_command WHERE id=:id")
         .param("id", id).query(String::class.java).optional().orElse(null)
+
+    fun status(ownerId: UUID, id: UUID): GatewayCommandStatus? = jdbc.sql(
+        "SELECT id,status,error_code FROM gateway_command WHERE owner_id=:ownerId AND id=:id",
+    ).param("ownerId", ownerId).param("id", id).query { rs, _ ->
+        GatewayCommandStatus(rs.getObject("id", UUID::class.java), rs.getString("status"), rs.getString("error_code"))
+    }.optional().orElse(null)
 }
 
 @Service
@@ -82,6 +89,8 @@ class GatewayCommandService(
         }
         return false
     }
+
+    fun status(ownerId: UUID, id: UUID) = repository.status(ownerId, id) ?: throw GatewayCommandInvalidException()
 
     fun next(nodeId: UUID, credential: String): GatewayCommand? {
         gateways.authenticate(nodeId, credential)

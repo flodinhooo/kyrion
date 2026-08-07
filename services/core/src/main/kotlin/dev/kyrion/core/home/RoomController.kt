@@ -13,6 +13,9 @@ import java.util.UUID
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.integration.IntegrationConnectionView
 import dev.kyrion.core.integration.view
+import dev.kyrion.core.gateway.GatewayCommandService
+import dev.kyrion.core.gateway.GatewayService
+import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 
 data class RoomNameRequest(@field:NotBlank @field:Size(max = 120) val name: String)
 data class RoomAssignmentRequest(val roomId: UUID?)
@@ -23,6 +26,8 @@ class RoomController(
     private val rooms: RoomRepository,
     private val activity: ActivityService,
     private val connections: IntegrationConnectionRepository,
+    private val gateways: GatewayService,
+    private val gatewayCommands: GatewayCommandService,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     @GetMapping("/rooms") fun rooms(request: HttpServletRequest) = rooms.all(request.ownerId())
@@ -44,6 +49,20 @@ class RoomController(
         val updated = connections.rename(ownerId, id, body.name.trim(), clock.instant()) ?: throw RoomAssignmentException()
         record(ownerId, "home.device.renamed", "device.renamed", id)
         return updated.view()
+    }
+    @DeleteMapping("/connections/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun removeDevice(@PathVariable id: UUID, request: HttpServletRequest) {
+        val ownerId = request.ownerId()
+        val connection = connections.find(ownerId, id) ?: throw RoomNotFoundException()
+        if (connection.provider != ZigbeeDeviceSyncService.PROVIDER) throw RoomAssignmentException()
+        val node = gateways.all(ownerId).singleOrNull { view ->
+            view.health?.zigbee?.devices?.any { it.ieeeAddress == connection.endpointHost } == true
+        } ?: throw RoomAssignmentException()
+        if (!gatewayCommands.enqueueAndAwait(ownerId, node.id, "zigbee.remove", mapOf("deviceId" to connection.endpointHost))) {
+            throw RoomAssignmentException()
+        }
+        if (!connections.delete(ownerId, id)) throw RoomNotFoundException()
+        record(ownerId, "home.device.removed", "device.removed", id)
     }
     private fun record(ownerId: UUID, type: String, summary: String, correlationId: UUID) = activity.record(ActivityCategory.INTEGRATION, type, ActivityStatus.SUCCEEDED, ActivityActorType.USER, "kyrion-core", summary, ownerId.toString(), correlationId)
     private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw RoomUnauthenticatedException()
