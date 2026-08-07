@@ -215,7 +215,13 @@ Success criterion:
 - [x] Define and implement authenticated gateway registration, identity,
   heartbeat and health
   contracts before implementing radio-specific control.
-- [ ] Separate discovered candidates from owner-approved, paired devices.
+- [x] Separate heartbeat-reported Zigbee candidates from owner-approved Home
+  devices in the first UI slice; require an explicit name and Add action before
+  Core creates or reconciles the stable inventory record.
+- [ ] Apply the same post-approval contract to Zigbee, Thread/Matter,
+  Bluetooth, local-network and future adapter discovery: create or reconcile a
+  stable database device record, display it automatically on `/home`, and
+  persist every room assignment, rename and removal lifecycle change.
 - [x] Define stable USB adapter identity/configuration without assuming device
   paths before the Raspberry Pi and radios are available.
 - [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
@@ -310,6 +316,9 @@ integrations work end to end:
   throttling and integrated Bluetooth inventory.
 - [x] Validate the Sonoff ZBDongle-E and first Philips Hue colour lamp through
   real pairing, state reporting and reversible Web commands.
+- [x] Pair a second Philips Hue colour lamp, verify automatic Core database and
+  `/home` import, and configure both lamps to recover their last state after a
+  cold power cycle.
 - [ ] Validate the Home Assistant Connect ZBT-2 and USB voice devices after
   attaching them.
 - [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss

@@ -338,6 +338,28 @@ plausible targets rather than allowing the model to guess.
 
 ## Integrations
 
+### Persistent device lifecycle invariant
+
+Every connection method follows the same Core-owned lifecycle, including
+Zigbee, Thread/Matter, Bluetooth, local-network discovery, Home Assistant and
+future plugin adapters. Discovery produces an untrusted candidate. Once the
+owner explicitly adds or approves that candidate, Core must create or update
+one stable owner-scoped device record and the device must appear automatically
+on `/home`; a provider adapter or browser-only list is not an inventory.
+
+Core persists current owner-managed device metadata, including display name,
+room assignment and enabled integration relationship. Creating, changing or
+clearing a room assignment must update authoritative persistence before the UI
+reports success. Reloading Web, restarting Core or temporarily losing a gateway
+must not discard those choices. Provider observations such as availability,
+power, brightness and colour remain timestamped observations rather than being
+confused with owner configuration. Re-discovery reconciles the stable record;
+it must not silently create duplicates or overwrite owner-managed metadata.
+
+Web and mobile clients read this same Core inventory for Home. New adapters may
+translate provider identities and capabilities, but they may not bypass this
+lifecycle or maintain a separate authoritative device list.
+
 External systems are connected through integration adapters.
 
 Possible integrations include:

@@ -149,18 +149,40 @@ never receives MQTT access or gateway credentials.
 
 Home now links to a dedicated German/English device-discovery page. It presents
 only currently available connection paths, starts Zigbee pairing or local
-Nanoleaf discovery after an explicit owner action and shows newly observed
-devices without exposing MQTT or provider credentials. Gateway command polling
+Nanoleaf discovery after an explicit owner action and presents newly observed
+Zigbee candidates with an owner-entered name and explicit Add action. New
+supported candidates are no longer imported merely because a heartbeat reports
+them. Adding creates or reconciles the stable owner-scoped Core record, after
+which `/home` displays it automatically. Existing Home devices can be renamed
+and their names and room assignments remain persisted. Supported Philips/Signify
+Hue lamps receive the bounded `zigbee.hue_power_on_recover` command
+automatically during Add. Web never receives MQTT or provider credentials.
+Gateway command polling
 is separated from full health collection: commands are checked every 250 ms
 while bounded health remains on its five-second cadence. Deployment of the
-updated agent service to the physical node requires the owner's privileged
-installation approval.
+updated agent service to the physical node was completed on 2026-08-07; the
+running systemd command includes `--command-interval 0.25`.
+
+The required lifecycle is now explicit for every future connection method:
+discovery alone does not create authority, but once an owner adds or approves a
+device, Core creates or reconciles its stable database record and `/home`
+displays it automatically. Owner-managed names and room assignments are always
+persisted and survive browser, Core and gateway restarts; transient provider
+state remains a timestamped observation.
 
 Paired supported Zigbee devices are automatically represented by stable
 owner-scoped entries in the shared Core device catalog. They therefore appear
 on `/home`, support the existing persistent room assignment flow and expose
 power, brightness and colour controls there. Gateway settings retain pairing,
 radio status and diagnostics but are no longer a daily device-control surface.
+
+On 2026-08-07 a second Philips Hue LCA011 was paired successfully as
+`0x001788010fdcc07d`. Zigbee2MQTT completed its interview, Core automatically
+created the stable owner-scoped PostgreSQL entry, and the device entered
+`/home` as unassigned. Both Hue lamps store `hue_power_on_behavior=recover` in
+the lamp so their last colour and brightness survive a cold power cycle without
+Core, Web or the gateway being online. The pairing window was closed again
+immediately after verification.
 
 The latest detailed handoff is [Raspberry Pi, Zigbee and Home Integration
 Session — 2026-08-06](2026-08-06-raspberry-pi-zigbee-home.md).

@@ -223,6 +223,9 @@ ordered products. Useful provider-neutral surfaces are:
 - a device manager for identity, room assignment, state and capabilities;
 - an integration manager for setup, health and removal;
 - a discovery inbox for unapproved devices and gateways;
+- one provider-neutral post-approval lifecycle for every connection method:
+  create or reconcile the persistent Core device record, show it automatically
+  on `/home`, and persist every later name or room-assignment change;
 - gateway and voice-satellite health views;
 - automation building blocks based on capability commands and typed events;
 - clear confirmation and activity views for sensitive actions.
