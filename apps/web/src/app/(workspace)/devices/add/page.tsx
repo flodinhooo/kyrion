@@ -41,8 +41,6 @@ export default function AddDevicePage() {
 
   const zigbeeNode = useMemo(() => nodes.find((node) => node.availability === "online"
     && node.health?.services.some((service) => service.id === "zigbee" && service.status === "ready")), [nodes]);
-  const zigbeeDevices = zigbeeNode?.health?.zigbee?.devices ?? [];
-
   useEffect(() => {
     if (!zigbeeNode || secondsLeft <= 0) return;
     let disposed = false;
