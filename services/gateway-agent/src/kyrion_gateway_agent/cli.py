@@ -31,6 +31,7 @@ def main() -> None:
     subparsers.add_parser("once")
     runner = subparsers.add_parser("run")
     runner.add_argument("--interval", type=int, default=15)
+    runner.add_argument("--command-interval", type=float, default=0.25)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
@@ -47,7 +48,9 @@ def main() -> None:
         LOGGER.info("Gateway heartbeat completed")
         return
 
-    interval = max(5, min(args.interval, 60))
+    heartbeat_interval = max(5, min(args.interval, 60))
+    command_interval = max(0.1, min(args.command_interval, 2.0))
+    next_heartbeat_at = 0.0
     while True:
         try:
             for _ in range(5):
@@ -55,11 +58,17 @@ def main() -> None:
                 if command is None:
                     break
                 _execute_command(config, command)
-            heartbeat(config, collect_health())
-            LOGGER.info("Gateway heartbeat completed")
+            now = time.monotonic()
+            if now >= next_heartbeat_at:
+                heartbeat(config, collect_health())
+                LOGGER.info("Gateway heartbeat completed")
+                next_heartbeat_at = now + heartbeat_interval
         except CoreRequestError as error:
-            LOGGER.warning("Gateway heartbeat failed: %s", error)
-        time.sleep(interval)
+            LOGGER.warning("Gateway communication failed: %s", error)
+            next_heartbeat_at = 0.0
+            time.sleep(min(heartbeat_interval, 5))
+            continue
+        time.sleep(command_interval)
 
 
 def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:

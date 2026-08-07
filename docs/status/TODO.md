@@ -229,6 +229,9 @@ Success criterion:
 - [ ] Replace synchronous Zigbee command waiting with an asynchronous status
   contract and visible pending/failure UI; test ownership, timeout, malformed
   payload, adapter failure, retry and idempotency boundaries.
+- [x] Separate fast 250 ms gateway command polling from the five-second health
+  heartbeat and add a Home entry point for explicit Zigbee or local-network
+  device discovery. Asynchronous command status remains open.
 - [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
   end-to-end slices; do not mark an integration complete based only on pairing
   or discovery.

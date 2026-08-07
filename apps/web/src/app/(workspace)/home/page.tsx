@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
@@ -172,6 +173,7 @@ export default function HomePage() {
     <header>
       <div><p className="eyebrow">Kyrion Home</p><h1>{t.homeTitle}</h1><p>{t.homeDescription}</p></div>
       <form onSubmit={createRoom}>
+        <Link className="home-add-device" href="/devices/add"><span>+</span>{t.addDevice}</Link>
         <button type="button" disabled={pending} onClick={() => void refreshObservations()}>
           {pending ? t.homeRefreshingStatus : t.homeRefreshStatus}
         </button>
