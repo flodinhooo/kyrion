@@ -610,6 +610,12 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .discovery-results { display: grid; gap: 9px; margin-top: 18px; }
 .discovery-results > div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 9px; }
 .discovery-results code { color: var(--muted-foreground); font-size: .75rem; }
+.discovery-results > .discovery-candidate { display: grid; gap: 10px; }
+.discovery-candidate > div { display: flex; justify-content: space-between; gap: 12px; }
+.discovery-candidate label { display: grid; gap: 6px; color: var(--muted-foreground); font-size: .82rem; }
+.discovery-candidate input { border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 10px; padding: 10px 12px; }
+.device-rename { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.device-rename input { min-width: 0; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 9px; padding: 8px 10px; }
 .pairing-card form { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; margin-top: 16px; }
 .pairing-card label { display: grid; gap: 6px; font-size: .85rem; color: var(--muted-foreground); }
 .pairing-card input { width: 100%; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 10px; padding: 10px 12px; }
