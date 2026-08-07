@@ -152,7 +152,7 @@ export default function HomePage() {
     const value: unknown = await response.json().catch(() => null);
     if (response.ok && isDeviceCommandResult(value) && value.succeeded === 1) {
       setDevices((current) => current.map((device) => device.id === id
-        ? { ...device, availability: "online", observedAt: new Date().toISOString() }
+        ? { ...device, availability: "online", observedAt: new Date().toISOString(), state: device.state ? { ...device.state, on } : null }
         : device));
     } else {
       const availability = value && typeof value === "object"
@@ -217,11 +217,17 @@ export default function HomePage() {
           return <article key={device.id} onClick={() => setSelected(device)}>
             <div>
               <strong>{device.displayName}</strong>
-              <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : "Nanoleaf"}</small>
+              <small>{device.hardwareName}</small>
+              <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : "Lokales Netzwerk · Nanoleaf"}</small>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
             <button>{t.homeOpenControls}</button>
+            {device.state && <div className="device-live-state" aria-label={t.homeCurrentState}>
+              <span className={`state-pill ${device.state.on ? "is-on" : "is-off"}`}>{device.state.on === null ? t.homeUnknown : device.state.on ? t.zigbeeOn : t.zigbeeOff}</span>
+              <span>{t.homeCurrentBrightness}: <strong>{device.state.brightness ?? "–"}%</strong></span>
+              <span>{t.homeCurrentColor}: <i className="color-swatch" style={device.state.hue !== null && device.state.saturation !== null ? { backgroundColor: `hsl(${device.state.hue} ${device.state.saturation}% 50%)` } : undefined} /></span>
+            </div>}
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
               <button disabled={pending} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>

@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isGatewayNodeList, type GatewayNode } from "@/features/gateways/contracts";
+import { isGatewayNodeList, isGatewayZigbeeDeviceList, type GatewayNode, type GatewayZigbeeDevice } from "@/features/gateways/contracts";
 import { isDiscoveredNanoleafList, type DiscoveredNanoleaf } from "@/features/integrations/contracts";
 
 export default function AddDevicePage() {
   const { t } = useWorkspace();
   const [nodes, setNodes] = useState<GatewayNode[]>([]);
-  const [zigbeeCandidates, setZigbeeCandidates] = useState<NonNullable<NonNullable<GatewayNode["health"]>["zigbee"]>["devices"]>([]);
+  const [zigbeeCandidates, setZigbeeCandidates] = useState<GatewayZigbeeDevice[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [networkDevices, setNetworkDevices] = useState<DiscoveredNanoleaf[] | null>(null);
   const [networkSearching, setNetworkSearching] = useState(false);
@@ -48,8 +48,8 @@ export default function AddDevicePage() {
       try {
         const response = await fetch(`/api/gateways/${zigbeeNode.id}/zigbee/devices`, { cache: "no-store" });
         const value: unknown = await response.json();
-        if (!response.ok || !Array.isArray(value)) throw new Error("invalid candidates");
-        if (!disposed) setZigbeeCandidates(value as typeof zigbeeCandidates);
+        if (!response.ok || !isGatewayZigbeeDeviceList(value)) throw new Error("invalid candidates");
+        if (!disposed) setZigbeeCandidates(value);
       } catch { if (!disposed) setError(true); }
     };
     void loadCandidates();

@@ -7,10 +7,12 @@ describe("runtime device contracts", () => {
       id: "f95ad0f2-b901-4f3b-9f14-d76884e48e29",
       provider: "nanoleaf",
       displayName: "Bedroom panels",
+      hardwareName: "Nanoleaf",
       room: { id: "9adb72fc-9e91-48c5-b577-881714c21167", name: "Schlafzimmer" },
       capabilities: [{ id: "power.set" }, { id: "light.setBrightness" }],
       availability: "unknown",
       observedAt: null,
+      state: null,
     }])).toBe(true);
   });
 
@@ -19,10 +21,12 @@ describe("runtime device contracts", () => {
       id: "device-1",
       provider: "nanoleaf",
       displayName: "Panels",
+      hardwareName: "Nanoleaf",
       room: null,
       capabilities: [],
       availability: "probably-online",
       observedAt: null,
+      state: null,
     }])).toBe(false);
   });
 

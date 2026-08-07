@@ -1,5 +1,11 @@
 export type GatewayAvailability = "online" | "offline" | "degraded" | "unknown";
 export type GatewayServiceStatus = "ready" | "unavailable" | "not_configured" | "degraded" | "unknown";
+export type GatewayZigbeeDevice = {
+  ieeeAddress: string; friendlyName: string; vendor: string; model: string;
+  description: string; supported: boolean; on: boolean | null;
+  brightness: number | null; linkquality: number | null;
+  hue: number | null; saturation: number | null; colorTemperature: number | null;
+};
 
 export type GatewayHealth = {
   temperatureCelsius: number | null;
@@ -19,11 +25,7 @@ export type GatewayHealth = {
   zigbee: null | {
     permitJoin: boolean;
     channel: number;
-    devices: Array<{
-      ieeeAddress: string; friendlyName: string; vendor: string; model: string;
-      description: string; supported: boolean; on: boolean | null;
-      brightness: number | null; linkquality: number | null;
-    }>;
+    devices: GatewayZigbeeDevice[];
   };
   services: Array<{ id: string; status: GatewayServiceStatus }>;
 };
@@ -72,17 +74,23 @@ function isHealth(value: unknown): value is GatewayHealth {
       && typeof adapter.serial === "string" && typeof adapter.path === "string"
       && adapter.path.startsWith("/dev/serial/by-id/"))
     && (item.zigbee === null || (!!item.zigbee && typeof item.zigbee.permitJoin === "boolean"
-      && typeof item.zigbee.channel === "number" && Array.isArray(item.zigbee.devices)
-      && item.zigbee.devices.length <= 100 && item.zigbee.devices.every((device) =>
-        !!device && typeof device.ieeeAddress === "string" && typeof device.friendlyName === "string"
-        && typeof device.vendor === "string" && typeof device.model === "string"
-        && typeof device.description === "string" && typeof device.supported === "boolean"
-        && (device.on === null || typeof device.on === "boolean")
-        && (device.brightness === null || typeof device.brightness === "number")
-        && (device.linkquality === null || typeof device.linkquality === "number"))))
+      && typeof item.zigbee.channel === "number" && isGatewayZigbeeDeviceList(item.zigbee.devices)))
     && Array.isArray(item.services) && item.services.length <= 32
     && item.services.every((service) => !!service && typeof service.id === "string"
       && serviceStatuses.has(service.status));
+}
+
+export function isGatewayZigbeeDeviceList(value: unknown): value is GatewayZigbeeDevice[] {
+  return Array.isArray(value) && value.length <= 100 && value.every((device) =>
+    !!device && typeof device.ieeeAddress === "string" && typeof device.friendlyName === "string"
+    && typeof device.vendor === "string" && typeof device.model === "string"
+    && typeof device.description === "string" && typeof device.supported === "boolean"
+    && (device.on === null || typeof device.on === "boolean")
+    && (device.brightness === null || typeof device.brightness === "number")
+    && (device.hue === null || typeof device.hue === "number")
+    && (device.saturation === null || typeof device.saturation === "number")
+    && (device.colorTemperature === null || typeof device.colorTemperature === "number")
+    && (device.linkquality === null || typeof device.linkquality === "number"));
 }
 
 export function isGatewayNode(value: unknown): value is GatewayNode {

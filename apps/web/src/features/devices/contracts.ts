@@ -4,10 +4,12 @@ export type RuntimeDevice = {
   id: string;
   provider: string;
   displayName: string;
+  hardwareName: string;
   room: { id: string; name: string } | null;
   capabilities: Array<{ id: string }>;
   availability: DeviceAvailability;
   observedAt: string | null;
+  state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null } | null;
 };
 
 export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
@@ -16,12 +18,18 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
   const room = device.room as Partial<NonNullable<RuntimeDevice["room"]>> | null | undefined;
   return typeof device.id === "string" && typeof device.provider === "string"
     && typeof device.displayName === "string"
+    && typeof device.hardwareName === "string"
     && (room === null || (!!room && typeof room.id === "string" && typeof room.name === "string"))
     && Array.isArray(device.capabilities)
     && device.capabilities.every((capability) => !!capability && typeof capability.id === "string")
     && (device.availability === "online" || device.availability === "offline"
       || device.availability === "degraded" || device.availability === "unknown")
-    && (device.observedAt === null || typeof device.observedAt === "string");
+    && (device.observedAt === null || typeof device.observedAt === "string")
+    && (device.state === null || (!!device.state && (device.state.on === null || typeof device.state.on === "boolean")
+      && (device.state.brightness === null || typeof device.state.brightness === "number")
+      && (device.state.hue === null || typeof device.state.hue === "number")
+      && (device.state.saturation === null || typeof device.state.saturation === "number")
+      && (device.state.colorTemperature === null || typeof device.state.colorTemperature === "number")));
 }
 
 export function isRuntimeDeviceList(value: unknown): value is RuntimeDevice[] {
