@@ -39,3 +39,24 @@ def test_run_backs_off_when_core_is_unavailable(monkeypatch: pytest.MonkeyPatch)
         cli.main()
 
     sleep.assert_called_once_with(5)
+
+
+def test_hue_recover_command_is_bounded_to_the_device_topic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
+    run = Mock(return_value=Mock(returncode=0))
+    monkeypatch.setattr(cli.subprocess, "run", run)
+    completed = Mock()
+    monkeypatch.setattr(cli, "complete_command", completed)
+
+    cli._execute_command(config, {
+        "id": "command-id",
+        "type": "zigbee.hue_power_on_recover",
+        "payload": {"deviceId": "0x001788010fdcc07d"},
+    })
+
+    arguments = run.call_args.args[0]
+    assert arguments[4] == "zigbee2mqtt/0x001788010fdcc07d/set"
+    assert arguments[6] == '{"hue_power_on_behavior": "recover"}'
+    completed.assert_called_once_with(config, "command-id", True)
