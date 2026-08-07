@@ -44,6 +44,10 @@ export default function SettingsPage() {
             <Icons.shield />
             <span><strong>{t.gatewayTitle}</strong><small>{t.gatewaySettingsDescription}</small></span>
           </Link>
+          <Link className="settings-link-card" href="/knowledge">
+            <Icons.book />
+            <span><strong>{t.knowledgeTitle}</strong><small>{t.knowledgeDescription}</small></span>
+          </Link>
         </div>
 
         <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>

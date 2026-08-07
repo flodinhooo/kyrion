@@ -21,6 +21,7 @@ export default function HomePage() {
   const [devices, setDevices] = useState<RuntimeDevice[]>([]);
   const [selected, setSelected] = useState<RuntimeDevice | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
+  const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
@@ -121,6 +122,22 @@ export default function HomePage() {
     setPending(false);
   }
 
+  async function renameDevice(device: RuntimeDevice) {
+    const name = deviceNames[device.id]?.trim();
+    if (!name) return;
+    setPending(true); setError(false);
+    const response = await fetch(`/api/home/connections/${device.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...csrfHeader() },
+      body: JSON.stringify({ name }),
+    });
+    if (response.ok) {
+      setDeviceNames((current) => { const next = { ...current }; delete next[device.id]; return next; });
+      await load();
+    } else setError(true);
+    setPending(false);
+  }
+
   async function quickPower(id: string, on: boolean) {
     setPending(true);
     const response = await fetch("/api/device-commands", {
@@ -208,6 +225,10 @@ export default function HomePage() {
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
               <button disabled={pending} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
+            </div>
+            <div className="device-rename" onClick={(event) => event.stopPropagation()}>
+              <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
+              <button disabled={pending || deviceNames[device.id] === undefined} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
             </div>
             <label onClick={(event) => event.stopPropagation()}>{t.homeAssignRoom}
               <select value={device.room?.id ?? ""} disabled={pending} onChange={(event) => void assign(device.id, event.target.value || null)}>

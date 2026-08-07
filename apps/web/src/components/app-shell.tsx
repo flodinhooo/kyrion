@@ -45,8 +45,8 @@ export type TextSize = "standard" | "comfortable" | "large";
 const navigation = [
   ["chat", Icons.chat, "/"],
   ["home", Icons.home, "/home"],
+  ["addDevice", Icons.plus, "/devices/add"],
   ["automations", Icons.spark, "/automations"],
-  ["knowledge", Icons.book, "/knowledge"],
   ["plugins", Icons.plugins, "/plugins"],
   ["activity", Icons.activity, "/activity"],
 ] as const;
