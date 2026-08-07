@@ -1,0 +1,247 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">Kyrion App Icon Dark</title>
+
+  <defs>
+
+    <!-- App background -->
+    <linearGradient
+      id="background"
+      x1="0"
+      y1="0"
+      x2="0"
+      y2="1"
+    >
+      <stop offset="0%" stop-color="#162437" />
+      <stop offset="100%" stop-color="#0B1421" />
+    </linearGradient>
+
+    <!-- subtle blue/purple ambient illumination -->
+    <radialGradient
+      id="background-accent"
+      cx="41%"
+      cy="49%"
+      r="43%"
+    >
+      <stop offset="0%" stop-color="#4936A8" stop-opacity=".18" />
+      <stop offset="42%" stop-color="#172B4D" stop-opacity=".10" />
+      <stop offset="100%" stop-color="#0B1421" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Core ring -->
+    <linearGradient
+      id="core-ring"
+      x1="0%"
+      y1="0%"
+      x2="100%"
+      y2="100%"
+    >
+      <stop offset="0%" stop-color="#8B4DFF" />
+      <stop offset="45%" stop-color="#6C43F5" />
+      <stop offset="100%" stop-color="#168BFF" />
+    </linearGradient>
+
+    <!-- Core center -->
+    <radialGradient
+      id="core-fill"
+      cx="40%"
+      cy="35%"
+      r="70%"
+    >
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="38%" stop-color="#E5FAFF" />
+      <stop offset="72%" stop-color="#8CDEFF" />
+      <stop offset="100%" stop-color="#53BFFF" />
+    </radialGradient>
+
+    <!-- Core glow -->
+    <filter
+      id="core-glow"
+      x="-200%"
+      y="-200%"
+      width="500%"
+      height="500%"
+    >
+      <feGaussianBlur stdDeviation="25" />
+    </filter>
+
+  </defs>
+
+
+  <!-- =====================================================
+       APP TILE
+       ===================================================== -->
+
+  <rect
+    x="32"
+    y="32"
+    width="960"
+    height="960"
+    rx="196"
+    fill="url(#background)"
+  />
+
+  <!-- subtle light edge -->
+  <rect
+    x="33"
+    y="33"
+    width="958"
+    height="958"
+    rx="195"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-opacity=".12"
+    stroke-width="2"
+  />
+
+  <rect
+    x="32"
+    y="32"
+    width="960"
+    height="960"
+    rx="196"
+    fill="url(#background-accent)"
+  />
+
+
+  <!-- =====================================================
+       K-CORE MARK
+       ===================================================== -->
+
+  <g
+    id="k-core-mark"
+    transform="translate(144 152) scale(.72)"
+    fill="#F7F8FA"
+  >
+
+    <!-- Upper-left -->
+    <path d="
+      M120 100
+      L120 416.5
+      L177.6 474.1
+      L264.1 502.9
+      L264.1 474.1
+      L206.5 451.1
+      L148.8 393.5
+      L148.8 146
+      L160.4 134.5
+      L292.9 140.3
+      L292.9 318.7
+      L350.6 382
+      L362.1 376.3
+      L362.1 347.5
+      L327.5 312.9
+      L327.5 100
+      Z
+    "/>
+
+    <!-- Upper-right -->
+    <path d="
+      M904 100
+      L644.6 100
+      L431.3 341.7
+      L460.1 353.2
+      L661.9 134.5
+      L811.8 134.5
+      L817.5 146
+      L563.9 428.1
+      L494.7 456.8
+      L500.5 474.1
+      L581.2 456.8
+      Z
+    "/>
+
+    <!-- Lower-left -->
+    <path d="
+      M166.1 525.9
+      L120 577.7
+      L120 900
+      L327.5 900
+      L327.5 675.5
+      L362.1 635.3
+      L362.1 612.2
+      L344.8 606.5
+      L292.9 664
+      L292.9 859.7
+      L281.4 871.2
+      L166.1 871.2
+      L148.8 859.7
+      L148.8 595
+      L212.2 537.4
+      Z
+    "/>
+
+    <!-- Lower-right -->
+    <path d="
+      M500.5 508.6
+      L500.5 531.7
+      L558.1 548.9
+      L829.1 859.7
+      L823.3 871.2
+      L667.6 871.2
+      L460.1 635.3
+      L437.1 658.3
+      L644.6 900
+      L904 900
+      L586.9 525.9
+      Z
+    "/>
+
+  </g>
+
+
+  <!-- =====================================================
+       CORE
+       ===================================================== -->
+
+  <g
+    id="k-core-center"
+    transform="translate(144 152) scale(.72)"
+  >
+
+    <circle
+      cx="379.4"
+      cy="502.9"
+      r="112"
+      fill="#684BFF"
+      opacity=".38"
+      filter="url(#core-glow)"
+    />
+
+    <circle
+      cx="379.4"
+      cy="502.9"
+      r="78"
+      fill="url(#core-ring)"
+    />
+
+    <circle
+      cx="379.4"
+      cy="502.9"
+      r="53"
+      fill="#EEF8FF"
+    />
+
+    <circle
+      cx="379.4"
+      cy="502.9"
+      r="42"
+      fill="url(#core-fill)"
+    />
+
+    <ellipse
+      cx="363"
+      cy="486"
+      rx="21"
+      ry="13"
+      fill="#FFFFFF"
+      opacity=".30"
+    />
+
+  </g>
+
+</svg>

@@ -1,0 +1,157 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">Kyrion K-Core Light</title>
+
+  <defs>
+    <linearGradient id="core-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B4DFF" />
+      <stop offset="45%" stop-color="#6C43F5" />
+      <stop offset="100%" stop-color="#168BFF" />
+    </linearGradient>
+
+    <radialGradient id="core-fill" cx="40%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="38%" stop-color="#E5FAFF" />
+      <stop offset="72%" stop-color="#8CDEFF" />
+      <stop offset="100%" stop-color="#53BFFF" />
+    </radialGradient>
+
+    <filter id="core-glow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="24" />
+    </filter>
+  </defs>
+
+  <!--
+    KYRION K-CORE
+    Light mark
+
+    Important:
+    The core is intentionally NOT centered in the canvas.
+    This asymmetric construction is what creates the K silhouette.
+  -->
+
+  <g fill="#101E2D">
+
+    <!-- Upper-left module -->
+    <path d="
+      M120 100
+      L120 416.5
+      L177.6 474.1
+      L264.1 502.9
+      L264.1 474.1
+      L206.5 451.1
+      L148.8 393.5
+      L148.8 146
+      L160.4 134.5
+      L292.9 140.3
+      L292.9 318.7
+      L350.6 382
+      L362.1 376.3
+      L362.1 347.5
+      L327.5 312.9
+      L327.5 100
+      Z
+    "/>
+
+    <!-- Upper-right module -->
+    <path d="
+      M904 100
+      L644.6 100
+      L431.3 341.7
+      L460.1 353.2
+      L661.9 134.5
+      L811.8 134.5
+      L817.5 146
+      L563.9 428.1
+      L494.7 456.8
+      L500.5 474.1
+      L581.2 456.8
+      Z
+    "/>
+
+    <!-- Lower-left module -->
+    <path d="
+      M166.1 525.9
+      L120 577.7
+      L120 900
+      L327.5 900
+      L327.5 675.5
+      L362.1 635.3
+      L362.1 612.2
+      L344.8 606.5
+      L292.9 664
+      L292.9 859.7
+      L281.4 871.2
+      L166.1 871.2
+      L148.8 859.7
+      L148.8 595
+      L212.2 537.4
+      Z
+    "/>
+
+    <!-- Lower-right module -->
+    <path d="
+      M500.5 508.6
+      L500.5 531.7
+      L558.1 548.9
+      L829.1 859.7
+      L823.3 871.2
+      L667.6 871.2
+      L460.1 635.3
+      L437.1 658.3
+      L644.6 900
+      L904 900
+      L586.9 525.9
+      Z
+    "/>
+
+  </g>
+
+  <!-- Core ambient glow -->
+  <circle
+    cx="379.4"
+    cy="502.9"
+    r="92"
+    fill="#684BFF"
+    opacity="0.28"
+    filter="url(#core-glow)"
+  />
+
+  <!-- Gradient outer ring -->
+  <circle
+    cx="379.4"
+    cy="502.9"
+    r="78"
+    fill="url(#core-ring)"
+  />
+
+  <!-- Pale inner separator -->
+  <circle
+    cx="379.4"
+    cy="502.9"
+    r="53"
+    fill="#EEF8FF"
+  />
+
+  <!-- Core -->
+  <circle
+    cx="379.4"
+    cy="502.9"
+    r="42"
+    fill="url(#core-fill)"
+  />
+
+  <!-- Subtle highlight -->
+  <ellipse
+    cx="363"
+    cy="486"
+    rx="21"
+    ry="13"
+    fill="#FFFFFF"
+    opacity="0.28"
+  />
+</svg>
