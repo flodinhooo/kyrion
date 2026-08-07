@@ -10,13 +10,21 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import java.time.Clock
 import java.util.UUID
+import dev.kyrion.core.integration.IntegrationConnectionRepository
+import dev.kyrion.core.integration.IntegrationConnectionView
+import dev.kyrion.core.integration.view
 
 data class RoomNameRequest(@field:NotBlank @field:Size(max = 120) val name: String)
 data class RoomAssignmentRequest(val roomId: UUID?)
 
 @RestController
 @RequestMapping("/v1/home")
-class RoomController(private val rooms: RoomRepository, private val activity: ActivityService, private val clock: Clock = Clock.systemUTC()) {
+class RoomController(
+    private val rooms: RoomRepository,
+    private val activity: ActivityService,
+    private val connections: IntegrationConnectionRepository,
+    private val clock: Clock = Clock.systemUTC(),
+) {
     @GetMapping("/rooms") fun rooms(request: HttpServletRequest) = rooms.all(request.ownerId())
     @PostMapping("/rooms") @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody body: RoomNameRequest, request: HttpServletRequest): Room {
@@ -30,6 +38,13 @@ class RoomController(private val rooms: RoomRepository, private val activity: Ac
     fun delete(@PathVariable id: UUID, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.delete(ownerId, id)) throw RoomNotFoundException(); record(ownerId, "home.room.deleted", "room.deleted", id) }
     @PutMapping("/connections/{id}/room") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun assign(@PathVariable id: UUID, @RequestBody body: RoomAssignmentRequest, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.assignConnection(ownerId, id, body.roomId)) throw RoomAssignmentException(); record(ownerId, "home.device.assigned", "device.room.assigned", id) }
+    @PatchMapping("/connections/{id}")
+    fun renameDevice(@PathVariable id: UUID, @Valid @RequestBody body: RoomNameRequest, request: HttpServletRequest): IntegrationConnectionView {
+        val ownerId = request.ownerId()
+        val updated = connections.rename(ownerId, id, body.name.trim(), clock.instant()) ?: throw RoomAssignmentException()
+        record(ownerId, "home.device.renamed", "device.renamed", id)
+        return updated.view()
+    }
     private fun record(ownerId: UUID, type: String, summary: String, correlationId: UUID) = activity.record(ActivityCategory.INTEGRATION, type, ActivityStatus.SUCCEEDED, ActivityActorType.USER, "kyrion-core", summary, ownerId.toString(), correlationId)
     private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw RoomUnauthenticatedException()
 }

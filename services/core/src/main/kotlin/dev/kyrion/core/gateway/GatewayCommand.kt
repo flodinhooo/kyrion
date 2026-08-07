@@ -58,8 +58,11 @@ class GatewayCommandService(
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    fun gateway(ownerId: UUID, nodeId: UUID) =
+        gateways.all(ownerId).singleOrNull { it.id == nodeId } ?: throw GatewayCommandInvalidException()
+
     fun enqueue(ownerId: UUID, nodeId: UUID, type: String, payload: Map<String, Any>): UUID {
-        val node = gateways.all(ownerId).singleOrNull { it.id == nodeId } ?: throw GatewayCommandInvalidException()
+        val node = gateway(ownerId, nodeId)
         if (node.availability == "offline") throw GatewayCommandUnavailableException()
         val id = UUID.randomUUID()
         repository.create(id, nodeId, ownerId, type, payload, clock.instant())

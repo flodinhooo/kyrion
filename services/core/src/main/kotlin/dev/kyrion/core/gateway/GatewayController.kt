@@ -44,10 +44,18 @@ data class ZigbeeCommandRequest(
 )
 data class GatewayCommandResponse(val id: UUID)
 data class GatewayCommandResultRequest(val succeeded: Boolean, @field:Size(max = 80) val error: String?)
+data class AddZigbeeDeviceRequest(
+    @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
+    @field:NotBlank @field:Size(max = 160) val displayName: String,
+)
 
 @RestController
 @RequestMapping("/v1/gateways")
-class GatewayOwnerController(private val service: GatewayService, private val commands: GatewayCommandService) {
+class GatewayOwnerController(
+    private val service: GatewayService,
+    private val commands: GatewayCommandService,
+    private val zigbeeDevices: ZigbeeDeviceSyncService,
+) {
     @GetMapping fun all(request: HttpServletRequest) = service.all(request.ownerId())
 
     @PostMapping("/enrollments")
@@ -61,6 +69,15 @@ class GatewayOwnerController(private val service: GatewayService, private val co
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun pairing(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeePairingRequest, request: HttpServletRequest) =
         GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.permit_join", mapOf("duration" to body.duration)))
+
+    @PostMapping("/{id}/zigbee/devices")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addZigbeeDevice(@PathVariable id: UUID, @Valid @RequestBody body: AddZigbeeDeviceRequest, request: HttpServletRequest) =
+        zigbeeDevices.add(request.ownerId(), id, body.deviceId, body.displayName, commands)
+
+    @GetMapping("/{id}/zigbee/devices")
+    fun zigbeeCandidates(@PathVariable id: UUID, request: HttpServletRequest) =
+        zigbeeDevices.candidates(request.ownerId(), id, commands)
 
     @PostMapping("/{id}/zigbee/power") @ResponseStatus(HttpStatus.ACCEPTED)
     fun power(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeeCommandRequest, request: HttpServletRequest): GatewayCommandResponse {
