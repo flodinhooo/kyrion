@@ -136,7 +136,9 @@ latest heartbeat, applies a 45-second offline threshold and exposes owner-scoped
 health through the German/English Web gateway view. The Sonoff ZBDongle-E now
 runs as an Ember Zigbee coordinator through loopback-only MQTT, and a Philips
 Hue colour bulb passed pairing and reversible command validation. The Home
-Assistant Connect ZBT-2 and USB voice hardware have not yet been accepted. See
+Assistant Connect ZBT-2 has not yet been accepted. The Delock microphone and
+Pebble V3 Bluetooth speakers passed capture, playback and reboot-reconnect
+acceptance on 2026-08-08. See
 the
 [Development Hardware Roadmap](../hardware-roadmap.md).
 
@@ -418,9 +420,11 @@ Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
 - Interactive Zigbee controls enqueue asynchronously and expose pending,
   succeeded and failed gateway state. Broader retry, timeout and idempotency
   hardening remains before scaling.
-- A 2026-08-07 Pi audio probe found no capture device or USB audio hardware;
-  only HDMI playback is present. Voice Satellite runtime installation therefore
-  remains intentionally blocked on connecting the selected microphone/speaker.
+- The 2026-08-08 Pi audio acceptance found the Delock microphone through its
+  stable ALSA identity and the Pebble V3 as the connected BlueZ/PipeWire default
+  sink. Temporary capture and direct/browser playback passed. The authenticated
+  heartbeat exposes only bounded endpoint metadata in the bilingual gateway
+  view. Wake-word, STT, TTS and interruption runtime remain planned.
 
 ## Recommended next step
 
