@@ -13,3 +13,7 @@ interruption are subsequent slices.
 The intended production wake phrase is `Hey Velora`. The custom model is not
 committed until its training data provenance, license and real-room false
 accept/reject measurements are recorded.
+
+The reproducible local training configuration and its E:-drive storage boundary
+are documented in [`training/README.md`](training/README.md). Training artifacts,
+datasets, caches and generated speech remain outside the repository.
