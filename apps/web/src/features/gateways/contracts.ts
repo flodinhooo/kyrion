@@ -22,6 +22,10 @@ export type GatewayHealth = {
   adapters: Array<{
     id: string; protocol: "zigbee" | "thread"; vendor: string; model: string; serial: string; path: string;
   }>;
+  audio: null | {
+    capture: null | { id: string; displayName: string; transport: "usb" | "bluetooth" };
+    playback: null | { id: string; displayName: string; transport: "usb" | "bluetooth" };
+  };
   zigbee: null | {
     permitJoin: boolean;
     channel: number;
@@ -73,11 +77,21 @@ function isHealth(value: unknown): value is GatewayHealth {
       && typeof adapter.vendor === "string" && typeof adapter.model === "string"
       && typeof adapter.serial === "string" && typeof adapter.path === "string"
       && adapter.path.startsWith("/dev/serial/by-id/"))
+    && (item.audio === null || (!!item.audio
+      && isAudioEndpoint(item.audio.capture) && isAudioEndpoint(item.audio.playback)))
     && (item.zigbee === null || (!!item.zigbee && typeof item.zigbee.permitJoin === "boolean"
       && typeof item.zigbee.channel === "number" && isGatewayZigbeeDeviceList(item.zigbee.devices)))
     && Array.isArray(item.services) && item.services.length <= 32
     && item.services.every((service) => !!service && typeof service.id === "string"
       && serviceStatuses.has(service.status));
+}
+
+function isAudioEndpoint(value: unknown): boolean {
+  if (value === null) return true;
+  if (!value || typeof value !== "object") return false;
+  const item = value as { id?: unknown; displayName?: unknown; transport?: unknown };
+  return typeof item.id === "string" && typeof item.displayName === "string"
+    && (item.transport === "usb" || item.transport === "bluetooth");
 }
 
 export function isGatewayZigbeeDeviceList(value: unknown): value is GatewayZigbeeDevice[] {
