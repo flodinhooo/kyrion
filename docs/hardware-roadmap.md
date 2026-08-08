@@ -71,6 +71,13 @@ pipeline through an authenticated, explicit protocol. It must not execute
 device actions directly. Recognised intent or AI-proposed actions must pass
 through the same Core validation, permission and audit path as web requests.
 
+Hardware acceptance completed on 2026-08-08 with a Delock 20672 USB microphone
+and Creative Pebble V3 speakers connected through Bluetooth. Capture, direct
+playback, browser media playback and Bluetooth reconnect after reboot passed.
+The gateway heartbeat now reports bounded default capture/playback identity and
+transport without carrying audio. Wake-word, STT, TTS and interruption remain
+the next independent runtime slice.
+
 ## Initial test devices
 
 ### Zigbee

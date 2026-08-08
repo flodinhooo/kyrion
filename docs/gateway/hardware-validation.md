@@ -32,6 +32,15 @@ The read-only SSH inventory on 2026-08-06 confirmed:
 - no Docker, Podman, Home Assistant, USB microphone, or USB speaker detected at
   initial inventory time.
 
+On 2026-08-08 the Delock 20672 USB microphone and Creative Pebble V3 Bluetooth
+speakers were accepted. The microphone is stable as
+`/dev/snd/by-id/usb-0c76_Microphone_Delock_20672_-00`; a temporary 16 kHz,
+16-bit mono capture succeeded and was deleted immediately. The Pebble V3 are
+bonded and trusted through BlueZ as `00:02:3C:CE:31:40`, reconnect after reboot,
+and passed direct PipeWire and browser media playback. Core receives only
+bounded endpoint identity, display name and transport through the authenticated
+gateway heartbeat; no audio samples are included.
+
 On 2026-08-06 the Sonoff ZBDongle-E was accepted as the dedicated Zigbee
 coordinator. Zigbee2MQTT 2.10.1 completed an Ember handshake with firmware
 7.4.4, formed a channel-15 network, wrote a coordinator backup and connected to
@@ -69,8 +78,8 @@ the profile remains intact for a later explicit fallback test.
 - [x] Confirm current throttling state and temperature. Load and restart tests
   remain pending.
 - [x] Confirm Bluetooth controller. Bounded discovery remains pending.
-- [ ] Detect microphone and speakers and record stable ALSA/PipeWire identities.
-- [ ] Test capture and playback without retaining unnecessary voice recordings.
+- [x] Detect microphone and speakers and record stable ALSA/PipeWire identities.
+- [x] Test capture and playback without retaining unnecessary voice recordings.
 - [x] Attach the ZBDongle-E and record its stable USB identity before
   configuring Zigbee. A USB extension remains recommended for final placement.
 - [ ] Attach the ZBT-2 through a separate USB extension and record its stable

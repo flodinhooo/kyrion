@@ -83,7 +83,8 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add a centred, wider Voice Mode transcript with subtle spoken-word focus.
 - [ ] Replace prototype browser speech recognition and system TTS with
   explicitly selected local providers.
-- [ ] Add interruption, local wake-word detection and voice-device settings.
+- [ ] Add interruption, a locally trained `Velora` wake-word model and
+  voice-device settings above the accepted Pi audio endpoints.
 - [x] Add `/activity` to the primary navigation with an honest Core-bound empty
   state.
 - [x] Define the Core-owned activity event contract and append-only log.
@@ -320,8 +321,10 @@ integrations work end to end:
 - [x] Pair a second Philips Hue colour lamp, verify automatic Core database and
   `/home` import, and configure both lamps to recover their last state after a
   cold power cycle.
-- [ ] Validate the Home Assistant Connect ZBT-2 and USB voice devices after
-  attaching them.
+- [x] Validate the Delock USB microphone and Pebble V3 Bluetooth playback,
+  including temporary capture, direct/browser playback, reboot reconnect and
+  bounded authenticated gateway health.
+- [ ] Validate the Home Assistant Connect ZBT-2 after attaching it.
 - [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
   behaviour on the real Raspberry Pi node. Registration, repeated heartbeat
   and agent-service restart are proven; Pi reboot and network-loss recovery
