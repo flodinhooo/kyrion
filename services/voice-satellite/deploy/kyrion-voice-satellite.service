@@ -1,0 +1,16 @@
+[Unit]
+Description=Kyrion local wake-word satellite
+After=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/kyrion/voice-satellite/venv/bin/kyrion-voice-satellite --config %h/.config/kyrion/voice-satellite.json
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=default.target
