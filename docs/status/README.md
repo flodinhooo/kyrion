@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-06
+Last updated: 2026-08-09
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -202,8 +202,10 @@ the lamp so their last colour and brightness survive a cold power cycle without
 Core, Web or the gateway being online. The pairing window was closed again
 immediately after verification.
 
-The latest detailed handoff is [Hue Lifecycle, Command Status and Branding
-Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
+The latest detailed handoff is [Voice Satellite and Wake-Word Session —
+2026-08-09](2026-08-09-voice-satellite-wake-word.md). The preceding device
+handoff remains [Hue Lifecycle, Command Status and Branding Session —
+2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
 
 ## Completed
 
@@ -434,6 +436,13 @@ Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
   at threshold `0.5`, while the held-out `Velora` negative remained rejected.
   The small holdout and missed positives mean the model remains a test
   candidate and requires broader physical evaluation before production.
+  Stronger real-feature weighting was rejected after two controlled follow-up
+  candidates: both detected all 11 held-out complete phrases, but also accepted
+  the sole held-out `Velora`-only example. A `0.97` threshold separated this
+  single room holdout but reduced synthetic positive recall to 4/3000, proving
+  session over-specialisation rather than general improvement. The safer second
+  candidate remains deployed. More independent partial-phrase negatives and
+  cross-microphone positives are required before another candidate is accepted.
   Local STT, TTS, bounded post-wake sessions and interruption remain planned.
 
 ## Recommended next step
@@ -521,11 +530,14 @@ In a new agent chat, use this prompt:
 > Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
 > `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
 > current implementation and uncommitted changes. Read the latest dated session
-> handoff. Verify Core and the three Pi services, then confirm the paired Hue is
+> handoff, especially the 2026-08-09 Voice Satellite handoff. Verify Core and
+> the three Pi services, then confirm the paired Hue is
 > visible and controllable on `/home`. Verify the explicit remove/re-pair flow,
-> harden asynchronous command status with focused failure/retry tests, improve
-> the deployed `Hey Velora` test model from recorded room examples, and add the
-> bounded post-wake STT/Core/TTS session. Preserve Core as authority and the
+> harden asynchronous command status with focused failure/retry tests, collect
+> the documented independent partial-phrase and phone-microphone wake-word
+> holdouts, and train V5 without deploying the overfit V3/V4 experiments. Only
+> after wake-word acceptance, add the bounded post-wake STT/Core/TTS session.
+> Preserve Core as authority and the
 > outbound-only agent boundary. Do not begin Thread/Matter until the Zigbee
 > lifecycle and recovery work is understood. Never store credentials or
 > session tokens in browser local storage.

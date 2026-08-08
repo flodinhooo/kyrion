@@ -1,6 +1,6 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-05
+Last updated: 2026-08-09
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
@@ -91,6 +91,15 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Broaden physical wake-word evaluation and improve missed-phrase recall,
   then add interruption and voice-device settings above the accepted Pi audio
   endpoints.
+- [ ] Record a dedicated independent `Velora`-only negative set and positive
+  holdouts across the Pi microphone and at least one phone microphone before
+  accepting another strongly personalised wake-word candidate.
+- [ ] Keep V2 deployed until V5 passes independent complete-phrase,
+  partial-phrase and cross-microphone holdouts; never deploy the archived V3 or
+  V4 overfit experiments merely because they reached 11/11 same-session recall.
+- [ ] After V5 acceptance, build the bounded first-dialog slice in this order:
+  acknowledgement tone, VAD-bounded post-wake capture, authenticated Core
+  delivery, local STT, existing assistant routing, local TTS and Pebble output.
 - [x] Add `/activity` to the primary navigation with an honest Core-bound empty
   state.
 - [x] Define the Core-owned activity event contract and append-only log.
