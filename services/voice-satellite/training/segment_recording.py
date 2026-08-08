@@ -69,7 +69,10 @@ def segment_recording(source: Path, output: Path) -> int:
 
     samples_per_frame = round(parameters.framerate * 0.02)
     bytes_per_frame = samples_per_frame * parameters.sampwidth
-    chunks = [audio[offset : offset + bytes_per_frame] for offset in range(0, len(audio), bytes_per_frame)]
+    chunks = [
+        audio[offset : offset + bytes_per_frame]
+        for offset in range(0, len(audio), bytes_per_frame)
+    ]
     levels = [rms(chunk) for chunk in chunks if len(chunk) == bytes_per_frame]
     noise_floor = percentile(levels, 0.50)
     threshold = max(0.0012, noise_floor * 3.5)
@@ -82,7 +85,10 @@ def segment_recording(source: Path, output: Path) -> int:
         writer.writerow(["file", "start_seconds", "end_seconds", "duration_seconds", "label"])
         for index, segment in enumerate(segments, start=1):
             # Context helps review and lets augmentation crop each utterance naturally.
-            start_sample = max(0, segment.start_frame * samples_per_frame - round(0.25 * parameters.framerate))
+            start_sample = max(
+                0,
+                segment.start_frame * samples_per_frame - round(0.25 * parameters.framerate),
+            )
             end_sample = min(
                 len(audio) // parameters.sampwidth,
                 segment.end_frame * samples_per_frame + round(0.35 * parameters.framerate),

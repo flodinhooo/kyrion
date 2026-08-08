@@ -119,3 +119,15 @@ The generated manifest deliberately labels every clip `unreviewed`. Review and
 label exact target phrases as positive examples; use partial phrases such as
 `velora` as hard negatives. Never infer the label solely from clip duration or
 automatically add unreviewed owner audio to a training run.
+
+After human review, apply explicit labels and keep the resulting directories in
+the private training store:
+
+```bash
+LABEL=/mnt/e/dev/Kyrion/kyrion/services/voice-satellite/training/label_recording.py
+$PYTHON "$LABEL" /training/data/real-recordings/session-name \
+  --negative 7,10,18 --exclude 1
+```
+
+The default label is `positive`; only use it after every remaining clip has been
+confirmed to contain the complete target phrase.
