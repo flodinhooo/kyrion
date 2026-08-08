@@ -71,6 +71,10 @@ class GatewayServiceTest {
         GatewayInterfaceHealth(true, true), GatewayInterfaceHealth(true, false),
         true, true, "running",
         listOf(GatewayAdapterHealth("sonoff", "zigbee", "Itead", "Sonoff", "serial", "/dev/serial/by-id/sonoff")),
+        GatewayAudioHealth(
+            GatewayAudioEndpoint("alsa_input.usb-delock", "Delock microphone", "usb"),
+            GatewayAudioEndpoint("bluez_output.pebble", "Pebble V3", "bluetooth"),
+        ),
         GatewayZigbeeHealth(false, 15, emptyList()),
         listOf(GatewayServiceHealth("zigbee", "not_configured")),
     )

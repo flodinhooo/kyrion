@@ -57,6 +57,7 @@ data class GatewayHealth(
     val bluetooth: Boolean,
     val systemState: String,
     val adapters: List<GatewayAdapterHealth>,
+    val audio: GatewayAudioHealth? = null,
     val zigbee: GatewayZigbeeHealth?,
     val services: List<GatewayServiceHealth>,
 )
@@ -70,6 +71,11 @@ data class GatewayAdapterHealth(
     val serial: String,
     val path: String,
 )
+data class GatewayAudioHealth(
+    val capture: GatewayAudioEndpoint?,
+    val playback: GatewayAudioEndpoint?,
+)
+data class GatewayAudioEndpoint(val id: String, val displayName: String, val transport: String)
 data class GatewayZigbeeHealth(
     val permitJoin: Boolean,
     val channel: Int,
@@ -249,6 +255,13 @@ class GatewayService(
                     it.serial.length !in 1..160 || it.path.length !in 1..300 ||
                     !it.path.startsWith("/dev/serial/by-id/")
             }
+        ) throw GatewayHealthInvalidException()
+        if (health.audio?.let { audio ->
+                listOfNotNull(audio.capture, audio.playback).any {
+                    it.id.length !in 1..200 || it.displayName.length !in 1..160 ||
+                        it.transport !in setOf("usb", "bluetooth")
+                }
+            } == true
         ) throw GatewayHealthInvalidException()
         if (health.zigbee != null && (health.zigbee.channel !in 11..26 ||
                 health.zigbee.devices.size > 100 || health.zigbee.devices.any {
