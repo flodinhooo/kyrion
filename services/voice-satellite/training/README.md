@@ -131,3 +131,16 @@ $PYTHON "$LABEL" /training/data/real-recordings/session-name \
 
 The default label is `positive`; only use it after every remaining clip has been
 confirmed to contain the complete target phrase.
+
+Prepare a deterministic real-room holdout and copy replicated training inputs
+into the openWakeWord clip directories before regenerating features:
+
+```bash
+PREPARE=/mnt/e/dev/Kyrion/kyrion/services/voice-satellite/training/prepare_real_examples.py
+$PYTHON "$PREPARE" /training/data/real-recordings/session-name \
+  /training/output/hey_velora
+```
+
+The replicas are inputs to independent augmentation, not extra recordings. Real
+holdout clips remain outside openWakeWord's generated test directories and must
+be evaluated separately after export.
