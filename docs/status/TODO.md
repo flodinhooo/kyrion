@@ -83,8 +83,11 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Add a centred, wider Voice Mode transcript with subtle spoken-word focus.
 - [ ] Replace prototype browser speech recognition and system TTS with
   explicitly selected local providers.
-- [ ] Add interruption, a locally trained `Velora` wake-word model and
-  voice-device settings above the accepted Pi audio endpoints.
+- [x] Train and deploy the first local `Hey Velora` ONNX wake-word candidate as
+  a non-privileged Pi user service; prove one live Delock microphone detection.
+- [ ] Improve wake-word recall/false-positive performance with recorded room
+  examples, then add interruption and voice-device settings above the accepted
+  Pi audio endpoints.
 - [x] Add `/activity` to the primary navigation with an honest Core-bound empty
   state.
 - [x] Define the Core-owned activity event contract and append-only log.
@@ -227,8 +230,9 @@ Success criterion:
   paths before the Raspberry Pi and radios are available.
 - [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
   inbox and gateway/voice-satellite health views in German and English.
-- [ ] Complete hardware acceptance: Raspberry Pi and Sonoff ZBDongle-E baseline
-  validation is complete; ZBT-2, USB voice hardware and recovery drills remain.
+- [ ] Complete hardware acceptance: Raspberry Pi, Sonoff ZBDongle-E and USB
+  voice hardware baseline validation is complete; ZBT-2 and recovery drills
+  remain.
 - [x] Expose the first stable owner-scoped Zigbee light capabilities and typed,
   audited device commands in Web through Core.
 - [x] Replace automatic post-pairing import with a Core-owned Zigbee discovery

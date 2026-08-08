@@ -20,6 +20,7 @@ Expected layout:
   cache/
   data/
     background/
+    rir/
     openwakeword_features_ACAV100M_2000_hrs_16bit.npy
     validation_set_features.npy
   output/
@@ -36,6 +37,7 @@ Expected layout:
   `195e3bd967d54589c2137c9de2b22ad526ba6b6f`
 - Python `3.10.20`
 - PyTorch/Torchaudio `2.1.2+cu121`
+- SpeechBrain `1.0.3`
 - NumPy `1.26.4`
 - Setuptools `80.9.0` because Piper v2's WebRTC VAD still imports
   `pkg_resources`
@@ -81,6 +83,15 @@ the documented integer `rotation_index` argument. Without these narrow
 compatibility fixes, current SpeechBrain releases fail while applying room
 impulse responses.
 
+The runner also converts upstream argparse defaults written as the string
+`"False"` to the boolean `False`. This prevents an ONNX-only run from attempting
+the optional TFLite conversion after a successful model export.
+
+Copy the Piper impulse responses to `/training/data/rir` and run
+`normalize_generated_audio.py` on that directory before augmentation. Every RIR
+must be 16 kHz mono PCM16: upstream openWakeWord reuses the most recently loaded
+RIR sample rate for the next generated-audio batch.
+
 The final artifact is `/training/output/hey_velora/hey_velora.onnx`. Do not deploy
 it merely because training completed. First record:
 
@@ -92,3 +103,19 @@ it merely because training completed. First record:
 
 The Pi voice satellite must keep audio local before wake detection. A detection
 only opens a bounded audio session; it does not itself authorize commands.
+
+## Real-room recordings
+
+Keep owner recordings outside the repository. Split a continuous 16 kHz mono
+PCM16 capture into reviewable clips with:
+
+```bash
+PYTHON=/training/venv/bin/python
+SEGMENT=/mnt/e/dev/Kyrion/kyrion/services/voice-satellite/training/segment_recording.py
+$PYTHON "$SEGMENT" /path/to/recording.wav /training/data/real-recordings/session-name
+```
+
+The generated manifest deliberately labels every clip `unreviewed`. Review and
+label exact target phrases as positive examples; use partial phrases such as
+`velora` as hard negatives. Never infer the label solely from clip duration or
+automatically add unreviewed owner audio to a training run.

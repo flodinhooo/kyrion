@@ -17,3 +17,9 @@ accept/reject measurements are recorded.
 The reproducible local training configuration and its E:-drive storage boundary
 are documented in [`training/README.md`](training/README.md). Training artifacts,
 datasets, caches and generated speech remain outside the repository.
+
+The first deployment is a non-privileged `systemd --user` service. The tracked
+unit in [`deploy/kyrion-voice-satellite.service`](deploy/kyrion-voice-satellite.service)
+reads an explicit JSON configuration from
+`~/.config/kyrion/voice-satellite.json`. A model remains a test candidate until
+its real-room metrics satisfy the acceptance criteria.

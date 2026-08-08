@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import runpy
 import sys
 from collections.abc import Callable
@@ -40,11 +41,24 @@ def patch_speechbrain_convolution() -> None:
     signal_processing.reverberate = mono_reverberate
 
 
+def patch_false_string_defaults() -> None:
+    """Correct upstream argparse defaults that use the truthy string ``False``."""
+    original = argparse.ArgumentParser.add_argument
+
+    def compatible_add_argument(parser: Any, *names: str, **kwargs: Any) -> Any:
+        if kwargs.get("default") == "False":
+            kwargs["default"] = False
+        return original(parser, *names, **kwargs)
+
+    argparse.ArgumentParser.add_argument = compatible_add_argument
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit("Usage: run_openwakeword_training.py TRAIN.PY [arguments ...]")
     training_script = Path(sys.argv.pop(1)).resolve(strict=True)
     patch_speechbrain_convolution()
+    patch_false_string_defaults()
     sys.argv[0] = str(training_script)
     runpy.run_path(str(training_script), run_name="__main__")
 

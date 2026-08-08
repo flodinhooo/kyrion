@@ -412,8 +412,8 @@ Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
   loss is not yet recorded. Wi-Fi is configured but currently disconnected;
   its failed boot association remains a separate diagnostic follow-up.
 - The Sonoff Zigbee adapter and two Philips Hue colour lamps are accepted end to
-  end. The ZBT-2 Thread/Matter adapter and USB voice hardware remain
-  unvalidated.
+  end. The Delock USB microphone and Pebble V3 audio output are accepted. The
+  ZBT-2 Thread/Matter adapter remains unvalidated.
 - Zigbee discovery requires explicit approval and naming. Owner-confirmed
   removal publishes the bounded Zigbee2MQTT remove request through the gateway,
   deletes the Core record only after success and permits subsequent re-pairing.
@@ -424,7 +424,12 @@ Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
   stable ALSA identity and the Pebble V3 as the connected BlueZ/PipeWire default
   sink. Temporary capture and direct/browser playback passed. The authenticated
   heartbeat exposes only bounded endpoint metadata in the bilingual gateway
-  view. Wake-word, STT, TTS and interruption runtime remain planned.
+  view. A non-privileged Voice Satellite user service now performs continuous
+  local openWakeWord ONNX inference for `Hey Velora`; the first live Pi utterance
+  was detected at score `0.601`. The initial model remains a test candidate: its
+  synthetic validation recall is `0.417`, with `1.062` false positives/hour,
+  so real-room evaluation and a stronger model are required before production.
+  Local STT, TTS, bounded post-wake sessions and interruption remain planned.
 
 ## Recommended next step
 
@@ -488,13 +493,13 @@ execution remains to be repeated by the owner.
 ### Physical gateway and protocol validation
 
 - the dedicated Sonoff Zigbee adapter and first Hue device are validated;
-  attach and validate the Thread adapter and USB voice hardware through stable
-  device identities;
+  the USB voice hardware and local wake-word test path are validated; attach
+  and validate the Thread adapter through a stable device identity;
 - prove heartbeat recovery across a full Pi restart and temporary network loss;
 - prove Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice as separate
   end-to-end slices rather than treating discovery or pairing as completion.
 
-Cross-cutting follow-up remains local STT/TTS and wake-word interruption,
+Cross-cutting follow-up remains wake-word model quality, local STT/TTS and interruption,
 bounded background device events, DHCP recovery, login throttling, session and
 retention controls, physical token revocation and implementation of the
 accepted restore-point and verified-restore design.
@@ -513,8 +518,9 @@ In a new agent chat, use this prompt:
 > current implementation and uncommitted changes. Read the latest dated session
 > handoff. Verify Core and the three Pi services, then confirm the paired Hue is
 > visible and controllable on `/home`. Verify the explicit remove/re-pair flow,
-> harden asynchronous command status with focused failure/retry tests, and begin
-> Voice Satellite acceptance once USB audio hardware is connected. Preserve Core as authority and the
+> harden asynchronous command status with focused failure/retry tests, improve
+> the deployed `Hey Velora` test model from recorded room examples, and add the
+> bounded post-wake STT/Core/TTS session. Preserve Core as authority and the
 > outbound-only agent boundary. Do not begin Thread/Matter until the Zigbee
 > lifecycle and recovery work is understood. Never store credentials or
 > session tokens in browser local storage.
