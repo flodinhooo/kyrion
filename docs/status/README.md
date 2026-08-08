@@ -426,9 +426,14 @@ Session — 2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
   heartbeat exposes only bounded endpoint metadata in the bilingual gateway
   view. A non-privileged Voice Satellite user service now performs continuous
   local openWakeWord ONNX inference for `Hey Velora`; the first live Pi utterance
-  was detected at score `0.601`. The initial model remains a test candidate: its
-  synthetic validation recall is `0.417`, with `1.062` false positives/hour,
-  so real-room evaluation and a stronger model are required before production.
+  was detected at score `0.601`. A second test candidate trained with 40
+  reviewed real-room positives and four hard `Velora` negatives is deployed
+  with the baseline retained for rollback. Synthetic validation changed from
+  `0.417` to `0.389` recall and from `1.062` to `0.354` false positives/hour;
+  an independent 11-clip real-room holdout improved from 4/11 to 5/11 detected
+  at threshold `0.5`, while the held-out `Velora` negative remained rejected.
+  The small holdout and missed positives mean the model remains a test
+  candidate and requires broader physical evaluation before production.
   Local STT, TTS, bounded post-wake sessions and interruption remain planned.
 
 ## Recommended next step

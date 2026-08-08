@@ -144,3 +144,28 @@ $PYTHON "$PREPARE" /training/data/real-recordings/session-name \
 The replicas are inputs to independent augmentation, not extra recordings. Real
 holdout clips remain outside openWakeWord's generated test directories and must
 be evaluated separately after export.
+
+If real examples are drowned out by a much larger synthetic set, generate a
+separate deterministic real-room feature set with milder augmentation. Merge
+and weight those features explicitly rather than claiming that copying WAV
+files creates additional recordings:
+
+```bash
+REAL_FEATURES=/mnt/e/dev/Kyrion/kyrion/services/voice-satellite/training/build_real_features.py
+$PYTHON "$REAL_FEATURES" /training/data/real-recordings/session-name \
+  /training/output/hey_velora/real_features \
+  --background /training/data/background --rir /training/data/rir
+```
+
+Keep the unmodified generated features and real holdout for comparison. A
+device-specific improvement does not establish generalisation to other voices,
+rooms or mobile microphones; each important device class needs separate data
+and an untouched holdout.
+
+Combine a general feature array with repeated real-room features in a stable,
+shuffled order:
+
+```bash
+COMBINE=/mnt/e/dev/Kyrion/kyrion/services/voice-satellite/training/combine_features.py
+$PYTHON "$COMBINE" general.npy real.npy combined.npy --secondary-repeat 4
+```

@@ -85,9 +85,12 @@ session. The current implementation status is documented in [README.md](README.m
   explicitly selected local providers.
 - [x] Train and deploy the first local `Hey Velora` ONNX wake-word candidate as
   a non-privileged Pi user service; prove one live Delock microphone detection.
-- [ ] Improve wake-word recall/false-positive performance with recorded room
-  examples, then add interruption and voice-device settings above the accepted
-  Pi audio endpoints.
+- [x] Train and deploy a second wake-word test candidate with reviewed room
+  examples, a deterministic holdout and a rollback copy; record its mixed
+  synthetic and real-room comparison honestly.
+- [ ] Broaden physical wake-word evaluation and improve missed-phrase recall,
+  then add interruption and voice-device settings above the accepted Pi audio
+  endpoints.
 - [x] Add `/activity` to the primary navigation with an honest Core-bound empty
   state.
 - [x] Define the Core-owned activity event contract and append-only log.
