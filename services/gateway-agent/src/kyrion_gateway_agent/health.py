@@ -35,12 +35,97 @@ def collect_health() -> dict[str, Any]:
         "bluetooth": Path("/sys/class/bluetooth").exists(),
         "systemState": _system_state(),
         "adapters": _serial_adapters(),
+        "audio": {
+            "capture": _audio_endpoint("@DEFAULT_AUDIO_SOURCE@", "capture"),
+            "playback": _audio_endpoint("@DEFAULT_AUDIO_SINK@", "playback"),
+        },
         "zigbee": _zigbee_health(),
         "services": [
             {"id": service_id, "status": _service_status(unit)}
             for service_id, unit in SERVICE_UNITS.items()
         ],
     }
+
+
+def _audio_endpoint(target: str, direction: str) -> dict[str, str] | None:
+    output = _command(["wpctl", "inspect", target], "")
+    properties: dict[str, str] = {}
+    for line in output.splitlines():
+        cleaned = line.strip().removeprefix("* ")
+        if " = " not in cleaned:
+            continue
+        key, value = cleaned.split(" = ", maxsplit=1)
+        properties[key] = value.strip().strip('"').strip()
+    node_id = properties.get("node.name")
+    name = properties.get("node.description") or properties.get("node.nick")
+    api = properties.get("device.api")
+    media_class = properties.get("media.class")
+    expected_class = "Audio/Source" if direction == "capture" else "Audio/Sink"
+    if node_id and name and api in {"alsa", "bluez5"} and media_class == expected_class:
+        return {
+            "id": node_id[:200],
+            "displayName": " ".join(name.split())[:160],
+            "transport": "bluetooth" if api == "bluez5" else "usb",
+        }
+    if direction == "playback":
+        bluetooth = _connected_bluetooth_audio_sink()
+        if bluetooth is not None:
+            return bluetooth
+    return _usb_audio_endpoint(direction)
+
+
+def _connected_bluetooth_audio_sink() -> dict[str, str] | None:
+    devices = _command(["bluetoothctl", "devices", "Connected"], "")
+    for line in devices.splitlines()[:16]:
+        parts = line.split(maxsplit=2)
+        if len(parts) < 3 or parts[0] != "Device":
+            continue
+        address = parts[1]
+        info = _command(["bluetoothctl", "info", address], "")
+        if "Audio Sink" not in info or "Connected: yes" not in info:
+            continue
+        return {
+            "id": f"bluez_output.{address.replace(':', '_')}",
+            "displayName": " ".join(parts[2].split())[:160],
+            "transport": "bluetooth",
+        }
+    return None
+
+
+def _usb_audio_endpoint(direction: str) -> dict[str, str] | None:
+    try:
+        pcm = Path("/proc/asound/pcm").read_text(encoding="utf-8")
+        cards = Path("/proc/asound/cards").read_text(encoding="utf-8")
+        stable_paths = sorted(Path("/dev/snd/by-id").iterdir())
+    except OSError:
+        return None
+    marker = "capture" if direction == "capture" else "playback"
+    for stable_path in stable_paths[:16]:
+        try:
+            resolved_name = stable_path.resolve().name
+        except OSError:
+            continue
+        if not resolved_name.startswith("controlC"):
+            continue
+        card = resolved_name.removeprefix("controlC")
+        if not any(
+            row.startswith(f"{int(card):02d}-") and marker in row for row in pcm.splitlines()
+        ):
+            continue
+        display_name = next(
+            (
+                row.split("]: ", maxsplit=1)[1].strip()
+                for row in cards.splitlines()
+                if row.strip().startswith(f"{card} [") and "]: " in row
+            ),
+            stable_path.name,
+        )
+        return {
+            "id": stable_path.name[:200],
+            "displayName": " ".join(display_name.split())[:160],
+            "transport": "usb",
+        }
+    return None
 
 
 def _serial_adapters() -> list[dict[str, str]]:

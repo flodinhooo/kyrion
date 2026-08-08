@@ -129,6 +129,11 @@ export default function GatewaysPage() {
                 <strong>{adapter.model}</strong>
                 <span className="device-status online">{adapter.protocol === "zigbee" ? t.gatewayAdapterZigbee : t.gatewayAdapterThread} · {t.gatewayDetected}</span>
               </div>)}</div>}
+            <h3>{t.gatewayAudio}</h3>
+            <div className="gateway-services">
+              <AudioEndpoint label={t.gatewayAudioCapture} endpoint={node.health.audio?.capture ?? null} detected={t.gatewayDetected} missing={t.gatewayAudioMissing} />
+              <AudioEndpoint label={t.gatewayAudioPlayback} endpoint={node.health.audio?.playback ?? null} detected={t.gatewayDetected} missing={t.gatewayAudioMissing} />
+            </div>
             {node.health.zigbee && <section className="pairing-card">
               <div className="gateway-card-heading"><div><h3>{t.zigbeeDevices}</h3><p>{t.zigbeeChannel.replace("{channel}", String(node.health.zigbee.channel))}</p></div>
                 <button disabled={commandPending || secondsLeft > 0} onClick={() => void startPairing(node.id)}>{secondsLeft > 0 ? t.zigbeeSearching.replace("{seconds}", String(secondsLeft)) : t.zigbeeStartSearch}</button>
@@ -153,4 +158,14 @@ export default function GatewaysPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return <div><small>{label}</small><strong>{value}</strong></div>;
+}
+
+function AudioEndpoint({ label, endpoint, detected, missing }: {
+  label: string;
+  endpoint: { displayName: string; transport: "usb" | "bluetooth" } | null;
+  detected: string;
+  missing: string;
+}) {
+  return <div><strong>{label}</strong><span>{endpoint ? endpoint.displayName : missing}</span>
+    <span className={`device-status ${endpoint ? "online" : "unknown"}`}>{endpoint ? `${endpoint.transport.toUpperCase()} · ${detected}` : missing}</span></div>;
 }

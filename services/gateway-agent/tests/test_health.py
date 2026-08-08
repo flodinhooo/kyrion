@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from kyrion_gateway_agent import health as health_module
 from kyrion_gateway_agent.config import AgentConfig
 from kyrion_gateway_agent.health import collect_health, platform_identity
 
@@ -35,3 +36,20 @@ def test_health_contract_contains_bounded_platform_values() -> None:
     }
     assert identity["hostname"]
     assert identity["architecture"]
+
+
+def test_audio_endpoint_reports_only_the_expected_pipewire_direction(monkeypatch) -> None:
+    source = """
+      * media.class = "Audio/Source"
+        device.api = "alsa"
+      * node.description = "Microphone(Delock 20672) Mono"
+      * node.name = "alsa_input.usb-0c76_Microphone_Delock_20672_-00.mono-fallback"
+    """
+    monkeypatch.setattr(health_module, "_command", lambda _command, _default: source)
+
+    assert health_module._audio_endpoint("@DEFAULT_AUDIO_SOURCE@", "capture") == {
+        "id": "alsa_input.usb-0c76_Microphone_Delock_20672_-00.mono-fallback",
+        "displayName": "Microphone(Delock 20672) Mono",
+        "transport": "usb",
+    }
+    assert health_module._audio_endpoint("@DEFAULT_AUDIO_SOURCE@", "playback") is None
