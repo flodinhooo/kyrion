@@ -54,6 +54,7 @@ class VoiceDialogueService(
         val session = satellites.activeSession(satelliteId, credential, sessionId)
         val transcript = ai.post().uri("/v1/speech/transcribe")
             .contentType(MediaType.parseMediaType("audio/wav"))
+            .contentLength(audio.size.toLong())
             .header("X-Kyrion-Locale", locale)
             .body { outputStream -> outputStream.write(audio) }
             .retrieve()
