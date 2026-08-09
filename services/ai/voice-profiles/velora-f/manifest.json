@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "klar",
+  "name": "F_weiblich_klar",
+  "locale": "de-DE",
+  "reference": {
+    "repositoryPath": ".run/velora-female-options/F_weiblich_klar.wav",
+    "sha256": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+    "format": "PCM_S16LE",
+    "channels": 1,
+    "sampleRateHz": 24000,
+    "durationSeconds": 10.32,
+    "immutable": true
+  },
+  "transcriptPath": "transcript.txt",
+  "descriptionPath": "voice-description.txt",
+  "provenance": {
+    "generator": "Qwen3-TTS VoiceDesign 1.7B",
+    "assetCommit": "d592a197",
+    "runtimeCommit": "ed7d67d",
+    "modelLicence": "Apache-2.0",
+    "libraries": {
+      "qwen-tts": "0.1.1",
+      "transformers": "4.57.3",
+      "torch": "2.13.0+cu130",
+      "accelerate": "1.12.0",
+      "soundfile": "0.14.0"
+    }
+  },
+  "preferredSamplingProfile": {
+    "doSample": true,
+    "temperature": 0.9,
+    "topK": 50,
+    "topP": 1.0,
+    "repetitionPenalty": 1.05,
+    "subtalkerDoSample": true,
+    "subtalkerTemperature": 0.9,
+    "subtalkerTopK": 50,
+    "subtalkerTopP": 1.0
+  },
+  "providerDerivationsPath": "providers"
+}

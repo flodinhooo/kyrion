@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "provider": "chatterbox-multilingual",
+  "profileId": "klar",
+  "referenceSha256": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+  "conditioning": {
+    "mode": "prepare_conditionals",
+    "cachePolicy": "create once during runtime startup and reuse for every request",
+    "persistedArtifact": null
+  },
+  "legacyFallback": true
+}

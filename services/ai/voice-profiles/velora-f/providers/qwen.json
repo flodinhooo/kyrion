@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "provider": "qwen3-tts",
+  "profileId": "klar",
+  "referenceSha256": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+  "conditioning": {
+    "mode": "voice_clone_prompt",
+    "xVectorOnly": false,
+    "cachePolicy": "create once during runtime startup and reuse for every request",
+    "persistedArtifact": null
+  },
+  "originalRuntime": {
+    "modelType": "Qwen3-TTS-12Hz-1.7B-Base",
+    "device": "cuda:0",
+    "dtype": "float16",
+    "attentionImplementation": "sdpa",
+    "language": "German"
+  }
+}
