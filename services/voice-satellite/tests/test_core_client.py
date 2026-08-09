@@ -26,7 +26,11 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
             {"type": "transcript", "transcript": "Wer bist du?"},
             {"type": "audio.chunk", "audioBase64": base64.b64encode(first).decode()},
             {"type": "audio.chunk", "audioBase64": base64.b64encode(second).decode()},
-            {"type": "completed", "responseText": "Eine vollständige Antwort.", "continueSession": True},
+            {
+                "type": "completed",
+                "responseText": "Eine vollständige Antwort.",
+                "continueSession": True,
+            },
         ],
     )
     played: list[bytes] = []
