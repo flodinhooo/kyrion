@@ -2,5 +2,8 @@
   "model_path": "/home/flodinho/.local/share/kyrion/voice-satellite/models/hey_velora.onnx",
   "capture_device": "hw:CARD=M20672,DEV=0",
   "threshold": 0.5,
-  "cooldown_seconds": 2.0
+  "cooldown_seconds": 2.0,
+  "speech_start_timeout_seconds": 6.0,
+  "speech_end_silence_seconds": 0.8,
+  "utterance_max_seconds": 20.0
 }

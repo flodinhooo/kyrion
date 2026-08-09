@@ -2,5 +2,12 @@
   "model_path": "/home/kyrion/.local/share/kyrion/voice-satellite/models/hey_velora.onnx",
   "capture_device": "hw:CARD=M20672,DEV=0",
   "threshold": 0.5,
-  "cooldown_seconds": 2.0
+  "cooldown_seconds": 2.0,
+  "speech_start_timeout_seconds": 6.0,
+  "speech_end_silence_seconds": 0.8,
+  "utterance_max_seconds": 20.0,
+  "core_url": "http://CORE_HOST:8080",
+  "satellite_id": "REPLACE_WITH_SATELLITE_ID",
+  "credential_file": "/home/kyrion/.config/kyrion/voice-satellite.token",
+  "locale": "de"
 }
