@@ -66,7 +66,7 @@ class SpeechService:
         return self._synthesize_piper(text)
 
     def _qwen_request(self, method: str, path: str, **kwargs) -> httpx.Response:
-        client = self._http_client or httpx.Client(timeout=15.0)
+        client = self._http_client or httpx.Client(timeout=120.0)
         owns_client = self._http_client is None
         try:
             response = client.request(method, f"{self._settings.qwen_tts_url}{path}", **kwargs)

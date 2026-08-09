@@ -21,6 +21,21 @@ def test_config_accepts_only_bounded_local_audio_and_model_values(tmp_path: Path
     assert config.capture_device == "hw:CARD=M20672,DEV=0"
 
 
+def test_config_accepts_absolute_cached_greeting(tmp_path: Path) -> None:
+    path = tmp_path / "satellite.json"
+    path.write_text(json.dumps({
+        "model_path": "/model.onnx",
+        "capture_device": "hw:CARD=USB,DEV=0",
+        "greeting_audio_file": "/home/user/.local/share/kyrion/greeting.wav",
+        "playback_target": "bluez_output.00_02_3C_CE_31_40.1",
+    }), encoding="utf-8")
+
+    config = SatelliteConfig.load(path)
+
+    assert config.greeting_audio_file == Path("/home/user/.local/share/kyrion/greeting.wav")
+    assert config.playback_target == "bluez_output.00_02_3C_CE_31_40.1"
+
+
 @pytest.mark.parametrize("field,value", [
     ("model_path", "relative.onnx"),
     ("capture_device", "default"),

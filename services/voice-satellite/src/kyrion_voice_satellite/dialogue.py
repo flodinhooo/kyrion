@@ -16,6 +16,7 @@ LOGGER = logging.getLogger("kyrion-voice-satellite")
 
 class DialogueState(Enum):
     IDLE = "idle"
+    ACKNOWLEDGING = "acknowledging"
     LISTENING = "listening"
     PROCESSING = "processing"
     SPEAKING = "speaking"
@@ -32,13 +33,19 @@ class DialogueRunner:
             config.core_url, config.satellite_id, config.credential_file,
         )
         self._vad = WebRtcVoiceActivityDetector()
-        self._playback = PipeWirePlayback()
+        self._playback = PipeWirePlayback(config.playback_target)
+        self._greeting_audio = (
+            config.greeting_audio_file.read_bytes() if config.greeting_audio_file else None
+        )
         self.state = DialogueState.IDLE
 
     def run_session(self) -> None:
         session = self._client.open_session()
         reason = "error"
         try:
+            if self._greeting_audio is not None:
+                self.state = DialogueState.ACKNOWLEDGING
+                self._playback.play(self._greeting_audio)
             while True:
                 self.state = DialogueState.LISTENING
                 utterance = capture_utterance(

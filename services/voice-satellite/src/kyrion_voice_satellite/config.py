@@ -18,6 +18,8 @@ class SatelliteConfig:
     satellite_id: str | None = None
     credential_file: Path | None = None
     locale: str = "de"
+    greeting_audio_file: Path | None = None
+    playback_target: str | None = None
 
     @classmethod
     def load(cls, path: Path) -> SatelliteConfig:
@@ -35,6 +37,8 @@ class SatelliteConfig:
         satellite_id = value.get("satellite_id")
         credential_file = value.get("credential_file")
         locale = value.get("locale", "de")
+        greeting_audio_file = value.get("greeting_audio_file")
+        playback_target = value.get("playback_target")
         if not isinstance(model_path, str) or not model_path.startswith("/"):
             raise ValueError("Model path must be absolute")
         if not isinstance(capture_device, str) or not capture_device.startswith("hw:"):
@@ -66,10 +70,22 @@ class SatelliteConfig:
             raise ValueError("Credential file path must be absolute")
         if locale not in {"de", "en"}:
             raise ValueError("Locale must be de or en")
+        if greeting_audio_file is not None and (
+            not isinstance(greeting_audio_file, str) or not greeting_audio_file.startswith("/")
+        ):
+            raise ValueError("Greeting audio file path must be absolute")
+        if playback_target is not None and (
+            not isinstance(playback_target, str)
+            or not playback_target.startswith("bluez_output.")
+            or len(playback_target) > 160
+        ):
+            raise ValueError("Playback target must be a bounded Bluetooth sink name")
         return cls(
             Path(model_path), capture_device, float(threshold), float(cooldown),
             float(speech_start_timeout), float(speech_end_silence), float(utterance_max),
             core_url, satellite_id, Path(credential_file) if credential_file else None, locale,
+            Path(greeting_audio_file) if greeting_audio_file else None,
+            playback_target,
         )
 
     @property
