@@ -39,6 +39,7 @@ class AuthenticatedRouteConfiguration(
             "/v1/device-commands/**",
             "/v1/devices/**",
             "/v1/gateways/**",
+            "/v1/voice-satellites/**",
         )
     }
 }
