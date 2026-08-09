@@ -1,0 +1,150 @@
+{
+  "warmRunsPerStrategy": 3,
+  "text": "long",
+  "aggregates": [
+    {
+      "strategy": "fixed-5-context-25",
+      "initialFrames": 5,
+      "strideFrames": 5,
+      "contextFrames": 25,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 1248.386,
+      "firstPlayablePcmMinMs": 1149.227,
+      "firstPlayablePcmMaxMs": 1423.309,
+      "generationCompleteMeanMs": 23477.687,
+      "decodeCountMean": 22.333,
+      "alignedRmseMean": 0.018,
+      "maxBoundaryJump": 0.102112,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "fixed-5-context-50",
+      "initialFrames": 5,
+      "strideFrames": 5,
+      "contextFrames": 50,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 1306.352,
+      "firstPlayablePcmMinMs": 1239.704,
+      "firstPlayablePcmMaxMs": 1438.071,
+      "generationCompleteMeanMs": 23197.541,
+      "decodeCountMean": 22.333,
+      "alignedRmseMean": 0.017,
+      "maxBoundaryJump": 0.131638,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "start-5-then-20",
+      "initialFrames": 5,
+      "strideFrames": 20,
+      "contextFrames": 50,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 1139.244,
+      "firstPlayablePcmMinMs": 1113.671,
+      "firstPlayablePcmMaxMs": 1152.176,
+      "generationCompleteMeanMs": 22618.198,
+      "decodeCountMean": 6.667,
+      "alignedRmseMean": 0.017,
+      "maxBoundaryJump": 0.131363,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "start-5-then-20-xfade-40ms",
+      "initialFrames": 5,
+      "strideFrames": 20,
+      "contextFrames": 50,
+      "crossfadeMs": 40,
+      "firstPlayablePcmMeanMs": 1063.581,
+      "firstPlayablePcmMinMs": 1038.147,
+      "firstPlayablePcmMaxMs": 1103.113,
+      "generationCompleteMeanMs": 22054.964,
+      "decodeCountMean": 6.667,
+      "alignedRmseMean": 0.017,
+      "maxBoundaryJump": 0.036682,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "fixed-10-context-25",
+      "initialFrames": 10,
+      "strideFrames": 10,
+      "contextFrames": 25,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 2266.89,
+      "firstPlayablePcmMinMs": 2249.655,
+      "firstPlayablePcmMaxMs": 2284.435,
+      "generationCompleteMeanMs": 22020.802,
+      "decodeCountMean": 11.667,
+      "alignedRmseMean": 0.015,
+      "maxBoundaryJump": 0.087341,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "fixed-10-context-50",
+      "initialFrames": 10,
+      "strideFrames": 10,
+      "contextFrames": 50,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 3274.419,
+      "firstPlayablePcmMinMs": 2071.866,
+      "firstPlayablePcmMaxMs": 5412.974,
+      "generationCompleteMeanMs": 28871.376,
+      "decodeCountMean": 11.667,
+      "alignedRmseMean": 0.013,
+      "maxBoundaryJump": 0.101074,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "start-10-then-20",
+      "initialFrames": 10,
+      "strideFrames": 20,
+      "contextFrames": 50,
+      "crossfadeMs": 0,
+      "firstPlayablePcmMeanMs": 2309.332,
+      "firstPlayablePcmMinMs": 2085.713,
+      "firstPlayablePcmMaxMs": 2531.468,
+      "generationCompleteMeanMs": 26387.992,
+      "decodeCountMean": 6.667,
+      "alignedRmseMean": 0.013,
+      "maxBoundaryJump": 0.100952,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    },
+    {
+      "strategy": "start-10-then-20-xfade-40ms",
+      "initialFrames": 10,
+      "strideFrames": 20,
+      "contextFrames": 50,
+      "crossfadeMs": 40,
+      "firstPlayablePcmMeanMs": 2131.214,
+      "firstPlayablePcmMinMs": 2027.76,
+      "firstPlayablePcmMaxMs": 2248.598,
+      "generationCompleteMeanMs": 24541.545,
+      "decodeCountMean": 6.667,
+      "alignedRmseMean": 0.013,
+      "maxBoundaryJump": 0.128357,
+      "lengthDeltas": [
+        0
+      ],
+      "peakAllocatedVramMiB": 4617.897
+    }
+  ]
+}

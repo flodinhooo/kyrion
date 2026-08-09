@@ -1,0 +1,65 @@
+{
+  "textId": "long",
+  "windowFrames": 15,
+  "run": 3,
+  "firstCodecFrameMs": 295.318,
+  "firstPlayablePcmMs": 3366.983,
+  "generationCompleteMs": 23404.533,
+  "generatedFrames": 112,
+  "audioDurationSeconds": 8.96,
+  "rtf": 2.612113,
+  "decodeTotalSeconds": 0.835391,
+  "decodeCount": 8,
+  "memory": {
+    "allocatedMiB": 4050.698,
+    "reservedMiB": 4818.0,
+    "peakAllocatedMiB": 4617.897,
+    "processPeakRssMiB": 4657.125
+  },
+  "quality": {
+    "streamedSamples": 215040,
+    "fullSamples": 215040,
+    "lengthDeltaSamples": 0,
+    "lengthDeltaMs": 0.0,
+    "alignedRmse": 0.010865,
+    "boundaryCount": 7,
+    "maxBoundaryJump": 0.041645,
+    "boundaries": [
+      {
+        "sample": 28800,
+        "absoluteJump": 0.00177,
+        "localRms": 0.125205
+      },
+      {
+        "sample": 57600,
+        "absoluteJump": 0.00809,
+        "localRms": 0.057088
+      },
+      {
+        "sample": 86400,
+        "absoluteJump": 0.041645,
+        "localRms": 0.035968
+      },
+      {
+        "sample": 115200,
+        "absoluteJump": 0.036537,
+        "localRms": 0.027596
+      },
+      {
+        "sample": 144000,
+        "absoluteJump": 0.005554,
+        "localRms": 0.082435
+      },
+      {
+        "sample": 172800,
+        "absoluteJump": 0.00102,
+        "localRms": 0.004581
+      },
+      {
+        "sample": 201600,
+        "absoluteJump": 0.014592,
+        "localRms": 0.013013
+      }
+    ]
+  }
+}

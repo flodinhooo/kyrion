@@ -1,0 +1,2526 @@
+{
+  "model": "Qwen3-TTS-12Hz-1.7B-Base",
+  "dtype": "float16",
+  "attentionImplementation": "sdpa",
+  "referenceSha256": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+  "modelLoadSeconds": 34.494875,
+  "conditioningSeconds": 18.634065,
+  "warmIdleMemory": {
+    "allocatedMiB": 4050.188,
+    "reservedMiB": 4818.0,
+    "peakAllocatedMiB": 4155.802,
+    "processPeakRssMiB": 4656.812
+  },
+  "overlapFrames": 25,
+  "runs": [
+    {
+      "textId": "short",
+      "windowFrames": 5,
+      "run": 1,
+      "firstCodecFrameMs": 1366.122,
+      "firstPlayablePcmMs": 2614.299,
+      "generationCompleteMs": 5997.262,
+      "generatedFrames": 18,
+      "audioDurationSeconds": 1.44,
+      "rtf": 4.164765,
+      "decodeTotalSeconds": 1.568522,
+      "decodeCount": 4,
+      "memory": {
+        "allocatedMiB": 4050.274,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4396.156,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 34560,
+        "fullSamples": 34560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.019064,
+        "boundaryCount": 3,
+        "maxBoundaryJump": 0.054726,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 2e-06,
+            "localRms": 1.3e-05
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.020386,
+            "localRms": 0.209259
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.054726,
+            "localRms": 0.063903
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 5,
+      "run": 2,
+      "firstCodecFrameMs": 250.349,
+      "firstPlayablePcmMs": 1046.747,
+      "generationCompleteMs": 3336.747,
+      "generatedFrames": 16,
+      "audioDurationSeconds": 1.28,
+      "rtf": 2.606834,
+      "decodeTotalSeconds": 1.039948,
+      "decodeCount": 4,
+      "memory": {
+        "allocatedMiB": 4050.265,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4391.444,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 30720,
+        "fullSamples": 30720,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.065266,
+        "boundaryCount": 3,
+        "maxBoundaryJump": 0.021633,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 0.000483,
+            "localRms": 0.062093
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.000122,
+            "localRms": 0.087021
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.021633,
+            "localRms": 0.055146
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 5,
+      "run": 3,
+      "firstCodecFrameMs": 269.035,
+      "firstPlayablePcmMs": 1221.279,
+      "generationCompleteMs": 3461.337,
+      "generatedFrames": 15,
+      "audioDurationSeconds": 1.2,
+      "rtf": 2.884447,
+      "decodeTotalSeconds": 0.138708,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.26,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4389.086,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 28800,
+        "fullSamples": 28800,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.013842,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.032593,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 0.032593,
+            "localRms": 0.084495
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.014038,
+            "localRms": 0.09999
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 10,
+      "run": 1,
+      "firstCodecFrameMs": 309.354,
+      "firstPlayablePcmMs": 2523.345,
+      "generationCompleteMs": 4015.53,
+      "generatedFrames": 18,
+      "audioDurationSeconds": 1.44,
+      "rtf": 2.788563,
+      "decodeTotalSeconds": 0.431087,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.274,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4396.156,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 34560,
+        "fullSamples": 34560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.014085,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.024536,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.024536,
+            "localRms": 0.20211
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 10,
+      "run": 2,
+      "firstCodecFrameMs": 275.312,
+      "firstPlayablePcmMs": 2060.529,
+      "generationCompleteMs": 3351.03,
+      "generatedFrames": 16,
+      "audioDurationSeconds": 1.28,
+      "rtf": 2.617992,
+      "decodeTotalSeconds": 0.084825,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.265,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4391.444,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 30720,
+        "fullSamples": 30720,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.062884,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.002502,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.002502,
+            "localRms": 0.083011
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 10,
+      "run": 3,
+      "firstCodecFrameMs": 301.169,
+      "firstPlayablePcmMs": 2211.805,
+      "generationCompleteMs": 3307.5,
+      "generatedFrames": 15,
+      "audioDurationSeconds": 1.2,
+      "rtf": 2.75625,
+      "decodeTotalSeconds": 0.094585,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.26,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4389.086,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 28800,
+        "fullSamples": 28800,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.009359,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.00238,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.00238,
+            "localRms": 0.097032
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 15,
+      "run": 1,
+      "firstCodecFrameMs": 280.475,
+      "firstPlayablePcmMs": 3422.576,
+      "generationCompleteMs": 4019.397,
+      "generatedFrames": 18,
+      "audioDurationSeconds": 1.44,
+      "rtf": 2.791248,
+      "decodeTotalSeconds": 0.420873,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.274,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4396.156,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 34560,
+        "fullSamples": 34560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.008614,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.014252,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.014252,
+            "localRms": 0.060809
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 15,
+      "run": 2,
+      "firstCodecFrameMs": 236.003,
+      "firstPlayablePcmMs": 2981.737,
+      "generationCompleteMs": 3186.174,
+      "generatedFrames": 16,
+      "audioDurationSeconds": 1.28,
+      "rtf": 2.489198,
+      "decodeTotalSeconds": 0.084103,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.265,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4391.444,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 30720,
+        "fullSamples": 30720,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011563,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.004127,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.004127,
+            "localRms": 0.05297
+          }
+        ]
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 15,
+      "run": 3,
+      "firstCodecFrameMs": 247.553,
+      "firstPlayablePcmMs": 3175.445,
+      "generationCompleteMs": 3183.572,
+      "generatedFrames": 15,
+      "audioDurationSeconds": 1.2,
+      "rtf": 2.652977,
+      "decodeTotalSeconds": 0.06321,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.26,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4389.086,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 28800,
+        "fullSamples": 28800,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.007959,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 20,
+      "run": 1,
+      "firstCodecFrameMs": 269.082,
+      "firstPlayablePcmMs": 4028.277,
+      "generationCompleteMs": 3624.634,
+      "generatedFrames": 18,
+      "audioDurationSeconds": 1.44,
+      "rtf": 2.517107,
+      "decodeTotalSeconds": 0.354139,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.274,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4396.156,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 34560,
+        "fullSamples": 34560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.008142,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 20,
+      "run": 2,
+      "firstCodecFrameMs": 251.526,
+      "firstPlayablePcmMs": 3626.739,
+      "generationCompleteMs": 3273.622,
+      "generatedFrames": 16,
+      "audioDurationSeconds": 1.28,
+      "rtf": 2.557517,
+      "decodeTotalSeconds": 0.345103,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.265,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4391.444,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 30720,
+        "fullSamples": 30720,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011088,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 20,
+      "run": 3,
+      "firstCodecFrameMs": 294.687,
+      "firstPlayablePcmMs": 3343.94,
+      "generationCompleteMs": 3277.007,
+      "generatedFrames": 15,
+      "audioDurationSeconds": 1.2,
+      "rtf": 2.730839,
+      "decodeTotalSeconds": 0.058739,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.26,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4389.086,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 28800,
+        "fullSamples": 28800,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.007959,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 25,
+      "run": 1,
+      "firstCodecFrameMs": 293.649,
+      "firstPlayablePcmMs": 3808.584,
+      "generationCompleteMs": 3693.483,
+      "generatedFrames": 18,
+      "audioDurationSeconds": 1.44,
+      "rtf": 2.564919,
+      "decodeTotalSeconds": 0.066007,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.274,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4396.156,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 34560,
+        "fullSamples": 34560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.008142,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 25,
+      "run": 2,
+      "firstCodecFrameMs": 279.649,
+      "firstPlayablePcmMs": 3368.015,
+      "generationCompleteMs": 3292.933,
+      "generatedFrames": 16,
+      "audioDurationSeconds": 1.28,
+      "rtf": 2.572604,
+      "decodeTotalSeconds": 0.067609,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.265,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4391.444,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 30720,
+        "fullSamples": 30720,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011088,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "short",
+      "windowFrames": 25,
+      "run": 3,
+      "firstCodecFrameMs": 296.241,
+      "firstPlayablePcmMs": 3199.935,
+      "generationCompleteMs": 3126.8,
+      "generatedFrames": 15,
+      "audioDurationSeconds": 1.2,
+      "rtf": 2.605667,
+      "decodeTotalSeconds": 0.065232,
+      "decodeCount": 1,
+      "memory": {
+        "allocatedMiB": 4050.26,
+        "reservedMiB": 4494.0,
+        "peakAllocatedMiB": 4389.086,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 28800,
+        "fullSamples": 28800,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.007959,
+        "boundaryCount": 0,
+        "maxBoundaryJump": 0.0,
+        "boundaries": []
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 5,
+      "run": 1,
+      "firstCodecFrameMs": 253.275,
+      "firstPlayablePcmMs": 1117.81,
+      "generationCompleteMs": 9549.578,
+      "generatedFrames": 44,
+      "audioDurationSeconds": 3.52,
+      "rtf": 2.712948,
+      "decodeTotalSeconds": 0.782414,
+      "decodeCount": 9,
+      "memory": {
+        "allocatedMiB": 4050.391,
+        "reservedMiB": 4622.0,
+        "peakAllocatedMiB": 4457.779,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 84480,
+        "fullSamples": 84480,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.024422,
+        "boundaryCount": 8,
+        "maxBoundaryJump": 0.05542,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 4e-06,
+            "localRms": 1.3e-05
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 3e-06,
+            "localRms": 2.2e-05
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.010254,
+            "localRms": 0.194059
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.01001,
+            "localRms": 0.164875
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 0.018169,
+            "localRms": 0.022504
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.05542,
+            "localRms": 0.133517
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 0.002014,
+            "localRms": 0.111341
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.011173,
+            "localRms": 0.022167
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 5,
+      "run": 2,
+      "firstCodecFrameMs": 282.262,
+      "firstPlayablePcmMs": 1115.868,
+      "generationCompleteMs": 9219.034,
+      "generatedFrames": 43,
+      "audioDurationSeconds": 3.44,
+      "rtf": 2.679952,
+      "decodeTotalSeconds": 0.740109,
+      "decodeCount": 9,
+      "memory": {
+        "allocatedMiB": 4050.387,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4455.083,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 82560,
+        "fullSamples": 82560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.020186,
+        "boundaryCount": 8,
+        "maxBoundaryJump": 0.003723,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 7.8e-05,
+            "localRms": 0.031048
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.00354,
+            "localRms": 0.15213
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.003723,
+            "localRms": 0.136161
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000484,
+            "localRms": 0.019516
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 0.000159,
+            "localRms": 0.002956
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000412,
+            "localRms": 0.027696
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 0.001594,
+            "localRms": 0.014855
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.000153,
+            "localRms": 0.020874
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 5,
+      "run": 3,
+      "firstCodecFrameMs": 261.769,
+      "firstPlayablePcmMs": 1152.652,
+      "generationCompleteMs": 7822.994,
+      "generatedFrames": 38,
+      "audioDurationSeconds": 3.04,
+      "rtf": 2.573353,
+      "decodeTotalSeconds": 0.365222,
+      "decodeCount": 8,
+      "memory": {
+        "allocatedMiB": 4050.364,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4443.301,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 72960,
+        "fullSamples": 72960,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.019362,
+        "boundaryCount": 7,
+        "maxBoundaryJump": 0.023071,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 0.023071,
+            "localRms": 0.09658
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.005249,
+            "localRms": 0.121167
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.01099,
+            "localRms": 0.131438
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.011414,
+            "localRms": 0.087902
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 0.002502,
+            "localRms": 0.086176
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.001801,
+            "localRms": 0.021865
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 8e-05,
+            "localRms": 0.000734
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 10,
+      "run": 1,
+      "firstCodecFrameMs": 256.39,
+      "firstPlayablePcmMs": 2268.968,
+      "generationCompleteMs": 9019.282,
+      "generatedFrames": 44,
+      "audioDurationSeconds": 3.52,
+      "rtf": 2.562296,
+      "decodeTotalSeconds": 0.284372,
+      "decodeCount": 5,
+      "memory": {
+        "allocatedMiB": 4050.391,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4457.799,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 84480,
+        "fullSamples": 84480,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.024302,
+        "boundaryCount": 4,
+        "maxBoundaryJump": 0.055191,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 2e-06,
+            "localRms": 2.2e-05
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.01001,
+            "localRms": 0.16487
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.055191,
+            "localRms": 0.133532
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.010342,
+            "localRms": 0.022153
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 10,
+      "run": 2,
+      "firstCodecFrameMs": 247.997,
+      "firstPlayablePcmMs": 2189.346,
+      "generationCompleteMs": 9265.693,
+      "generatedFrames": 43,
+      "audioDurationSeconds": 3.44,
+      "rtf": 2.693515,
+      "decodeTotalSeconds": 0.261784,
+      "decodeCount": 5,
+      "memory": {
+        "allocatedMiB": 4050.387,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4455.083,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 82560,
+        "fullSamples": 82560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.01536,
+        "boundaryCount": 4,
+        "maxBoundaryJump": 0.025635,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.025635,
+            "localRms": 0.144418
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000542,
+            "localRms": 0.019516
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000412,
+            "localRms": 0.027694
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.001434,
+            "localRms": 0.021323
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 10,
+      "run": 3,
+      "firstCodecFrameMs": 235.139,
+      "firstPlayablePcmMs": 1988.671,
+      "generationCompleteMs": 7889.651,
+      "generatedFrames": 38,
+      "audioDurationSeconds": 3.04,
+      "rtf": 2.59528,
+      "decodeTotalSeconds": 0.533786,
+      "decodeCount": 4,
+      "memory": {
+        "allocatedMiB": 4050.364,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4443.301,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 72960,
+        "fullSamples": 72960,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.014342,
+        "boundaryCount": 3,
+        "maxBoundaryJump": 0.011414,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.003174,
+            "localRms": 0.114755
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.011414,
+            "localRms": 0.087899
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.001801,
+            "localRms": 0.021865
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 15,
+      "run": 1,
+      "firstCodecFrameMs": 278.642,
+      "firstPlayablePcmMs": 3110.645,
+      "generationCompleteMs": 8994.114,
+      "generatedFrames": 44,
+      "audioDurationSeconds": 3.52,
+      "rtf": 2.555146,
+      "decodeTotalSeconds": 0.483417,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.391,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4457.799,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 84480,
+        "fullSamples": 84480,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.018184,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.055084,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.032837,
+            "localRms": 0.187838
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.055084,
+            "localRms": 0.133539
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 15,
+      "run": 2,
+      "firstCodecFrameMs": 269.995,
+      "firstPlayablePcmMs": 3373.47,
+      "generationCompleteMs": 8756.998,
+      "generatedFrames": 43,
+      "audioDurationSeconds": 3.44,
+      "rtf": 2.545639,
+      "decodeTotalSeconds": 0.559089,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.387,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4455.083,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 82560,
+        "fullSamples": 82560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011639,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.000732,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.000732,
+            "localRms": 0.13312
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000412,
+            "localRms": 0.027694
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 15,
+      "run": 3,
+      "firstCodecFrameMs": 271.275,
+      "firstPlayablePcmMs": 3225.762,
+      "generationCompleteMs": 8013.046,
+      "generatedFrames": 38,
+      "audioDurationSeconds": 3.04,
+      "rtf": 2.63587,
+      "decodeTotalSeconds": 0.178123,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.364,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4443.301,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 72960,
+        "fullSamples": 72960,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010757,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.030155,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.030155,
+            "localRms": 0.126103
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.001801,
+            "localRms": 0.021865
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 20,
+      "run": 1,
+      "firstCodecFrameMs": 231.663,
+      "firstPlayablePcmMs": 4276.037,
+      "generationCompleteMs": 9475.1,
+      "generatedFrames": 44,
+      "audioDurationSeconds": 3.52,
+      "rtf": 2.69179,
+      "decodeTotalSeconds": 0.457763,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.391,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4457.799,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 84480,
+        "fullSamples": 84480,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.013569,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.011108,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.011108,
+            "localRms": 0.157704
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.009869,
+            "localRms": 0.022154
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 20,
+      "run": 2,
+      "firstCodecFrameMs": 253.415,
+      "firstPlayablePcmMs": 3966.582,
+      "generationCompleteMs": 8817.499,
+      "generatedFrames": 43,
+      "audioDurationSeconds": 3.44,
+      "rtf": 2.563226,
+      "decodeTotalSeconds": 0.20664,
+      "decodeCount": 3,
+      "memory": {
+        "allocatedMiB": 4050.387,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4455.083,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 82560,
+        "fullSamples": 82560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010262,
+        "boundaryCount": 2,
+        "maxBoundaryJump": 0.001009,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.001009,
+            "localRms": 0.018566
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.000519,
+            "localRms": 0.021269
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 20,
+      "run": 3,
+      "firstCodecFrameMs": 257.838,
+      "firstPlayablePcmMs": 4440.476,
+      "generationCompleteMs": 7859.039,
+      "generatedFrames": 38,
+      "audioDurationSeconds": 3.04,
+      "rtf": 2.58521,
+      "decodeTotalSeconds": 0.124076,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.364,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4443.301,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 72960,
+        "fullSamples": 72960,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.009327,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.009888,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.009888,
+            "localRms": 0.085393
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 25,
+      "run": 1,
+      "firstCodecFrameMs": 294.459,
+      "firstPlayablePcmMs": 5345.338,
+      "generationCompleteMs": 8829.741,
+      "generatedFrames": 44,
+      "audioDurationSeconds": 3.52,
+      "rtf": 2.508449,
+      "decodeTotalSeconds": 0.557604,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.391,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4457.799,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 84480,
+        "fullSamples": 84480,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011831,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.013476,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 0.013476,
+            "localRms": 0.02234
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 25,
+      "run": 2,
+      "firstCodecFrameMs": 261.461,
+      "firstPlayablePcmMs": 5207.73,
+      "generationCompleteMs": 8831.238,
+      "generatedFrames": 43,
+      "audioDurationSeconds": 3.44,
+      "rtf": 2.56722,
+      "decodeTotalSeconds": 0.145373,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.387,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4455.083,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 82560,
+        "fullSamples": 82560,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.00832,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.000824,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 0.000824,
+            "localRms": 0.00282
+          }
+        ]
+      }
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 25,
+      "run": 3,
+      "firstCodecFrameMs": 233.735,
+      "firstPlayablePcmMs": 5255.128,
+      "generationCompleteMs": 7930.938,
+      "generatedFrames": 38,
+      "audioDurationSeconds": 3.04,
+      "rtf": 2.608861,
+      "decodeTotalSeconds": 0.149754,
+      "decodeCount": 2,
+      "memory": {
+        "allocatedMiB": 4050.364,
+        "reservedMiB": 4624.0,
+        "peakAllocatedMiB": 4443.301,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 72960,
+        "fullSamples": 72960,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.008927,
+        "boundaryCount": 1,
+        "maxBoundaryJump": 0.007751,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 0.007751,
+            "localRms": 0.084448
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 5,
+      "run": 1,
+      "firstCodecFrameMs": 281.041,
+      "firstPlayablePcmMs": 1180.912,
+      "generationCompleteMs": 24280.271,
+      "generatedFrames": 111,
+      "audioDurationSeconds": 8.88,
+      "rtf": 2.734265,
+      "decodeTotalSeconds": 1.470897,
+      "decodeCount": 23,
+      "memory": {
+        "allocatedMiB": 4050.694,
+        "reservedMiB": 4816.0,
+        "peakAllocatedMiB": 4615.552,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 213120,
+        "fullSamples": 213120,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.023754,
+        "boundaryCount": 22,
+        "maxBoundaryJump": 0.030518,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 4e-06,
+            "localRms": 1.3e-05
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.030518,
+            "localRms": 0.134789
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.001221,
+            "localRms": 0.066195
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.001106,
+            "localRms": 0.003399
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 0.019264,
+            "localRms": 0.028385
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000977,
+            "localRms": 0.163863
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 0.007812,
+            "localRms": 0.124395
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.021667,
+            "localRms": 0.15287
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.003357,
+            "localRms": 0.025127
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 6.2e-05,
+            "localRms": 0.000158
+          },
+          {
+            "sample": 105600,
+            "absoluteJump": 0.010273,
+            "localRms": 0.026869
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 3e-06,
+            "localRms": 0.000123
+          },
+          {
+            "sample": 124800,
+            "absoluteJump": 0.001427,
+            "localRms": 0.060495
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.023254,
+            "localRms": 0.106833
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.004578,
+            "localRms": 0.0801
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 4e-05,
+            "localRms": 0.002463
+          },
+          {
+            "sample": 163200,
+            "absoluteJump": 3.1e-05,
+            "localRms": 6.3e-05
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.000515,
+            "localRms": 0.039183
+          },
+          {
+            "sample": 182400,
+            "absoluteJump": 0.000867,
+            "localRms": 0.003299
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.005432,
+            "localRms": 0.093455
+          },
+          {
+            "sample": 201600,
+            "absoluteJump": 0.017242,
+            "localRms": 0.063205
+          },
+          {
+            "sample": 211200,
+            "absoluteJump": 0.000374,
+            "localRms": 0.005359
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 5,
+      "run": 2,
+      "firstCodecFrameMs": 303.188,
+      "firstPlayablePcmMs": 1179.481,
+      "generationCompleteMs": 21510.586,
+      "generatedFrames": 101,
+      "audioDurationSeconds": 8.08,
+      "rtf": 2.662201,
+      "decodeTotalSeconds": 1.304084,
+      "decodeCount": 21,
+      "memory": {
+        "allocatedMiB": 4050.649,
+        "reservedMiB": 4816.0,
+        "peakAllocatedMiB": 4592.148,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 193920,
+        "fullSamples": 193920,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.015378,
+        "boundaryCount": 20,
+        "maxBoundaryJump": 0.102112,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 3e-05,
+            "localRms": 0.000239
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.005173,
+            "localRms": 0.035584
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 5e-05,
+            "localRms": 0.000659
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000408,
+            "localRms": 0.003187
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 0.012311,
+            "localRms": 0.150847
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000175,
+            "localRms": 0.01806
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 0.001873,
+            "localRms": 0.037573
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 3e-05,
+            "localRms": 0.001501
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.102112,
+            "localRms": 0.096158
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.006104,
+            "localRms": 0.040951
+          },
+          {
+            "sample": 105600,
+            "absoluteJump": 0.012005,
+            "localRms": 0.011553
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.004608,
+            "localRms": 0.076498
+          },
+          {
+            "sample": 124800,
+            "absoluteJump": 0.006226,
+            "localRms": 0.122851
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.012177,
+            "localRms": 0.059043
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 8e-06,
+            "localRms": 0.001596
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 0.007942,
+            "localRms": 0.038952
+          },
+          {
+            "sample": 163200,
+            "absoluteJump": 0.000668,
+            "localRms": 0.009383
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.030968,
+            "localRms": 0.114357
+          },
+          {
+            "sample": 182400,
+            "absoluteJump": 0.003418,
+            "localRms": 0.121287
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.003632,
+            "localRms": 0.014855
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 5,
+      "run": 3,
+      "firstCodecFrameMs": 265.331,
+      "firstPlayablePcmMs": 1128.036,
+      "generationCompleteMs": 23764.921,
+      "generatedFrames": 112,
+      "audioDurationSeconds": 8.96,
+      "rtf": 2.652335,
+      "decodeTotalSeconds": 1.455967,
+      "decodeCount": 23,
+      "memory": {
+        "allocatedMiB": 4050.698,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4617.897,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 215040,
+        "fullSamples": 215040,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.01429,
+        "boundaryCount": 22,
+        "maxBoundaryJump": 0.03973,
+        "boundaries": [
+          {
+            "sample": 9600,
+            "absoluteJump": 0.037231,
+            "localRms": 0.164516
+          },
+          {
+            "sample": 19200,
+            "absoluteJump": 0.00499,
+            "localRms": 0.101518
+          },
+          {
+            "sample": 28800,
+            "absoluteJump": 0.022278,
+            "localRms": 0.130677
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000395,
+            "localRms": 0.003819
+          },
+          {
+            "sample": 48000,
+            "absoluteJump": 1e-05,
+            "localRms": 7.5e-05
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.008219,
+            "localRms": 0.057079
+          },
+          {
+            "sample": 67200,
+            "absoluteJump": 0.004166,
+            "localRms": 0.053038
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.002441,
+            "localRms": 0.058209
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.03973,
+            "localRms": 0.033903
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.029846,
+            "localRms": 0.084436
+          },
+          {
+            "sample": 105600,
+            "absoluteJump": 0.015625,
+            "localRms": 0.105663
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.034676,
+            "localRms": 0.028408
+          },
+          {
+            "sample": 124800,
+            "absoluteJump": 0.000355,
+            "localRms": 0.012615
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.001709,
+            "localRms": 0.092669
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.015381,
+            "localRms": 0.082171
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 5e-06,
+            "localRms": 3.5e-05
+          },
+          {
+            "sample": 163200,
+            "absoluteJump": 0.000231,
+            "localRms": 0.001106
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.000885,
+            "localRms": 0.004193
+          },
+          {
+            "sample": 182400,
+            "absoluteJump": 0.01535,
+            "localRms": 0.11013
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.023972,
+            "localRms": 0.096273
+          },
+          {
+            "sample": 201600,
+            "absoluteJump": 0.009455,
+            "localRms": 0.013441
+          },
+          {
+            "sample": 211200,
+            "absoluteJump": 0.000114,
+            "localRms": 0.040457
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 10,
+      "run": 1,
+      "firstCodecFrameMs": 236.068,
+      "firstPlayablePcmMs": 2061.225,
+      "generationCompleteMs": 23072.138,
+      "generatedFrames": 111,
+      "audioDurationSeconds": 8.88,
+      "rtf": 2.598214,
+      "decodeTotalSeconds": 0.664512,
+      "decodeCount": 12,
+      "memory": {
+        "allocatedMiB": 4050.694,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4615.556,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 213120,
+        "fullSamples": 213120,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.018813,
+        "boundaryCount": 11,
+        "maxBoundaryJump": 0.087341,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.087341,
+            "localRms": 0.129037
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.001118,
+            "localRms": 0.003399
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.001099,
+            "localRms": 0.163867
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.033813,
+            "localRms": 0.153093
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 5e-05,
+            "localRms": 0.00016
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 3e-06,
+            "localRms": 0.000123
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.01947,
+            "localRms": 0.108197
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 1.8e-05,
+            "localRms": 0.002462
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.000378,
+            "localRms": 0.03921
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.002106,
+            "localRms": 0.095431
+          },
+          {
+            "sample": 211200,
+            "absoluteJump": 0.000416,
+            "localRms": 0.005385
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 10,
+      "run": 2,
+      "firstCodecFrameMs": 241.655,
+      "firstPlayablePcmMs": 2014.294,
+      "generationCompleteMs": 20876.63,
+      "generatedFrames": 101,
+      "audioDurationSeconds": 8.08,
+      "rtf": 2.583741,
+      "decodeTotalSeconds": 0.593777,
+      "decodeCount": 11,
+      "memory": {
+        "allocatedMiB": 4050.649,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4592.148,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 193920,
+        "fullSamples": 193920,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.012862,
+        "boundaryCount": 10,
+        "maxBoundaryJump": 0.033821,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.004395,
+            "localRms": 0.033484
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.00041,
+            "localRms": 0.003188
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000145,
+            "localRms": 0.018056
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 4.4e-05,
+            "localRms": 0.001503
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.008667,
+            "localRms": 0.039505
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.00032,
+            "localRms": 0.076415
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.013977,
+            "localRms": 0.059622
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 0.007523,
+            "localRms": 0.039923
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.033821,
+            "localRms": 0.114239
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.00235,
+            "localRms": 0.014379
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 10,
+      "run": 3,
+      "firstCodecFrameMs": 225.14,
+      "firstPlayablePcmMs": 2030.849,
+      "generationCompleteMs": 22223.638,
+      "generatedFrames": 112,
+      "audioDurationSeconds": 8.96,
+      "rtf": 2.480317,
+      "decodeTotalSeconds": 0.63022,
+      "decodeCount": 12,
+      "memory": {
+        "allocatedMiB": 4050.698,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4617.897,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 215040,
+        "fullSamples": 215040,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.012145,
+        "boundaryCount": 11,
+        "maxBoundaryJump": 0.037338,
+        "boundaries": [
+          {
+            "sample": 19200,
+            "absoluteJump": 0.037338,
+            "localRms": 0.095289
+          },
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000385,
+            "localRms": 0.003818
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.00812,
+            "localRms": 0.057086
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.003052,
+            "localRms": 0.060535
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.028076,
+            "localRms": 0.085203
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.035988,
+            "localRms": 0.028255
+          },
+          {
+            "sample": 134400,
+            "absoluteJump": 0.006714,
+            "localRms": 0.093378
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 1.1e-05,
+            "localRms": 3.5e-05
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.000797,
+            "localRms": 0.004462
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.019398,
+            "localRms": 0.096343
+          },
+          {
+            "sample": 211200,
+            "absoluteJump": 0.000389,
+            "localRms": 0.040838
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 15,
+      "run": 1,
+      "firstCodecFrameMs": 242.391,
+      "firstPlayablePcmMs": 3002.23,
+      "generationCompleteMs": 21967.988,
+      "generatedFrames": 111,
+      "audioDurationSeconds": 8.88,
+      "rtf": 2.473873,
+      "decodeTotalSeconds": 0.759755,
+      "decodeCount": 8,
+      "memory": {
+        "allocatedMiB": 4050.694,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4615.556,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 213120,
+        "fullSamples": 213120,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.017718,
+        "boundaryCount": 7,
+        "maxBoundaryJump": 0.018082,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.007309,
+            "localRms": 0.062729
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000977,
+            "localRms": 0.163863
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.006439,
+            "localRms": 0.026084
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 1e-05,
+            "localRms": 0.000123
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.012817,
+            "localRms": 0.080248
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.00016,
+            "localRms": 0.039224
+          },
+          {
+            "sample": 201600,
+            "absoluteJump": 0.018082,
+            "localRms": 0.063005
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 15,
+      "run": 2,
+      "firstCodecFrameMs": 293.175,
+      "firstPlayablePcmMs": 3032.071,
+      "generationCompleteMs": 19970.627,
+      "generatedFrames": 101,
+      "audioDurationSeconds": 8.08,
+      "rtf": 2.471612,
+      "decodeTotalSeconds": 0.583423,
+      "decodeCount": 7,
+      "memory": {
+        "allocatedMiB": 4050.649,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4592.148,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 193920,
+        "fullSamples": 193920,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011444,
+        "boundaryCount": 6,
+        "maxBoundaryJump": 0.097137,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 7.1e-05,
+            "localRms": 0.000715
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.000206,
+            "localRms": 0.018057
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.097137,
+            "localRms": 0.096515
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.006958,
+            "localRms": 0.076181
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 5.1e-05,
+            "localRms": 0.001602
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.021942,
+            "localRms": 0.114463
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 15,
+      "run": 3,
+      "firstCodecFrameMs": 266.7,
+      "firstPlayablePcmMs": 3126.77,
+      "generationCompleteMs": 23031.203,
+      "generatedFrames": 112,
+      "audioDurationSeconds": 8.96,
+      "rtf": 2.570447,
+      "decodeTotalSeconds": 0.746373,
+      "decodeCount": 8,
+      "memory": {
+        "allocatedMiB": 4050.698,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4617.897,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 215040,
+        "fullSamples": 215040,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010865,
+        "boundaryCount": 7,
+        "maxBoundaryJump": 0.041645,
+        "boundaries": [
+          {
+            "sample": 28800,
+            "absoluteJump": 0.00177,
+            "localRms": 0.125205
+          },
+          {
+            "sample": 57600,
+            "absoluteJump": 0.00809,
+            "localRms": 0.057088
+          },
+          {
+            "sample": 86400,
+            "absoluteJump": 0.041645,
+            "localRms": 0.035968
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.036537,
+            "localRms": 0.027596
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.005554,
+            "localRms": 0.082435
+          },
+          {
+            "sample": 172800,
+            "absoluteJump": 0.00102,
+            "localRms": 0.004581
+          },
+          {
+            "sample": 201600,
+            "absoluteJump": 0.014592,
+            "localRms": 0.013013
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 20,
+      "run": 1,
+      "firstCodecFrameMs": 274.843,
+      "firstPlayablePcmMs": 4128.048,
+      "generationCompleteMs": 22222.747,
+      "generatedFrames": 111,
+      "audioDurationSeconds": 8.88,
+      "rtf": 2.502562,
+      "decodeTotalSeconds": 0.356853,
+      "decodeCount": 6,
+      "memory": {
+        "allocatedMiB": 4050.694,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4615.556,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 213120,
+        "fullSamples": 213120,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011431,
+        "boundaryCount": 5,
+        "maxBoundaryJump": 0.035645,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.00082,
+            "localRms": 0.003346
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.035645,
+            "localRms": 0.15418
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 5e-06,
+            "localRms": 0.000124
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 3.1e-05,
+            "localRms": 0.002453
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.001099,
+            "localRms": 0.095176
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 20,
+      "run": 2,
+      "firstCodecFrameMs": 250.086,
+      "firstPlayablePcmMs": 4214.066,
+      "generationCompleteMs": 21350.87,
+      "generatedFrames": 101,
+      "audioDurationSeconds": 8.08,
+      "rtf": 2.642434,
+      "decodeTotalSeconds": 0.425427,
+      "decodeCount": 6,
+      "memory": {
+        "allocatedMiB": 4050.649,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4592.148,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 193920,
+        "fullSamples": 193920,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.011445,
+        "boundaryCount": 5,
+        "maxBoundaryJump": 0.014099,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.001362,
+            "localRms": 0.003071
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 2.2e-05,
+            "localRms": 0.001502
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.014099,
+            "localRms": 0.075433
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 0.006805,
+            "localRms": 0.038938
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.002838,
+            "localRms": 0.014635
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 20,
+      "run": 3,
+      "firstCodecFrameMs": 309.515,
+      "firstPlayablePcmMs": 4361.135,
+      "generationCompleteMs": 23285.112,
+      "generatedFrames": 112,
+      "audioDurationSeconds": 8.96,
+      "rtf": 2.598785,
+      "decodeTotalSeconds": 0.730351,
+      "decodeCount": 6,
+      "memory": {
+        "allocatedMiB": 4050.698,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4617.897,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 215040,
+        "fullSamples": 215040,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010572,
+        "boundaryCount": 5,
+        "maxBoundaryJump": 0.035904,
+        "boundaries": [
+          {
+            "sample": 38400,
+            "absoluteJump": 0.000406,
+            "localRms": 0.003723
+          },
+          {
+            "sample": 76800,
+            "absoluteJump": 0.005249,
+            "localRms": 0.061747
+          },
+          {
+            "sample": 115200,
+            "absoluteJump": 0.035904,
+            "localRms": 0.026984
+          },
+          {
+            "sample": 153600,
+            "absoluteJump": 8e-06,
+            "localRms": 3.5e-05
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.021904,
+            "localRms": 0.098018
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 25,
+      "run": 1,
+      "firstCodecFrameMs": 283.008,
+      "firstPlayablePcmMs": 5253.521,
+      "generationCompleteMs": 22490.581,
+      "generatedFrames": 111,
+      "audioDurationSeconds": 8.88,
+      "rtf": 2.532723,
+      "decodeTotalSeconds": 0.313766,
+      "decodeCount": 5,
+      "memory": {
+        "allocatedMiB": 4050.694,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4615.556,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 213120,
+        "fullSamples": 213120,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010905,
+        "boundaryCount": 4,
+        "maxBoundaryJump": 0.01947,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 0.01947,
+            "localRms": 0.027348
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 3.3e-05,
+            "localRms": 0.000159
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.011414,
+            "localRms": 0.080064
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.006653,
+            "localRms": 0.095788
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 25,
+      "run": 2,
+      "firstCodecFrameMs": 284.562,
+      "firstPlayablePcmMs": 5078.489,
+      "generationCompleteMs": 19745.591,
+      "generatedFrames": 101,
+      "audioDurationSeconds": 8.08,
+      "rtf": 2.443761,
+      "decodeTotalSeconds": 0.314486,
+      "decodeCount": 5,
+      "memory": {
+        "allocatedMiB": 4050.649,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4592.148,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 193920,
+        "fullSamples": 193920,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010142,
+        "boundaryCount": 4,
+        "maxBoundaryJump": 0.012051,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 0.012051,
+            "localRms": 0.146841
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.009471,
+            "localRms": 0.040093
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 6.5e-05,
+            "localRms": 0.001601
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.004578,
+            "localRms": 0.014695
+          }
+        ]
+      }
+    },
+    {
+      "textId": "long",
+      "windowFrames": 25,
+      "run": 3,
+      "firstCodecFrameMs": 236.548,
+      "firstPlayablePcmMs": 5366.34,
+      "generationCompleteMs": 22495.321,
+      "generatedFrames": 112,
+      "audioDurationSeconds": 8.96,
+      "rtf": 2.510639,
+      "decodeTotalSeconds": 0.320591,
+      "decodeCount": 5,
+      "memory": {
+        "allocatedMiB": 4050.698,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4617.897,
+        "processPeakRssMiB": 4656.812
+      },
+      "quality": {
+        "streamedSamples": 215040,
+        "fullSamples": 215040,
+        "lengthDeltaSamples": 0,
+        "lengthDeltaMs": 0.0,
+        "alignedRmse": 0.010185,
+        "boundaryCount": 4,
+        "maxBoundaryJump": 0.03595,
+        "boundaries": [
+          {
+            "sample": 48000,
+            "absoluteJump": 1.3e-05,
+            "localRms": 7.2e-05
+          },
+          {
+            "sample": 96000,
+            "absoluteJump": 0.03595,
+            "localRms": 0.086865
+          },
+          {
+            "sample": 144000,
+            "absoluteJump": 0.007202,
+            "localRms": 0.082458
+          },
+          {
+            "sample": 192000,
+            "absoluteJump": 0.015337,
+            "localRms": 0.09792
+          }
+        ]
+      }
+    }
+  ],
+  "cancellations": [
+    {
+      "cancelAfterMs": 500,
+      "run": 1,
+      "cancelCaught": true,
+      "cancelRequestedMs": 504.168,
+      "generationStoppedMs": 651.148,
+      "cancelToStopMs": 146.98,
+      "framesProduced": 2,
+      "chunksWritten": 0,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.189,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4094.326,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 500,
+      "run": 2,
+      "cancelCaught": true,
+      "cancelRequestedMs": 504.055,
+      "generationStoppedMs": 509.919,
+      "cancelToStopMs": 5.864,
+      "framesProduced": 2,
+      "chunksWritten": 0,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.189,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4094.326,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 500,
+      "run": 3,
+      "cancelCaught": true,
+      "cancelRequestedMs": 504.147,
+      "generationStoppedMs": 593.215,
+      "cancelToStopMs": 89.068,
+      "framesProduced": 2,
+      "chunksWritten": 0,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.189,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4094.326,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 1000,
+      "run": 1,
+      "cancelCaught": true,
+      "cancelRequestedMs": 1004.44,
+      "generationStoppedMs": 1028.408,
+      "cancelToStopMs": 23.968,
+      "framesProduced": 4,
+      "chunksWritten": 0,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.19,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4094.326,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 1000,
+      "run": 2,
+      "cancelCaught": true,
+      "cancelRequestedMs": 1004.163,
+      "generationStoppedMs": 1022.554,
+      "cancelToStopMs": 18.391,
+      "framesProduced": 5,
+      "chunksWritten": 1,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.191,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4155.802,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 1000,
+      "run": 3,
+      "cancelCaught": true,
+      "cancelRequestedMs": 1004.001,
+      "generationStoppedMs": 1144.597,
+      "cancelToStopMs": 140.596,
+      "framesProduced": 4,
+      "chunksWritten": 0,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.19,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4094.326,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 2000,
+      "run": 1,
+      "cancelCaught": true,
+      "cancelRequestedMs": 2004.304,
+      "generationStoppedMs": 2038.897,
+      "cancelToStopMs": 34.593,
+      "framesProduced": 9,
+      "chunksWritten": 1,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.193,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4155.802,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 2000,
+      "run": 2,
+      "cancelCaught": true,
+      "cancelRequestedMs": 2004.09,
+      "generationStoppedMs": 2074.714,
+      "cancelToStopMs": 70.624,
+      "framesProduced": 9,
+      "chunksWritten": 1,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.193,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4155.802,
+        "processPeakRssMiB": 4656.812
+      }
+    },
+    {
+      "cancelAfterMs": 2000,
+      "run": 3,
+      "cancelCaught": true,
+      "cancelRequestedMs": 2004.077,
+      "generationStoppedMs": 2026.65,
+      "cancelToStopMs": 22.573,
+      "framesProduced": 9,
+      "chunksWritten": 1,
+      "memoryAfterCancellation": {
+        "allocatedMiB": 4050.193,
+        "reservedMiB": 4818.0,
+        "peakAllocatedMiB": 4155.802,
+        "processPeakRssMiB": 4656.812
+      }
+    }
+  ]
+}

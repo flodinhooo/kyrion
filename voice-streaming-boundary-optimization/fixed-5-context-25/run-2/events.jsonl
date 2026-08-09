@@ -1,0 +1,44 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 301.955, "frameIndex": 0}
+{"event": "FIRST_DECODE_START", "elapsedMs": 1126.701, "frameEnd": 5, "contextFrames": 25, "newFrames": 5}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 1172.63, "samples": 9600, "decodeMs": 42.508}
+{"event": "CHUNK_2_START", "elapsedMs": 2196.594, "frameEnd": 10, "contextFrames": 5, "newFrames": 5}
+{"event": "CHUNK_2", "elapsedMs": 2233.874, "samples": 9600, "decodeMs": 33.666}
+{"event": "CHUNK_3_START", "elapsedMs": 3219.266, "frameEnd": 15, "contextFrames": 10, "newFrames": 5}
+{"event": "CHUNK_3", "elapsedMs": 3271.41, "samples": 9600, "decodeMs": 48.42}
+{"event": "CHUNK_4_START", "elapsedMs": 4250.689, "frameEnd": 20, "contextFrames": 15, "newFrames": 5}
+{"event": "CHUNK_4", "elapsedMs": 4309.291, "samples": 9600, "decodeMs": 54.696}
+{"event": "CHUNK_5_START", "elapsedMs": 5256.699, "frameEnd": 25, "contextFrames": 20, "newFrames": 5}
+{"event": "CHUNK_5", "elapsedMs": 5308.938, "samples": 9600, "decodeMs": 48.128}
+{"event": "CHUNK_6_START", "elapsedMs": 6272.421, "frameEnd": 30, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_6", "elapsedMs": 6348.925, "samples": 9600, "decodeMs": 72.71}
+{"event": "CHUNK_7_START", "elapsedMs": 7248.298, "frameEnd": 35, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_7", "elapsedMs": 7307.151, "samples": 9600, "decodeMs": 55.273}
+{"event": "CHUNK_8_START", "elapsedMs": 8319.991, "frameEnd": 40, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_8", "elapsedMs": 8383.875, "samples": 9600, "decodeMs": 60.228}
+{"event": "CHUNK_9_START", "elapsedMs": 9445.21, "frameEnd": 45, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_9", "elapsedMs": 9509.161, "samples": 9600, "decodeMs": 60.047}
+{"event": "CHUNK_10_START", "elapsedMs": 10543.682, "frameEnd": 50, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_10", "elapsedMs": 10610.687, "samples": 9600, "decodeMs": 63.314}
+{"event": "CHUNK_11_START", "elapsedMs": 11499.491, "frameEnd": 55, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_11", "elapsedMs": 11566.569, "samples": 9600, "decodeMs": 63.443}
+{"event": "CHUNK_12_START", "elapsedMs": 12589.067, "frameEnd": 60, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_12", "elapsedMs": 12643.779, "samples": 9600, "decodeMs": 50.849}
+{"event": "CHUNK_13_START", "elapsedMs": 13650.527, "frameEnd": 65, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_13", "elapsedMs": 13718.88, "samples": 9600, "decodeMs": 64.76}
+{"event": "CHUNK_14_START", "elapsedMs": 14749.3, "frameEnd": 70, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_14", "elapsedMs": 14801.712, "samples": 9600, "decodeMs": 48.933}
+{"event": "CHUNK_15_START", "elapsedMs": 15848.17, "frameEnd": 75, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_15", "elapsedMs": 15906.631, "samples": 9600, "decodeMs": 54.967}
+{"event": "CHUNK_16_START", "elapsedMs": 16913.605, "frameEnd": 80, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_16", "elapsedMs": 16964.387, "samples": 9600, "decodeMs": 46.876}
+{"event": "CHUNK_17_START", "elapsedMs": 17948.837, "frameEnd": 85, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_17", "elapsedMs": 18002.424, "samples": 9600, "decodeMs": 49.426}
+{"event": "CHUNK_18_START", "elapsedMs": 19002.094, "frameEnd": 90, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_18", "elapsedMs": 19066.423, "samples": 9600, "decodeMs": 60.697}
+{"event": "CHUNK_19_START", "elapsedMs": 20216.876, "frameEnd": 95, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_19", "elapsedMs": 20283.396, "samples": 9600, "decodeMs": 62.772}
+{"event": "CHUNK_20_START", "elapsedMs": 21251.563, "frameEnd": 100, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_20", "elapsedMs": 21307.432, "samples": 9600, "decodeMs": 52.215}
+{"event": "CHUNK_21_START", "elapsedMs": 21529.879, "frameEnd": 101, "contextFrames": 25, "newFrames": 1}
+{"event": "CHUNK_21", "elapsedMs": 21579.688, "samples": 1920, "decodeMs": 46.343}

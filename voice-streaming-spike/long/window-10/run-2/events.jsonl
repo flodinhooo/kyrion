@@ -1,0 +1,30 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 241.655, "frameIndex": 0}
+{"event": "FRAME_5_READY", "elapsedMs": 995.681, "frameIndex": 4}
+{"event": "FRAME_10_READY", "elapsedMs": 1952.331, "frameIndex": 9}
+{"event": "FIRST_DECODE_START", "elapsedMs": 1956.384, "frameEnd": 10, "overlapFrames": 25}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 2014.305, "samples": 19200, "decodeMs": 54.078}
+{"event": "FRAME_15_READY", "elapsedMs": 3054.364, "frameIndex": 14}
+{"event": "FRAME_20_READY", "elapsedMs": 4119.477, "frameIndex": 19}
+{"event": "CHUNK_2_START", "elapsedMs": 4123.733, "frameEnd": 20, "overlapFrames": 10}
+{"event": "CHUNK_2", "elapsedMs": 4163.864, "samples": 19200, "decodeMs": 35.572}
+{"event": "FRAME_25_READY", "elapsedMs": 5139.218, "frameIndex": 24}
+{"event": "CHUNK_3_START", "elapsedMs": 6042.347, "frameEnd": 30, "overlapFrames": 20}
+{"event": "CHUNK_3", "elapsedMs": 6099.892, "samples": 19200, "decodeMs": 52.951}
+{"event": "CHUNK_4_START", "elapsedMs": 7927.248, "frameEnd": 40, "overlapFrames": 25}
+{"event": "CHUNK_4", "elapsedMs": 7988.756, "samples": 19200, "decodeMs": 57.315}
+{"event": "CHUNK_5_START", "elapsedMs": 9863.578, "frameEnd": 50, "overlapFrames": 25}
+{"event": "CHUNK_5", "elapsedMs": 9920.676, "samples": 19200, "decodeMs": 53.23}
+{"event": "CHUNK_6_START", "elapsedMs": 11942.614, "frameEnd": 60, "overlapFrames": 25}
+{"event": "CHUNK_6", "elapsedMs": 12006.735, "samples": 19200, "decodeMs": 59.888}
+{"event": "CHUNK_7_START", "elapsedMs": 14038.946, "frameEnd": 70, "overlapFrames": 25}
+{"event": "CHUNK_7", "elapsedMs": 14108.617, "samples": 19200, "decodeMs": 64.812}
+{"event": "CHUNK_8_START", "elapsedMs": 16279.532, "frameEnd": 80, "overlapFrames": 25}
+{"event": "CHUNK_8", "elapsedMs": 16351.2, "samples": 19200, "decodeMs": 66.474}
+{"event": "CHUNK_9_START", "elapsedMs": 18519.828, "frameEnd": 90, "overlapFrames": 25}
+{"event": "CHUNK_9", "elapsedMs": 18571.368, "samples": 19200, "decodeMs": 47.26}
+{"event": "CHUNK_10_START", "elapsedMs": 20610.908, "frameEnd": 100, "overlapFrames": 25}
+{"event": "CHUNK_10", "elapsedMs": 20669.598, "samples": 19200, "decodeMs": 54.83}
+{"event": "GENERATION_COMPLETE", "elapsedMs": 20876.64, "frames": 101}
+{"event": "CHUNK_11_START", "elapsedMs": 20880.502, "frameEnd": 101, "overlapFrames": 25}
+{"event": "CHUNK_11", "elapsedMs": 20931.906, "samples": 1920, "decodeMs": 47.368}

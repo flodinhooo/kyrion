@@ -1,0 +1,20 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 274.843, "frameIndex": 0}
+{"event": "FRAME_5_READY", "elapsedMs": 1060.87, "frameIndex": 4}
+{"event": "FRAME_10_READY", "elapsedMs": 2055.162, "frameIndex": 9}
+{"event": "FRAME_15_READY", "elapsedMs": 2998.336, "frameIndex": 14}
+{"event": "FRAME_20_READY", "elapsedMs": 4006.788, "frameIndex": 19}
+{"event": "FIRST_DECODE_START", "elapsedMs": 4011.183, "frameEnd": 20, "overlapFrames": 25}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 4128.069, "samples": 38400, "decodeMs": 62.283}
+{"event": "FRAME_25_READY", "elapsedMs": 5101.689, "frameIndex": 24}
+{"event": "CHUNK_2_START", "elapsedMs": 7981.731, "frameEnd": 40, "overlapFrames": 20}
+{"event": "CHUNK_2", "elapsedMs": 8087.731, "samples": 38400, "decodeMs": 61.782}
+{"event": "CHUNK_3_START", "elapsedMs": 12051.189, "frameEnd": 60, "overlapFrames": 25}
+{"event": "CHUNK_3", "elapsedMs": 12163.328, "samples": 38400, "decodeMs": 64.895}
+{"event": "CHUNK_4_START", "elapsedMs": 16265.421, "frameEnd": 80, "overlapFrames": 25}
+{"event": "CHUNK_4", "elapsedMs": 16363.618, "samples": 38400, "decodeMs": 54.308}
+{"event": "CHUNK_5_START", "elapsedMs": 20045.426, "frameEnd": 100, "overlapFrames": 25}
+{"event": "CHUNK_5", "elapsedMs": 20163.1, "samples": 38400, "decodeMs": 65.588}
+{"event": "GENERATION_COMPLETE", "elapsedMs": 22222.757, "frames": 111}
+{"event": "CHUNK_6_START", "elapsedMs": 22227.716, "frameEnd": 111, "overlapFrames": 25}
+{"event": "CHUNK_6", "elapsedMs": 22320.12, "samples": 21120, "decodeMs": 47.997}

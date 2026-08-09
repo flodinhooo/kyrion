@@ -1,0 +1,44 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 273.704, "frameIndex": 0}
+{"event": "FIRST_DECODE_START", "elapsedMs": 1172.802, "frameEnd": 5, "contextFrames": 50, "newFrames": 5}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 1241.291, "samples": 9600, "decodeMs": 64.747}
+{"event": "CHUNK_2_START", "elapsedMs": 2369.938, "frameEnd": 10, "contextFrames": 5, "newFrames": 5}
+{"event": "CHUNK_2", "elapsedMs": 2411.655, "samples": 9600, "decodeMs": 37.576}
+{"event": "CHUNK_3_START", "elapsedMs": 3596.357, "frameEnd": 15, "contextFrames": 10, "newFrames": 5}
+{"event": "CHUNK_3", "elapsedMs": 3642.888, "samples": 9600, "decodeMs": 42.813}
+{"event": "CHUNK_4_START", "elapsedMs": 4633.094, "frameEnd": 20, "contextFrames": 15, "newFrames": 5}
+{"event": "CHUNK_4", "elapsedMs": 4674.768, "samples": 9600, "decodeMs": 37.908}
+{"event": "CHUNK_5_START", "elapsedMs": 5608.434, "frameEnd": 25, "contextFrames": 20, "newFrames": 5}
+{"event": "CHUNK_5", "elapsedMs": 5655.594, "samples": 9600, "decodeMs": 43.617}
+{"event": "CHUNK_6_START", "elapsedMs": 6695.623, "frameEnd": 30, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_6", "elapsedMs": 6754.043, "samples": 9600, "decodeMs": 54.904}
+{"event": "CHUNK_7_START", "elapsedMs": 7652.256, "frameEnd": 35, "contextFrames": 30, "newFrames": 5}
+{"event": "CHUNK_7", "elapsedMs": 7724.649, "samples": 9600, "decodeMs": 68.758}
+{"event": "CHUNK_8_START", "elapsedMs": 8752.809, "frameEnd": 40, "contextFrames": 35, "newFrames": 5}
+{"event": "CHUNK_8", "elapsedMs": 8821.256, "samples": 9600, "decodeMs": 64.77}
+{"event": "CHUNK_9_START", "elapsedMs": 9728.199, "frameEnd": 45, "contextFrames": 40, "newFrames": 5}
+{"event": "CHUNK_9", "elapsedMs": 9799.794, "samples": 9600, "decodeMs": 67.676}
+{"event": "CHUNK_10_START", "elapsedMs": 10758.181, "frameEnd": 50, "contextFrames": 45, "newFrames": 5}
+{"event": "CHUNK_10", "elapsedMs": 10836.428, "samples": 9600, "decodeMs": 74.664}
+{"event": "CHUNK_11_START", "elapsedMs": 11688.358, "frameEnd": 55, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_11", "elapsedMs": 11759.343, "samples": 9600, "decodeMs": 67.205}
+{"event": "CHUNK_12_START", "elapsedMs": 12805.267, "frameEnd": 60, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_12", "elapsedMs": 12884.473, "samples": 9600, "decodeMs": 75.195}
+{"event": "CHUNK_13_START", "elapsedMs": 13803.758, "frameEnd": 65, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_13", "elapsedMs": 13879.588, "samples": 9600, "decodeMs": 72.232}
+{"event": "CHUNK_14_START", "elapsedMs": 14903.291, "frameEnd": 70, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_14", "elapsedMs": 14976.31, "samples": 9600, "decodeMs": 69.477}
+{"event": "CHUNK_15_START", "elapsedMs": 16002.796, "frameEnd": 75, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_15", "elapsedMs": 16068.654, "samples": 9600, "decodeMs": 62.265}
+{"event": "CHUNK_16_START", "elapsedMs": 17030.209, "frameEnd": 80, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_16", "elapsedMs": 17111.789, "samples": 9600, "decodeMs": 77.513}
+{"event": "CHUNK_17_START", "elapsedMs": 17988.837, "frameEnd": 85, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_17", "elapsedMs": 18056.167, "samples": 9600, "decodeMs": 63.336}
+{"event": "CHUNK_18_START", "elapsedMs": 18987.924, "frameEnd": 90, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_18", "elapsedMs": 19077.479, "samples": 9600, "decodeMs": 85.865}
+{"event": "CHUNK_19_START", "elapsedMs": 19985.65, "frameEnd": 95, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_19", "elapsedMs": 20051.941, "samples": 9600, "decodeMs": 62.7}
+{"event": "CHUNK_20_START", "elapsedMs": 20960.716, "frameEnd": 100, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_20", "elapsedMs": 21044.981, "samples": 9600, "decodeMs": 80.194}
+{"event": "CHUNK_21_START", "elapsedMs": 21259.937, "frameEnd": 101, "contextFrames": 50, "newFrames": 1}
+{"event": "CHUNK_21", "elapsedMs": 21319.772, "samples": 1920, "decodeMs": 56.129}

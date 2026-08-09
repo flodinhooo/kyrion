@@ -1,0 +1,81 @@
+{
+  "strategy": {
+    "name": "fixed-10-context-50",
+    "initial_frames": 10,
+    "stride_frames": 10,
+    "overlap_frames": 50,
+    "crossfade_ms": 0
+  },
+  "run": 2,
+  "firstPlayablePcmMs": 2071.866,
+  "generationCompleteMs": 23855.336,
+  "decodeCount": 11,
+  "decodeTotalSeconds": 3.551291,
+  "memory": {
+    "allocatedMiB": 4050.649,
+    "reservedMiB": 4810.0,
+    "peakAllocatedMiB": 4592.148,
+    "processPeakRssMiB": 4662.957
+  },
+  "quality": {
+    "streamedSamples": 193920,
+    "fullSamples": 193920,
+    "lengthDeltaSamples": 0,
+    "lengthDeltaMs": 0.0,
+    "alignedRmse": 0.011777,
+    "boundaryCount": 10,
+    "maxBoundaryJump": 0.0336,
+    "boundaries": [
+      {
+        "sample": 19200,
+        "absoluteJump": 0.006561,
+        "localRms": 0.032458
+      },
+      {
+        "sample": 38400,
+        "absoluteJump": 0.00041,
+        "localRms": 0.003188
+      },
+      {
+        "sample": 57600,
+        "absoluteJump": 0.000458,
+        "localRms": 0.018172
+      },
+      {
+        "sample": 76800,
+        "absoluteJump": 5.7e-05,
+        "localRms": 0.001461
+      },
+      {
+        "sample": 96000,
+        "absoluteJump": 0.002557,
+        "localRms": 0.04021
+      },
+      {
+        "sample": 115200,
+        "absoluteJump": 0.001785,
+        "localRms": 0.07266
+      },
+      {
+        "sample": 134400,
+        "absoluteJump": 0.005066,
+        "localRms": 0.057443
+      },
+      {
+        "sample": 153600,
+        "absoluteJump": 0.006424,
+        "localRms": 0.038409
+      },
+      {
+        "sample": 172800,
+        "absoluteJump": 0.0336,
+        "localRms": 0.114426
+      },
+      {
+        "sample": 192000,
+        "absoluteJump": 0.000366,
+        "localRms": 0.01499
+      }
+    ]
+  }
+}

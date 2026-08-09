@@ -1,0 +1,8 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 279.649, "frameIndex": 0}
+{"event": "FRAME_5_READY", "elapsedMs": 1020.664, "frameIndex": 4}
+{"event": "FRAME_10_READY", "elapsedMs": 2096.558, "frameIndex": 9}
+{"event": "FRAME_15_READY", "elapsedMs": 3105.651, "frameIndex": 14}
+{"event": "GENERATION_COMPLETE", "elapsedMs": 3292.941, "frames": 16}
+{"event": "FIRST_DECODE_START", "elapsedMs": 3296.714, "frameEnd": 16, "overlapFrames": 25}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 3368.026, "samples": 30720, "decodeMs": 67.609}

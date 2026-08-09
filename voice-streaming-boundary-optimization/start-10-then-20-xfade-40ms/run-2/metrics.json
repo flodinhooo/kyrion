@@ -1,0 +1,56 @@
+{
+  "strategy": {
+    "name": "start-10-then-20-xfade-40ms",
+    "initial_frames": 10,
+    "stride_frames": 20,
+    "overlap_frames": 50,
+    "crossfade_ms": 40
+  },
+  "run": 2,
+  "firstPlayablePcmMs": 2117.284,
+  "generationCompleteMs": 25966.441,
+  "decodeCount": 6,
+  "decodeTotalSeconds": 5.390874,
+  "memory": {
+    "allocatedMiB": 4050.649,
+    "reservedMiB": 4810.0,
+    "peakAllocatedMiB": 4592.148,
+    "processPeakRssMiB": 4662.957
+  },
+  "quality": {
+    "streamedSamples": 193920,
+    "fullSamples": 193920,
+    "lengthDeltaSamples": 0,
+    "lengthDeltaMs": 0.0,
+    "alignedRmse": 0.011717,
+    "boundaryCount": 5,
+    "maxBoundaryJump": 0.026733,
+    "boundaries": [
+      {
+        "sample": 18240,
+        "absoluteJump": 0.006653,
+        "localRms": 0.127846
+      },
+      {
+        "sample": 56640,
+        "absoluteJump": 0.006226,
+        "localRms": 0.133159
+      },
+      {
+        "sample": 95040,
+        "absoluteJump": 0.026733,
+        "localRms": 0.061359
+      },
+      {
+        "sample": 133440,
+        "absoluteJump": 0.004211,
+        "localRms": 0.066978
+      },
+      {
+        "sample": 171840,
+        "absoluteJump": 0.00769,
+        "localRms": 0.171394
+      }
+    ]
+  }
+}

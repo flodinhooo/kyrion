@@ -1,0 +1,35 @@
+{
+  "textId": "short",
+  "windowFrames": 10,
+  "run": 3,
+  "firstCodecFrameMs": 349.562,
+  "firstPlayablePcmMs": 2582.954,
+  "generationCompleteMs": 3821.74,
+  "generatedFrames": 15,
+  "audioDurationSeconds": 1.2,
+  "rtf": 3.184783,
+  "decodeTotalSeconds": 0.105279,
+  "decodeCount": 2,
+  "memory": {
+    "allocatedMiB": 4050.26,
+    "reservedMiB": 4494.0,
+    "peakAllocatedMiB": 4389.086,
+    "processPeakRssMiB": 4657.125
+  },
+  "quality": {
+    "streamedSamples": 28800,
+    "fullSamples": 28800,
+    "lengthDeltaSamples": 0,
+    "lengthDeltaMs": 0.0,
+    "alignedRmse": 0.009359,
+    "boundaryCount": 1,
+    "maxBoundaryJump": 0.00238,
+    "boundaries": [
+      {
+        "sample": 19200,
+        "absoluteJump": 0.00238,
+        "localRms": 0.097032
+      }
+    ]
+  }
+}

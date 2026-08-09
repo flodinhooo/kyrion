@@ -1,0 +1,4 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 253.819, "frameIndex": 0}
+{"event": "CANCEL_REQUESTED", "elapsedMs": 504.918}
+{"event": "GENERATION_STOPPED", "elapsedMs": 525.389}

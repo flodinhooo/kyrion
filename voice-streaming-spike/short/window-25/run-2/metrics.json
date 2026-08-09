@@ -1,0 +1,29 @@
+{
+  "textId": "short",
+  "windowFrames": 25,
+  "run": 2,
+  "firstCodecFrameMs": 279.649,
+  "firstPlayablePcmMs": 3368.015,
+  "generationCompleteMs": 3292.933,
+  "generatedFrames": 16,
+  "audioDurationSeconds": 1.28,
+  "rtf": 2.572604,
+  "decodeTotalSeconds": 0.067609,
+  "decodeCount": 1,
+  "memory": {
+    "allocatedMiB": 4050.265,
+    "reservedMiB": 4494.0,
+    "peakAllocatedMiB": 4391.444,
+    "processPeakRssMiB": 4656.812
+  },
+  "quality": {
+    "streamedSamples": 30720,
+    "fullSamples": 30720,
+    "lengthDeltaSamples": 0,
+    "lengthDeltaMs": 0.0,
+    "alignedRmse": 0.011088,
+    "boundaryCount": 0,
+    "maxBoundaryJump": 0.0,
+    "boundaries": []
+  }
+}

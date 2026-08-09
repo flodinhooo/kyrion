@@ -1,0 +1,26 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 282.262, "frameIndex": 0}
+{"event": "FRAME_5_READY", "elapsedMs": 1059.749, "frameIndex": 4}
+{"event": "FIRST_DECODE_START", "elapsedMs": 1064.403, "frameEnd": 5, "overlapFrames": 25}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 1115.88, "samples": 9600, "decodeMs": 47.047}
+{"event": "FRAME_10_READY", "elapsedMs": 2138.913, "frameIndex": 9}
+{"event": "CHUNK_2_START", "elapsedMs": 2143.381, "frameEnd": 10, "overlapFrames": 5}
+{"event": "CHUNK_2", "elapsedMs": 2185.268, "samples": 9600, "decodeMs": 37.635}
+{"event": "FRAME_15_READY", "elapsedMs": 3122.22, "frameIndex": 14}
+{"event": "CHUNK_3_START", "elapsedMs": 3126.74, "frameEnd": 15, "overlapFrames": 10}
+{"event": "CHUNK_3", "elapsedMs": 3172.831, "samples": 9600, "decodeMs": 41.251}
+{"event": "FRAME_20_READY", "elapsedMs": 4235.794, "frameIndex": 19}
+{"event": "CHUNK_4_START", "elapsedMs": 4244.253, "frameEnd": 20, "overlapFrames": 15}
+{"event": "CHUNK_4", "elapsedMs": 4285.532, "samples": 9600, "decodeMs": 37.325}
+{"event": "FRAME_25_READY", "elapsedMs": 5299.452, "frameIndex": 24}
+{"event": "CHUNK_5_START", "elapsedMs": 5303.749, "frameEnd": 25, "overlapFrames": 20}
+{"event": "CHUNK_5", "elapsedMs": 5352.815, "samples": 9600, "decodeMs": 44.804}
+{"event": "CHUNK_6_START", "elapsedMs": 6345.448, "frameEnd": 30, "overlapFrames": 25}
+{"event": "CHUNK_6", "elapsedMs": 6406.259, "samples": 9600, "decodeMs": 56.566}
+{"event": "CHUNK_7_START", "elapsedMs": 7380.355, "frameEnd": 35, "overlapFrames": 25}
+{"event": "CHUNK_7", "elapsedMs": 7443.252, "samples": 9600, "decodeMs": 58.435}
+{"event": "CHUNK_8_START", "elapsedMs": 8490.045, "frameEnd": 40, "overlapFrames": 25}
+{"event": "CHUNK_8", "elapsedMs": 8544.971, "samples": 9600, "decodeMs": 50.618}
+{"event": "GENERATION_COMPLETE", "elapsedMs": 9219.044, "frames": 43}
+{"event": "CHUNK_9_START", "elapsedMs": 9223.06, "frameEnd": 43, "overlapFrames": 25}
+{"event": "CHUNK_9", "elapsedMs": 9593.244, "samples": 5760, "decodeMs": 366.429}

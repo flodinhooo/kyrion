@@ -1,0 +1,7 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 233.182, "frameIndex": 0}
+{"event": "FRAME_5_READY", "elapsedMs": 965.775, "frameIndex": 4}
+{"event": "FIRST_DECODE_START", "elapsedMs": 969.962, "frameEnd": 5, "overlapFrames": 25}
+{"event": "CANCEL_REQUESTED", "elapsedMs": 1004.163}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 1018.649, "samples": 9600, "decodeMs": 44.708}
+{"event": "GENERATION_STOPPED", "elapsedMs": 1022.554}

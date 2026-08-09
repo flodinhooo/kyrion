@@ -1,0 +1,296 @@
+{
+  "source": "summary.json",
+  "warmRunsPerConfiguration": 3,
+  "aggregates": [
+    {
+      "textId": "short",
+      "windowFrames": 5,
+      "firstCodecFrameMeanMs": 266.65,
+      "firstPlayablePcmMeanMs": 1296.035,
+      "firstPlayablePcmMinMs": 1166.746,
+      "generationCompleteMeanMs": 4007.127,
+      "rtfMean": 3.042,
+      "vramPeakMiB": 4396.156,
+      "reservedVramMaxMiB": 4494.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.033,
+      "maxBoundaryJump": 0.054726
+    },
+    {
+      "textId": "short",
+      "windowFrames": 10,
+      "firstCodecFrameMeanMs": 277.561,
+      "firstPlayablePcmMeanMs": 2383.533,
+      "firstPlayablePcmMinMs": 2100.741,
+      "generationCompleteMeanMs": 3730.925,
+      "rtfMean": 2.864,
+      "vramPeakMiB": 4396.156,
+      "reservedVramMaxMiB": 4494.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.029,
+      "maxBoundaryJump": 0.024536
+    },
+    {
+      "textId": "short",
+      "windowFrames": 15,
+      "firstCodecFrameMeanMs": 265.312,
+      "firstPlayablePcmMeanMs": 3288.074,
+      "firstPlayablePcmMinMs": 3121.17,
+      "generationCompleteMeanMs": 3560.813,
+      "rtfMean": 2.719,
+      "vramPeakMiB": 4396.156,
+      "reservedVramMaxMiB": 4494.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.009,
+      "maxBoundaryJump": 0.014252
+    },
+    {
+      "textId": "short",
+      "windowFrames": 20,
+      "firstCodecFrameMeanMs": 246.385,
+      "firstPlayablePcmMeanMs": 3695.604,
+      "firstPlayablePcmMinMs": 3174.751,
+      "generationCompleteMeanMs": 3419.009,
+      "rtfMean": 2.611,
+      "vramPeakMiB": 4396.156,
+      "reservedVramMaxMiB": 4494.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.009,
+      "maxBoundaryJump": 0.0
+    },
+    {
+      "textId": "short",
+      "windowFrames": 25,
+      "firstCodecFrameMeanMs": 274.512,
+      "firstPlayablePcmMeanMs": 3582.188,
+      "firstPlayablePcmMinMs": 3307.803,
+      "generationCompleteMeanMs": 3497.16,
+      "rtfMean": 2.679,
+      "vramPeakMiB": 4396.156,
+      "reservedVramMaxMiB": 4494.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.009,
+      "maxBoundaryJump": 0.0
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 5,
+      "firstCodecFrameMeanMs": 268.411,
+      "firstPlayablePcmMeanMs": 1117.705,
+      "firstPlayablePcmMinMs": 1086.888,
+      "generationCompleteMeanMs": 9109.722,
+      "rtfMean": 2.735,
+      "vramPeakMiB": 4457.779,
+      "reservedVramMaxMiB": 4624.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.021,
+      "maxBoundaryJump": 0.05542
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 10,
+      "firstCodecFrameMeanMs": 312.144,
+      "firstPlayablePcmMeanMs": 2348.168,
+      "firstPlayablePcmMinMs": 2231.951,
+      "generationCompleteMeanMs": 9262.093,
+      "rtfMean": 2.778,
+      "vramPeakMiB": 4457.799,
+      "reservedVramMaxMiB": 4624.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.018,
+      "maxBoundaryJump": 0.055191
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 15,
+      "firstCodecFrameMeanMs": 251.063,
+      "firstPlayablePcmMeanMs": 3116.299,
+      "firstPlayablePcmMinMs": 2950.491,
+      "generationCompleteMeanMs": 8900.65,
+      "rtfMean": 2.668,
+      "vramPeakMiB": 4457.799,
+      "reservedVramMaxMiB": 4624.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.014,
+      "maxBoundaryJump": 0.055084
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 20,
+      "firstCodecFrameMeanMs": 272.497,
+      "firstPlayablePcmMeanMs": 4392.636,
+      "firstPlayablePcmMinMs": 4099.79,
+      "generationCompleteMeanMs": 9016.377,
+      "rtfMean": 2.701,
+      "vramPeakMiB": 4457.799,
+      "reservedVramMaxMiB": 4624.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.011,
+      "maxBoundaryJump": 0.011108
+    },
+    {
+      "textId": "medium",
+      "windowFrames": 25,
+      "firstCodecFrameMeanMs": 290.203,
+      "firstPlayablePcmMeanMs": 5410.241,
+      "firstPlayablePcmMinMs": 5163.78,
+      "generationCompleteMeanMs": 8842.651,
+      "rtfMean": 2.652,
+      "vramPeakMiB": 4457.799,
+      "reservedVramMaxMiB": 4624.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.01,
+      "maxBoundaryJump": 0.013476
+    },
+    {
+      "textId": "long",
+      "windowFrames": 5,
+      "firstCodecFrameMeanMs": 276.749,
+      "firstPlayablePcmMeanMs": 1154.262,
+      "firstPlayablePcmMinMs": 1112.197,
+      "generationCompleteMeanMs": 24062.3,
+      "rtfMean": 2.783,
+      "vramPeakMiB": 4617.897,
+      "reservedVramMaxMiB": 4818.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.018,
+      "maxBoundaryJump": 0.102112
+    },
+    {
+      "textId": "long",
+      "windowFrames": 10,
+      "firstCodecFrameMeanMs": 297.45,
+      "firstPlayablePcmMeanMs": 2141.23,
+      "firstPlayablePcmMinMs": 2082.445,
+      "generationCompleteMeanMs": 22660.506,
+      "rtfMean": 2.621,
+      "vramPeakMiB": 4617.897,
+      "reservedVramMaxMiB": 4818.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.015,
+      "maxBoundaryJump": 0.087341
+    },
+    {
+      "textId": "long",
+      "windowFrames": 15,
+      "firstCodecFrameMeanMs": 275.415,
+      "firstPlayablePcmMeanMs": 3300.855,
+      "firstPlayablePcmMinMs": 3194.308,
+      "generationCompleteMeanMs": 22857.515,
+      "rtfMean": 2.645,
+      "vramPeakMiB": 4617.897,
+      "reservedVramMaxMiB": 4818.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.013,
+      "maxBoundaryJump": 0.097137
+    },
+    {
+      "textId": "long",
+      "windowFrames": 20,
+      "firstCodecFrameMeanMs": 290.933,
+      "firstPlayablePcmMeanMs": 4803.984,
+      "firstPlayablePcmMinMs": 4489.139,
+      "generationCompleteMeanMs": 25213.798,
+      "rtfMean": 2.918,
+      "vramPeakMiB": 4617.897,
+      "reservedVramMaxMiB": 4818.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.011,
+      "maxBoundaryJump": 0.035904
+    },
+    {
+      "textId": "long",
+      "windowFrames": 25,
+      "firstCodecFrameMeanMs": 301.526,
+      "firstPlayablePcmMeanMs": 5998.536,
+      "firstPlayablePcmMinMs": 5959.056,
+      "generationCompleteMeanMs": 24280.699,
+      "rtfMean": 2.812,
+      "vramPeakMiB": 4617.897,
+      "reservedVramMaxMiB": 4818.0,
+      "ramPeakMiB": 4657.125,
+      "lengthDeltaSamples": [
+        0
+      ],
+      "alignedRmseMean": 0.01,
+      "maxBoundaryJump": 0.03595
+    }
+  ],
+  "cancellationAggregates": [
+    {
+      "cancelAfterMs": 500,
+      "successes": 3,
+      "runs": 3,
+      "cancelToStopMeanMs": 140.067,
+      "cancelToStopMaxMs": 225.414,
+      "allocatedAfterMinMiB": 4050.189,
+      "allocatedAfterMaxMiB": 4050.189,
+      "reservedAfterMinMiB": 4818.0,
+      "reservedAfterMaxMiB": 4818.0
+    },
+    {
+      "cancelAfterMs": 1000,
+      "successes": 3,
+      "runs": 3,
+      "cancelToStopMeanMs": 38.514,
+      "cancelToStopMaxMs": 83.26,
+      "allocatedAfterMinMiB": 4050.19,
+      "allocatedAfterMaxMiB": 4050.19,
+      "reservedAfterMinMiB": 4818.0,
+      "reservedAfterMaxMiB": 4818.0
+    },
+    {
+      "cancelAfterMs": 2000,
+      "successes": 3,
+      "runs": 3,
+      "cancelToStopMeanMs": 62.98,
+      "cancelToStopMaxMs": 125.522,
+      "allocatedAfterMinMiB": 4050.192,
+      "allocatedAfterMaxMiB": 4050.193,
+      "reservedAfterMinMiB": 4818.0,
+      "reservedAfterMaxMiB": 4818.0
+    }
+  ]
+}

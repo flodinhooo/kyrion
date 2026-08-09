@@ -1,0 +1,16 @@
+{
+  "cancelAfterMs": 1000,
+  "run": 1,
+  "cancelCaught": true,
+  "cancelRequestedMs": 1004.44,
+  "generationStoppedMs": 1028.408,
+  "cancelToStopMs": 23.968,
+  "framesProduced": 4,
+  "chunksWritten": 0,
+  "memoryAfterCancellation": {
+    "allocatedMiB": 4050.19,
+    "reservedMiB": 4818.0,
+    "peakAllocatedMiB": 4094.326,
+    "processPeakRssMiB": 4656.812
+  }
+}

@@ -1,0 +1,48 @@
+{"event": "TTS_TEXT_AVAILABLE", "elapsedMs": 0.0}
+{"event": "FIRST_CODEC_FRAME", "elapsedMs": 238.527, "frameIndex": 0}
+{"event": "FIRST_DECODE_START", "elapsedMs": 1098.543, "frameEnd": 5, "contextFrames": 50, "newFrames": 5}
+{"event": "FIRST_PLAYABLE_PCM", "elapsedMs": 1438.078, "samples": 9600, "decodeMs": 335.953}
+{"event": "CHUNK_2_START", "elapsedMs": 2416.129, "frameEnd": 10, "contextFrames": 5, "newFrames": 5}
+{"event": "CHUNK_2", "elapsedMs": 2461.831, "samples": 9600, "decodeMs": 41.922}
+{"event": "CHUNK_3_START", "elapsedMs": 3531.521, "frameEnd": 15, "contextFrames": 10, "newFrames": 5}
+{"event": "CHUNK_3", "elapsedMs": 3574.814, "samples": 9600, "decodeMs": 39.621}
+{"event": "CHUNK_4_START", "elapsedMs": 4593.465, "frameEnd": 20, "contextFrames": 15, "newFrames": 5}
+{"event": "CHUNK_4", "elapsedMs": 4659.306, "samples": 9600, "decodeMs": 61.117}
+{"event": "CHUNK_5_START", "elapsedMs": 5734.583, "frameEnd": 25, "contextFrames": 20, "newFrames": 5}
+{"event": "CHUNK_5", "elapsedMs": 5812.669, "samples": 9600, "decodeMs": 74.351}
+{"event": "CHUNK_6_START", "elapsedMs": 6778.791, "frameEnd": 30, "contextFrames": 25, "newFrames": 5}
+{"event": "CHUNK_6", "elapsedMs": 6838.404, "samples": 9600, "decodeMs": 55.82}
+{"event": "CHUNK_7_START", "elapsedMs": 7784.431, "frameEnd": 35, "contextFrames": 30, "newFrames": 5}
+{"event": "CHUNK_7", "elapsedMs": 8140.163, "samples": 9600, "decodeMs": 351.986}
+{"event": "CHUNK_8_START", "elapsedMs": 9206.989, "frameEnd": 40, "contextFrames": 35, "newFrames": 5}
+{"event": "CHUNK_8", "elapsedMs": 9479.529, "samples": 9600, "decodeMs": 268.575}
+{"event": "CHUNK_9_START", "elapsedMs": 10440.035, "frameEnd": 45, "contextFrames": 40, "newFrames": 5}
+{"event": "CHUNK_9", "elapsedMs": 10794.933, "samples": 9600, "decodeMs": 351.456}
+{"event": "CHUNK_10_START", "elapsedMs": 11737.734, "frameEnd": 50, "contextFrames": 45, "newFrames": 5}
+{"event": "CHUNK_10", "elapsedMs": 11826.722, "samples": 9600, "decodeMs": 85.354}
+{"event": "CHUNK_11_START", "elapsedMs": 12866.739, "frameEnd": 55, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_11", "elapsedMs": 12938.035, "samples": 9600, "decodeMs": 67.709}
+{"event": "CHUNK_12_START", "elapsedMs": 14000.647, "frameEnd": 60, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_12", "elapsedMs": 14072.411, "samples": 9600, "decodeMs": 67.88}
+{"event": "CHUNK_13_START", "elapsedMs": 15013.117, "frameEnd": 65, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_13", "elapsedMs": 15101.538, "samples": 9600, "decodeMs": 84.852}
+{"event": "CHUNK_14_START", "elapsedMs": 16156.234, "frameEnd": 70, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_14", "elapsedMs": 16235.915, "samples": 9600, "decodeMs": 75.897}
+{"event": "CHUNK_15_START", "elapsedMs": 17278.969, "frameEnd": 75, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_15", "elapsedMs": 17354.691, "samples": 9600, "decodeMs": 72.031}
+{"event": "CHUNK_16_START", "elapsedMs": 18402.634, "frameEnd": 80, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_16", "elapsedMs": 18473.027, "samples": 9600, "decodeMs": 66.727}
+{"event": "CHUNK_17_START", "elapsedMs": 19385.07, "frameEnd": 85, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_17", "elapsedMs": 19471.742, "samples": 9600, "decodeMs": 82.993}
+{"event": "CHUNK_18_START", "elapsedMs": 20360.573, "frameEnd": 90, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_18", "elapsedMs": 20433.746, "samples": 9600, "decodeMs": 69.496}
+{"event": "CHUNK_19_START", "elapsedMs": 21395.959, "frameEnd": 95, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_19", "elapsedMs": 21454.838, "samples": 9600, "decodeMs": 55.256}
+{"event": "CHUNK_20_START", "elapsedMs": 22361.824, "frameEnd": 100, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_20", "elapsedMs": 22440.125, "samples": 9600, "decodeMs": 74.629}
+{"event": "CHUNK_21_START", "elapsedMs": 23451.657, "frameEnd": 105, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_21", "elapsedMs": 23515.83, "samples": 9600, "decodeMs": 60.412}
+{"event": "CHUNK_22_START", "elapsedMs": 24579.673, "frameEnd": 110, "contextFrames": 50, "newFrames": 5}
+{"event": "CHUNK_22", "elapsedMs": 24654.708, "samples": 9600, "decodeMs": 71.355}
+{"event": "CHUNK_23_START", "elapsedMs": 24851.541, "frameEnd": 111, "contextFrames": 50, "newFrames": 1}
+{"event": "CHUNK_23", "elapsedMs": 25223.718, "samples": 1920, "decodeMs": 368.532}
