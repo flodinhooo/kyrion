@@ -1,0 +1,11 @@
+{
+  "long-a.wav": "qwen-1.7b-f",
+  "long-b.wav": "chatterbox-f",
+  "long-c.wav": "qwen-0.6b-f",
+  "medium-a.wav": "qwen-0.6b-f",
+  "medium-b.wav": "chatterbox-f",
+  "medium-c.wav": "qwen-1.7b-f",
+  "short-a.wav": "chatterbox-f",
+  "short-b.wav": "qwen-0.6b-f",
+  "short-c.wav": "qwen-1.7b-f"
+}

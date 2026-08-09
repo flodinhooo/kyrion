@@ -1,0 +1,219 @@
+{
+  "provider": "qwen3-tts",
+  "model": "/training/models/qwen3-tts/voice-clone-base",
+  "device": "NVIDIA GeForce RTX 2070",
+  "dtype": "float16",
+  "samplingEnabled": true,
+  "attentionImplementation": "sdpa",
+  "modelLoadSeconds": 33.324023,
+  "voiceConditioningSeconds": 1.969658,
+  "permanentVramAfterLoad": {
+    "allocatedMiB": 4010.026,
+    "reservedMiB": 4410.0,
+    "peakAllocatedMiB": 4258.427
+  },
+  "permanentVramAfterConditioning": {
+    "allocatedMiB": 4050.187,
+    "reservedMiB": 4450.0,
+    "peakAllocatedMiB": 4258.427
+  },
+  "processPeakRssMiB": 4666.508,
+  "tests": {
+    "short": {
+      "text": "Ich bin Velora.",
+      "runs": [
+        {
+          "kind": "first",
+          "generationSeconds": 6.579307,
+          "audioDecodeSeconds": 1.032386,
+          "codeGenerationAndOverheadSeconds": 5.546922,
+          "audioDurationSeconds": 1.84,
+          "rtf": 3.575711,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4604.0,
+            "peakAllocatedMiB": 4407.922
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-1",
+          "generationSeconds": 3.853484,
+          "audioDecodeSeconds": 0.492644,
+          "codeGenerationAndOverheadSeconds": 3.360839,
+          "audioDurationSeconds": 1.36,
+          "rtf": 2.833444,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4604.0,
+            "peakAllocatedMiB": 4393.808
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-2",
+          "generationSeconds": 3.718861,
+          "audioDecodeSeconds": 0.398479,
+          "codeGenerationAndOverheadSeconds": 3.320382,
+          "audioDurationSeconds": 1.28,
+          "rtf": 2.90536,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4604.0,
+            "peakAllocatedMiB": 4391.452
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-3",
+          "generationSeconds": 5.072149,
+          "audioDecodeSeconds": 0.462447,
+          "codeGenerationAndOverheadSeconds": 4.609703,
+          "audioDurationSeconds": 1.76,
+          "rtf": 2.881903,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4604.0,
+            "peakAllocatedMiB": 4405.587
+          },
+          "processPeakRssMiB": 4666.508
+        }
+      ],
+      "warmMeanSeconds": 4.214831,
+      "warmMinSeconds": 3.718861
+    },
+    "medium": {
+      "text": "Ich bin Velora und begleite dich durch deinen Alltag.",
+      "runs": [
+        {
+          "kind": "first",
+          "generationSeconds": 10.040685,
+          "audioDecodeSeconds": 0.46579,
+          "codeGenerationAndOverheadSeconds": 9.574895,
+          "audioDurationSeconds": 3.6,
+          "rtf": 2.789079,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4608.0,
+            "peakAllocatedMiB": 4459.756
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-1",
+          "generationSeconds": 8.594084,
+          "audioDecodeSeconds": 0.429264,
+          "codeGenerationAndOverheadSeconds": 8.16482,
+          "audioDurationSeconds": 3.04,
+          "rtf": 2.827001,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4608.0,
+            "peakAllocatedMiB": 4443.264
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-2",
+          "generationSeconds": 8.51488,
+          "audioDecodeSeconds": 0.482445,
+          "codeGenerationAndOverheadSeconds": 8.032435,
+          "audioDurationSeconds": 3.12,
+          "rtf": 2.729128,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4608.0,
+            "peakAllocatedMiB": 4445.619
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-3",
+          "generationSeconds": 11.151473,
+          "audioDecodeSeconds": 0.612719,
+          "codeGenerationAndOverheadSeconds": 10.538754,
+          "audioDurationSeconds": 3.840042,
+          "rtf": 2.903998,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4610.0,
+            "peakAllocatedMiB": 4466.824
+          },
+          "processPeakRssMiB": 4666.508
+        }
+      ],
+      "warmMeanSeconds": 9.420146,
+      "warmMinSeconds": 8.51488
+    },
+    "long": {
+      "text": "Natürlich, Flo. Ich helfe dir dabei, den Überblick zu behalten und die nächsten Schritte in Ruhe zu planen. Sag mir einfach, womit wir beginnen sollen.",
+      "runs": [
+        {
+          "kind": "first",
+          "generationSeconds": 25.058142,
+          "audioDecodeSeconds": 0.539777,
+          "codeGenerationAndOverheadSeconds": 24.518365,
+          "audioDurationSeconds": 9.12,
+          "rtf": 2.747603,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4806.0,
+            "peakAllocatedMiB": 4622.578
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-1",
+          "generationSeconds": 23.396328,
+          "audioDecodeSeconds": 0.494195,
+          "codeGenerationAndOverheadSeconds": 22.902134,
+          "audioDurationSeconds": 8.720042,
+          "rtf": 2.683052,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4806.0,
+            "peakAllocatedMiB": 4610.86
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-2",
+          "generationSeconds": 21.646298,
+          "audioDecodeSeconds": 0.497988,
+          "codeGenerationAndOverheadSeconds": 21.14831,
+          "audioDurationSeconds": 8.160042,
+          "rtf": 2.652719,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4806.0,
+            "peakAllocatedMiB": 4594.439
+          },
+          "processPeakRssMiB": 4666.508
+        },
+        {
+          "kind": "warm-3",
+          "generationSeconds": 24.022805,
+          "audioDecodeSeconds": 0.520876,
+          "codeGenerationAndOverheadSeconds": 23.501929,
+          "audioDurationSeconds": 8.96,
+          "rtf": 2.681117,
+          "vram": {
+            "allocatedMiB": 4050.188,
+            "reservedMiB": 4806.0,
+            "peakAllocatedMiB": 4617.881
+          },
+          "processPeakRssMiB": 4666.508
+        }
+      ],
+      "warmMeanSeconds": 23.02181,
+      "warmMinSeconds": 21.646298
+    }
+  },
+  "referenceSha256": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+  "benchmarkTexts": {
+    "short": "Ich bin Velora.",
+    "medium": "Ich bin Velora und begleite dich durch deinen Alltag.",
+    "long": "Natürlich, Flo. Ich helfe dir dabei, den Überblick zu behalten und die nächsten Schritte in Ruhe zu planen. Sag mir einfach, womit wir beginnen sollen."
+  },
+  "note": "The first run per text is the first sample for that text length. Only the first text also follows a freshly loaded and conditioned model. Public provider APIs return complete audio; generationSeconds is not true streaming TTFA."
+}
