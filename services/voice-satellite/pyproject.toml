@@ -7,6 +7,7 @@ name = "kyrion-voice-satellite"
 version = "0.1.0"
 description = "Local wake-word and audio-session runtime for Kyrion voice satellites"
 requires-python = ">=3.12"
+dependencies = ["webrtcvad-wheels>=2.0.14,<3.0"]
 
 [project.scripts]
 kyrion-voice-satellite = "kyrion_voice_satellite.cli:main"
