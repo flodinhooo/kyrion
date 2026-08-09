@@ -1,6 +1,7 @@
 package dev.kyrion.core.voice
 
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.gateway.GatewayService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -26,6 +27,10 @@ data class EnrollVoiceSatelliteRequest(
     @field:NotBlank @field:Size(max = 40) val runtimeVersion: String,
 )
 data class EnrollVoiceSatelliteResponse(val satelliteId: UUID, val satelliteToken: String)
+data class BootstrapVoiceSatelliteRequest(
+    @field:NotBlank @field:Size(max = 253) @field:Pattern(regexp = "^[A-Za-z0-9.-]+$") val hostname: String,
+    @field:NotBlank @field:Size(max = 40) val runtimeVersion: String,
+)
 data class OpenVoiceSessionResponse(val sessionId: UUID, val conversationId: UUID, val expiresAt: Instant)
 data class CloseVoiceSessionRequest(
     val sessionId: UUID,
@@ -50,12 +55,29 @@ class VoiceSatelliteOwnerController(private val service: VoiceSatelliteService) 
 
 @RestController
 @RequestMapping("/v1/voice-satellite")
-class VoiceSatelliteAgentController(private val service: VoiceSatelliteService) {
+class VoiceSatelliteAgentController(
+    private val service: VoiceSatelliteService,
+    private val gateways: GatewayService,
+) {
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
     fun enroll(@Valid @RequestBody body: EnrollVoiceSatelliteRequest): EnrollVoiceSatelliteResponse {
         val registered = service.enroll(
             body.enrollmentToken, body.hostname.lowercase(), body.runtimeVersion,
+        )
+        return EnrollVoiceSatelliteResponse(registered.satellite.id, registered.token)
+    }
+
+    @PostMapping("/bootstrap-from-gateway")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun bootstrap(
+        @RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
+        @RequestHeader("Authorization") authorization: String,
+        @Valid @RequestBody body: BootstrapVoiceSatelliteRequest,
+    ): EnrollVoiceSatelliteResponse {
+        val gateway = gateways.authenticate(nodeId, authorization.bearer())
+        val registered = service.bootstrap(
+            gateway.ownerId, "${gateway.displayName} Voice", body.hostname.lowercase(), body.runtimeVersion,
         )
         return EnrollVoiceSatelliteResponse(registered.satellite.id, registered.token)
     }

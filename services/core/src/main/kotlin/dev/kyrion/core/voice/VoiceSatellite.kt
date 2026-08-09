@@ -175,14 +175,11 @@ class VoiceSatelliteService(
         val now = clock.instant()
         val enrollment = repository.consumeEnrollment(tokens.hash(token), now)
             ?: throw VoiceSatelliteUnauthenticatedException()
-        val credential = tokens.create()
-        val satellite = VoiceSatellite(
-            UUID.randomUUID(), enrollment.ownerId, enrollment.displayName, hostname,
-            credential.tokenHash, runtimeVersion, now, now,
-        )
-        repository.createSatellite(satellite)
-        return RegisteredVoiceSatellite(satellite, credential.rawToken)
+        return register(enrollment.ownerId, enrollment.displayName, hostname, runtimeVersion, now)
     }
+
+    fun bootstrap(ownerId: UUID, displayName: String, hostname: String, runtimeVersion: String) =
+        register(ownerId, displayName, hostname, runtimeVersion, clock.instant())
 
     fun openSession(satelliteId: UUID, credential: String): VoiceDialogueSession {
         val satellite = authenticate(satelliteId, credential)
@@ -220,6 +217,27 @@ class VoiceSatelliteService(
     fun authenticate(id: UUID, credential: String): VoiceSatellite =
         repository.findSatellite(id)?.takeIf { it.credentialHash == tokens.hash(credential) }
             ?: throw VoiceSatelliteUnauthenticatedException()
+
+    private fun register(
+        ownerId: UUID,
+        displayName: String,
+        hostname: String,
+        runtimeVersion: String,
+        now: Instant,
+    ): RegisteredVoiceSatellite {
+        val credential = tokens.create()
+        val satellite = VoiceSatellite(
+            UUID.randomUUID(), ownerId, displayName, hostname,
+            credential.tokenHash, runtimeVersion, now, now,
+        )
+        repository.createSatellite(satellite)
+        activity.record(
+            ActivityCategory.SECURITY, "voice.satellite.registered", ActivityStatus.SUCCEEDED,
+            ActivityActorType.INTEGRATION, "kyrion-core", "voice.satellite.registered",
+            satellite.id.toString(), satellite.id,
+        )
+        return RegisteredVoiceSatellite(satellite, credential.rawToken)
+    }
 }
 
 class VoiceSatelliteUnauthenticatedException : RuntimeException()
