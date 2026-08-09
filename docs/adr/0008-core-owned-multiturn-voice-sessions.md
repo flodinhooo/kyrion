@@ -24,6 +24,13 @@ session lifecycle. A satellite receives a separate least-privilege credential
 through an owner-created, one-time enrollment. The credential authorises only
 the bounded voice endpoints for that satellite.
 
+For the first co-located development installation, an already owner-enrolled
+gateway may bootstrap its local Voice Satellite once. Core derives owner scope
+from the authenticated gateway, issues a new voice-only credential and records
+the registration. The Voice Satellite never receives or retains the gateway
+credential after provisioning. Product onboarding continues to use explicit
+owner enrollment.
+
 One local wake detection opens one Core voice session. The session may contain
 multiple sequential turns and retains one Core-owned conversation identifier.
 It closes after an explicit stop phrase, an inactivity timeout, a configured
@@ -42,7 +49,12 @@ The first local speech providers are:
 
 - a lightweight frame-based VAD on the satellite;
 - faster-whisper behind the AI service for German/English STT;
-- Piper behind a provider interface for local TTS.
+- Microsoft Azure Speech with `de-DE-KatjaNeural` as Velora's primary TTS
+  voice. Text responses leave the local system for synthesis; audio capture and
+  STT remain local. Credentials remain server-side and no other voice is used
+  as a silent fallback.
+- Piper as an explicitly selected local development provider, not the product
+  voice or an automatic fallback.
 
 Speech runtimes and voice models remain separately installed artifacts with
 recorded versions, checksums and licences. Piper's engine licence and each
@@ -75,8 +87,9 @@ boundary.
   contract.
 - The implementation requires a new persisted satellite credential/session
   model and bounded binary request handling in Core.
-- STT and TTS availability are visible runtime dependencies; a missing model
-  produces a typed failure rather than a cloud fallback.
+- STT and TTS availability are visible runtime dependencies. Missing Azure
+  credentials or connectivity produce a typed failure rather than changing
+  Velora's voice.
 - Full-duplex acoustic echo handling remains a physical acceptance item. Basic
   playback cancellation can precede reliable barge-in, but the state and
   protocol must already support interruption.
