@@ -1,6 +1,6 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
@@ -202,10 +202,10 @@ the lamp so their last colour and brightness survive a cold power cycle without
 Core, Web or the gateway being online. The pairing window was closed again
 immediately after verification.
 
-The latest detailed handoff is [Voice Satellite and Wake-Word Session —
-2026-08-09](2026-08-09-voice-satellite-wake-word.md). The preceding device
-handoff remains [Hue Lifecycle, Command Status and Branding Session —
-2026-08-07](2026-08-07-hue-lifecycle-command-status-branding.md).
+The latest detailed handoff is [Qwen Streaming Spike Closeout —
+2026-08-10](2026-08-10-qwen-streaming-closeout.md). The wake-word handoff
+remains [Voice Satellite and Wake-Word Session —
+2026-08-09](2026-08-09-voice-satellite-wake-word.md).
 
 ## Completed
 
@@ -447,6 +447,14 @@ handoff remains [Hue Lifecycle, Command Status and Branding Session —
 
 ## Recommended next step
 
+The local voice architecture gate now passes for an isolated Qwen 1.7B
+prototype. The owner selected the non-crossfaded 10-frame first decode followed
+by 20-frame strides because it sounds almost identical to the full decode. Its
+mean TTS TTFA is 2.309 seconds. The next voice step is Phase 3.1 only: a bounded
+authenticated PCM16 uplink from the already-woken satellite to Core with typed
+session, turn, audio-format and sequence metadata. Do not add STT, TTS downlink,
+playback buffering, dialogue replacement or barge-in in the same slice.
+
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
 systems, not a Home Assistant clone or an unrestricted assistant. Home
@@ -527,20 +535,15 @@ in browser local storage. Continue with one verified vertical slice at a time.
 
 In a new agent chat, use this prompt:
 
-> Read `AGENTS.md`, `README.md`, all project-owned files in `docs/`, especially
-> `docs/status/README.md`, `docs/status/TODO.md` and all ADRs. Inspect the
-> current implementation and uncommitted changes. Read the latest dated session
-> handoff, especially the 2026-08-09 Voice Satellite handoff. Verify Core and
-> the three Pi services, then confirm the paired Hue is
-> visible and controllable on `/home`. Verify the explicit remove/re-pair flow,
-> harden asynchronous command status with focused failure/retry tests, collect
-> the documented independent partial-phrase and phone-microphone wake-word
-> holdouts, and train V5 without deploying the overfit V3/V4 experiments. Only
-> after wake-word acceptance, add the bounded post-wake STT/Core/TTS session.
-> Preserve Core as authority and the
-> outbound-only agent boundary. Do not begin Thread/Matter until the Zigbee
-> lifecycle and recovery work is understood. Never store credentials or
-> session tokens in browser local storage.
+> Read `AGENTS.md`, `README.md`, `docs/status/README.md`,
+> `docs/status/TODO.md`, `docs/status/2026-08-10-qwen-streaming-closeout.md`,
+> ADR 0009 and the Qwen spike report. Inspect uncommitted changes. Continue with
+> Phase 3.1 only: define and implement a typed authenticated continuous PCM16
+> uplink from the already-woken Voice Satellite to a bounded Core ingress. Use
+> session ID, turn ID, explicit PCM format and monotonically increasing sequence
+> numbers, and measure transport timing. Do not yet add streaming STT, TTS
+> downlink, playback buffering, dialogue replacement or barge-in. Preserve
+> Chatterbox as fallback, Qwen F as the quality reference and Core authority.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 

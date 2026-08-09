@@ -12,10 +12,11 @@ model, talker and decoder warm-up, first playable PCM arrived in 1.09–1.48
 seconds across the nine measured short, medium and long runs. Ten-frame output
 arrived in 1.99–2.58 seconds. Larger windows missed the latency gate.
 
-Overall classification is **BORDERLINE pending the owner's listening test**.
-Latency and cancellation pass with five frames. Sample counts and memory are
-stable. The remaining gate is whether the more frequent decode boundaries are
-inaudible and retain F's timbre and prosody closely enough.
+Final classification is **PASS with an accepted quality/latency compromise**.
+After the initial matrix and a focused boundary-optimisation follow-up, the
+owner accepted a ten-frame first decode followed by 20-frame strides as nearly
+full-decode quality. Cancellation, sample counts and memory are stable. The
+non-crossfaded candidate was technically stronger than the crossfaded variant.
 
 ## Implementation
 
@@ -159,8 +160,9 @@ comfortably below two seconds on the current GPU.
 
 ## Gate and recommendation
 
-Current gate: **BORDERLINE**, with a technical latency/cancellation pass and a
-pending subjective audio-quality decision.
+The initial gate was **BORDERLINE** pending subjective listening. That gate is
+now closed as **PASS with an accepted quality/latency compromise**; see the
+final listening decision below.
 
 - If five frames sound clean and retain F: continue Qwen 1.7B toward Phase 3.
 - If five frames click but ten frames sound clean: Qwen remains usable, but the
@@ -232,6 +234,44 @@ If the five-frame adaptive crossfade is audibly transparent, it supersedes the
 original fixed-window candidate. Otherwise the adaptive strategy without
 crossfade is the safer next candidate. Phase 3 remains blocked on this listening
 gate and was not started.
+
+## Final owner listening gate and decision
+
+The owner directly compared `00`, `03`, `04`, `07` and `08`. Both ten-frame
+start variants (`07` and `08`) were substantially closer to the full decode
+than the five-frame variants and were judged almost indistinguishable from the
+full-decode reference. The owner therefore selected a 10-frame first chunk
+followed by 20-frame chunks as the preferred quality/latency compromise.
+
+Between the two accepted-sounding ten-frame variants, the non-crossfaded `07`
+is the technical winner:
+
+| Candidate | First PCM mean | Aligned RMSE | Maximum boundary jump |
+| --- | ---: | ---: | ---: |
+| `07` start 10, then 20 | 2.309 s | **0.013340** | **0.100952** |
+| `08` start 10, then 20 + 40 ms crossfade | 2.131 s | 0.013385 | 0.128357 |
+
+The small apparent TTFA advantage of `08` is not caused by crossfading, which
+happens after decoding, and is therefore treated as run variance. `08` has both
+a slightly higher waveform error and a materially higher worst measured
+boundary jump. Crossfading adds mutable-tail state without demonstrating a
+robustness benefit for the selected ten-frame path. Candidate `07` is retained.
+
+Final spike classification: **PASS with an accepted quality/latency
+compromise**. Qwen 1.7B FP16, the immutable cached F conditioning, a 10-frame
+first decode, 20-frame subsequent strides and 50 frames of left context are the
+selected inputs for the future provider prototype. The measured 2.309-second
+mean TTS TTFA misses the ideal two-second threshold but remains below the
+three-second investigation ceiling, preserves F close to full-decode quality,
+cancels reliably and stays within the isolated RTX 2070 memory envelope.
+
+Phase 3 was not started. Its minimal first step is a typed, authenticated,
+continuous PCM16 uplink from the already-woken Voice Satellite to a new bounded
+Core ingress prototype. It should carry `sessionId`, `turnId`, sample rate,
+channel count and monotonically increasing frame sequence numbers. The first
+slice ends after Core receives, orders and records timing for the PCM frames;
+it does not yet add streaming STT, a TTS downlink, dialogue replacement,
+playback or barge-in.
 
 ## Reproduction
 

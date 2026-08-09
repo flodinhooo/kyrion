@@ -1,9 +1,33 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
+
+## Next session: Local voice Phase 3
+
+- [x] Preserve the immutable provider-neutral `velora-f` voice profile and its
+  original Qwen reference, transcript, checksum and provenance.
+- [x] Benchmark Qwen 1.7B internal codec-frame streaming on the RTX 2070 with
+  cached F conditioning, warm FP16 runtime, cancellation and bounded memory.
+- [x] Complete the owner's listening gate. Accept `start 10, then 20` without
+  crossfade as the spike candidate: it is nearly full-decode quality to the
+  owner, averages 2.309 seconds to first PCM and avoids the crossfade variant's
+  larger measured worst boundary jump.
+- [ ] Phase 3.1: define and implement only a typed authenticated continuous
+  PCM16 uplink prototype from the already-woken Voice Satellite to a bounded
+  Core ingress. Include `sessionId`, `turnId`, sample rate, channel count and a
+  monotonically increasing frame sequence; record transport timing.
+- [ ] Verify ordering, bounded buffering, authentication failure, disconnect,
+  cancellation and reconnect behaviour for the PCM uplink before adding STT.
+- [ ] After PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
+  measured slice; do not combine it prematurely with TTS downlink or barge-in.
+- [ ] Keep Chatterbox operational as the batch fallback and do not make the
+  Qwen spike a production provider until a later provider-adapter phase.
+
+Do not begin the Pi audio downlink, production Dialogue Controller changes,
+WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 
 ## Completed: Local authentication and ownership
 
