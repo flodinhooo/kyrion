@@ -107,6 +107,7 @@ class VoiceDialogueService(
         val response = StringBuilder()
         val pendingSpeech = StringBuilder()
         var sentenceCount = 0
+        var emittedChunks = 0
         ai.execute(
             "$aiBaseUrl/v1/chat/stream",
             org.springframework.http.HttpMethod.POST,
@@ -124,10 +125,12 @@ class VoiceDialogueService(
                             response.append(delta)
                             pendingSpeech.append(delta)
                             sentenceCount += delta.count { it == '.' || it == '!' || it == '?' }
-                            if (sentenceCount >= SENTENCES_PER_CHUNK) {
+                            val requiredSentences = if (emittedChunks == 0) 1 else SENTENCES_PER_LATER_CHUNK
+                            if (sentenceCount >= requiredSentences) {
                                 emitAudio(pendingSpeech.toString().trim(), locale, emit)
                                 pendingSpeech.clear()
                                 sentenceCount = 0
+                                emittedChunks += 1
                             }
                         }
                     }
@@ -154,7 +157,7 @@ class VoiceDialogueService(
     }
 
     companion object {
-        private const val SENTENCES_PER_CHUNK = 2
+        private const val SENTENCES_PER_LATER_CHUNK = 2
         private val STOP_PHRASES = setOf(
             "stopp", "abbrechen", "danke", "bis später", "tschüss",
             "stop", "cancel", "thanks", "thank you", "goodbye",
