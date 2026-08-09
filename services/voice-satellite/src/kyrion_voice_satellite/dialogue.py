@@ -59,10 +59,14 @@ class DialogueRunner:
                     reason = "inactivity"
                     return
                 self.state = DialogueState.PROCESSING
-                turn = self._client.turn(session.id, pcm_to_wav(utterance.pcm), self._config.locale)
-                LOGGER.info("Voice turn transcribed and answered")
                 self.state = DialogueState.SPEAKING
-                self._playback.play(turn.audio)
+                turn = self._client.turn(
+                    session.id,
+                    pcm_to_wav(utterance.pcm),
+                    self._config.locale,
+                    self._playback.play,
+                )
+                LOGGER.info("Voice turn transcribed and answered")
                 if not turn.continue_session:
                     reason = "explicit"
                     return
