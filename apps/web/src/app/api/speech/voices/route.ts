@@ -1,0 +1,20 @@
+import { isVoiceCatalog } from "@/features/voice/contracts";
+import { requireApiSession } from "@/lib/server-auth";
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
+
+export async function GET() {
+  const auth = await requireApiSession();
+  if (auth instanceof Response) return auth;
+  try {
+    const response = await fetch(`${AI_SERVICE_URL}/v1/speech/voices`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
+    });
+    const catalog: unknown = await response.json();
+    if (!response.ok || !isVoiceCatalog(catalog)) throw new Error("Invalid voice catalog");
+    return Response.json(catalog, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({ code: "TTS_UNAVAILABLE" }, { status: 503 });
+  }
+}
