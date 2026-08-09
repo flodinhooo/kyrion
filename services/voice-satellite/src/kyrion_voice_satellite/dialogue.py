@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import time
+import uuid
 from enum import Enum
 
 from kyrion_voice_satellite.audio import AlsaCapture
@@ -59,12 +61,31 @@ class DialogueRunner:
                     reason = "inactivity"
                     return
                 self.state = DialogueState.PROCESSING
+                turn_id = str(uuid.uuid4())
+                speech_end = time.time_ns() // 1_000_000
+                LOGGER.info("[VOICE] turn=%s event=speech_end ts_ms=%d", turn_id, speech_end)
+
+                def play_chunk(audio: bytes, voice_turn_id: str = turn_id) -> None:
+                    received = time.time_ns() // 1_000_000
+                    LOGGER.info(
+                        "[VOICE] turn=%s event=satellite_first_chunk_received ts_ms=%d",
+                        voice_turn_id,
+                        received,
+                    )
+                    LOGGER.info(
+                        "[VOICE] turn=%s event=playback_started ts_ms=%d",
+                        voice_turn_id,
+                        time.time_ns() // 1_000_000,
+                    )
+                    self._playback.play(audio)
+
                 self.state = DialogueState.SPEAKING
                 turn = self._client.turn(
                     session.id,
                     pcm_to_wav(utterance.pcm),
                     self._config.locale,
-                    self._playback.play,
+                    play_chunk,
+                    turn_id,
                 )
                 LOGGER.info("Voice turn transcribed and answered")
                 if not turn.continue_session:

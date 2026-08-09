@@ -354,6 +354,17 @@ user-needs analysis: trust foundation, daily usability, then differentiation.
 
 ## Later product slices
 
+- [ ] Add the future three-mode AI product choice: Kyrion Local, Kyrion Managed
+  AI and Bring Your Own AI, all using the same provider-neutral contracts.
+- [ ] Detect and benchmark CPU, RAM and VRAM, then recommend transparent local
+  profiles such as CPU-only, Local Lite, Local Standard and Local Performance.
+- [ ] Let Expert Mode route STT, LLM and TTS independently; keep Simple Mode to
+  understandable Local, Managed or External choices.
+- [ ] Before building Kyrion Managed AI, decide data minimisation, residency,
+  retention, consent, billing, quotas, availability and operational support.
+- [ ] Implement and validate a bounded external-provider plugin only after the
+  provider contract, secret handling, permissions, data-flow disclosure and
+  audit boundaries are stable.
 - [x] Add an official internal Plugins catalog and Nanoleaf detail page.
 - [x] Discover Nanoleaf controllers through mDNS with a manual private-IPv4 fallback.
 - [x] Persist owner-specific connections and AES-GCM-encrypted credentials in Core.

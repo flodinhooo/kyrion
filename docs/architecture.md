@@ -336,6 +336,29 @@ proposal contract. Core must reject unknown targets and request clarification
 when a natural-language room or device selector matches zero or multiple
 plausible targets rather than allowing the model to guess.
 
+### Future AI deployment modes
+
+The provider boundary should support three future deployment modes without
+creating separate Kyrion products: models running on user-controlled hardware,
+models hosted as an optional Kyrion-managed service, and owner-configured
+external AI providers. STT, LLM and TTS are separate capabilities and may be
+routed independently, so an installation can keep speech recognition local
+while using a different provider for reasoning or voice synthesis.
+
+Provider selection and hardware recommendations must be based on declared
+capabilities and measured deployment profiles, not provider-specific branches
+in Web, Core or the dialogue controller. Core remains local and authoritative
+for identity, permissions, context release, action validation and audit in all
+three modes. A remote AI request receives only the context required for that
+request; connecting a cloud provider must not implicitly move durable
+conversation history, personal memory, smart-home history or camera data into
+that provider's storage.
+
+External-provider credentials remain server-side. Data destination, expected
+cost, retention implications and fallback behaviour must be visible before a
+user enables remote processing. Managed or external AI is optional and must not
+remove the essential non-AI or local control paths.
+
 ## Integrations
 
 ### Persistent device lifecycle invariant

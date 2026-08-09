@@ -245,6 +245,7 @@ class OllamaProvider:
 
 
 def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]:
+    voice_mode = request.interaction_mode == "voice"
     return {
         "model": request.model_id or default_model,
         "messages": [message.model_dump() for message in request.messages],
@@ -252,8 +253,8 @@ def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]
         # Reasoning-capable models otherwise finish an invisible thinking pass
         # before emitting their user-facing answer.
         "think": False,
-        "keep_alive": "10m",
-        "options": {"num_ctx": 4096},
+        "keep_alive": "24h" if voice_mode else "10m",
+        "options": {"num_ctx": 4096, **({"num_predict": 48} if voice_mode else {})},
     }
 
 

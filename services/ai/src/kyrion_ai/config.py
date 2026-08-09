@@ -24,7 +24,7 @@ class Settings:
             model.strip()
             for model in os.getenv(
                 "KYRION_ALLOWED_MODELS",
-                "gemma3:4b,qwen3:8b",
+                "gemma3:1b,gemma3:4b,qwen3:8b",
             ).split(",")
             if model.strip()
         )

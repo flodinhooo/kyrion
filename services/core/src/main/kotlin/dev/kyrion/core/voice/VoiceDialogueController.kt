@@ -12,6 +12,7 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -52,12 +53,14 @@ class VoiceDialogueService(
         sessionId: UUID,
         locale: String,
         audio: ByteArray,
+        turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
     ) {
         if (audio.size !in 44..1_000_000 || !audio.copyOfRange(0, 4).contentEquals("RIFF".toByteArray())) {
             throw VoiceAudioInvalidException()
         }
         val session = satellites.activeSession(satelliteId, credential, sessionId)
+        voiceEvent(turnId, "stt_start")
         val headers = HttpHeaders().apply {
             contentType = MediaType.parseMediaType("audio/wav")
             contentLength = audio.size.toLong()
@@ -68,6 +71,8 @@ class VoiceDialogueService(
             HttpEntity(audio, headers),
             AiTranscriptionResponse::class.java,
         ).body?.text?.trim().orEmpty()
+        voiceEvent(turnId, "stt_first_result")
+        voiceEvent(turnId, "stt_complete")
         if (transcript.isBlank()) throw VoiceAudioInvalidException()
         emit(VoiceTurnEvent(type = "transcript", transcript = transcript))
 
@@ -80,9 +85,9 @@ class VoiceDialogueService(
         val responseText = if (explicitEnd) {
             if (locale == "de") "Bis später." else "Talk to you later."
         } else {
-            chatAndSpeak(session.conversationId, locale, conversation.messages.takeLast(12), emit)
+            chatAndSpeak(session.conversationId, locale, conversation.messages.takeLast(12), turnId, emit)
         }
-        if (explicitEnd) emitAudio(responseText, locale, emit)
+        if (explicitEnd) emitAudio(responseText, locale, turnId, emit)
         conversations.finishTurn(
             session.ownerId, session.conversationId, userMessage.id,
             ConversationMessage(UUID.randomUUID(), "assistant", responseText, clock.instant()),
@@ -96,6 +101,7 @@ class VoiceDialogueService(
         conversationId: UUID,
         locale: String,
         messages: List<ConversationMessage>,
+        turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
     ): String {
         val body = mapOf(
@@ -103,11 +109,13 @@ class VoiceDialogueService(
             "locale" to locale,
             "messages" to messages.map { mapOf("role" to it.role, "content" to it.content) },
             "memoryContext" to emptyList<Any>(),
+            "interactionMode" to "voice",
+            "modelId" to "gemma3:1b",
+            "voiceTurnId" to turnId,
         )
         val response = StringBuilder()
-        val pendingSpeech = StringBuilder()
-        var sentenceCount = 0
-        var emittedChunks = 0
+        var firstTokenSeen = false
+        voiceEvent(turnId, "llm_request")
         ai.execute(
             "$aiBaseUrl/v1/chat/stream",
             org.springframework.http.HttpMethod.POST,
@@ -121,30 +129,33 @@ class VoiceDialogueService(
                         val event = objectMapper.readTree(line)
                         if (event.path("type").asText() == "error") throw VoiceSpeechUnavailableException()
                         if (event.path("type").asText() == "message.delta") {
+                            if (!firstTokenSeen) {
+                                firstTokenSeen = true
+                                voiceEvent(turnId, "llm_first_token")
+                            }
                             val delta = event.path("delta").asText()
                             response.append(delta)
-                            pendingSpeech.append(delta)
-                            sentenceCount += delta.count { it == '.' || it == '!' || it == '?' }
-                            val requiredSentences = if (emittedChunks == 0) 1 else SENTENCES_PER_LATER_CHUNK
-                            if (sentenceCount >= requiredSentences) {
-                                emitAudio(pendingSpeech.toString().trim(), locale, emit)
-                                pendingSpeech.clear()
-                                sentenceCount = 0
-                                emittedChunks += 1
-                            }
                         }
                     }
                 }
             },
         )
-        pendingSpeech.toString().trim().takeIf { it.isNotEmpty() }?.let { emitAudio(it, locale, emit) }
-        return response.toString().trim().takeIf { it.isNotEmpty() }
+        voiceEvent(turnId, "llm_complete")
+        val complete = response.toString().trim().takeIf { it.isNotEmpty() }
             ?: throw VoiceSpeechUnavailableException()
+        emitAudio(complete, locale, turnId, emit)
+        return complete
     }
 
     private fun normalized(value: String) = value.lowercase().trim().replace(Regex("[.!?]+$"), "")
 
-    private fun emitAudio(text: String, locale: String, emit: (VoiceTurnEvent) -> Unit) {
+    private fun emitAudio(
+        text: String,
+        locale: String,
+        turnId: String,
+        emit: (VoiceTurnEvent) -> Unit,
+    ) {
+        voiceEvent(turnId, "tts_request")
         val audio = ai.postForEntity(
             "$aiBaseUrl/v1/speech/synthesize",
             HttpEntity(
@@ -153,11 +164,18 @@ class VoiceDialogueService(
             ),
             ByteArray::class.java,
         ).body ?: throw VoiceSpeechUnavailableException()
+        voiceEvent(turnId, "tts_first_audio")
+        voiceEvent(turnId, "tts_complete")
         emit(VoiceTurnEvent(type = "audio.chunk", audioBase64 = Base64.getEncoder().encodeToString(audio)))
+        voiceEvent(turnId, "satellite_first_chunk_sent")
+    }
+
+    private fun voiceEvent(turnId: String, event: String) {
+        LOGGER.info("[VOICE] turn={} event={} ts_ms={}", turnId, event, System.currentTimeMillis())
     }
 
     companion object {
-        private const val SENTENCES_PER_LATER_CHUNK = 2
+        private val LOGGER = LoggerFactory.getLogger(VoiceDialogueService::class.java)
         private val STOP_PHRASES = setOf(
             "stopp", "abbrechen", "danke", "bis später", "tschüss",
             "stop", "cancel", "thanks", "thank you", "goodbye",
@@ -176,13 +194,14 @@ class VoiceDialogueController(private val dialogue: VoiceDialogueService) {
         @RequestHeader("Authorization") authorization: String,
         @RequestHeader("X-Kyrion-Locale", defaultValue = "de")
         @Pattern(regexp = "^(de|en)$") locale: String,
+        @RequestHeader("X-Kyrion-Voice-Turn-Id") turnId: UUID,
         @RequestBody audio: ByteArray,
     ): StreamingResponseBody {
         val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
             ?: throw VoiceSatelliteUnauthenticatedException()
         return StreamingResponseBody { output ->
-            dialogue.streamTurn(satelliteId, credential, sessionId, locale, audio) { event ->
-                objectMapper.writeValue(output, event)
+            dialogue.streamTurn(satelliteId, credential, sessionId, locale, audio, turnId.toString()) { event ->
+                output.write(objectMapper.writeValueAsBytes(event))
                 output.write('\n'.code)
                 output.flush()
             }

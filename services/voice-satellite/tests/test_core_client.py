@@ -37,7 +37,7 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
 
     with patch("urllib.request.urlopen", return_value=response):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
-            "session", b"RIFF-audio", "de", played.append,
+            "session", b"RIFF-audio", "de", played.append, "turn-id",
         )
 
     assert played == [first, second]

@@ -1,5 +1,5 @@
-from collections.abc import AsyncIterator
 import logging
+from collections.abc import AsyncIterator
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -48,12 +48,16 @@ async def transcribe(request: Request) -> Response:
         return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
     audio = await request.body()
     if not 44 <= len(audio) <= 1_000_000:
-        logger.warning("Rejected speech container length=%d header=%s", len(audio), audio[:12].hex())
+        logger.warning(
+            "Rejected speech container length=%d header=%s", len(audio), audio[:12].hex()
+        )
         return JSONResponse({"code": "INVALID_AUDIO"}, status_code=400)
     try:
         text = await run_in_threadpool(speech.transcribe, audio, locale)
     except InvalidAudioError:
-        logger.warning("Rejected speech WAV structure length=%d header=%s", len(audio), audio[:12].hex())
+        logger.warning(
+            "Rejected speech WAV structure length=%d header=%s", len(audio), audio[:12].hex()
+        )
         return JSONResponse({"code": "INVALID_AUDIO"}, status_code=400)
     except SpeechUnavailableError:
         return JSONResponse({"code": "STT_UNAVAILABLE"}, status_code=503)

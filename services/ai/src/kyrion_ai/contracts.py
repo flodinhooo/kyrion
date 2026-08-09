@@ -36,6 +36,8 @@ class ChatRequest(BaseModel):
         max_length=3,
     )
     locale: Literal["de", "en"]
+    interaction_mode: Literal["chat", "voice"] = Field(default="chat", alias="interactionMode")
+    voice_turn_id: str | None = Field(default=None, alias="voiceTurnId", max_length=64)
 
 
 class RuntimeDeviceCapability(BaseModel):

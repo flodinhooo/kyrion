@@ -4,6 +4,12 @@
 
 Accepted for the first Raspberry Pi dialogue slice on 2026-08-09.
 
+The provider selection and batch speech pipeline in this ADR are superseded by
+[ADR 0009](0009-local-provider-neutral-streaming-voice-pipeline.md). The
+Core-owned identity, authorisation, session and execution boundaries remain in
+force. Azure Speech and Piper below describe the initial decision only; they
+are not the current target architecture.
+
 ## Context
 
 The first Voice Satellite performs local wake-word inference but has no

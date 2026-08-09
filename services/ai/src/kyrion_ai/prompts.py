@@ -13,6 +13,7 @@ def prepare_chat_request(request: ChatRequest) -> ChatRequest:
         content=_system_prompt(
             _RESPONSE_LANGUAGES[request.locale],
             request.memory_context,
+            request.interaction_mode,
         ),
     )
     conversation_messages = [
@@ -27,6 +28,7 @@ def prepare_chat_request(request: ChatRequest) -> ChatRequest:
 def _system_prompt(
     response_language: str,
     memory_context: list[MemoryContextItem],
+    interaction_mode: str = "chat",
 ) -> str:
     sections = (
         _identity_prompt(),
@@ -39,8 +41,17 @@ def _system_prompt(
         _uncertainty_prompt(),
         _instruction_integrity_prompt(),
         _memory_context_prompt(memory_context),
+        _voice_prompt() if interaction_mode == "voice" else "",
     )
-    return "\n\n".join(sections)
+    return "\n\n".join(section for section in sections if section)
+
+
+def _voice_prompt() -> str:
+    return (
+        "This is a spoken conversation. Answer naturally in at most two concise sentences. "
+        "Do not use Markdown, headings, lists, stage directions, filler, or an introductory "
+        "apology. Give the useful answer immediately and finish the thought cleanly."
+    )
 
 
 def _memory_context_prompt(memories: list[MemoryContextItem]) -> str:

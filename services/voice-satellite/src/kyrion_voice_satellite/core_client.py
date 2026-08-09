@@ -42,13 +42,18 @@ class CoreVoiceClient:
         wav: bytes,
         locale: str,
         play_audio: Callable[[bytes], None],
+        turn_id: str,
     ) -> VoiceTurn:
         request = self._build_request(
             "POST",
             f"/v1/voice-satellite/sessions/{session_id}/turns",
             wav,
             "audio/wav",
-            {"X-Kyrion-Locale": locale, "Accept": "application/x-ndjson"},
+            {
+                "X-Kyrion-Locale": locale,
+                "X-Kyrion-Voice-Turn-Id": turn_id,
+                "Accept": "application/x-ndjson",
+            },
         )
         transcript = ""
         response_text = ""

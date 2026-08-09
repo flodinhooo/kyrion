@@ -166,6 +166,16 @@ assets such as PV, batteries, wallboxes or heat pumps.
 
 Only after the contracts and operating model are proven:
 
+- [ ] Productise three AI modes over the same provider contracts: Kyrion Local,
+  Kyrion Managed AI and Bring Your Own AI
+- [ ] Add hardware detection and reproducible CPU, RAM and VRAM benchmarks that
+  recommend honest local model profiles and expected latency
+- [ ] Allow STT, LLM and TTS routing to be selected independently in Expert Mode
+  while Simple Mode offers understandable Local, Managed and External choices
+- [ ] Define the privacy, residency, retention, consent, metering, cost-control
+  and support model before implementing Kyrion Managed AI
+- [ ] Prove at least one bounded external AI provider plugin without exposing
+  credentials to Web or allowing the provider to bypass Core policy and audit
 - [ ] Stabilise versioned plugin manifests and SDK contracts
 - [ ] Prove plugin permissions, isolation, signing, updates and rollback with
   official first-party plugins
