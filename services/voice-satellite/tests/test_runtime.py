@@ -1,4 +1,4 @@
-from kyrion_voice_satellite.runtime import listen
+from kyrion_voice_satellite.runtime import listen, wait_for_detection
 
 
 class FakeDetector:
@@ -19,3 +19,11 @@ def test_listener_applies_threshold_and_cooldown() -> None:
     )
 
     assert detections == [0.8, 0.7]
+
+
+def test_wait_for_detection_returns_first_matching_score() -> None:
+    score = wait_for_detection(
+        [b"a", b"b", b"c"], FakeDetector([0.2, 0.7, 0.9]), 0.5
+    )
+
+    assert score == 0.7

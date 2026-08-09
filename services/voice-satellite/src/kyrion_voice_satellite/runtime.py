@@ -31,5 +31,16 @@ def listen(
         on_detected(score)
 
 
+def wait_for_detection(
+    frames: Iterable[bytes], detector: WakeWordDetector, threshold: float
+) -> float:
+    """Return on the first wake event so the capture generator can be closed."""
+    for frame in frames:
+        score = detector.score(frame)
+        if score >= threshold:
+            return score
+    raise RuntimeError("Audio capture ended before wake detection")
+
+
 def log_detection(score: float) -> None:
     LOGGER.info("Wake word detected (score=%.3f)", score)

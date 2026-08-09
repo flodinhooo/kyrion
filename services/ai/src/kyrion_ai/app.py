@@ -17,11 +17,11 @@ from kyrion_ai.contracts import (
 from kyrion_ai.device_commands import propose_device_command
 from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
-from kyrion_ai.speech import InvalidAudioError, LocalSpeechService, SpeechUnavailableError
+from kyrion_ai.speech import InvalidAudioError, SpeechService, SpeechUnavailableError
 
 settings = Settings.from_environment()
 provider = OllamaProvider(settings)
-speech = LocalSpeechService(settings)
+speech = SpeechService(settings)
 
 app = FastAPI(title="Kyrion AI", version="0.1.0")
 
@@ -29,6 +29,7 @@ app = FastAPI(title="Kyrion AI", version="0.1.0")
 class SynthesisRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4_000)
     locale: str = Field(pattern="^(de|en)$")
+    voice_id: str | None = Field(default=None, alias="voiceId", pattern="^[a-z0-9_-]{1,40}$")
 
 
 @app.get("/health")
@@ -58,7 +59,7 @@ async def transcribe(request: Request) -> Response:
 @app.post("/v1/speech/synthesize")
 async def synthesize(request: SynthesisRequest) -> Response:
     try:
-        audio = await run_in_threadpool(speech.synthesize, request.text)
+        audio = await run_in_threadpool(speech.synthesize, request.text, request.voice_id)
     except SpeechUnavailableError:
         return JSONResponse({"code": "TTS_UNAVAILABLE"}, status_code=503)
     return Response(
@@ -66,6 +67,15 @@ async def synthesize(request: SynthesisRequest) -> Response:
         media_type="audio/wav",
         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
     )
+
+
+@app.get("/v1/speech/voices")
+async def voices() -> Response:
+    try:
+        catalog = await run_in_threadpool(speech.voices)
+    except SpeechUnavailableError:
+        return JSONResponse({"code": "TTS_UNAVAILABLE"}, status_code=503)
+    return JSONResponse(catalog)
 
 
 @app.get("/v1/models", response_model=ModelCatalog, response_model_by_alias=True)
