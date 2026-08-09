@@ -8,6 +8,11 @@ class Settings:
     ollama_model: str
     ollama_allowed_models: tuple[str, ...]
     ollama_connect_timeout_seconds: float
+    stt_model: str = "small"
+    stt_device: str = "cpu"
+    stt_compute_type: str = "int8"
+    piper_executable: str | None = None
+    piper_model: str | None = None
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -28,4 +33,9 @@ class Settings:
             ollama_connect_timeout_seconds=float(
                 os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "5")
             ),
+            stt_model=os.getenv("KYRION_STT_MODEL", "small"),
+            stt_device=os.getenv("KYRION_STT_DEVICE", "cpu"),
+            stt_compute_type=os.getenv("KYRION_STT_COMPUTE_TYPE", "int8"),
+            piper_executable=os.getenv("KYRION_PIPER_EXECUTABLE"),
+            piper_model=os.getenv("KYRION_PIPER_MODEL"),
         )

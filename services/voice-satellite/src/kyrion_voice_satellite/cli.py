@@ -7,6 +7,7 @@ from pathlib import Path
 from kyrion_voice_satellite.audio import AlsaCapture
 from kyrion_voice_satellite.config import SatelliteConfig
 from kyrion_voice_satellite.detector import OpenWakeWordDetector
+from kyrion_voice_satellite.dialogue import DialogueRunner
 from kyrion_voice_satellite.runtime import listen, log_detection
 
 
@@ -18,9 +19,16 @@ def main() -> None:
 
     config = SatelliteConfig.load(args.config)
     detector = OpenWakeWordDetector(config.model_path)
+    dialogue = DialogueRunner(config) if config.dialogue_enabled else None
+
+    def detected(score: float) -> None:
+        log_detection(score)
+        if dialogue is not None:
+            dialogue.run_session()
+
     listen(
         AlsaCapture(config.capture_device).frames(), detector, config.threshold,
-        config.cooldown_seconds, log_detection,
+        config.cooldown_seconds, detected,
     )
 
 

@@ -20,6 +20,12 @@ def main() -> None:
     parser.add_argument("output", type=Path)
     parser.add_argument("--positive-repetitions", type=int, default=100)
     parser.add_argument("--negative-repetitions", type=int, default=1000)
+    parser.add_argument(
+        "--labels",
+        nargs="+",
+        choices=("positive", "negative"),
+        default=("positive", "negative"),
+    )
     parser.add_argument("--background", type=Path, required=True)
     parser.add_argument("--rir", type=Path, required=True)
     arguments = parser.parse_args()
@@ -49,10 +55,11 @@ def main() -> None:
         "RIR": 0.25,
     }
     arguments.output.mkdir(parents=True, exist_ok=True)
-    settings = (
-        ("positive", arguments.positive_repetitions),
-        ("negative", arguments.negative_repetitions),
-    )
+    repetitions_by_label = {
+        "positive": arguments.positive_repetitions,
+        "negative": arguments.negative_repetitions,
+    }
+    settings = ((label, repetitions_by_label[label]) for label in arguments.labels)
     for label, repetitions in settings:
         paths = repeated_paths(arguments.session / "split" / "train" / label, repetitions)
         generator = augment_clips(
