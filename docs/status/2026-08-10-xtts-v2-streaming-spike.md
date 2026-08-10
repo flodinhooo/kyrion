@@ -7,7 +7,8 @@ candidate on the RTX 2070. It uses the immutable `velora-f` reference and the
 shared German and English acceptance texts. It does not add a provider, change
 Core or the AI service, or plan an integration.
 
-XTTS v2 is a **NO-GO for integration**. Its native streaming generator is fast
+The initial result was a **NO-GO for immediate integration**, not a final model
+rejection. Its native streaming generator is fast
 enough with a 20-token chunk: all 24 warm turns stay faster than playback and
 the simulated 320 ms playback buffer never empties. It nevertheless fails the
 quality gate reproducibly: all three short German runs generate 5.29–10.63
@@ -129,12 +130,15 @@ three-word sentence. This is not an isolated listening preference. It violates
 correctness and makes total-time/RTF figures for short text misleadingly look
 acceptable because XTTS generates excess playable audio.
 
-## Frozen outcome and evidence
+## Provisional outcome and evidence
 
-Do not tune XTTS sampling, add special-case short-text cleanup, build a provider
-adapter or connect Core. Such work would not fix the model licence and would
-turn a bounded candidate test into model-specific product logic. A future MVP
-candidate must independently pass the shared
+Do not build a provider adapter or connect Core. A later focused short-output
+termination spike was explicitly authorised and supersedes the earlier frozen
+decoder decision; see `2026-08-11-xtts-v2-short-de-termination-spike.md`. XTTS
+remained a candidate while the isolated guard path was evaluated. The later
+live-generator guard failed the real-time gates and records the current no-go
+in `2026-08-11-xtts-v2-live-generator-guard-spike.md`. Any future candidate
+must still pass the shared
 [`streaming TTS acceptance criteria`](../voice-tts-spike-acceptance.md).
 
 Reproducible runners in Git:
