@@ -40,9 +40,28 @@ The default remains `batch` until physical acceptance succeeds.
   the pre-existing Testcontainers integration test because Docker was not
   running.
 
-## Remaining acceptance gate
+## Physical acceptance
 
-Run the opt-in mode on the real Raspberry Pi against Core with synchronised
-clocks. Record one-way latency, force authentication failure, interrupt a live
-request, break and restore the connection, and verify that memory remains
-bounded. Do not begin streaming STT until this physical gate passes.
+The real Raspberry Pi acceptance passed against Core on `192.168.1.107:8080`:
+
+- three consecutive 20-second captures each delivered 250 ordered 80 ms frames
+  and 640,000 PCM bytes;
+- the calibrated reference run measured 2 ms first-frame and 12 ms maximum
+  satellite-to-Core latency;
+- Core working set remained 309.6-309.7 MiB and private memory remained
+  411.2-411.3 MiB across two repeated full captures;
+- an invalid Satellite token returned HTTP 401;
+- explicit cancellation completed with `cancelled` and no later audio;
+- an intentionally broken chunked upload failed without accepting a terminal
+  result;
+- a fresh turn on the same session succeeded immediately after that disconnect.
+
+Windows and Pi wall clocks differed by roughly 294 ms despite both reporting
+NTP synchronisation. The session-open response now carries Core time and the
+Satellite applies a conservative per-session offset to capture timestamps.
+Core retains signed latency values rather than silently clamping clock errors
+to zero.
+
+Phase 3.1 is accepted. Phase 3.2 may now add CPU-int8 streaming STT as a new
+separately measured slice. TTS downlink, playback buffering and barge-in remain
+out of scope.

@@ -19,11 +19,12 @@ session. The current implementation status is documented in [README.md](README.m
   PCM16 uplink prototype from the already-woken Voice Satellite to a bounded
   Core ingress. Include `sessionId`, `turnId`, sample rate, channel count and a
   monotonically increasing frame sequence; record transport timing.
-- [ ] Complete physical Pi-to-Core acceptance for ordering, bounded buffering,
+- [x] Complete physical Pi-to-Core acceptance for ordering, bounded buffering,
   authentication failure, disconnect, cancellation, reconnect and measured
-  latency. Automated Core and Satellite coverage for these protocol boundaries
-  is implemented; the real-network run remains required before adding STT.
-- [ ] After PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
+  latency. Three 20-second Pi runs delivered 250 frames each with stable Core
+  memory; the reference run measured 2-12 ms after per-session clock
+  calibration. Authentication, cancellation, disconnect and reconnect passed.
+- [ ] Phase 3.2: after PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
   measured slice; do not combine it prematurely with TTS downlink or barge-in.
 - [ ] Keep Chatterbox operational as the batch fallback and do not make the
   Qwen spike a production provider until a later provider-adapter phase.
