@@ -20,6 +20,7 @@ class SatelliteConfig:
     locale: str = "de"
     greeting_audio_file: Path | None = None
     playback_target: str | None = None
+    dialogue_mode: str = "batch"
 
     @classmethod
     def load(cls, path: Path) -> SatelliteConfig:
@@ -39,6 +40,7 @@ class SatelliteConfig:
         locale = value.get("locale", "de")
         greeting_audio_file = value.get("greeting_audio_file")
         playback_target = value.get("playback_target")
+        dialogue_mode = value.get("dialogue_mode", "batch")
         if not isinstance(model_path, str) or not model_path.startswith("/"):
             raise ValueError("Model path must be absolute")
         if not isinstance(capture_device, str) or not capture_device.startswith("hw:"):
@@ -80,12 +82,15 @@ class SatelliteConfig:
             or len(playback_target) > 160
         ):
             raise ValueError("Playback target must be a bounded Bluetooth sink name")
+        if dialogue_mode not in {"batch", "pcm-uplink"}:
+            raise ValueError("Dialogue mode must be batch or pcm-uplink")
         return cls(
             Path(model_path), capture_device, float(threshold), float(cooldown),
             float(speech_start_timeout), float(speech_end_silence), float(utterance_max),
             core_url, satellite_id, Path(credential_file) if credential_file else None, locale,
             Path(greeting_audio_file) if greeting_audio_file else None,
             playback_target,
+            dialogue_mode,
         )
 
     @property

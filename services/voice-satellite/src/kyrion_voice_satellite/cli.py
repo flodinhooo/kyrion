@@ -8,6 +8,7 @@ from kyrion_voice_satellite.audio import AlsaCapture
 from kyrion_voice_satellite.config import SatelliteConfig
 from kyrion_voice_satellite.detector import OpenWakeWordDetector
 from kyrion_voice_satellite.dialogue import DialogueRunner
+from kyrion_voice_satellite.pcm_uplink_runner import PcmUplinkRunner
 from kyrion_voice_satellite.runtime import listen, log_detection, wait_for_detection
 
 
@@ -18,7 +19,13 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     config = SatelliteConfig.load(args.config)
-    dialogue = DialogueRunner(config) if config.dialogue_enabled else None
+    dialogue = None
+    if config.dialogue_enabled:
+        dialogue = (
+            PcmUplinkRunner(config)
+            if config.dialogue_mode == "pcm-uplink"
+            else DialogueRunner(config)
+        )
 
     if dialogue is not None:
         while True:
