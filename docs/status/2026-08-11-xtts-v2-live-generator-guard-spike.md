@@ -5,6 +5,10 @@
 XTTS v2 is **NO-GO for integration on the current MVP hardware and runtime**.
 No provider adapter or Core integration was added.
 
+The subsequent bounded guard-optimisation spike confirms this decision after
+measuring VAD gating, incremental tails, Tiny alignment and an internal XTTS
+code-length cap; see `2026-08-11-xtts-v2-guard-optimization-spike.md`.
+
 The live guard successfully prevents the known Short-DE pseudo-speech from
 reaching its simulated player, but local Faster-Whisper `small/int8` alignment
 on every native 20-token XTTS chunk is far too slow. It raises first playable

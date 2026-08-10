@@ -1,9 +1,68 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
+
+## Tomorrow: XTTS physical-path recovery (2026-08-12)
+
+Today's physical Raspberry Pi/Pebble run is rejected. Do not interpret the
+isolated XTTS benchmark as an end-to-end pass and do not make XTTS the default.
+
+The separate, parallelisable and strictly isolated Short-output investigation
+is tracked in the
+[XTTS short-output optimisation plan](2026-08-12-xtts-short-output-optimization-plan.md).
+It explicitly excludes Core/provider integration and should complete its
+EOS/tokenisation evidence before any further XTTS integration decision.
+
+- [ ] Preserve the failed run before changing behavior: record the six turn
+  IDs, stored transcripts/responses and timing boundaries from wake detection
+  through playback. The worst observed turn waited about 31.8 seconds after
+  speech end; XTTS took 27.9 seconds, produced 26.0 seconds of audio at RTF
+  1.067 and recorded one simulated underrun.
+- [ ] Add an explicit physical-path acceptance report separating VAD/capture,
+  final Faster-Whisper STT, LLM, XTTS generation, Core delivery and Pi playback.
+  Report both internal XTTS TTFA and user-perceived first audio; never present
+  internal chunk arrival as physical streaming latency.
+- [ ] Fix the runtime startup contract: Core must bind to the intended LAN
+  address for the Pi while the existing firewall remains restricted to the two
+  `kyrion-node` addresses. Add a documented health check from the Pi before a
+  listening run. Do not broaden Core exposure.
+- [ ] Remove the hard-coded `gemma3:1b` selection from the voice dialogue path.
+  Route voice through the configured provider-neutral model selection and test
+  it with the same German/English language-policy fixtures as ordinary chat.
+- [ ] Enforce response-locale consistency before TTS. For a German voice turn,
+  reject or regenerate an unrequested English continuation instead of sending
+  mixed-language model output to the German XTTS frontend. Preserve legitimate
+  names and requested translations; do not implement a vocabulary allowlist.
+- [ ] Add regressions for the two captured failures: German question followed
+  by a German-to-English LLM continuation, and a German complaint transcribed
+  incorrectly as English despite locale `de`.
+- [ ] Determine whether the latter was an STT recognition error, captured
+  playback/echo, or session-turn contamination. Preserve and inspect the exact
+  utterance WAV if still available before changing Faster-Whisper settings.
+- [ ] Replace the transactional full-WAV XTTS handoff with actual bounded PCM
+  streaming through the already tested provider-neutral Core downlink and Pi
+  jitter-buffer/PipeWire components. Keep provider details and the private
+  `max_gen_mel_tokens` workaround inside the XTTS adapter.
+- [ ] Define the streaming failure boundary before implementation: no
+  Chatterbox replay after XTTS audio has become audible; fallback is allowed
+  only before release, otherwise terminate the turn cleanly and report the
+  provider failure.
+- [ ] Carry provider chunk timestamps through Core and the satellite so the
+  physical run measures XTTS TTFA, first released PCM, first Pi receipt,
+  playback start, buffer depth, underruns and cancellation independently.
+- [ ] Repeat a bounded physical matrix only after automated tests pass: short
+  DE repeated, medium/long DE, dialogue DE, numbers DE/EN, domain DE/EN,
+  mixed-name terms and natural pauses. Include the exact questions that failed
+  today.
+- [ ] Accept the next physical run only if the answer language remains correct,
+  Short-DE has no tail, user-perceived first audio meets the agreed gate,
+  long-form RTF is below 0.90 and Pi playback has zero underruns.
+- [ ] Keep Chatterbox available as the stable operational fallback after the
+  isolated XTTS-only measurement. XTTS remains opt-in until public termination
+  and repeated physical short-output correctness are solved.
 
 ## Next session: Local voice Phase 3
 
