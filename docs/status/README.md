@@ -518,6 +518,26 @@ and Apache-2.0 project evidence. This is not an integration approval. Model
 load, artifact licensing, RTX 2070 compatibility and one Velora DE/EN proof
 must pass in the training WSL environment before the full acceptance matrix.
 
+The CosyVoice proof subsequently failed that cheap gate. With cached Velora
+conditioning and a warm model, first PCM took 4.2–5.4 seconds; five of six
+DE/EN runs emitted the complete phrase as their only chunk, and observed RTF
+was roughly 0.94–1.52. The full stability/listening matrix is therefore not
+justified. CosyVoice joins Qwen as a documented no-go, while Chatterbox remains
+the operational batch fallback and no Core integration is added.
+
+Phase 3.13 verifies that Chatterbox itself remains a healthy batch fallback: a
+silent local request returned a valid 3.28-second mono 24 kHz PCM16 WAV in
+3.624 seconds and unknown voices fail explicitly. The AI configuration still
+labels its local HTTP client as Qwen even though that transport shape is also
+used by Chatterbox. This naming/configuration debt is documented for the next
+bounded slice; no endpoint was silently switched.
+
+Phase 3.14 resolves that debt without adding fallback selection: `http_batch`
+and `KYRION_HTTP_TTS_URL` now name the existing local batch contract, while an
+explicit legacy `qwen` selection retains its old endpoint. The real client to
+Chatterbox returned valid mono 24 kHz PCM16, and the AI suite has 72 passing
+tests. Streaming and Core remain unchanged.
+
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
 systems, not a Home Assistant clone or an unrestricted assistant. Home

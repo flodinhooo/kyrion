@@ -44,8 +44,10 @@ session. The current implementation status is documented in [README.md](README.m
 - [ ] Leave production streaming STT unplanned until another stateful local
   candidate clearly beats the preserved `small/int8` quality gate, including
   `Velora`, `Gamingraum`, `desk lamp` and interrupted self-correction.
-- [ ] Keep Chatterbox operational as the batch fallback and do not make the
+- [x] Keep Chatterbox operational as the batch fallback and do not make the
   Qwen spike a production provider until a later provider-adapter phase.
+  The Phase 3.13 smoke check returned a valid 3.28-second mono 24 kHz PCM16 WAV
+  in 3.624 seconds and rejected an unknown voice. No audio was played.
 - [x] Phase 3.3 software prototype: add only a provider-neutral authenticated
   bounded PCM downlink with synthetic PCM and strict session/turn, format,
   sequence, size, total and local-cancellation validation. Keep it disconnected
@@ -99,9 +101,19 @@ session. The current implementation status is documented in [README.md](README.m
   feasibility evidence. `Fun-CosyVoice3-0.5B-2512` is selected because its
   official project supports DE/EN zero-shot cloning and bi-streaming under an
   Apache-2.0 code licence. Do not integrate it or download other candidates.
-- [ ] Install CosyVoice 3 only in the isolated training WSL environment and
+- [x] Install CosyVoice 3 only in the isolated training WSL environment and
   prove model load plus one DE/EN `velora-f` clone before running the full
-  Phase 3.11 acceptance matrix.
+  Phase 3.11 acceptance matrix. The cached warm proof fails early: first PCM
+  takes 4.2–5.4 seconds, five of six outputs arrive as a single complete chunk,
+  and warm RTF is roughly 0.94–1.52. Freeze CosyVoice as a no-go.
+- [ ] Leave streaming-TTS provider selection open. Qwen and CosyVoice are
+  documented no-go candidates on the RTX 2070; Chatterbox remains the working
+  batch fallback and the synthetic provider-neutral contracts remain ready.
+- [x] Replace the Qwen-specific name of the existing AI-side local batch HTTP
+  TTS client with an explicit provider-neutral name. Preserve Piper and typed
+  failure behaviour; do not add silent fallback, streaming or Core changes.
+  `http_batch` now targets the explicit `KYRION_HTTP_TTS_URL`; the real
+  Chatterbox acceptance returned valid mono 24 kHz PCM16 and all 72 tests pass.
 
 Do not begin the Pi audio downlink, production Dialogue Controller changes,
 WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
