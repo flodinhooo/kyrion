@@ -15,12 +15,14 @@ session. The current implementation status is documented in [README.md](README.m
   crossfade as the spike candidate: it is nearly full-decode quality to the
   owner, averages 2.309 seconds to first PCM and avoids the crossfade variant's
   larger measured worst boundary jump.
-- [ ] Phase 3.1: define and implement only a typed authenticated continuous
+- [x] Phase 3.1: define and implement only a typed authenticated continuous
   PCM16 uplink prototype from the already-woken Voice Satellite to a bounded
   Core ingress. Include `sessionId`, `turnId`, sample rate, channel count and a
   monotonically increasing frame sequence; record transport timing.
-- [ ] Verify ordering, bounded buffering, authentication failure, disconnect,
-  cancellation and reconnect behaviour for the PCM uplink before adding STT.
+- [ ] Complete physical Pi-to-Core acceptance for ordering, bounded buffering,
+  authentication failure, disconnect, cancellation, reconnect and measured
+  latency. Automated Core and Satellite coverage for these protocol boundaries
+  is implemented; the real-network run remains required before adding STT.
 - [ ] After PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
   measured slice; do not combine it prematurely with TTS downlink or barge-in.
 - [ ] Keep Chatterbox operational as the batch fallback and do not make the

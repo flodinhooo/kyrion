@@ -9,5 +9,6 @@
   "core_url": "http://CORE_HOST:8080",
   "satellite_id": "REPLACE_WITH_SATELLITE_ID",
   "credential_file": "/home/kyrion/.config/kyrion/voice-satellite.token",
+  "dialogue_mode": "batch",
   "locale": "de"
 }

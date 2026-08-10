@@ -443,17 +443,22 @@ remains [Voice Satellite and Wake-Word Session —
   session over-specialisation rather than general improvement. The safer second
   candidate remains deployed. More independent partial-phrase negatives and
   cross-microphone positives are required before another candidate is accepted.
-  Local STT, TTS, bounded post-wake sessions and interruption remain planned.
+  The bounded post-wake PCM uplink prototype is implemented. Local streaming
+  STT, streaming TTS and interruption remain planned.
 
 ## Recommended next step
 
-The local voice architecture gate now passes for an isolated Qwen 1.7B
+The local voice architecture gate passes for an isolated Qwen 1.7B
 prototype. The owner selected the non-crossfaded 10-frame first decode followed
 by 20-frame strides because it sounds almost identical to the full decode. Its
-mean TTS TTFA is 2.309 seconds. The next voice step is Phase 3.1 only: a bounded
-authenticated PCM16 uplink from the already-woken satellite to Core with typed
-session, turn, audio-format and sequence metadata. Do not add STT, TTS downlink,
-playback buffering, dialogue replacement or barge-in in the same slice.
+mean TTS TTFA is 2.309 seconds. Phase 3.1 now provides a bounded authenticated
+HTTP/NDJSON PCM16 uplink from the already-woken satellite to Core with typed
+session, turn, audio-format, capture-time and sequence metadata. Core processes
+the request incrementally, retains no audio and returns frame, byte and latency
+measurements. Automated transport-boundary tests pass; physical Pi-to-Core
+latency, disconnect and reconnect acceptance remains the next gate. Do not add
+streaming STT, TTS downlink, playback buffering, dialogue replacement or
+barge-in before that acceptance.
 
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
@@ -538,12 +543,11 @@ In a new agent chat, use this prompt:
 > Read `AGENTS.md`, `README.md`, `docs/status/README.md`,
 > `docs/status/TODO.md`, `docs/status/2026-08-10-qwen-streaming-closeout.md`,
 > ADR 0009 and the Qwen spike report. Inspect uncommitted changes. Continue with
-> Phase 3.1 only: define and implement a typed authenticated continuous PCM16
-> uplink from the already-woken Voice Satellite to a bounded Core ingress. Use
-> session ID, turn ID, explicit PCM format and monotonically increasing sequence
-> numbers, and measure transport timing. Do not yet add streaming STT, TTS
-> downlink, playback buffering, dialogue replacement or barge-in. Preserve
-> Chatterbox as fallback, Qwen F as the quality reference and Core authority.
+> Phase 3.1 is implemented in software. Inspect its status report and run the
+> physical Pi-to-Core acceptance for authenticated PCM16 ordering, bounded
+> buffering, cancellation, disconnect, reconnect and transport latency. Do not
+> add streaming STT until that gate passes. Preserve Chatterbox as fallback,
+> Qwen F as the quality reference and Core authority.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 
