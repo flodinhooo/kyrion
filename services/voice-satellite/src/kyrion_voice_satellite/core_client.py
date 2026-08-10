@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -17,6 +18,7 @@ class CoreVoiceError(RuntimeError):
 class OpenSession:
     id: str
     conversation_id: str
+    clock_offset_millis: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +36,13 @@ class CoreVoiceClient:
 
     def open_session(self) -> OpenSession:
         value = self._request("POST", "/v1/voice-satellite/sessions", b"", "application/json")
-        return OpenSession(value["sessionId"], value["conversationId"])
+        completed = time.time_ns() // 1_000_000
+        server_time = int(value["serverTimeEpochMillis"])
+        # Use receipt time as a conservative offset. The server timestamp is
+        # created immediately before serialisation, so midpoint calibration
+        # would also count Core's session/database work and can put captures in
+        # Core's future.
+        return OpenSession(value["sessionId"], value["conversationId"], server_time - completed)
 
     def turn(
         self,

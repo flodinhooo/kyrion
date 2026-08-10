@@ -10,10 +10,34 @@ class StreamingResponse:
         self._lines = [json.dumps(event).encode() + b"\n" for event in events]
 
     def __enter__(self):
-        return iter(self._lines)
+        return self
 
     def __exit__(self, *_args):
         return False
+
+    def read(self):
+        return b"".join(self._lines)
+
+    def __iter__(self):
+        return iter(self._lines)
+
+
+def test_open_session_calibrates_satellite_clock_to_core(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    response = StreamingResponse([{
+        "sessionId": "session",
+        "conversationId": "conversation",
+        "serverTimeEpochMillis": 1_250,
+    }])
+
+    with (
+        patch("urllib.request.urlopen", return_value=response),
+        patch("time.time_ns", return_value=1_100_000_000),
+    ):
+        session = CoreVoiceClient("http://core", "satellite", credential).open_session()
+
+    assert session.clock_offset_millis == 150
 
 
 def test_turn_plays_audio_chunks_before_completion(tmp_path):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from itertools import islice
 
@@ -22,18 +23,21 @@ class PcmUplinkRunner:
         self._sessions = CoreVoiceClient(
             config.core_url, config.satellite_id, config.credential_file,
         )
-        self._uplink = PcmUplinkClient(
-            config.core_url, config.satellite_id, config.credential_file,
-        )
 
     def run_session(self) -> None:
         session = self._sessions.open_session()
         turn_id = str(uuid.uuid4())
+        uplink = PcmUplinkClient(
+            self._config.core_url,
+            self._config.satellite_id,
+            self._config.credential_file,
+            epoch_millis=lambda: time.time_ns() // 1_000_000 + session.clock_offset_millis,
+        )
         reason = "error"
         frames = AlsaCapture(self._config.capture_device).frames()
         frame_limit = round(self._config.utterance_max_seconds / FRAME_SECONDS)
         try:
-            result = self._uplink.stream(
+            result = uplink.stream(
                 session.id, turn_id, islice(frames, frame_limit),
             )
             reason = "maximum"
