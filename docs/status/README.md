@@ -538,6 +538,18 @@ explicit legacy `qwen` selection retains its old endpoint. The real client to
 Chatterbox returned valid mono 24 kHz PCM16, and the AI suite has 72 passing
 tests. Streaming and Core remain unchanged.
 
+Phase 3.15 exercised the complete physical batch dialogue path for five owner
+turns. Transport reliability passed, but the owner rejected the experience:
+instrumented speech-end-to-playback was 5.858-11.814 seconds, or approximately
+7.858-13.814 seconds including the configured trailing silence. The
+[turn-by-turn analysis](2026-08-10-phase315-batch-voice-dialogue-analysis.md)
+shows that the voice prompt's two-concise-sentence rule and the 48-token ceiling
+artificially constrain Gemma. Core sends the resulting text unchanged to
+Chatterbox. One correct open question received a factually wrong answer and the
+following turn reinforced it. STT and TTS remain unchanged pending this
+diagnosis; the batch path is functional but not an accepted natural-dialogue
+experience.
+
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
 systems, not a Home Assistant clone or an unrestricted assistant. Home

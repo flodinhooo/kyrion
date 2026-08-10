@@ -114,6 +114,18 @@ session. The current implementation status is documented in [README.md](README.m
   failure behaviour; do not add silent fallback, streaming or Core changes.
   `http_batch` now targets the explicit `KYRION_HTTP_TTS_URL`; the real
   Chatterbox acceptance returned valid mono 24 kHz PCM16 and all 72 tests pass.
+- [x] Run and diagnose the first physical five-turn batch voice dialogue. The
+  path is reliable but not accepted as a natural conversation: perceived waits
+  were approximately 7.858-13.814 seconds, the prompt imposes at most two
+  concise sentences, and voice generation is capped at 48 tokens. Core applies
+  no content shortening before Chatterbox. Preserve STT and TTS while the
+  documented prompt/latency diagnosis is reviewed.
+- [ ] Adjust the voice response policy only after review: retain short answers
+  for simple facts, allow two to four natural sentences for open/explanatory
+  questions, and replace the blanket 48-token ceiling with a bound that can
+  express that policy. Add tests for German language adherence, challenged
+  incorrect premises and natural stop-phrase variants before another physical
+  dialogue acceptance run.
 
 Do not begin the Pi audio downlink, production Dialogue Controller changes,
 WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
