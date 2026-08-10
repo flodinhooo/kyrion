@@ -24,14 +24,16 @@ session. The current implementation status is documented in [README.md](README.m
   latency. Three 20-second Pi runs delivered 250 frames each with stable Core
   memory; the reference run measured 2-12 ms after per-session clock
   calibration. Authentication, cancellation, disconnect and reconnect passed.
-- [ ] Phase 3.2: after PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
-  measured slice; do not combine it prematurely with TTS downlink or barge-in.
-  The isolated Faster-Whisper `small/int8` spike rejects 800 ms updates because
-  1.45-1.71 second decodes accumulate backlog. A 1,600 ms candidate stayed
-  below its interval and transcribed three clean German references correctly.
-  Validate it next with independent real Delock-microphone German/English,
-  silence/noise, longer-turn, correction and cancellation inputs before wiring
-  it to Core.
+- [x] Phase 3.2 spike: measure CPU-int8 Faster-Whisper rolling STT separately.
+  Real Delock German/English, silence/noise and correction tests reject the
+  design for production: `small` full-window recomputation delays authoritative
+  finals to roughly 2.4-2.9 seconds when a partial is in flight, while `base`
+  is fast enough but loses too much German command meaning. Keep final-utterance
+  `small/int8` as fallback and do not wire either rolling design to Core.
+- [ ] Evaluate a genuinely stateful incremental local STT candidate against
+  the preserved private Delock set. Require explicit DE/EN locale, VAD-empty
+  noise results, partial/final semantics, coalescing, prompt cancellation and
+  lower final latency than the Faster-Whisper reference before integration.
 - [ ] Keep Chatterbox operational as the batch fallback and do not make the
   Qwen spike a production provider until a later provider-adapter phase.
 

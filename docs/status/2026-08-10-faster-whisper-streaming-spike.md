@@ -30,21 +30,58 @@ transcript was correct. The first two inputs produced useful partial text after
 1.6 seconds of available audio. The shortest input already had its correct
 final wording at the first update.
 
+## Real Delock microphone gate
+
+The owner recorded one independent 150-second session through the production
+Delock microphone: 12 German commands, eight English commands, silence and
+ordinary non-speech sounds. The immutable private source remains outside Git
+under `E:/Kyrion/Data/voice-training/phase32-stt/` with SHA-256
+`FE18C69A546A3F52B01BCC04409147FDF0E6518AFAFEC97ABA4AE771AD797537`.
+Pause-based segmentation produced 20 speech clips and six non-speech clips.
+
+With the explicit session locale and VAD enabled, `small/int8` produced usable
+or correct final meaning for 16 of 20 speech clips. All six silence/noise clips
+returned empty text. Automatic per-clip language detection had previously
+misclassified one English command as Welsh and hallucinated Sinhala text for a
+noise clip, so production must retain the explicit Core-owned session locale
+and upstream VAD boundary.
+
+The remaining weaknesses were concentrated around the assistant/device terms
+`Velora`, `Gamingraum`, one English availability question and `desk lamp`.
+These are not safe to silently correct inside STT. Later target resolution may
+use the owner-visible device catalogue, but Core must still clarify ambiguity
+rather than guessing.
+
+Real 1,600 ms rolling-window calls on `small/int8` usually took 1.36-1.58
+seconds. A difficult final German decode reached 1.98 seconds. When end of
+speech arrived shortly after an in-flight partial, the non-cancellable final
+decode waited and end-of-speech-to-final latency reached roughly 2.4-2.9
+seconds. Final recomputation did correct meaningful hypotheses such as
+`desk clamp` to `desk lamp`, so simply accepting the last partial is unsafe.
+
+The multilingual `base/int8` comparison completed each decode in roughly
+0.41-0.49 seconds and sustained 800 ms updates, but materially damaged German
+command accuracy and longer-sentence meaning. It is rejected.
+
 ## Decision
 
-Do not integrate the 800 ms design. Retain 1,600 ms as the next candidate, but
-do not call Phase 3.2 accepted yet. The current evidence uses clean generated
-speech and short utterances. A provider contract needs an independent real
-Delock-microphone set with ordinary German and English speech, silence/noise,
-longer utterances, partial-hypothesis correction and cancellation measurements.
+Do not integrate either rolling-window design. `base/int8` fails quality;
+`small/int8` cannot reliably finish a partial before the next update and its
+full-window recomputation can delay the authoritative final transcript. The
+existing bounded final-utterance `small/int8` path remains the honest fallback.
 
-Only after that gate passes should Core forward bounded PCM to an AI-service
-streaming STT provider. The transport must coalesce updates rather than queue
-concurrent decodes, cap the rolling window, mark partial versus final text and
-discard all state on cancellation.
+Phase 3.2 is therefore **FAIL for Faster-Whisper rolling-window streaming**,
+not a failure of the accepted PCM transport. Before changing Core or AI
+contracts, evaluate a genuinely incremental local STT runtime that retains
+decoder/encoder state, coalesces rather than queues partial work, supports
+explicit German and English locale, emits partial/final distinction and
+cancels promptly. Faster-Whisper may remain the final-transcript reference
+during that comparison.
 
 ## Evidence
 
 - `.run/faster_whisper_streaming_spike.py`
 - `.run/phase32-faster-whisper-streaming.json`
 - `.run/phase32-faster-whisper-streaming-1600ms.json`
+- private `batch-transcripts.json`, `locale-vad-transcripts.json` and rolling
+  measurements under `E:/Kyrion/Data/voice-training/phase32-stt/`
