@@ -57,3 +57,17 @@ def test_chat_payload_streams_without_hidden_model_thinking() -> None:
     assert payload["think"] is False
     assert payload["keep_alive"] == "10m"
     assert payload["options"] == {"num_ctx": 4096}
+
+
+def test_voice_chat_payload_allows_bounded_natural_answers() -> None:
+    request = ChatRequest(
+        locale="de",
+        modelId="gemma3:1b",
+        interactionMode="voice",
+        messages=[ChatMessage(role="user", content="Warum ist Madrid Spaniens Hauptstadt?")],
+    )
+
+    payload = _chat_payload(request, "gemma3:4b")
+
+    assert payload["keep_alive"] == "24h"
+    assert payload["options"] == {"num_ctx": 4096, "num_predict": 128}

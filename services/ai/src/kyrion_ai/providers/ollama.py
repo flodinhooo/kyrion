@@ -254,7 +254,9 @@ def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]
         # before emitting their user-facing answer.
         "think": False,
         "keep_alive": "24h" if voice_mode else "10m",
-        "options": {"num_ctx": 4096, **({"num_predict": 48} if voice_mode else {})},
+        # 128 tokens leave room for a natural two-to-four-sentence spoken answer
+        # while retaining a firm bound for local latency and resource use.
+        "options": {"num_ctx": 4096, **({"num_predict": 128} if voice_mode else {})},
     }
 
 

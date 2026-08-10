@@ -159,3 +159,63 @@ def test_prompt_includes_only_explicit_memory_context_as_quoted_data() -> None:
 
 def test_prompt_discloses_when_no_memory_was_selected() -> None:
     assert "No confirmed personal memories" in system_prompt(make_request())
+
+
+def test_voice_prompt_uses_natural_adaptive_answer_length() -> None:
+    request = make_request("de").model_copy(update={"interaction_mode": "voice"})
+    prompt = system_prompt(request)
+
+    assert "simple factual question, one or two natural sentences" in prompt
+    assert "ordinary question, typically use two to four sentences" in prompt
+    assert "may be longer when needed for accuracy" in prompt
+    assert "never force a sentence count" in prompt
+    assert "at most two concise sentences" not in prompt
+
+
+def test_voice_prompt_requires_critical_recheck_after_doubt_or_correction() -> None:
+    request = ChatRequest.model_validate(
+        {
+            "messages": [
+                {"role": "user", "content": "Wieso ist Barcelona nicht die Hauptstadt?"},
+                {"role": "assistant", "content": "Madrid hat mehr Einwohner."},
+                {"role": "user", "content": "Bist du dir sicher? Das ist nicht der Grund."},
+            ],
+            "locale": "de",
+            "interactionMode": "voice",
+        }
+    )
+
+    prepared = prepare_chat_request(request)
+
+    assert prepared.messages[1:] == request.messages
+    assert "critically re-check the relevant claim" in prepared.messages[0].content
+    assert "instead of reflexively confirming it" in prepared.messages[0].content
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [{"role": "user", "content": "Was ist die Hauptstadt von Spanien?"}],
+        [
+            {"role": "user", "content": "Was ist die Hauptstadt von Spanien?"},
+            {"role": "assistant", "content": "Madrid ist die Hauptstadt Spaniens."},
+            {"role": "user", "content": "Und seit wann?"},
+        ],
+        [{"role": "user", "content": "Warum ist Barcelona nicht die Hauptstadt?"}],
+        [
+            {"role": "user", "content": "Madrid wurde nur wegen seiner Einwohnerzahl Hauptstadt."},
+            {"role": "user", "content": "Nein, korrigiere das bitte."},
+        ],
+    ],
+)
+def test_voice_dialogue_scenarios_preserve_complete_conversation_context(
+    messages: list[dict[str, str]],
+) -> None:
+    request = ChatRequest.model_validate(
+        {"messages": messages, "locale": "de", "interactionMode": "voice"}
+    )
+
+    prepared = prepare_chat_request(request)
+
+    assert prepared.messages[1:] == request.messages
+    assert prepared.messages[0].role == "system"
