@@ -180,10 +180,14 @@ class VoiceDialogueService(
 
 private val SESSION_ENDINGS = listOf(
     listOf("bis", "spater"),
+    listOf("bis", "spaeter"),
     listOf("tschuss"),
     listOf("auf", "wiedersehen"),
     listOf("das", "wars"),
+    listOf("danke"),
     listOf("goodbye"),
+    listOf("thanks"),
+    listOf("thank", "you"),
     listOf("talk", "to", "you", "later"),
     listOf("thats", "all"),
     listOf("stop"),

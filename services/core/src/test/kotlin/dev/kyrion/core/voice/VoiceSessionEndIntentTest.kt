@@ -13,6 +13,7 @@ class VoiceSessionEndIntentTest {
             "Passt. Danke. Bis später.",
             "Okay, tschüss.",
             "Danke dir, das war's.",
+            "Danke.",
             "Okay, danke dir, bis spaeter!",
             "Alright, goodbye.",
             "Thanks, talk to you later.",
