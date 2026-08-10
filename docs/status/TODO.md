@@ -30,12 +30,78 @@ session. The current implementation status is documented in [README.md](README.m
   finals to roughly 2.4-2.9 seconds when a partial is in flight, while `base`
   is fast enough but loses too much German command meaning. Keep final-utterance
   `small/int8` as fallback and do not wire either rolling design to Core.
-- [ ] Evaluate a genuinely stateful incremental local STT candidate against
-  the preserved private Delock set. Require explicit DE/EN locale, VAD-empty
-  noise results, partial/final semantics, coalescing, prompt cancellation and
-  lower final latency than the Faster-Whisper reference before integration.
+- [x] Evaluate Nemotron 3.5 ASR as a genuinely stateful incremental local STT
+  candidate against the preserved private Delock set. Its CPU Q8 runtime has
+  stable partials, zero hallucinations across six noise clips and under 0.49
+  seconds mean EOS-to-final latency at 160 ms chunks, but only ties
+  `small/int8` at 16/20 usable sentence meanings and regresses `desk lamp`. Do
+  not integrate it or replace the existing final-transcript fallback.
+- [x] Close Phase 3.2 with Nemotron retained as a documented no-go and
+  Faster-Whisper `small/int8` retained as the productive bounded-final baseline.
+- [x] Define shared future STT acceptance criteria with fivefold weighting for
+  `Velora`, room and device identity, hard safety/latency/resource gates and a
+  clear-win threshold beyond aggregate WER.
+- [ ] Leave production streaming STT unplanned until another stateful local
+  candidate clearly beats the preserved `small/int8` quality gate, including
+  `Velora`, `Gamingraum`, `desk lamp` and interrupted self-correction.
 - [ ] Keep Chatterbox operational as the batch fallback and do not make the
   Qwen spike a production provider until a later provider-adapter phase.
+- [x] Phase 3.3 software prototype: add only a provider-neutral authenticated
+  bounded PCM downlink with synthetic PCM and strict session/turn, format,
+  sequence, size, total and local-cancellation validation. Keep it disconnected
+  from the production Satellite runtime and every speech provider.
+- [x] Complete Phase 3.3 physical Pi acceptance. Four 20-second 160 ms runs
+  delivered 125 frames and 960,000 bytes each in 19.85–19.88 seconds with
+  stable Core memory; cancellation, authentication rejection and reconnect
+  passed. The unstable 80 ms framing is rejected.
+- [x] Phase 3.4: add and verify only a bounded Satellite PCM jitter buffer with
+  synthetic frames, explicit prebuffer, backpressure, underflow metrics and
+  cancellation clearing. The silent Pi test consumed 125/125 frames with a
+  two-frame peak, no underflow/drop and correct queued-frame cancellation.
+- [x] Phase 3.5: add a bounded raw-PCM PipeWire sink and physically verify the
+  Creative Pebble output. The corrected two-frame downstream priming sounded
+  clean in two owner-confirmed streaming runs; completion and 59 ms
+  post-signal cancellation pass. Keep it disconnected from TTS and dialogue.
+- [x] Phase 3.6: define the smallest provider-neutral streaming-TTS contract
+  behind the existing AI boundary, including format/capability declaration,
+  cancellation and phrase granularity. Do not wire Qwen into Core until the
+  contract and an isolated adapter test pass. The contract now validates typed
+  start/audio/terminal events, provider capabilities, bounds and cancellation.
+- [x] Phase 3.7: implement and test an isolated Qwen mapping against a mocked
+  capability-reporting streaming runtime. Keep it unavailable for selection
+  because the current real Qwen runtime does not implement that interface.
+- [x] Phase 3.8: add the capability and bounded NDJSON streaming interface to
+  the isolated Qwen runtime and rerun the gate through the real adapter.
+  Capability, terminal and 208.3 ms cancellation behaviour pass, and the owner
+  accepted the short DE/EN quality samples. Integration is rejected because
+  first audio takes 2.4–2.7 seconds, update gaps reach 4.3–4.6 seconds and one
+  longer sample has an audible codec-boundary jerk. Keep Qwen isolated.
+- [ ] Do not schedule Qwen/Core integration. The next local streaming-TTS
+  candidate must sustain generation faster than playback, provide continuous
+  bounded chunks and preserve the accepted voice quality and cancellation.
+- [x] Phase 3.9: implement and test only the provider-neutral LLM-text to TTS
+  phrase-boundary policy. It emits bounded DE/EN sentences incrementally,
+  preserves domain names, avoids common abbreviation splits and discards
+  buffered text on cancellation. Keep it disconnected from production chat.
+- [x] Phase 3.10: compose a mock LLM text stream, the phrase boundary and a
+  synthetic streaming-TTS provider. Phrase/audio ordering, per-phrase sequence,
+  totals and shared cancellation pass without provider or Core integration.
+- [ ] Resume Voice Pipeline integration only after a local streaming-TTS
+  provider passes continuous faster-than-playback generation, voice quality,
+  cancellation, stability, memory and licence gates. Until then retain the
+  working batch dialogue and avoid speculative Core wiring.
+- [x] Phase 3.11: define shared streaming-TTS acceptance criteria. Treat
+  continuous post-prebuffer playback, long-form RTF below 0.90, bounded chunk
+  deadlines and critical Velora/domain/boundary listening scores as hard gates,
+  rather than accepting TTFA alone.
+- [x] Select at most one new local streaming-TTS candidate for an isolated
+  Phase 3.12 spike based on official streaming, cloning, licence and RTX 2070
+  feasibility evidence. `Fun-CosyVoice3-0.5B-2512` is selected because its
+  official project supports DE/EN zero-shot cloning and bi-streaming under an
+  Apache-2.0 code licence. Do not integrate it or download other candidates.
+- [ ] Install CosyVoice 3 only in the isolated training WSL environment and
+  prove model load plus one DE/EN `velora-f` clone before running the full
+  Phase 3.11 acceptance matrix.
 
 Do not begin the Pi audio downlink, production Dialogue Controller changes,
 WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.

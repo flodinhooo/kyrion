@@ -443,8 +443,12 @@ remains [Voice Satellite and Wake-Word Session —
   session over-specialisation rather than general improvement. The safer second
   candidate remains deployed. More independent partial-phrase negatives and
   cross-microphone positives are required before another candidate is accepted.
-  The bounded post-wake PCM uplink prototype is implemented. Local streaming
-  STT, streaming TTS and interruption remain planned.
+  The bounded post-wake PCM uplink prototype and its physical Pi acceptance are
+  complete. Faster-Whisper rolling-window streaming was rejected for final
+  latency. Nemotron 3.5 CPU Q8 then achieved stable sub-second finals and no
+  noise hallucinations, but tied rather than clearly beat the preserved
+  `small/int8` sentence-quality gate and regressed `desk lamp`; it is therefore
+  not approved for integration. Streaming TTS and interruption remain planned.
 
 ## Recommended next step
 
@@ -455,10 +459,64 @@ mean TTS TTFA is 2.309 seconds. Phase 3.1 now provides a bounded authenticated
 HTTP/NDJSON PCM16 uplink from the already-woken satellite to Core with typed
 session, turn, audio-format, capture-time and sequence metadata. Core processes
 the request incrementally, retains no audio and returns frame, byte and latency
-measurements. Automated transport-boundary tests pass; physical Pi-to-Core
-latency, disconnect and reconnect acceptance remains the next gate. Do not add
-streaming STT, TTS downlink, playback buffering, dialogue replacement or
-barge-in before that acceptance.
+measurements. Automated and physical transport acceptance pass. The subsequent
+Faster-Whisper rolling and Nemotron 3.5 incremental STT spikes are both no-go
+for production: the former misses the latency gate and the latter does not
+clearly win the quality gate. Keep the current final `small/int8` fallback and
+do not add STT integration, TTS downlink, playback buffering, dialogue
+replacement or barge-in on the strength of either spike.
+
+Phase 3.2 is now formally closed under weighted future STT acceptance criteria.
+Faster-Whisper `small/int8` remains the productive bounded-final baseline and
+Nemotron is frozen as a documented no-go. Phase 3.3 has begun with an isolated
+authenticated synthetic PCM downlink contract and validating Satellite client.
+It remains disconnected from providers, the Dialogue Controller and playback;
+physical Pi transport acceptance was the next gate and has now passed at the
+selected 160 ms framing. Four 20-second runs were complete and real-time paced,
+with stable Core memory, authentication rejection, cancellation and reconnect.
+The next isolated slice is a bounded Satellite jitter buffer using synthetic
+frames; it remains separate from TTS providers and dialogue routing.
+
+The bounded jitter buffer and raw PipeWire sink subsequently passed physical
+Pi acceptance. The initial just-in-time PipeWire feed produced audible gaps;
+the same buffered PCM sounded perfect, isolating the issue to downstream
+priming. After forwarding the complete 320 ms prebuffer immediately, the owner
+confirmed two clean streaming-tone runs. Phase 3.5 is accepted without adding a
+TTS provider or production dialogue integration.
+
+Phase 3.6 now defines the provider-neutral AI-side streaming-TTS contract with
+typed capabilities, phrase scope, PCM bounds, sequence validation and bounded
+cancellation. Phase 3.7 adds an isolated Qwen mapping tested against a mock
+runtime. Phase 3.8 proves the same mapping against a real isolated runtime:
+typed streaming and 208.3 ms cancellation pass, and the owner accepted the
+short DE/EN samples. Qwen nevertheless remains a no-go because first audio
+takes 2.4–2.7 seconds, updates pause for 4.3–4.6 seconds and a longer sample
+has an audible boundary jerk. Core and provider selection remain unchanged.
+
+Phase 3.9 adds the next provider-neutral stage in isolation: incremental LLM
+text is segmented into bounded TTS phrases with domain-term preservation,
+abbreviation handling and cancellation. It is covered by the 69 passing AI
+tests and remains disconnected from the production chat route. The next safe
+slice is a synthetic composition test, not provider or Core integration.
+
+Phase 3.10 completes that synthetic composition: ordered phrases become
+validated PCM events, totals remain turn-scoped and one shared cancellation
+prevents later phrases from starting. The AI suite now has 71 passing tests.
+Further production wiring is intentionally gated on an accepted streaming-TTS
+runtime; Qwen does not satisfy that gate.
+
+Phase 3.11 now defines the shared streaming-TTS gate. A candidate must provide
+true incremental PCM, P95 first audio within two seconds, long-form RTF below
+0.90 and uninterrupted playback after the accepted 320 ms prebuffer. It must
+also pass bounded cancellation, stability, concurrent GPU headroom, licensing
+and owner listening weighted toward Velora identity, domain pronunciation and
+boundary continuity. TTFA alone can no longer qualify a runtime.
+
+Phase 3.12 selects `Fun-CosyVoice3-0.5B-2512` as the only next isolated spike
+candidate based on official DE/EN zero-shot cloning, bi-streaming, 0.5B size
+and Apache-2.0 project evidence. This is not an integration approval. Model
+load, artifact licensing, RTX 2070 compatibility and one Velora DE/EN proof
+must pass in the training WSL environment before the full acceptance matrix.
 
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
@@ -541,13 +599,13 @@ in browser local storage. Continue with one verified vertical slice at a time.
 In a new agent chat, use this prompt:
 
 > Read `AGENTS.md`, `README.md`, `docs/status/README.md`,
-> `docs/status/TODO.md`, `docs/status/2026-08-10-qwen-streaming-closeout.md`,
-> ADR 0009 and the Qwen spike report. Inspect uncommitted changes. Continue with
-> Phase 3.1 is implemented in software. Inspect its status report and run the
-> physical Pi-to-Core acceptance for authenticated PCM16 ordering, bounded
-> buffering, cancellation, disconnect, reconnect and transport latency. Do not
-> add streaming STT until that gate passes. Preserve Chatterbox as fallback,
-> Qwen F as the quality reference and Core authority.
+> `docs/status/TODO.md`, the Phase 3.1 report, both 2026-08-10 STT spike reports,
+> ADR 0009 and the Qwen streaming closeout. Inspect uncommitted changes. Phase
+> 3.1 physical PCM uplink acceptance passed. Faster-Whisper rolling streaming
+> and Nemotron 3.5 integration were both rejected; retain bounded final
+> `small/int8` and Chatterbox as fallbacks. Do not change Core or the Voice
+> Pipeline unless a new stateful local STT candidate clearly wins the preserved
+> private quality and latency benchmark.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 

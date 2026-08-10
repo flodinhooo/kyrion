@@ -10,8 +10,12 @@ locally. After a positive score, `dialogue_mode` selects the working legacy
 `batch` dialogue or the bounded Phase 3.1 `pcm-uplink` prototype. The prototype
 streams authenticated typed NDJSON events to Core, which verifies the active
 session, turn scope, format and monotonically increasing sequence without
-persisting audio. Streaming STT, a PCM downlink and interruption remain later
-slices.
+persisting audio. Streaming STT and interruption remain later slices. Phase
+3.3 contains an isolated PCM downlink transport prototype: an authenticated
+active satellite session may request bounded deterministic 24 kHz mono PCM16
+frames from Core. The satellite validates session/turn scope, format, sequence
+and totals and passes frames only to a caller-supplied sink. It is not connected
+to the runtime, Qwen, PipeWire/Pebble playback or a jitter buffer.
 
 The prototype is opt-in:
 
