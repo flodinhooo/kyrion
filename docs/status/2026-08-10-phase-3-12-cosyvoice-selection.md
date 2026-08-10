@@ -35,3 +35,41 @@ outside the product service environment. First prove model load, exact
 `velora-f` reference conditioning and one DE/EN output. Only then run the full
 Phase 3.11 latency, continuous-buffer, cancellation, memory, stability and
 listening matrix. Do not add an AI route or adapter during the spike.
+
+## Isolated proof result
+
+The official revision `074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc` and its
+Matcha-TTS submodule were installed in the training WSL distribution. The
+repository licence SHA-256 is
+`c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4`.
+The official inference environment required Python 3.10 and pinned Setuptools
+80.9.0 for the legacy Whisper build. DeepSpeed was removed because its import
+requires a separate CUDA toolkit although ordinary inference does not use it.
+PyTorch 2.3.1 CUDA 12.1 then imported CosyVoice successfully on the RTX 2070.
+
+The 9.1 GiB official model snapshot loaded in 58.628 seconds. Immutable Velora
+conditioning took 5.201 seconds and was cached before warm measurement. Peak
+allocated model/inference VRAM was 5,006.7 MiB.
+
+| Phrase | First PCM range | Total range | Audio range | Chunks |
+| --- | ---: | ---: | ---: | ---: |
+| German domain terms | 4.221–4.473 s | 4.252–5.968 s | 3.92–4.64 s | 1–2 |
+| English domain terms | 4.785–5.399 s | 4.817–5.434 s | 4.92–5.76 s | 1 |
+
+Five of six warm runs yielded the complete phrase as their first and only
+chunk. The remaining German run first yielded 3.52 seconds of its 4.36-second
+output after 4.271 seconds. This is technically a streaming API, but not useful
+incremental playback on this hardware. Warm total RTF was roughly 0.94–1.52.
+
+## Decision
+
+CosyVoice 3 is **NO-GO for integration** at the cheap proof gate. It misses the
+2.0-second first-PCM hard limit by more than twofold and does not expose useful
+short-phrase chunks. Do not run the expensive stability/listening matrix,
+optimize TensorRT/vLLM, add an adapter or connect Core. Preserve the evidence
+and select no replacement until a new official runtime has credible RTX 2070
+faster-than-playback evidence.
+
+Evidence remains outside Git under `/training/cosyvoice-velora-proof/`, with
+the reproducible runners `.run/cosyvoice_import_probe.py`,
+`.run/download_cosyvoice_model.py` and `.run/cosyvoice_velora_proof.py`.
