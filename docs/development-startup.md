@@ -75,6 +75,35 @@ $env:OLLAMA_MODEL = 'qwen3:8b'
 
 The environment variable must be set before starting the AI service.
 
+### Experimental XTTS-v2 voice test (opt-in)
+
+XTTS-v2 is an experimental MVP provider. Chatterbox on port 8020 must remain
+running because it is the automatic batch fallback. Start the isolated XTTS
+runtime in the `Kyrion-Voice-Training` WSL environment:
+
+```bash
+cd /mnt/e/dev/Kyrion/kyrion
+python services/ai/runtime/xtts_v2_streaming_tts_server.py --host 0.0.0.0 --port 8031
+```
+
+Then opt in before starting the AI service:
+
+```powershell
+$env:KYRION_TTS_PROVIDER = 'xtts'
+$env:KYRION_XTTS_EXPERIMENTAL_ENABLED = 'true'
+$env:KYRION_XTTS_TTS_URL = 'http://127.0.0.1:8031'
+& '.\.venv\Scripts\python.exe' -m uvicorn kyrion_ai.app:app --host 127.0.0.1 --port 8000
+```
+
+Without both provider selection and the feature flag, XTTS cannot run. The
+runtime uses 20-token chunks. It does not run Faster-Whisper. Its private
+`max_gen_mel_tokens` length cap is enabled by default only inside this runtime
+as an unstable MVP workaround; set
+`KYRION_XTTS_UNSTABLE_LENGTH_CAP_ENABLED=false` to disable it for diagnostics.
+The AI service buffers and validates the experimental stream before returning
+the WAV, so a crash, timeout, malformed stream or suspicious duration can fall
+back cleanly without releasing partial XTTS audio.
+
 ### 5. Start Kyrion Web
 
 ```powershell
