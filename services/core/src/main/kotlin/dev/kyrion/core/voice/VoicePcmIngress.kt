@@ -107,7 +107,7 @@ class VoicePcmIngressService(
                     if (pcmBytes + pcm.size > MAX_PCM_BYTES) throw VoicePcmIngressLimitException()
                     val capturedAt = event.capturedAtEpochMillis
                         ?: throw VoicePcmIngressInvalidException("MISSING_TIMESTAMP")
-                    val latency = (clock.millis() - capturedAt).coerceAtLeast(0)
+                    val latency = clock.millis() - capturedAt
                     firstLatency = firstLatency ?: latency
                     maximumLatency = maxOf(maximumLatency ?: latency, latency)
                     expectedSequence++

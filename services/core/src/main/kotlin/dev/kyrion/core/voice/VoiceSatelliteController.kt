@@ -31,7 +31,12 @@ data class BootstrapVoiceSatelliteRequest(
     @field:NotBlank @field:Size(max = 253) @field:Pattern(regexp = "^[A-Za-z0-9.-]+$") val hostname: String,
     @field:NotBlank @field:Size(max = 40) val runtimeVersion: String,
 )
-data class OpenVoiceSessionResponse(val sessionId: UUID, val conversationId: UUID, val expiresAt: Instant)
+data class OpenVoiceSessionResponse(
+    val sessionId: UUID,
+    val conversationId: UUID,
+    val expiresAt: Instant,
+    val serverTimeEpochMillis: Long,
+)
 data class CloseVoiceSessionRequest(
     val sessionId: UUID,
     @field:Pattern(regexp = "^(explicit|inactivity|maximum|error|interrupted)$") val reason: String,
@@ -89,7 +94,9 @@ class VoiceSatelliteAgentController(
         @RequestHeader("Authorization") authorization: String,
     ): OpenVoiceSessionResponse {
         val session = service.openSession(satelliteId, authorization.bearer())
-        return OpenVoiceSessionResponse(session.id, session.conversationId, session.expiresAt)
+        return OpenVoiceSessionResponse(
+            session.id, session.conversationId, session.expiresAt, System.currentTimeMillis(),
+        )
     }
 
     @PostMapping("/sessions/close")
