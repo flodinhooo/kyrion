@@ -550,6 +550,16 @@ following turn reinforced it. STT and TTS remain unchanged pending this
 diagnosis; the batch path is functional but not an accepted natural-dialogue
 experience.
 
+Phase 3.16 applies the bounded response-quality correction identified by that
+analysis. Voice responses now use adaptive natural length, explicitly re-check
+challenged prior claims and have a 256-token safety ceiling, while the adaptive
+policy keeps ordinary answers concise and permits two-to-four-sentence
+answers. Core uses a deterministic terminal-phrase
+recogniser for natural endings without matching quoted/contextual mentions.
+STT, TTS, transport and Satellite infrastructure are unchanged. Automated
+coverage passes; the documented physical before/after run remains the final
+acceptance checkpoint.
+
 The market and user-needs analysis sharpened Kyrion's position: it should be an
 understandable, secure and reliably operated orchestration layer above existing
 systems, not a Home Assistant clone or an unrestricted assistant. Home

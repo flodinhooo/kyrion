@@ -120,12 +120,16 @@ session. The current implementation status is documented in [README.md](README.m
   concise sentences, and voice generation is capped at 48 tokens. Core applies
   no content shortening before Chatterbox. Preserve STT and TTS while the
   documented prompt/latency diagnosis is reviewed.
-- [ ] Adjust the voice response policy only after review: retain short answers
+- [x] Adjust the voice response policy after review: retain short answers
   for simple facts, allow two to four natural sentences for open/explanatory
-  questions, and replace the blanket 48-token ceiling with a bound that can
-  express that policy. Add tests for German language adherence, challenged
-  incorrect premises and natural stop-phrase variants before another physical
-  dialogue acceptance run.
+  questions, and replace the blanket 48-token ceiling with a 256-token upper
+  safety bound controlled in practice by the adaptive response policy.
+  Prompt/context and natural stop-phrase regressions pass without
+  changing STT, TTS, transport or Satellite infrastructure.
+- [ ] Physically repeat the Phase 3.15 multi-turn dialogue with the Phase 3.16
+  policy, including a fact, contextual follow-up, open explanation, challenged
+  prior claim and natural compound session end. Record the same per-turn
+  content and latency boundaries for a direct before/after comparison.
 
 Do not begin the Pi audio downlink, production Dialogue Controller changes,
 WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
