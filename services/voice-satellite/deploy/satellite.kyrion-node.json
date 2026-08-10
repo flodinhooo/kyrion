@@ -4,6 +4,6 @@
   "threshold": 0.5,
   "cooldown_seconds": 2.0,
   "speech_start_timeout_seconds": 6.0,
-  "speech_end_silence_seconds": 0.8,
+  "speech_end_silence_seconds": 2.0,
   "utterance_max_seconds": 20.0
 }
