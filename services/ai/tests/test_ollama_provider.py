@@ -70,4 +70,4 @@ def test_voice_chat_payload_allows_bounded_natural_answers() -> None:
     payload = _chat_payload(request, "gemma3:4b")
 
     assert payload["keep_alive"] == "24h"
-    assert payload["options"] == {"num_ctx": 4096, "num_predict": 128}
+    assert payload["options"] == {"num_ctx": 4096, "num_predict": 256}
