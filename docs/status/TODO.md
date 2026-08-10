@@ -26,6 +26,12 @@ session. The current implementation status is documented in [README.md](README.m
   calibration. Authentication, cancellation, disconnect and reconnect passed.
 - [ ] Phase 3.2: after PCM-uplink acceptance, add CPU-int8 streaming STT as a separate
   measured slice; do not combine it prematurely with TTS downlink or barge-in.
+  The isolated Faster-Whisper `small/int8` spike rejects 800 ms updates because
+  1.45-1.71 second decodes accumulate backlog. A 1,600 ms candidate stayed
+  below its interval and transcribed three clean German references correctly.
+  Validate it next with independent real Delock-microphone German/English,
+  silence/noise, longer-turn, correction and cancellation inputs before wiring
+  it to Core.
 - [ ] Keep Chatterbox operational as the batch fallback and do not make the
   Qwen spike a production provider until a later provider-adapter phase.
 

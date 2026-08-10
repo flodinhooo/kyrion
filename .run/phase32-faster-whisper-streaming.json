@@ -1,0 +1,81 @@
+{
+  "model": "small",
+  "device": "cpu",
+  "computeType": "int8",
+  "modelLoadSeconds": 3.562,
+  "stepMilliseconds": 800,
+  "minimumAudioMilliseconds": 1600,
+  "maximumBufferSeconds": 15,
+  "results": [
+    {
+      "input": ".run\\velora-greeting.wav",
+      "durationSeconds": 2.64,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.571,
+          "emittedAtSeconds": 1.571,
+          "changed": true,
+          "text": "Hey Flo, womit kann ich dir..."
+        },
+        {
+          "audioAvailableSeconds": 2.4,
+          "decodeSeconds": 1.6,
+          "emittedAtSeconds": 3.171,
+          "changed": true,
+          "text": "Hey Flo, womit kann ich dir behilflich sein?"
+        },
+        {
+          "audioAvailableSeconds": 2.64,
+          "decodeSeconds": 1.711,
+          "emittedAtSeconds": 4.882,
+          "changed": false,
+          "text": "Hey Flo, womit kann ich dir behilflich sein?"
+        }
+      ],
+      "finalText": "Hey Flo, womit kann ich dir behilflich sein?"
+    },
+    {
+      "input": ".run\\velora-live-test.wav",
+      "durationSeconds": 2.4,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.45,
+          "emittedAtSeconds": 1.45,
+          "changed": true,
+          "text": "Guten Abend. Ich bin..."
+        },
+        {
+          "audioAvailableSeconds": 2.4,
+          "decodeSeconds": 1.646,
+          "emittedAtSeconds": 3.096,
+          "changed": true,
+          "text": "Guten Abend, ich bin bereit."
+        }
+      ],
+      "finalText": "Guten Abend, ich bin bereit."
+    },
+    {
+      "input": ".run\\velora-f-live-test.wav",
+      "durationSeconds": 2.0,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.577,
+          "emittedAtSeconds": 1.577,
+          "changed": true,
+          "text": "Ich bin Velora."
+        },
+        {
+          "audioAvailableSeconds": 2.0,
+          "decodeSeconds": 1.451,
+          "emittedAtSeconds": 3.028,
+          "changed": false,
+          "text": "Ich bin Velora."
+        }
+      ],
+      "finalText": "Ich bin Velora."
+    }
+  ]
+}

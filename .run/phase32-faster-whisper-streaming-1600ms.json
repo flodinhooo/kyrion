@@ -1,0 +1,74 @@
+{
+  "model": "small",
+  "device": "cpu",
+  "computeType": "int8",
+  "modelLoadSeconds": 1.643,
+  "stepMilliseconds": 1600,
+  "minimumAudioMilliseconds": 1600,
+  "maximumBufferSeconds": 15,
+  "results": [
+    {
+      "input": ".run\\velora-greeting.wav",
+      "durationSeconds": 2.64,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.457,
+          "emittedAtSeconds": 1.457,
+          "changed": true,
+          "text": "Hey Flo, womit kann ich dir..."
+        },
+        {
+          "audioAvailableSeconds": 2.64,
+          "decodeSeconds": 1.49,
+          "emittedAtSeconds": 2.947,
+          "changed": true,
+          "text": "Hey Flo, womit kann ich dir behilflich sein?"
+        }
+      ],
+      "finalText": "Hey Flo, womit kann ich dir behilflich sein?"
+    },
+    {
+      "input": ".run\\velora-live-test.wav",
+      "durationSeconds": 2.4,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.396,
+          "emittedAtSeconds": 1.396,
+          "changed": true,
+          "text": "Guten Abend. Ich bin..."
+        },
+        {
+          "audioAvailableSeconds": 2.4,
+          "decodeSeconds": 1.428,
+          "emittedAtSeconds": 2.824,
+          "changed": true,
+          "text": "Guten Abend, ich bin bereit."
+        }
+      ],
+      "finalText": "Guten Abend, ich bin bereit."
+    },
+    {
+      "input": ".run\\velora-f-live-test.wav",
+      "durationSeconds": 2.0,
+      "updates": [
+        {
+          "audioAvailableSeconds": 1.6,
+          "decodeSeconds": 1.408,
+          "emittedAtSeconds": 1.408,
+          "changed": true,
+          "text": "Ich bin Velora."
+        },
+        {
+          "audioAvailableSeconds": 2.0,
+          "decodeSeconds": 1.367,
+          "emittedAtSeconds": 2.775,
+          "changed": false,
+          "text": "Ich bin Velora."
+        }
+      ],
+      "finalText": "Ich bin Velora."
+    }
+  ]
+}
