@@ -12,7 +12,7 @@ class SatelliteConfig:
     threshold: float = 0.5
     cooldown_seconds: float = 2.0
     speech_start_timeout_seconds: float = 6.0
-    speech_end_silence_seconds: float = 0.8
+    speech_end_silence_seconds: float = 2.0
     utterance_max_seconds: float = 20.0
     core_url: str | None = None
     satellite_id: str | None = None
@@ -32,7 +32,7 @@ class SatelliteConfig:
         threshold = value.get("threshold", 0.5)
         cooldown = value.get("cooldown_seconds", 2.0)
         speech_start_timeout = value.get("speech_start_timeout_seconds", 6.0)
-        speech_end_silence = value.get("speech_end_silence_seconds", 0.8)
+        speech_end_silence = value.get("speech_end_silence_seconds", 2.0)
         utterance_max = value.get("utterance_max_seconds", 20.0)
         core_url = value.get("core_url")
         satellite_id = value.get("satellite_id")

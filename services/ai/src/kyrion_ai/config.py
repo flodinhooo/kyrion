@@ -11,7 +11,9 @@ class Settings:
     stt_model: str = "small"
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
-    tts_provider: str = "qwen"
+    tts_provider: str = "http_batch"
+    http_tts_url: str = "http://127.0.0.1:8020"
+    # Compatibility only for existing explicit Qwen batch deployments.
     qwen_tts_url: str = "http://127.0.0.1:8010"
     default_voice_id: str = "velora"
     piper_executable: str | None = None
@@ -39,7 +41,10 @@ class Settings:
             stt_model=os.getenv("KYRION_STT_MODEL", "small"),
             stt_device=os.getenv("KYRION_STT_DEVICE", "cpu"),
             stt_compute_type=os.getenv("KYRION_STT_COMPUTE_TYPE", "int8"),
-            tts_provider=os.getenv("KYRION_TTS_PROVIDER", "qwen").lower(),
+            tts_provider=os.getenv("KYRION_TTS_PROVIDER", "http_batch").lower(),
+            http_tts_url=os.getenv(
+                "KYRION_HTTP_TTS_URL", "http://127.0.0.1:8020"
+            ).rstrip("/"),
             qwen_tts_url=os.getenv("KYRION_QWEN_TTS_URL", "http://127.0.0.1:8010").rstrip("/"),
             default_voice_id=os.getenv("KYRION_DEFAULT_VOICE_ID", "velora"),
             piper_executable=os.getenv("KYRION_PIPER_EXECUTABLE"),

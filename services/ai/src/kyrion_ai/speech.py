@@ -54,36 +54,41 @@ class SpeechService:
             source.unlink(missing_ok=True)
 
     def voices(self) -> dict[str, object]:
-        if self._settings.tts_provider != "qwen":
+        if self._settings.tts_provider not in {"http_batch", "qwen"}:
             return {"defaultVoiceId": self._settings.default_voice_id, "voices": []}
-        return self._qwen_request("GET", "/v1/voices").json()
+        return self._http_tts_request("GET", "/v1/voices").json()
 
     def synthesize(self, text: str, voice_id: str | None = None) -> bytes:
-        if self._settings.tts_provider == "qwen":
-            return self._synthesize_qwen(text, voice_id or self._settings.default_voice_id)
+        if self._settings.tts_provider in {"http_batch", "qwen"}:
+            return self._synthesize_http(text, voice_id or self._settings.default_voice_id)
         if self._settings.tts_provider != "piper":
             raise SpeechUnavailableError("Configured TTS provider is unsupported")
         return self._synthesize_piper(text)
 
-    def _qwen_request(self, method: str, path: str, **kwargs) -> httpx.Response:
+    def _http_tts_request(self, method: str, path: str, **kwargs) -> httpx.Response:
         client = self._http_client or httpx.Client(timeout=120.0)
         owns_client = self._http_client is None
+        base_url = (
+            self._settings.qwen_tts_url
+            if self._settings.tts_provider == "qwen"
+            else self._settings.http_tts_url
+        )
         try:
-            response = client.request(method, f"{self._settings.qwen_tts_url}{path}", **kwargs)
+            response = client.request(method, f"{base_url}{path}", **kwargs)
             response.raise_for_status()
         except httpx.HTTPError as error:
-            raise SpeechUnavailableError("Local Qwen TTS request failed") from error
+            raise SpeechUnavailableError("Local HTTP TTS request failed") from error
         finally:
             if owns_client:
                 client.close()
         return response
 
-    def _synthesize_qwen(self, text: str, voice_id: str) -> bytes:
-        response = self._qwen_request(
+    def _synthesize_http(self, text: str, voice_id: str) -> bytes:
+        response = self._http_tts_request(
             "POST", "/v1/synthesize", json={"text": text, "voiceId": voice_id}
         )
         if not response.content.startswith(b"RIFF"):
-            raise SpeechUnavailableError("Local Qwen TTS returned invalid audio")
+            raise SpeechUnavailableError("Local HTTP TTS returned invalid audio")
         return response.content
 
     def _synthesize_piper(self, text: str) -> bytes:
