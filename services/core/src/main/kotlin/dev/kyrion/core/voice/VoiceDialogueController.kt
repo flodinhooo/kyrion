@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.time.Clock
+import java.text.Normalizer
 import java.util.Base64
 import java.util.UUID
 
@@ -76,7 +77,7 @@ class VoiceDialogueService(
         if (transcript.isBlank()) throw VoiceAudioInvalidException()
         emit(VoiceTurnEvent(type = "transcript", transcript = transcript))
 
-        val explicitEnd = normalized(transcript) in STOP_PHRASES
+        val explicitEnd = isVoiceSessionEnd(transcript)
         val now = clock.instant()
         val userMessage = ConversationMessage(UUID.randomUUID(), "user", transcript, now)
         val conversation = conversations.startTurn(
@@ -147,8 +148,6 @@ class VoiceDialogueService(
         return complete
     }
 
-    private fun normalized(value: String) = value.lowercase().trim().replace(Regex("[.!?]+$"), "")
-
     private fun emitAudio(
         text: String,
         locale: String,
@@ -176,12 +175,48 @@ class VoiceDialogueService(
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(VoiceDialogueService::class.java)
-        private val STOP_PHRASES = setOf(
-            "stopp", "abbrechen", "danke", "bis später", "tschüss",
-            "stop", "cancel", "thanks", "thank you", "goodbye",
-        )
     }
 }
+
+private val SESSION_ENDINGS = listOf(
+    listOf("bis", "spater"),
+    listOf("tschuss"),
+    listOf("auf", "wiedersehen"),
+    listOf("das", "wars"),
+    listOf("goodbye"),
+    listOf("talk", "to", "you", "later"),
+    listOf("thats", "all"),
+    listOf("stop"),
+    listOf("stopp"),
+    listOf("cancel"),
+    listOf("abbrechen"),
+)
+
+private val SESSION_END_PREFIX_WORDS = setOf(
+    "ok", "okay", "passt", "gut", "danke", "dir", "vielen", "dank", "alles", "klar",
+    "ja", "prima", "super", "bitte", "schon", "thanks", "thank", "you", "alright",
+    "fine", "great", "done",
+)
+
+internal fun isVoiceSessionEnd(transcript: String): Boolean {
+    val words = normalizedVoiceWords(transcript)
+    if (words.isEmpty()) return false
+
+    return SESSION_ENDINGS.any { ending ->
+        if (words.size < ending.size || words.takeLast(ending.size) != ending) return@any false
+        words.dropLast(ending.size).all(SESSION_END_PREFIX_WORDS::contains)
+    }
+}
+
+private fun normalizedVoiceWords(value: String): List<String> = Normalizer
+    .normalize(value.lowercase(), Normalizer.Form.NFKD)
+    .replace(Regex("\\p{M}+"), "")
+    .replace("'", "")
+    .replace("’", "")
+    .replace(Regex("[^a-z0-9]+"), " ")
+    .trim()
+    .split(Regex("\\s+"))
+    .filter(String::isNotEmpty)
 
 @RestController
 @RequestMapping("/v1/voice-satellite/sessions")
