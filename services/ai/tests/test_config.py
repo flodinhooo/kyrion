@@ -11,3 +11,5 @@ def test_settings_include_default_model_once_in_allowlist(monkeypatch) -> None:
     assert settings.ollama_allowed_models == ("qwen3:8b", "gemma3:4b")
     assert settings.tts_provider == "http_batch"
     assert settings.http_tts_url == "http://127.0.0.1:8020"
+    assert settings.xtts_experimental_enabled is False
+    assert settings.xtts_tts_url == "http://127.0.0.1:8031"

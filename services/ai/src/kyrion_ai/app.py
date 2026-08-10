@@ -67,7 +67,9 @@ async def transcribe(request: Request) -> Response:
 @app.post("/v1/speech/synthesize")
 async def synthesize(request: SynthesisRequest) -> Response:
     try:
-        audio = await run_in_threadpool(speech.synthesize, request.text, request.voice_id)
+        audio = await run_in_threadpool(
+            speech.synthesize, request.text, request.voice_id, request.locale
+        )
     except SpeechUnavailableError:
         return JSONResponse({"code": "TTS_UNAVAILABLE"}, status_code=503)
     return Response(

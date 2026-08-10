@@ -1,13 +1,28 @@
 from __future__ import annotations
 
+import io
+import logging
 import os
 import subprocess
 import tempfile
+import time
+import wave
 from pathlib import Path
+from threading import Event
+from uuid import uuid4
 
 import httpx
 
 from kyrion_ai.config import Settings
+from kyrion_ai.providers.xtts_streaming_tts import XttsStreamingTtsAdapter
+from kyrion_ai.streaming_tts import (
+    StreamingTtsContractError,
+    StreamingTtsRequest,
+    TtsStreamAudio,
+    ValidatedStreamingTts,
+)
+
+logger = logging.getLogger("uvicorn.error.kyrion-ai.tts")
 
 
 class SpeechUnavailableError(RuntimeError):
@@ -54,23 +69,33 @@ class SpeechService:
             source.unlink(missing_ok=True)
 
     def voices(self) -> dict[str, object]:
+        if self._settings.tts_provider == "xtts":
+            self._require_xtts_opt_in()
+            return self._http_tts_request("GET", "/v1/voices", force_batch=True).json()
         if self._settings.tts_provider not in {"http_batch", "qwen"}:
             return {"defaultVoiceId": self._settings.default_voice_id, "voices": []}
         return self._http_tts_request("GET", "/v1/voices").json()
 
-    def synthesize(self, text: str, voice_id: str | None = None) -> bytes:
+    def synthesize(self, text: str, voice_id: str | None = None, locale: str = "de") -> bytes:
+        if self._settings.tts_provider == "xtts":
+            self._require_xtts_opt_in()
+            return self._synthesize_xtts_with_fallback(
+                text, voice_id or self._settings.default_voice_id, locale
+            )
         if self._settings.tts_provider in {"http_batch", "qwen"}:
             return self._synthesize_http(text, voice_id or self._settings.default_voice_id)
         if self._settings.tts_provider != "piper":
             raise SpeechUnavailableError("Configured TTS provider is unsupported")
         return self._synthesize_piper(text)
 
-    def _http_tts_request(self, method: str, path: str, **kwargs) -> httpx.Response:
+    def _http_tts_request(
+        self, method: str, path: str, *, force_batch: bool = False, **kwargs
+    ) -> httpx.Response:
         client = self._http_client or httpx.Client(timeout=120.0)
         owns_client = self._http_client is None
         base_url = (
             self._settings.qwen_tts_url
-            if self._settings.tts_provider == "qwen"
+            if self._settings.tts_provider == "qwen" and not force_batch
             else self._settings.http_tts_url
         )
         try:
@@ -83,9 +108,71 @@ class SpeechService:
                 client.close()
         return response
 
-    def _synthesize_http(self, text: str, voice_id: str) -> bytes:
+    def _require_xtts_opt_in(self) -> None:
+        if not self._settings.xtts_experimental_enabled:
+            raise SpeechUnavailableError("Experimental XTTS provider is not enabled")
+
+    def _synthesize_xtts_with_fallback(self, text: str, voice_id: str, locale: str) -> bytes:
+        started = time.perf_counter()
+        reason = "unknown"
+        try:
+            owns_client = self._http_client is None
+            client = self._http_client or httpx.Client(
+                timeout=httpx.Timeout(self._settings.xtts_timeout_seconds)
+            )
+            try:
+                stream = ValidatedStreamingTts(
+                    XttsStreamingTtsAdapter(self._settings.xtts_tts_url, client)
+                )
+                request = StreamingTtsRequest(uuid4(), text, locale, voice_id, 0, True)
+                chunks: list[bytes] = []
+                arrivals: list[float] = []
+                for event in stream.stream(request, Event()):
+                    if isinstance(event, TtsStreamAudio):
+                        chunks.append(event.pcm)
+                        arrivals.append(time.perf_counter() - started)
+                pcm = b"".join(chunks)
+                sample_rate = stream.capabilities.sample_rate
+                duration = len(pcm) / (sample_rate * 2)
+                maximum_duration = _maximum_expected_duration(text)
+                if duration <= 0 or duration > maximum_duration:
+                    reason = "suspicious_duration"
+                    raise StreamingTtsContractError("XTTS_SUSPICIOUS_DURATION")
+                total = time.perf_counter() - started
+                underruns = _playback_underruns(arrivals, chunks, sample_rate)
+                logger.info(
+                    "tts provider=xtts-experimental ttfa_seconds=%.3f rtf=%.3f "
+                    "underruns=%d audio_seconds=%.3f text_characters=%d fallback_reason=none",
+                    arrivals[0],
+                    total / duration,
+                    underruns,
+                    duration,
+                    len(text),
+                )
+                return _pcm_to_wav(pcm, sample_rate)
+            finally:
+                if owns_client:
+                    client.close()
+        except (StreamingTtsContractError, httpx.HTTPError, TimeoutError) as error:
+            if reason == "unknown":
+                reason = (
+                    "timeout" if isinstance(error, httpx.TimeoutException) else "provider_failure"
+                )
+            logger.warning(
+                "tts provider=xtts-experimental fallback_provider=chatterbox "
+                "fallback_reason=%s text_characters=%d error=%s",
+                reason,
+                len(text),
+                type(error).__name__,
+            )
+            return self._synthesize_http(text, voice_id, force_batch=True)
+
+    def _synthesize_http(self, text: str, voice_id: str, *, force_batch: bool = False) -> bytes:
         response = self._http_tts_request(
-            "POST", "/v1/synthesize", json={"text": text, "voiceId": voice_id}
+            "POST",
+            "/v1/synthesize",
+            force_batch=force_batch,
+            json={"text": text, "voiceId": voice_id},
         )
         if not response.content.startswith(b"RIFF"):
             raise SpeechUnavailableError("Local HTTP TTS returned invalid audio")
@@ -119,3 +206,42 @@ class SpeechService:
 
 # Compatibility name for callers that only use local STT.
 LocalSpeechService = SpeechService
+
+
+def _maximum_expected_duration(text: str) -> float:
+    # Deliberately generous output validation, not language or vocabulary filtering.
+    words = len(text.split())
+    return max(4.0, words * 1.25 + 2.0)
+
+
+def _playback_underruns(arrivals: list[float], chunks: list[bytes], sample_rate: int) -> int:
+    durations = [len(chunk) / (sample_rate * 2) for chunk in chunks]
+    buffered = 0.0
+    start_index = None
+    for index, duration in enumerate(durations):
+        buffered += duration
+        if buffered >= 0.320:
+            start_index = index
+            break
+    if start_index is None:
+        return 1
+    underruns = 0
+    previous = arrivals[start_index]
+    for index in range(start_index + 1, len(arrivals)):
+        buffered -= arrivals[index] - previous
+        if buffered < 0:
+            underruns += 1
+            buffered = 0.0
+        buffered += durations[index]
+        previous = arrivals[index]
+    return underruns
+
+
+def _pcm_to_wav(pcm: bytes, sample_rate: int) -> bytes:
+    output = io.BytesIO()
+    with wave.open(output, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(pcm)
+    return output.getvalue()
