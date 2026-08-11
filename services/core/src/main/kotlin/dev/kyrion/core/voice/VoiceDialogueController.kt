@@ -41,6 +41,7 @@ data class AiTranscriptionResponse(val text: String, val locale: String)
 class VoiceDialogueService(
     private val satellites: VoiceSatelliteService,
     private val conversations: ConversationRepository,
+    private val responsePolicies: VoiceResponsePolicyRegistry,
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
@@ -83,12 +84,24 @@ class VoiceDialogueService(
         val conversation = conversations.startTurn(
             session.ownerId, session.conversationId, "Voice conversation", userMessage, now,
         )
-        val responseText = if (explicitEnd) {
-            if (locale == "de") "Bis später." else "Talk to you later."
+        val outcome = if (explicitEnd) {
+            SessionFarewellOutcome
         } else {
-            chatAndSpeak(session.conversationId, locale, conversation.messages.takeLast(12), turnId, emit)
+            DynamicDialogueOutcome(
+                chat(session.conversationId, locale, conversation.messages.takeLast(12), turnId),
+            )
         }
-        if (explicitEnd) emitAudio(responseText, locale, turnId, emit)
+        val responsePlan = responsePolicies.resolve(
+            outcome,
+            VoiceResponseContext(
+                session.ownerId,
+                sessionId,
+                UUID.fromString(turnId),
+                locale,
+            ),
+        )
+        emitAudio(responsePlan, turnId, emit)
+        val responseText = responsePlan.renderedText
         conversations.finishTurn(
             session.ownerId, session.conversationId, userMessage.id,
             ConversationMessage(UUID.randomUUID(), "assistant", responseText, clock.instant()),
@@ -98,12 +111,11 @@ class VoiceDialogueService(
         emit(VoiceTurnEvent(type = "completed", responseText = responseText, continueSession = !explicitEnd))
     }
 
-    private fun chatAndSpeak(
+    private fun chat(
         conversationId: UUID,
         locale: String,
         messages: List<ConversationMessage>,
         turnId: String,
-        emit: (VoiceTurnEvent) -> Unit,
     ): String {
         val body = mapOf(
             "conversationId" to conversationId.toString(),
@@ -144,21 +156,19 @@ class VoiceDialogueService(
         voiceEvent(turnId, "llm_complete")
         val complete = response.toString().trim().takeIf { it.isNotEmpty() }
             ?: throw VoiceSpeechUnavailableException()
-        emitAudio(complete, locale, turnId, emit)
         return complete
     }
 
     private fun emitAudio(
-        text: String,
-        locale: String,
+        plan: VoiceResponsePlan,
         turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
     ) {
         voiceEvent(turnId, "tts_request")
         val audio = ai.postForEntity(
-            "$aiBaseUrl/v1/speech/synthesize",
+            "$aiBaseUrl/v1/speech/resolve-response",
             HttpEntity(
-                mapOf("text" to text, "locale" to locale),
+                plan,
                 HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON },
             ),
             ByteArray::class.java,
