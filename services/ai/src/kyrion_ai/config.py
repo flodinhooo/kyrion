@@ -1,5 +1,7 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+from tempfile import gettempdir
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +23,11 @@ class Settings:
     default_voice_id: str = "velora"
     piper_executable: str | None = None
     piper_model: str | None = None
+    voice_response_manifest: Path = (
+        Path(__file__).resolve().parents[2] / "voice-responses" / "manifest.json"
+    )
+    voice_response_cache_dir: Path = Path(gettempdir()) / "kyrion-voice-response-cache"
+    voice_response_synthesis_revision: str = "configured-normal-tts-v1"
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -52,4 +59,20 @@ class Settings:
             default_voice_id=os.getenv("KYRION_DEFAULT_VOICE_ID", "velora"),
             piper_executable=os.getenv("KYRION_PIPER_EXECUTABLE"),
             piper_model=os.getenv("KYRION_PIPER_MODEL"),
+            voice_response_manifest=Path(
+                os.getenv(
+                    "KYRION_VOICE_RESPONSE_MANIFEST",
+                    str(Path(__file__).resolve().parents[2] / "voice-responses" / "manifest.json"),
+                )
+            ),
+            voice_response_cache_dir=Path(
+                os.getenv(
+                    "KYRION_VOICE_RESPONSE_CACHE_DIR",
+                    str(Path(gettempdir()) / "kyrion-voice-response-cache"),
+                )
+            ),
+            voice_response_synthesis_revision=os.getenv(
+                "KYRION_VOICE_RESPONSE_SYNTHESIS_REVISION",
+                "configured-normal-tts-v1",
+            ),
         )

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "catalogRevision": "voice-responses-v1",
+  "description": "Reviewed fixed-response assets only. No production audio is approved yet.",
+  "voiceProfiles": {
+    "velora": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09"
+  },
+  "assets": [],
+  "pendingAssets": [
+    {"locale": "de", "responseKey": "session.greeting", "variantId": "neutral-01"},
+    {"locale": "de", "responseKey": "session.greeting", "variantId": "warm-01"},
+    {"locale": "en", "responseKey": "session.greeting", "variantId": "neutral-01"},
+    {"locale": "en", "responseKey": "session.greeting", "variantId": "warm-01"},
+    {"locale": "de", "responseKey": "session.farewell", "variantId": "neutral-01"},
+    {"locale": "de", "responseKey": "session.farewell", "variantId": "warm-01"},
+    {"locale": "en", "responseKey": "session.farewell", "variantId": "neutral-01"},
+    {"locale": "en", "responseKey": "session.farewell", "variantId": "warm-01"},
+    {"locale": "de", "responseKey": "dialogue.acknowledged", "variantId": "neutral-01"},
+    {"locale": "de", "responseKey": "dialogue.acknowledged", "variantId": "neutral-02"},
+    {"locale": "en", "responseKey": "dialogue.acknowledged", "variantId": "neutral-01"},
+    {"locale": "en", "responseKey": "dialogue.acknowledged", "variantId": "neutral-02"}
+  ]
+}

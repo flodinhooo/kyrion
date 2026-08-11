@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -175,3 +175,47 @@ class ChatEvent(BaseModel):
 
     def to_ndjson(self) -> bytes:
         return self.model_dump_json(by_alias=True, exclude_none=True).encode() + b"\n"
+
+
+class VoiceResponseSlot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["entityName"]
+    value: str = Field(min_length=1, max_length=120)
+
+
+class VoiceResponsePlanBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_type: str = Field(alias="responseType", min_length=1, max_length=80)
+    locale: Literal["de", "en"]
+    voice_profile_id: str = Field(alias="voiceProfileId", pattern="^[a-z0-9_-]{1,40}$")
+    voice_profile_revision: str = Field(
+        alias="voiceProfileRevision", pattern="^[a-zA-Z0-9._:-]{1,128}$"
+    )
+    catalog_revision: str = Field(
+        alias="catalogRevision", pattern="^[a-zA-Z0-9._-]{1,80}$"
+    )
+    rendered_text: str = Field(alias="renderedText", min_length=1, max_length=4_000)
+
+
+class FixedVoiceResponsePlan(VoiceResponsePlanBase):
+    kind: Literal["fixed"]
+    response_key: str = Field(alias="responseKey", min_length=1, max_length=80)
+    variant_id: str = Field(alias="variantId", pattern="^[a-z0-9_-]{1,40}$")
+
+
+class TemplateVoiceResponsePlan(VoiceResponsePlanBase):
+    kind: Literal["template"]
+    template_key: str = Field(alias="templateKey", min_length=1, max_length=80)
+    slots: dict[str, VoiceResponseSlot] = Field(max_length=12)
+
+
+class DynamicVoiceResponsePlan(VoiceResponsePlanBase):
+    kind: Literal["dynamic"]
+
+
+VoiceResponsePlan = Annotated[
+    FixedVoiceResponsePlan | TemplateVoiceResponsePlan | DynamicVoiceResponsePlan,
+    Field(discriminator="kind"),
+]
