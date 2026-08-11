@@ -36,6 +36,7 @@ data class VoiceTurnEvent(
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
+data class VoiceGreetingResponse(val responseText: String, val audioBase64: String)
 
 @Service
 class VoiceDialogueService(
@@ -48,6 +49,25 @@ class VoiceDialogueService(
     private val aiBaseUrl = aiUrl.trimEnd('/')
     private val ai = RestTemplate()
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
+
+    fun greeting(
+        satelliteId: UUID,
+        credential: String,
+        sessionId: UUID,
+        locale: String,
+    ): VoiceGreetingResponse {
+        val session = satellites.activeSession(satelliteId, credential, sessionId)
+        val greetingTurnId = UUID.nameUUIDFromBytes("voice-greeting:$sessionId".toByteArray())
+        val plan = responsePolicies.resolve(
+            SessionGreetingOutcome,
+            VoiceResponseContext(session.ownerId, sessionId, greetingTurnId, locale),
+        )
+        val audio = resolveAudio(plan, greetingTurnId.toString())
+        return VoiceGreetingResponse(
+            responseText = plan.renderedText,
+            audioBase64 = Base64.getEncoder().encodeToString(audio),
+        )
+    }
 
     fun streamTurn(
         satelliteId: UUID,
@@ -84,6 +104,18 @@ class VoiceDialogueService(
         val conversation = conversations.startTurn(
             session.ownerId, session.conversationId, "Voice conversation", userMessage, now,
         )
+        if (!explicitEnd) {
+            val acknowledgement = responsePolicies.resolve(
+                DialogueAcknowledgedOutcome,
+                VoiceResponseContext(
+                    session.ownerId,
+                    sessionId,
+                    UUID.fromString(turnId),
+                    locale,
+                ),
+            )
+            emitAudio(acknowledgement, turnId, emit)
+        }
         val outcome = if (explicitEnd) {
             SessionFarewellOutcome
         } else {
@@ -164,6 +196,12 @@ class VoiceDialogueService(
         turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
     ) {
+        val audio = resolveAudio(plan, turnId)
+        emit(VoiceTurnEvent(type = "audio.chunk", audioBase64 = Base64.getEncoder().encodeToString(audio)))
+        voiceEvent(turnId, "satellite_first_chunk_sent")
+    }
+
+    private fun resolveAudio(plan: VoiceResponsePlan, turnId: String): ByteArray {
         voiceEvent(turnId, "tts_request")
         val audio = ai.postForEntity(
             "$aiBaseUrl/v1/speech/resolve-response",
@@ -173,10 +211,16 @@ class VoiceDialogueService(
             ),
             ByteArray::class.java,
         ).body ?: throw VoiceSpeechUnavailableException()
+        if (
+            audio.size !in 44..10_000_000 ||
+            !audio.copyOfRange(0, 4).contentEquals("RIFF".toByteArray()) ||
+            !audio.copyOfRange(8, 12).contentEquals("WAVE".toByteArray())
+        ) {
+            throw VoiceSpeechUnavailableException()
+        }
         voiceEvent(turnId, "tts_first_audio")
         voiceEvent(turnId, "tts_complete")
-        emit(VoiceTurnEvent(type = "audio.chunk", audioBase64 = Base64.getEncoder().encodeToString(audio)))
-        voiceEvent(turnId, "satellite_first_chunk_sent")
+        return audio
     }
 
     private fun voiceEvent(turnId: String, event: String) {
@@ -235,6 +279,19 @@ private fun normalizedVoiceWords(value: String): List<String> = Normalizer
 @RestController
 @RequestMapping("/v1/voice-satellite/sessions")
 class VoiceDialogueController(private val dialogue: VoiceDialogueService) {
+    @PostMapping("/{sessionId}/greeting", produces = ["application/json"])
+    fun greeting(
+        @PathVariable sessionId: UUID,
+        @RequestHeader("X-Kyrion-Satellite-Id") satelliteId: UUID,
+        @RequestHeader("Authorization") authorization: String,
+        @RequestHeader("X-Kyrion-Locale", defaultValue = "de")
+        @Pattern(regexp = "^(de|en)$") locale: String,
+    ): VoiceGreetingResponse {
+        val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
+            ?: throw VoiceSatelliteUnauthenticatedException()
+        return dialogue.greeting(satelliteId, credential, sessionId, locale)
+    }
+
     @PostMapping("/{sessionId}/turns", consumes = ["audio/wav"], produces = ["application/x-ndjson"])
     @ResponseStatus(HttpStatus.OK)
     fun turn(
