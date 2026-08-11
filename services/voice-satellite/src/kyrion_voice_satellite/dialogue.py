@@ -7,7 +7,7 @@ from enum import Enum
 
 from kyrion_voice_satellite.audio import AlsaCapture
 from kyrion_voice_satellite.config import SatelliteConfig
-from kyrion_voice_satellite.core_client import CoreVoiceClient
+from kyrion_voice_satellite.core_client import CoreVoiceClient, CoreVoiceError
 from kyrion_voice_satellite.playback import PipeWirePlayback
 from kyrion_voice_satellite.utterance import capture_utterance
 from kyrion_voice_satellite.vad import WebRtcVoiceActivityDetector
@@ -36,7 +36,7 @@ class DialogueRunner:
         )
         self._vad = WebRtcVoiceActivityDetector()
         self._playback = PipeWirePlayback(config.playback_target)
-        self._greeting_audio = (
+        self._legacy_greeting_audio = (
             config.greeting_audio_file.read_bytes() if config.greeting_audio_file else None
         )
         self.state = DialogueState.IDLE
@@ -45,9 +45,15 @@ class DialogueRunner:
         session = self._client.open_session()
         reason = "error"
         try:
-            if self._greeting_audio is not None:
-                self.state = DialogueState.ACKNOWLEDGING
-                self._playback.play(self._greeting_audio)
+            self.state = DialogueState.ACKNOWLEDGING
+            try:
+                greeting_audio = self._client.greeting(session.id, self._config.locale)
+            except CoreVoiceError:
+                if self._legacy_greeting_audio is None:
+                    raise
+                LOGGER.warning("Using configured legacy greeting after Core greeting failure")
+                greeting_audio = self._legacy_greeting_audio
+            self._playback.play(greeting_audio)
             while True:
                 self.state = DialogueState.LISTENING
                 utterance = capture_utterance(

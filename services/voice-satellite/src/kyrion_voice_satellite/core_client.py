@@ -44,6 +44,22 @@ class CoreVoiceClient:
         # Core's future.
         return OpenSession(value["sessionId"], value["conversationId"], server_time - completed)
 
+    def greeting(self, session_id: str, locale: str) -> bytes:
+        value = self._request(
+            "POST",
+            f"/v1/voice-satellite/sessions/{session_id}/greeting",
+            b"",
+            "application/json",
+            {"X-Kyrion-Locale": locale},
+        )
+        try:
+            audio = base64.b64decode(value["audioBase64"], validate=True)
+        except (KeyError, TypeError, ValueError) as error:
+            raise CoreVoiceError("Core returned an invalid greeting") from error
+        if not 44 <= len(audio) <= 10_000_000 or audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
+            raise CoreVoiceError("Core returned an invalid greeting")
+        return audio
+
     def turn(
         self,
         session_id: str,

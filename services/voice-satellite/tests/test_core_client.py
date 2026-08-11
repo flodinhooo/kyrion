@@ -2,7 +2,9 @@ import base64
 import json
 from unittest.mock import patch
 
-from kyrion_voice_satellite.core_client import CoreVoiceClient
+import pytest
+
+from kyrion_voice_satellite.core_client import CoreVoiceClient, CoreVoiceError
 
 
 class StreamingResponse:
@@ -38,6 +40,38 @@ def test_open_session_calibrates_satellite_clock_to_core(tmp_path):
         session = CoreVoiceClient("http://core", "satellite", credential).open_session()
 
     assert session.clock_offset_millis == 150
+
+
+def test_greeting_returns_valid_server_resolved_wav(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    wav = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 32
+    response = StreamingResponse([{
+        "responseText": "Hallo.",
+        "audioBase64": base64.b64encode(wav).decode(),
+    }])
+
+    with patch("urllib.request.urlopen", return_value=response):
+        audio = CoreVoiceClient("http://core", "satellite", credential).greeting(
+            "session", "de",
+        )
+
+    assert audio == wav
+
+
+def test_greeting_rejects_invalid_audio(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    response = StreamingResponse([{
+        "responseText": "Hallo.",
+        "audioBase64": base64.b64encode(b"not-a-wave").decode(),
+    }])
+
+    with (
+        patch("urllib.request.urlopen", return_value=response),
+        pytest.raises(CoreVoiceError, match="invalid greeting"),
+    ):
+        CoreVoiceClient("http://core", "satellite", credential).greeting("session", "de")
 
 
 def test_turn_plays_audio_chunks_before_completion(tmp_path):
