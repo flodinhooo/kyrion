@@ -68,6 +68,7 @@ data class TemplateResponsePlan(
     override val renderedText: String,
     val templateKey: String,
     val slots: Map<String, VoiceResponseSlot>,
+    val cacheScope: String,
 ) : VoiceResponsePlan
 
 data class DynamicResponsePlan(
@@ -219,6 +220,7 @@ private class CommandOutcomeResolver(
             responseType = templateKey,
             templateKey = templateKey,
             slots = slots,
+            cacheScope = ownerCacheScope(context.ownerId),
             locale = context.locale,
             voiceProfileId = context.voiceProfileId,
             voiceProfileRevision = context.voiceProfileRevision,
@@ -312,3 +314,7 @@ private fun deterministicVariantIndex(
         .digest(input.toByteArray(StandardCharsets.UTF_8))
     return Math.floorMod(ByteBuffer.wrap(digest).int, variantCount)
 }
+
+private fun ownerCacheScope(ownerId: UUID): String = MessageDigest.getInstance("SHA-256")
+    .digest(ownerId.toString().toByteArray(StandardCharsets.UTF_8))
+    .joinToString("") { byte -> "%02x".format(byte) }

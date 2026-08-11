@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed architecture, 2026-08-11. This document records analysis and a design
-proposal only. It does not implement the response router, audio registry or
-cache.
+Accepted architecture, 2026-08-11. The first provider-neutral vertical slice
+is implemented under ADR 0010. Final reviewed fixed-response audio assets and a
+separately selected Short-TTS provider remain follow-up work.
 
 This work is deliberately separate from the ongoing XTTS v2 short-output and
 EOS investigation. It must not modify or replace XTTS termination behaviour.

@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+from uuid import uuid4
 
 from kyrion_ai.contracts import (
     DynamicVoiceResponsePlan,
@@ -121,12 +122,13 @@ class CompleteUtteranceAudioCache:
             "voiceProfileRevision": plan.voice_profile_revision,
             "synthesisRevision": self._synthesis_revision,
             "audioFormat": "wav",
+            "cacheScope": plan.cache_scope,
         }
         canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
     def get(self, plan: TemplateVoiceResponsePlan) -> bytes | None:
-        path = self._root / f"{self.key(plan)}.wav"
+        path = self._path(plan)
         try:
             audio = path.read_bytes()
         except FileNotFoundError:
@@ -139,11 +141,17 @@ class CompleteUtteranceAudioCache:
     def put(self, plan: TemplateVoiceResponsePlan, audio: bytes) -> None:
         if not audio.startswith(b"RIFF"):
             raise VoiceResponseResolutionError("VOICE_RESPONSE_AUDIO_INVALID")
-        self._root.mkdir(parents=True, exist_ok=True)
-        target = self._root / f"{self.key(plan)}.wav"
-        temporary = target.with_suffix(".tmp")
-        temporary.write_bytes(audio)
-        temporary.replace(target)
+        target = self._path(plan)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_bytes(audio)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def _path(self, plan: TemplateVoiceResponsePlan) -> Path:
+        return self._root / plan.cache_scope / f"{self.key(plan)}.wav"
 
 
 class VoiceResponseAudioResolver:
@@ -152,10 +160,12 @@ class VoiceResponseAudioResolver:
         manifest: FixedAudioManifest,
         cache: CompleteUtteranceAudioCache,
         normal_tts: NormalTtsFallback,
+        short_cache_miss_tts: NormalTtsFallback,
     ) -> None:
         self._manifest = manifest
         self._cache = cache
         self._normal_tts = normal_tts
+        self._short_cache_miss_tts = short_cache_miss_tts
 
     def resolve(self, plan: VoiceResponsePlan) -> ResolvedVoiceAudio:
         if isinstance(plan, FixedVoiceResponsePlan):
@@ -173,7 +183,7 @@ class VoiceResponseAudioResolver:
         if audio is not None:
             return ResolvedVoiceAudio(audio, "prerendered", True, None)
         return ResolvedVoiceAudio(
-            self._synthesize(plan),
+            self._synthesize(plan, self._short_cache_miss_tts),
             "normal_tts",
             False,
             "fixed_asset_pending_review",
@@ -183,12 +193,16 @@ class VoiceResponseAudioResolver:
         audio = self._cache.get(plan)
         if audio is not None:
             return ResolvedVoiceAudio(audio, "template_cache", True, None)
-        audio = self._synthesize(plan)
+        audio = self._synthesize(plan, self._short_cache_miss_tts)
         self._cache.put(plan, audio)
         return ResolvedVoiceAudio(audio, "normal_tts", False, "template_cache_miss")
 
-    def _synthesize(self, plan: VoiceResponsePlan) -> bytes:
-        audio = self._normal_tts.synthesize(
+    def _synthesize(
+        self,
+        plan: VoiceResponsePlan,
+        provider: NormalTtsFallback | None = None,
+    ) -> bytes:
+        audio = (provider or self._normal_tts).synthesize(
             plan.rendered_text, plan.voice_profile_id, plan.locale
         )
         if not audio.startswith(b"RIFF"):

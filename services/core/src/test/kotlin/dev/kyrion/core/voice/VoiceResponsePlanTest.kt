@@ -70,6 +70,25 @@ class VoiceResponsePlanTest {
     }
 
     @Test
+    fun `template cache scope is stable per owner and isolated between owners`() {
+        val first = registry.resolve(
+            CommandExecutionOutcome(true, true, "Gamingraum"),
+            context,
+        ) as TemplateResponsePlan
+        val sameOwner = registry.resolve(
+            CommandExecutionOutcome(true, true, "Gamingraum"),
+            context.copy(turnId = UUID.randomUUID()),
+        ) as TemplateResponsePlan
+        val otherOwner = registry.resolve(
+            CommandExecutionOutcome(true, true, "Gamingraum"),
+            context.copy(ownerId = UUID.randomUUID()),
+        ) as TemplateResponsePlan
+
+        assertThat(sameOwner.cacheScope).isEqualTo(first.cacheScope)
+        assertThat(otherOwner.cacheScope).isNotEqualTo(first.cacheScope)
+    }
+
+    @Test
     fun `invalid or privileged LLM proposals are rejected`() {
         assertThatThrownBy {
             registry.validateProposal(
