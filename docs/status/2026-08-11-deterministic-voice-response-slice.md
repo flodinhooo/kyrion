@@ -21,8 +21,9 @@ Core now creates typed plans from semantic outcome provenance:
 - Core-confirmed `command.succeeded` and `command.failed` outcomes resolve to
   localized templates with a validated `entityName` slot;
 - ordinary LLM output resolves explicitly to a dynamic plan;
-- the live Voice turn uses a fixed plan for an explicit farewell and a dynamic
-  plan for ordinary dialogue;
+- the live Voice path resolves the greeting after authenticated session open,
+  acknowledges a successfully transcribed non-terminal turn, uses a fixed plan
+  for explicit farewell and uses a dynamic plan for ordinary dialogue;
 - deterministic variant selection is derived from owner, session, turn,
   response key and catalog revision;
 - LLM catalog proposals are restricted to acknowledgement in this slice;
@@ -50,12 +51,8 @@ Generated cache audio is not committed.
 - No fixed-response audio is approved yet. The manifest contains only the
   complete pending-asset inventory; it contains no invented or generated
   production WAVs.
-- Session greeting remains the Satellite's existing optional local greeting
-  file. The resolver exists, but the session-open protocol was not expanded in
-  this slice.
-- Dialogue acknowledgement is available to the registry and proposal
-  validator, but the current free-form chat stream does not yet emit structured
-  response proposals.
+- The Satellite's configured local greeting remains only as a compatibility
+  fallback when server-side greeting resolution fails.
 - Command success and failure resolvers are implemented and tested, but the
   current Voice controller still does not add a second device-command
   orchestration path.
@@ -83,27 +80,12 @@ entry in `services/ai/voice-responses/manifest.json`. Recordings require human
 review for exact wording, clean ending, pronunciation, prosody, loudness and
 silence. The pending entry is removed only when its reviewed asset is added.
 
-## Separate Category-B Short-TTS benchmark
+## Closed Category-B Short-TTS benchmark
 
-After the product boundary and reviewed fixed assets are accepted, evaluate a
-Short-TTS candidate as a new adapter behind the existing `NormalTtsFallback`
-boundary. Do not alter Core routing or infer category from text length.
-
-Use cache misses from the registered German and English command templates plus
-names, rooms, numbers and mixed DE/EN terms. Compare candidates on:
-
-- exact semantic completion and zero fantasy continuation;
-- Velora voice similarity and stable identity;
-- names, numbers, `Velora`, `Gamingraum` and mixed `desk lamp` pronunciation;
-- warm first-playable latency and real-time factor;
-- deterministic repeatability, cancellation and PCM contract compliance;
-- CPU/GPU memory, concurrency and local deployment cost;
-- licence and redistribution constraints.
-
-A candidate must first pass the isolated corpus. Only then should the AI
-composition root inject it for template cache misses. Category A continues to
-use reviewed assets and Category C continues to use normal provider-neutral
-TTS.
+The dedicated provider search ended without an accepted candidate. Template
+cache misses continue to use the existing stable NormalTtsFallback. Do not add
+a text-length heuristic, reopen XTTS Short optimisation or start another
+provider-discovery lane for the MVP.
 
 ## Verification
 

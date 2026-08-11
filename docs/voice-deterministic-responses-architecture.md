@@ -3,8 +3,9 @@
 ## Status
 
 Accepted architecture, 2026-08-11. The first provider-neutral vertical slice
-is implemented under ADR 0010. Final reviewed fixed-response audio assets and a
-separately selected Short-TTS provider remain follow-up work.
+is implemented under ADR 0010. Final reviewed fixed-response audio assets remain
+follow-up work. The dedicated Short-TTS provider search is closed without an
+accepted provider for the MVP.
 
 This work is deliberately separate from the ongoing XTTS v2 short-output and
 EOS investigation. It must not modify or replace XTTS termination behaviour.
@@ -39,9 +40,12 @@ Satellite
   -> PipeWire playback
 ```
 
-The only deterministic spoken response is currently the explicit session-end
-answer in `VoiceDialogueController.kt`. All other responses become free-form
-LLM text and are then passed to the speech service.
+The live batch path now resolves authenticated session greetings and
+post-transcription acknowledgements as fixed responses, and explicit session
+endings as fixed farewells. Ordinary answers remain free-form LLM text passed
+to the normal speech service. Command templates are ready, but the current
+Voice turn does not execute device commands and therefore has no trusted
+command outcome to speak yet.
 
 The speech service receives only text, locale and an optional voice ID. At that
 boundary it no longer knows whether the text represents a confirmed command
@@ -451,7 +455,7 @@ Core turn orchestration
                 |                  |
                 |          hit ----+---- miss
                 |                  |       |
-                |                  |  short-safe provider
+                |                  |  existing NormalTtsFallback
                 +------------------+-------+--------------------------+
                                            |
                                            v
