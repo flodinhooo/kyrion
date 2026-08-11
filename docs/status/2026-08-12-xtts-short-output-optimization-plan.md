@@ -25,7 +25,9 @@ Acceptance remains conjunctive:
 Inspect the autoregressive audio-code generator rather than inferring semantic
 completion from the finished waveform. Record for every generated audio code:
 
-- probability and rank of audio EOS token `8193`;
+- probability and rank of the loaded model's declared audio EOS token. Direct
+  inspection subsequently established `gpt.stop_audio_token == 1025` with
+  1,026 output logits; `8193` was not valid for this installed output layer;
 - top-k token IDs and probabilities;
 - margin between EOS and the selected token;
 - generated-code position and elapsed audio duration;

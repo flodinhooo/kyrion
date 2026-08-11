@@ -16,6 +16,18 @@ is tracked in the
 It explicitly excludes Core/provider integration and should complete its
 EOS/tokenisation evidence before any further XTTS integration decision.
 
+- [x] Instrument the installed XTTS autoregressive generator directly. The
+  model-declared audio EOS is `1025`, not the previously assumed `8193`; direct
+  traces do not support an EOS-bias experiment because EOS was excluded from
+  sampling before native completion in 9/10 Short runs. See the
+  [direct EOS trace](2026-08-11-xtts-v2-eos-trace.md).
+- [x] Complete the exact `.`, `!`, `?` and `;` text-token/terminal
+  representation comparison. Each uses the same explicit start `261`, stop `0`
+  and sequence length; only the punctuation token differs, so no neutral hidden
+  completion marker was found.
+- [ ] Listen to and classify the ten preserved EOS-trace Short WAVs; reconcile
+  any disagreement with the independent ASR transcripts in the report.
+
 - [ ] Preserve the failed run before changing behavior: record the six turn
   IDs, stored transcripts/responses and timing boundaries from wake detection
   through playback. The worst observed turn waited about 31.8 seconds after
