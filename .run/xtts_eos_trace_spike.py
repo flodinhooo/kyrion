@@ -13,7 +13,6 @@ import hashlib
 import json
 import math
 import time
-from types import MethodType
 from pathlib import Path
 from typing import Any
 
@@ -161,33 +160,7 @@ def run(
     started = time.perf_counter()
     trace: EosTraceProcessor | None = None
     original_get_generator = model.gpt.get_generator
-    inference_model = model.gpt.gpt_inference
-    original_forward = inference_model.forward
-    attention_records: list[dict[str, Any]] = []
     text_details = tokenisation(model, text, "de")
-    conditioning_tokens = int(conditioning[0].shape[1])
-    text_tokens = int(len(text_details["effectiveTokenIds"]))
-
-    def traced_forward(_instance: Any, *args: Any, **kwargs: Any) -> Any:
-        kwargs["output_attentions"] = True
-        result = original_forward(*args, **kwargs)
-        last_layer = result.attentions[-1]
-        attention = last_layer[:, :, -1, :].detach().float().mean(dim=(0, 1)).cpu()
-        text_attention = attention[
-            conditioning_tokens : conditioning_tokens + text_tokens
-        ]
-        text_mass = float(text_attention.sum().item())
-        normalized = text_attention / max(text_mass, 1e-12)
-        positions = torch.arange(text_tokens, dtype=normalized.dtype)
-        attention_records.append(
-            {
-                "textAttentionMass": text_mass,
-                "textAttentionCentre": float((normalized * positions).sum().item()),
-                "textAttentionPeakPosition": int(torch.argmax(text_attention).item()),
-                "textStopAttention": float(text_attention[-1].item()),
-            }
-        )
-        return result
 
     def traced_generator(fake_inputs: torch.Tensor, **kwargs: Any) -> Any:
         nonlocal trace
@@ -202,7 +175,6 @@ def run(
             yield token, latent
 
     model.gpt.get_generator = traced_generator
-    inference_model.forward = MethodType(traced_forward, inference_model)
     try:
         chunks = [
             tensor.detach().float().cpu().numpy()
@@ -219,7 +191,6 @@ def run(
         torch.cuda.synchronize()
     finally:
         model.gpt.get_generator = original_get_generator
-        inference_model.forward = original_forward
 
     audio = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
     duration = len(audio) / SAMPLE_RATE
@@ -227,12 +198,6 @@ def run(
     sf.write(target, audio, SAMPLE_RATE, subtype="PCM_16")
     transcript = transcribe(aligner, audio, "de")
     assert trace is not None
-    if len(attention_records) != len(trace.records):
-        raise RuntimeError(
-            f"attention/code trace length mismatch: {len(attention_records)} != {len(trace.records)}"
-        )
-    for record, attention in zip(trace.records, attention_records, strict=True):
-        record.update(attention)
     eos_token_id = int(model.gpt.stop_audio_token)
     eos_records = [item for item in trace.records if item["selectedTokenId"] == eos_token_id]
     result = {
