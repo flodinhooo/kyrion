@@ -1,5 +1,6 @@
 import logging
 from collections.abc import AsyncIterator
+from dataclasses import replace
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -30,6 +31,7 @@ from kyrion_ai.voice_responses import (
 settings = Settings.from_environment()
 provider = OllamaProvider(settings)
 speech = SpeechService(settings)
+short_response_fallback = SpeechService(replace(settings, tts_provider="http_batch"))
 voice_responses = VoiceResponseAudioResolver(
     FixedAudioManifest(settings.voice_response_manifest),
     CompleteUtteranceAudioCache(
@@ -37,6 +39,7 @@ voice_responses = VoiceResponseAudioResolver(
         settings.voice_response_synthesis_revision,
     ),
     speech,
+    short_response_fallback,
 )
 logger = logging.getLogger("kyrion-ai")
 

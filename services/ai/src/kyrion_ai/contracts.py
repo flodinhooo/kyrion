@@ -209,6 +209,7 @@ class TemplateVoiceResponsePlan(VoiceResponsePlanBase):
     kind: Literal["template"]
     template_key: str = Field(alias="templateKey", min_length=1, max_length=80)
     slots: dict[str, VoiceResponseSlot] = Field(max_length=12)
+    cache_scope: str = Field(alias="cacheScope", pattern="^[a-f0-9]{64}$")
 
 
 class DynamicVoiceResponsePlan(VoiceResponsePlanBase):

@@ -70,6 +70,7 @@ def template_plan(**updates: object) -> TemplateVoiceResponsePlan:
         "kind": "template",
         "responseType": "command.succeeded",
         "templateKey": "command.succeeded",
+        "cacheScope": "a" * 64,
         "slots": {"targetName": {"type": "entityName", "value": "Gamingraum"}},
         "locale": "de",
         "voiceProfileId": "velora",
@@ -87,6 +88,7 @@ def resolver(tmp_path: Path, tts: RecordingTts) -> VoiceResponseAudioResolver:
     return VoiceResponseAudioResolver(
         FixedAudioManifest(manifest_path),
         CompleteUtteranceAudioCache(tmp_path / "cache", "normal-v1"),
+        tts,
         tts,
     )
 
@@ -130,6 +132,7 @@ def test_fixed_response_reads_checksum_pinned_reviewed_asset(tmp_path: Path) -> 
         FixedAudioManifest(manifest_path),
         CompleteUtteranceAudioCache(tmp_path / "cache", "normal-v1"),
         tts,
+        tts,
     ).resolve(plan)
 
     assert audio.source == "prerendered"
@@ -166,6 +169,16 @@ def test_catalog_or_voice_revision_invalidates_template_cache(
 
     audio_resolver.resolve(template_plan())
     audio_resolver.resolve(template_plan(**updates))
+
+    assert len(tts.calls) == 2
+
+
+def test_template_cache_is_isolated_by_owner_scope(tmp_path: Path) -> None:
+    tts = RecordingTts()
+    audio_resolver = resolver(tmp_path, tts)
+
+    audio_resolver.resolve(template_plan())
+    audio_resolver.resolve(template_plan(cacheScope="b" * 64))
 
     assert len(tts.calls) == 2
 
