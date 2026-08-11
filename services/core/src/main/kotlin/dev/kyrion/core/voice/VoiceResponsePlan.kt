@@ -250,9 +250,8 @@ private class DynamicOutcomeResolver(
 }
 
 @Service
-class VoiceResponsePolicyRegistry(
-    private val catalog: VoiceResponseCatalog = VoiceResponseCatalog(),
-) {
+class VoiceResponsePolicyRegistry {
+    private val catalog = VoiceResponseCatalog()
     private val resolvers: Map<KClass<out DialogueOutcome>, VoiceResponseResolver<out DialogueOutcome>> =
         listOf(
             FixedOutcomeResolver(SessionGreetingOutcome::class, "session.greeting", catalog),
@@ -313,4 +312,3 @@ private fun deterministicVariantIndex(
         .digest(input.toByteArray(StandardCharsets.UTF_8))
     return Math.floorMod(ByteBuffer.wrap(digest).int, variantCount)
 }
-

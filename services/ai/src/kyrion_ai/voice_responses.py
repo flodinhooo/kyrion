@@ -45,6 +45,12 @@ class FixedAudioManifest:
             raise VoiceResponseResolutionError("VOICE_RESPONSE_MANIFEST_INVALID")
         self.catalog_revision = payload.get("catalogRevision")
         self.pending_assets = tuple(payload.get("pendingAssets", ()))
+        self._voice_profiles = payload.get("voiceProfiles", {})
+        self._pending_keys = {
+            (item.get("locale"), item.get("responseKey"), item.get("variantId"))
+            for item in self.pending_assets
+            if isinstance(item, dict)
+        }
         self._assets = {
             self._key(item): item
             for item in payload.get("assets", ())
@@ -52,6 +58,12 @@ class FixedAudioManifest:
         }
 
     def resolve(self, plan: FixedVoiceResponsePlan) -> bytes | None:
+        if (
+            plan.response_type != plan.response_key
+            or plan.catalog_revision != self.catalog_revision
+            or self._voice_profiles.get(plan.voice_profile_id) != plan.voice_profile_revision
+        ):
+            raise VoiceResponseResolutionError("VOICE_RESPONSE_PLAN_INVALID")
         item = self._assets.get(
             (
                 plan.catalog_revision,
@@ -63,7 +75,10 @@ class FixedAudioManifest:
             )
         )
         if item is None:
-            return None
+            pending_key = (plan.locale, plan.response_key, plan.variant_id)
+            if pending_key in self._pending_keys:
+                return None
+            raise VoiceResponseResolutionError("VOICE_RESPONSE_PLAN_INVALID")
         relative_path = item.get("path")
         expected_sha256 = item.get("sha256")
         if not isinstance(relative_path, str) or not isinstance(expected_sha256, str):
@@ -179,4 +194,3 @@ class VoiceResponseAudioResolver:
         if not audio.startswith(b"RIFF"):
             raise VoiceResponseResolutionError("VOICE_RESPONSE_AUDIO_INVALID")
         return audio
-

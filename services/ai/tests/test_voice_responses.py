@@ -1,5 +1,4 @@
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -35,8 +34,15 @@ def write_manifest(path: Path, assets: list[dict] | None = None) -> None:
             {
                 "schemaVersion": 1,
                 "catalogRevision": "voice-responses-v1",
+                "voiceProfiles": {"velora": VOICE_REVISION},
                 "assets": assets or [],
-                "pendingAssets": [],
+                "pendingAssets": [
+                    {
+                        "locale": "de",
+                        "responseKey": "session.farewell",
+                        "variantId": "neutral-01",
+                    }
+                ],
             }
         ),
         encoding="utf-8",
@@ -85,7 +91,9 @@ def resolver(tmp_path: Path, tts: RecordingTts) -> VoiceResponseAudioResolver:
     )
 
 
-def test_fixed_response_uses_normal_provider_while_reviewed_asset_is_pending(tmp_path: Path) -> None:
+def test_fixed_response_uses_normal_provider_while_asset_is_pending(
+    tmp_path: Path,
+) -> None:
     tts = RecordingTts()
 
     result = resolver(tmp_path, tts).resolve(fixed_plan())
@@ -162,7 +170,9 @@ def test_catalog_or_voice_revision_invalidates_template_cache(
     assert len(tts.calls) == 2
 
 
-def test_dynamic_response_always_uses_normal_provider_without_template_cache(tmp_path: Path) -> None:
+def test_dynamic_response_uses_normal_provider_without_template_cache(
+    tmp_path: Path,
+) -> None:
     tts = RecordingTts()
     plan = DynamicVoiceResponsePlan.model_validate(
         {
