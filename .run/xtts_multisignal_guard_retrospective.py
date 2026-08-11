@@ -154,7 +154,13 @@ def candidate_decisions(events: list[dict[str, Any]]) -> dict[str, float | None]
 
 def classify(stop: float | None, label: dict[str, Any], control: bool) -> str:
     if stop is None:
-        return "no-stop"
+        if control:
+            return "correct-no-stop-control"
+        if not label["requestedContentObserved"]:
+            return "unrecoverable-requested-content-not-observed"
+        if label["wholeOutputClean"]:
+            return "correct-no-stop-clean-short"
+        return "false-negative-hallucination"
     if control:
         return "false-positive-control-truncation"
     desired_end = label["desiredContentEndSeconds"]
