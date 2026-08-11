@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Local dynamic Short-TTS and Category-B cache-miss benchmark",
+  "manualReviewRequired": true,
+  "cases": [
+    {"id": "de.identity", "stage": 1, "locale": "de", "category": "identity", "text": "Ich bin Velora.", "runs": 3},
+    {"id": "de.acknowledge", "stage": 1, "locale": "de", "category": "confirmation", "text": "Alles klar.", "runs": 1},
+    {"id": "de.reject", "stage": 1, "locale": "de", "category": "rejection", "text": "Nein, das kann ich nicht.", "runs": 1},
+    {"id": "de.greeting", "stage": 1, "locale": "de", "category": "greeting", "text": "Guten Morgen, Flo.", "runs": 1},
+    {"id": "de.domain", "stage": 1, "locale": "de", "category": "command_success", "text": "Die Desk Lamp im Gamingraum ist eingeschaltet.", "runs": 1},
+
+    {"id": "de.command_failure", "stage": 2, "locale": "de", "category": "command_failure", "text": "Die Desk Lamp ist nicht erreichbar.", "runs": 1},
+    {"id": "de.device", "stage": 2, "locale": "de", "category": "device_name", "text": "Die Stehlampe ist eingeschaltet.", "runs": 1},
+    {"id": "de.person_alias", "stage": 2, "locale": "de", "category": "person_alias", "text": "Hallo Florian, hier ist Velora.", "runs": 1},
+    {"id": "de.number", "stage": 2, "locale": "de", "category": "number", "text": "Drei Geräte sind bereit.", "runs": 1},
+    {"id": "de.time", "stage": 2, "locale": "de", "category": "time", "text": "Es ist 18 Uhr 30.", "runs": 1},
+    {"id": "de.percent", "stage": 2, "locale": "de", "category": "percentage", "text": "Die Helligkeit beträgt 42 Prozent.", "runs": 1},
+
+    {"id": "en.identity", "stage": 2, "locale": "en", "category": "identity", "text": "I am Velora.", "runs": 1},
+    {"id": "en.acknowledge", "stage": 2, "locale": "en", "category": "confirmation", "text": "All right.", "runs": 1},
+    {"id": "en.reject", "stage": 2, "locale": "en", "category": "rejection", "text": "No, I cannot do that.", "runs": 1},
+    {"id": "en.greeting", "stage": 2, "locale": "en", "category": "greeting", "text": "Good morning, Flo.", "runs": 1},
+    {"id": "en.domain", "stage": 2, "locale": "en", "category": "command_success", "text": "The Desk Lamp in the gaming room is on.", "runs": 1},
+    {"id": "en.command_failure", "stage": 2, "locale": "en", "category": "command_failure", "text": "The Desk Lamp is unavailable.", "runs": 1},
+    {"id": "en.number", "stage": 2, "locale": "en", "category": "number", "text": "Three devices are ready.", "runs": 1},
+    {"id": "en.time_percent", "stage": 2, "locale": "en", "category": "time_percentage", "text": "It is six thirty and the brightness is 42 percent.", "runs": 1},
+
+    {"id": "template.de.light_on", "stage": 3, "locale": "de", "category": "template", "text": "Das Licht im Gamingraum wurde eingeschaltet.", "runs": 3},
+    {"id": "template.de.unavailable", "stage": 3, "locale": "de", "category": "template", "text": "Die Desk Lamp ist nicht erreichbar.", "runs": 3},
+    {"id": "template.de.updated", "stage": 3, "locale": "de", "category": "template", "text": "Drei Geräte wurden aktualisiert.", "runs": 3},
+    {"id": "template.en.light_on", "stage": 3, "locale": "en", "category": "template", "text": "The light in the gaming room was turned on.", "runs": 3},
+    {"id": "template.en.unavailable", "stage": 3, "locale": "en", "category": "template", "text": "The Desk Lamp is unavailable.", "runs": 3},
+    {"id": "template.en.updated", "stage": 3, "locale": "en", "category": "template", "text": "Three devices were updated.", "runs": 3}
+  ]
+}
