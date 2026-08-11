@@ -14,15 +14,30 @@ from kyrion_ai.contracts import (
     ModelBenchmarkRequest,
     ModelBenchmarkResult,
     ModelCatalog,
+    VoiceResponsePlan,
 )
 from kyrion_ai.device_commands import propose_device_command
 from kyrion_ai.prompts import prepare_chat_request
 from kyrion_ai.providers.ollama import OllamaProvider
 from kyrion_ai.speech import InvalidAudioError, SpeechService, SpeechUnavailableError
+from kyrion_ai.voice_responses import (
+    CompleteUtteranceAudioCache,
+    FixedAudioManifest,
+    VoiceResponseAudioResolver,
+    VoiceResponseResolutionError,
+)
 
 settings = Settings.from_environment()
 provider = OllamaProvider(settings)
 speech = SpeechService(settings)
+voice_responses = VoiceResponseAudioResolver(
+    FixedAudioManifest(settings.voice_response_manifest),
+    CompleteUtteranceAudioCache(
+        settings.voice_response_cache_dir,
+        settings.voice_response_synthesis_revision,
+    ),
+    speech,
+)
 logger = logging.getLogger("kyrion-ai")
 
 app = FastAPI(title="Kyrion AI", version="0.1.0")
@@ -76,6 +91,32 @@ async def synthesize(request: SynthesisRequest) -> Response:
         audio,
         media_type="audio/wav",
         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@app.post("/v1/speech/resolve-response")
+async def resolve_voice_response(request: VoiceResponsePlan) -> Response:
+    try:
+        resolved = await run_in_threadpool(voice_responses.resolve, request)
+    except (SpeechUnavailableError, VoiceResponseResolutionError):
+        return JSONResponse({"code": "TTS_UNAVAILABLE"}, status_code=503)
+    logger.info(
+        "voice_response type=%s mode=%s source=%s cache_hit=%s fallback_reason=%s",
+        request.response_type,
+        request.kind,
+        resolved.source,
+        resolved.cache_hit,
+        resolved.fallback_reason or "none",
+    )
+    return Response(
+        resolved.audio,
+        media_type="audio/wav",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "X-Kyrion-Audio-Source": resolved.source,
+            "X-Kyrion-Cache-Hit": str(resolved.cache_hit).lower(),
+        },
     )
 
 
