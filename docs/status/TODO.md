@@ -5,6 +5,23 @@ Last updated: 2026-08-11
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
 
+## Short-TTS provider benchmark
+
+- [x] Freeze the XTTS dynamic-Short optimisation lane and preserve XTTS as an
+  experimental normal/long quality reference.
+- [x] Define the staged DE/EN Short and Category-B corpus and an isolated
+  provider-neutral benchmark measurement format.
+- [x] Run Stage 1 for the already installed Piper German model and Chatterbox
+  Multilingual Velora clone. Preserve fourteen WAVs and raw measurements under
+  `E:/Kyrion/Data/voice-training/short-tts-provider-benchmark/`.
+- [ ] Complete the owner's Stage-1 listening review. All audio correctness and
+  voice-identity results remain `pending_manual_review`; do not start Stage 2
+  before this gate. See the
+  [Short-TTS provider benchmark](2026-08-11-short-tts-provider-benchmark.md).
+- [ ] Run Stage 2 only for candidates that pass Short-DE termination,
+  completeness and intelligibility. Do not install an English Piper voice or a
+  new engine until its model licence and concrete benchmark value are verified.
+
 ## Tomorrow: XTTS physical-path recovery (2026-08-12)
 
 Today's physical Raspberry Pi/Pebble run is rejected. Do not interpret the

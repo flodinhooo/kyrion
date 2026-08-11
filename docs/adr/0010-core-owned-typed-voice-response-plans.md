@@ -47,8 +47,10 @@ The AI service resolves audio without changing the response meaning:
 - fixed plans first resolve reviewed manifest-backed audio assets;
 - template plans first use a complete-utterance content-addressed cache;
 - dynamic plans use the existing normal provider-neutral TTS path;
-- unresolved fixed assets and template cache misses use an injected normal TTS
-  fallback until a separate Short-TTS candidate passes its own benchmark.
+- unresolved fixed assets and template cache misses use an injected stable
+  batch fallback until a separate Short-TTS candidate passes its own benchmark;
+  an explicitly selected experimental XTTS runtime is not used for these
+  Short cache misses.
 
 The fallback is an explicit availability bridge, not an assertion that the
 missing fixed asset is production-ready. Missing fixed assets are observable
@@ -87,8 +89,8 @@ execution path or infer command success from model text.
 - Reviewed fixed audio can later remove inference latency without changing
   Core dialogue semantics.
 - Repeated templated utterances avoid synthesis through a revision-safe cache.
-- The first request for a new template value still uses the configured normal
-  TTS provider until a separately benchmarked Short-TTS adapter is selected.
+- The first request for a new template value still uses the existing stable
+  batch fallback until a separately benchmarked Short-TTS adapter is selected.
 - Core and AI gain a versioned contract that must evolve compatibly.
 - Final German and English Velora assets remain explicit follow-up work.
 - XTTS EOS experiments and runtime internals remain unchanged.
@@ -101,4 +103,3 @@ execution path or infer command success from model text.
 - Allowing an LLM proposal to establish command state or success.
 - Committing automatically generated fixed assets without listening review.
 - Selecting a new Short-TTS provider as part of this architecture slice.
-
