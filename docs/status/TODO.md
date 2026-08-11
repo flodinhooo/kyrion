@@ -27,6 +27,12 @@ EOS/tokenisation evidence before any further XTTS integration decision.
   completion marker was found.
 - [ ] Listen to and classify the ten preserved EOS-trace Short WAVs; reconcile
   any disagreement with the independent ASR transcripts in the report.
+- [x] Evaluate a retrospective multi-signal audio-code guard without VAD-only
+  stopping or per-chunk ASR. EOS, repeated code n-grams and entropy changes do
+  not confirm the useful pauses, and text attention is not safely exposed by
+  the installed streaming generator. Decision B: end the dynamic XTTS-Short
+  completion lane. See the
+  [multi-signal guard report](2026-08-11-xtts-v2-multisignal-code-guard.md).
 
 - [ ] Preserve the failed run before changing behavior: record the six turn
   IDs, stored transcripts/responses and timing boundaries from wake detection

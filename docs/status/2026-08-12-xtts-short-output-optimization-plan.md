@@ -181,8 +181,17 @@ instrumentation. It should determine whether XTTS can be repaired with a small,
 principled Short-only policy or whether Short replies require a separate,
 deterministic path.
 
+The subsequent direct trace, terminal-token and multi-signal guard experiments
+selected the latter outcome. No observable independent code signal confirmed
+the natural completion pauses, and accessing text attention would require an
+unstable private streaming fork. End this dynamic Short-output optimisation
+lane; see the
+[multi-signal guard decision](2026-08-11-xtts-v2-multisignal-code-guard.md).
+
 Related evidence:
 
 - [Short-output follow-up](2026-08-11-xtts-v2-short-output-follow-up.md)
 - [Guard optimisation spike](2026-08-11-xtts-v2-guard-optimization-spike.md)
+- [Direct EOS trace](2026-08-11-xtts-v2-eos-trace.md)
+- [Multi-signal code guard](2026-08-11-xtts-v2-multisignal-code-guard.md)
 - [Streaming TTS acceptance criteria](../voice-tts-spike-acceptance.md)
