@@ -1,270 +1,249 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="branding/logo/kyrion-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="branding/logo/kyrion-light.svg">
+    <img alt="Kyrion" src="branding/logo/kyrion-light.svg" width="560">
+  </picture>
+</p>
+
 # Kyrion
 
-> A local-first platform for connecting devices, services, media and artificial intelligence.
+> A local-first orchestration platform for devices, services, automations and
+> optional AI.
 
-Kyrion is a modular personal infrastructure platform designed to unify otherwise
-isolated parts of a user's digital environment.
+Kyrion is being developed as an open-source project. It explores how a
+personal digital environment can connect smart-home devices, local services,
+media, knowledge and AI without giving an AI model direct authority over the
+user's systems.
 
-It provides one coherent interface for devices, services, media systems,
-automations and AI-assisted workflows while keeping users in control of their
-infrastructure and data.
+The project is currently a working development prototype, not a finished
+consumer product. Its implemented vertical slices run on real local hardware;
+planned capabilities are documented separately and are not presented as
+complete.
 
-Kyrion begins as a personal project built around real use cases. It is intended
-to grow incrementally without introducing unnecessary complexity before it is
-needed.
+> **Licence notice:** the source is being prepared for open-source publication,
+> but a repository licence has not yet been selected. Until a `LICENSE` file is
+> added, the code remains all rights reserved and cannot yet be reused under an
+> open-source licence.
 
-## Vision
+## Why Kyrion exists
 
-Modern digital environments are fragmented across many applications,
-manufacturers, cloud services and proprietary ecosystems.
+Personal infrastructure is fragmented across vendor applications, cloud
+accounts and incompatible ecosystems. Kyrion aims to provide one coherent,
+auditable layer above them while preserving a few non-negotiable boundaries:
 
-Kyrion aims to provide a consistent layer above these systems.
+- essential functions remain usable without AI;
+- local processing and storage are preferred where practical;
+- external providers are optional and visible;
+- Core, not an LLM, owns permissions and execution decisions;
+- integrations expose stable capabilities instead of leaking vendor APIs;
+- important actions are validated, correlated and recorded;
+- German and English are supported from the beginning.
 
-The platform should:
+The guiding rule for AI-assisted actions is:
 
-- run primarily on hardware controlled by the user;
-- connect devices and services through modular integrations;
-- remain usable without artificial intelligence;
-- offer AI as an optional and controlled interaction layer;
-- work locally whenever practical;
-- remain understandable, secure and auditable;
-- provide a modern and intuitive user experience.
+> **LLM proposes. Core decides. Adapter executes. Result confirms.**
 
-Read the full [project vision](docs/vision.md).
-The market-informed product focus and build-versus-integrate boundary are
-defined in [Product Strategy](docs/product-strategy.md).
+Read the [project vision](docs/vision.md), [principles](docs/principles.md) and
+[product strategy](docs/product-strategy.md) for the longer-term direction.
 
-## Core principles
+## What works today
 
-Kyrion is guided by the following principles:
+The current local development installation includes the following implemented
+slices.
 
-- Local first
-- Privacy by default
-- AI is optional
-- Controlled and auditable actions
-- Modular integrations
-- Useful before impressive
-- Progressive complexity
-- Offline-friendly operation
-- Secure defaults
-- Beautiful software
-- Internationalisation from the beginning
+### Platform and security
 
-Read all [project principles](docs/principles.md).
+- local owner setup and authentication;
+- Argon2id password hashing and opaque, hashed session credentials;
+- owner-scoped PostgreSQL persistence;
+- conversation history and deterministic context compaction;
+- explicit, owner-controlled personal memory;
+- an append-only activity log with correlation identifiers;
+- German and English Web interfaces.
 
-## Implemented first use case
+### Devices and integrations
 
-Kyrion controls existing Nanoleaf installations through the official local
-OpenAPI. The current development installation runs this slice end to end.
+- local Nanoleaf discovery, physical authorisation and encrypted credentials;
+- Nanoleaf state, power, brightness, colour, temperature and stored scenes;
+- persistent rooms, device names and room assignments;
+- a provider-neutral device catalog and bounded command contracts;
+- an authenticated Raspberry Pi 5 gateway agent;
+- Zigbee discovery and explicit approval through Zigbee2MQTT;
+- physical control of two Philips Hue colour lamps through the shared Core
+  command path;
+- explicit `online`, `offline`, `degraded` and `unknown` availability.
 
-Implemented behaviour includes:
+### AI and voice
 
-- automatic controller discovery through mDNS/Bonjour;
-- owner-specific physical API authorisation;
-- reading the current device state;
-- switching the panels on and off;
-- changing brightness;
-- setting colour and colour temperature;
-- listing and activating controller-stored scenes with palette previews;
-- encrypted persistence of per-owner controller credentials;
-- persistent rooms and device-to-room assignments;
-- a room dashboard with live status, quick actions and device dialogs;
-- displaying connection and API errors;
-- supporting German and English user interfaces.
+- local streaming chat through a provider-neutral AI service and Ollama;
+- bounded German and English device-command proposals;
+- a Raspberry Pi Voice Satellite with local `Hey Velora` wake-word inference;
+- local VAD, microphone capture and Faster-Whisper transcription;
+- authenticated, Core-owned multi-turn voice sessions;
+- Bluetooth/PipeWire playback through physical speakers;
+- provider-neutral Fixed, Template and Dynamic voice-response plans;
+- checksum-pinned reviewed-audio support and an owner-scoped template cache.
 
-The current slice deliberately does not provide:
+The Voice Satellite can already complete ordinary local batch conversations.
+The next MVP milestone connects it to the same Core-owned action path used by
+Web and returns spoken success only after a real adapter result.
 
-- a dedicated mobile application;
-- Nanoleaf cloud-account or undocumented cloud API access;
-- public registration or public internet exposure;
-- a general third-party plugin runtime or public marketplace;
-- remote access.
+## Current focus
 
-These components will only be introduced when a real use case requires them.
+Development is deliberately focused on a small, useful Voice MVP rather than
+continued general TTS experimentation:
 
-## Current architecture
+1. produce the first reviewed Velora fixed-response assets using local recording
+   and offline voice conversion;
+2. move command orchestration out of the Next.js chat route into Kyrion Core;
+3. add minimal room categories for natural and deterministic target resolution;
+4. prove one German Nanoleaf power command through the physical Voice Satellite;
+5. repeat the path at least twenty times and test timeout, offline, ambiguity
+   and stale-session failures;
+6. expand through the same contracts to Zigbee, Thread/Matter and local Wi-Fi
+   devices.
+
+The detailed sequence is captured in the
+[Voice and Action MVP plan](docs/status/2026-08-12-voice-action-mvp-plan.md) and
+its [dated TODO checkpoint](docs/status/2026-08-12-voice-action-mvp-todo.md).
+
+## Architecture
 
 ```text
-┌─────────────────────┐
-│   Web Application   │
-└──────────┬──────────┘
-           │
-┌──────────▼──────────┐
-│     Kyrion Core     │
-└──────────┬──────────┘
-           │
-     ┌─────┴─────┐
-     │           │
-┌────▼────┐ ┌────▼─────────┐
-│ Devices │ │ Optional AI  │
-└─────────┘ └──────────────┘
+Web / Voice Satellite / future Mobile / Automations
+                         |
+                         v
+                    Kyrion Core
+       identity | policy | persistence | audit
+            target resolution | action decisions
+                  /                    \
+                 v                      v
+       Integration adapters       Optional AI service
+       Nanoleaf / Zigbee / ...    STT / proposals / chat / TTS
 ```
 
-The browser communicates only with same-origin Next.js routes. Kyrion Core owns
-users, sessions, rooms, integration connections, encrypted credentials,
-command validation and activity logging. Only Core communicates with the
-Nanoleaf local API. PostgreSQL persists owner-scoped state, while the optional
-AI service and Ollama remain outside the device-execution boundary.
+Component ownership is intentional:
 
-Read the full [architecture documentation](docs/architecture.md).
-For the implemented device slice, see the
-[Nanoleaf integration documentation](docs/nanoleaf-integration.md).
+- **Web** presents state and collects intent through same-origin routes. It does
+  not own provider rules or browser-visible secrets.
+- **Kyrion Core** is the Kotlin/Spring Boot authority for authentication,
+  ownership, permissions, policy, target resolution, command execution,
+  persistence and audit.
+- **AI service** is a Python/FastAPI capability provider for language,
+  transcription and speech. Its proposals are untrusted until Core validates
+  them.
+- **Gateway agent** performs only bounded operations authorised by Core and
+  reports typed health and device observations.
+- **Voice Satellite** owns local wake detection, bounded capture and playback.
+  It cannot execute device actions directly.
+- **Adapters** translate Kyrion capabilities into provider-specific APIs.
+  Home Assistant may later be one optional adapter; it is not the platform
+  core.
 
-## Repository structure
+See [Architecture](docs/architecture.md) and the accepted
+[Architecture Decision Records](docs/adr/) for detailed boundaries.
 
-Kyrion is maintained as a monorepo.
+## Repository layout
 
 ```text
 kyrion/
-├── apps/
-│   ├── web/
-│   └── mobile/
-├── services/
-│   ├── core/
-│   └── ai/
-├── packages/
-│   └── api-contracts/
-├── infrastructure/
-├── docs/
-├── .editorconfig
-├── .gitignore
-└── README.md
+|-- apps/
+|   |-- web/                 Next.js and React Web application
+|   `-- mobile/              planned Expo application
+|-- services/
+|   |-- core/                Kotlin/Spring Boot authority
+|   |-- ai/                  Python/FastAPI AI and speech capabilities
+|   |-- gateway-agent/       bounded Raspberry Pi gateway runtime
+|   `-- voice-satellite/     local wake, capture and playback runtime
+|-- packages/
+|   `-- api-contracts/       shared/generated contracts scaffold
+|-- infrastructure/         local deployment and node configuration
+|-- docs/                    architecture, roadmap, ADRs and evidence
+`-- README.md
 ```
 
-### Applications
+## Technology
 
-`apps/web`
+- Next.js, React and TypeScript;
+- Kotlin, Spring Boot and Gradle;
+- Python, FastAPI and Pydantic;
+- PostgreSQL and Flyway;
+- Ollama for replaceable local language-model execution;
+- Faster-Whisper for local speech recognition;
+- openWakeWord and ONNX on the Raspberry Pi;
+- Zigbee2MQTT and loopback-only Mosquitto for the current Zigbee adapter;
+- PipeWire, ALSA and Bluetooth for the Voice Satellite audio path.
 
-The main browser-based interface for configuration, dashboards, device control
-and assistant interactions.
+Speech runtimes, model weights, private recordings and device credentials are
+not treated as ordinary repository assets. Their versions, licences and local
+storage boundaries must be reviewed separately.
 
-`apps/mobile`
+## Development status and evidence
 
-The planned mobile application for quick actions, notifications and assistant
-access.
+Kyrion distinguishes four states explicitly:
 
-### Services
+- **implemented**: present in the repository with proportionate tests;
+- **physically verified**: exercised against the documented local hardware;
+- **experimental**: isolated code or benchmarks that are not active product
+  paths;
+- **planned**: architectural direction or roadmap scope not yet implemented.
 
-`services/core`
+Useful starting points:
 
-The Kotlin and Spring Boot authoritative backend. It owns local authentication,
-sessions, conversations, personal memory, rooms, integration connections,
-encrypted credentials, validated Nanoleaf commands and the PostgreSQL-backed
-activity log.
+- [Current development status](docs/status/README.md)
+- [Current TODO](docs/status/TODO.md)
+- [Project roadmap](docs/roadmap.md)
+- [Single-file context snapshot](docs/status/CHAT-CONTEXT.md)
+- [Development startup](docs/development-startup.md)
+- [Hardware roadmap](docs/hardware-roadmap.md)
 
-`services/ai`
+Several voice-provider and streaming experiments remain in the repository as
+reproducible evidence. They are not automatically installed, started or
+considered production dependencies.
 
-The implemented optional AI service responsible for local chat streaming and
-model-provider abstraction. It does not execute device commands directly.
+## Running the project
 
-### Shared packages
+Kyrion is not yet packaged for one-command consumer installation. Local
+development currently requires the Web application, Core, AI service,
+PostgreSQL and selected local providers to be configured independently.
 
-`packages/api-contracts`
+Start with [Local Development Startup](docs/development-startup.md). Hardware
+integrations additionally require owner-controlled devices, private local
+configuration and explicit enrolment. Never commit credentials, model caches,
+private recordings or generated training data.
 
-Shared API definitions and generated client contracts.
+## Roadmap direction
 
-### Infrastructure
+Near-term work focuses on trustworthy orchestration and real hardware:
 
-`infrastructure`
+- shared Core Action Orchestrator for Web, Voice and later clients;
+- typed policy and confirmation classes;
+- natural room resolution using visible names and room categories;
+- Voice-confirmed Nanoleaf and Zigbee actions;
+- Home Assistant Connect ZBT-2, Thread/Matter and local Wi-Fi validation;
+- gateway recovery, backup and restore verification.
 
-Local PostgreSQL container configuration is implemented. Further deployment,
-monitoring and backup configuration remains planned.
+Later domains may include calendar, email, local file search, Spotify, YouTube,
+playback routing and automations. These will use domain-specific typed actions
+above the same Core authority rather than being added as unrestricted AI tools.
 
-### Documentation
+The Web experience will also be reconsidered as a personal local platform
+rather than remaining centred on a generic chat interface.
 
-`docs`
+## Contributing
 
-Product vision, principles, architecture, roadmap and technical decisions.
+External contribution guidance, issue templates and a code of conduct have not
+yet been published. Until those are added, the repository should be considered
+an actively developed project shared for transparency and portfolio review.
 
-## Languages and internationalisation
-
-Kyrion will support German and English from the beginning.
-
-English is used as the primary technical language for:
-
-- source code;
-- variable and function names;
-- API contracts;
-- commit messages;
-- documentation;
-- logs intended for developers.
-
-The user interface supports:
-
-- German: `de`
-- English: `en`
-
-User-facing text must not be hardcoded directly into interface components.
-Translations should be managed through dedicated locale files.
-
-English acts as the fallback language when a translation is unavailable.
-
-The language preference should later be stored per user or installation.
-
-## Assistant identity
-
-Kyrion is the name of the platform.
-
-Velora is the current working name for the optional assistant personality.
-
-Assistant identity, voice and personality may later be configurable. Possible
-options could include:
-
-- Velora
-- Kyrion
-- custom assistant names
-- different voices and personalities
-
-The platform itself must not depend on one particular assistant identity.
-
-## Development approach
-
-Kyrion follows a vertical-slice development approach.
-
-Each milestone should deliver one complete and usable capability across the
-required layers instead of creating many disconnected technical components.
-
-The first vertical slice is:
-
-```text
-Kyrion Web
-    ↓
-Nanoleaf server-side client
-    ↓
-Nanoleaf local API
-    ↓
-Physical light panels
-```
-
-The first success criterion is simple:
-
-> A user can open Kyrion Web and reliably control the existing Nanoleaf panels
-> without using the official Nanoleaf application.
-
-## Project status
-
-Kyrion is currently a working local-first prototype. Local text chat,
-browser-backed voice, authentication, conversation persistence, explicit
-personal memory, the activity log, Nanoleaf control and the room dashboard run
-end to end.
-
-Current priorities:
-
-1. stabilise the Core-owned provider-neutral device and capability model;
-2. add household roles, action policies, correlated audit and integration
-   health above the working Nanoleaf reference integration;
-3. introduce Home Assistant as an optional adapter with owner-selected Observe,
-   Control or Manage access without making it the platform core;
-4. prepare the authenticated Raspberry Pi gateway agent and verified backup,
-   update and recovery foundations;
-5. build Simple and Expert experiences only on the same authoritative state.
-
-See the full [roadmap](docs/roadmap.md), the current
-[development status](docs/status/README.md) and the single-file
-[chat context snapshot](docs/status/CHAT-CONTEXT.md).
+Architecture and implementation contributions must preserve the boundaries in
+[AGENTS.md](AGENTS.md): Core authority, least privilege, provider-neutral
+contracts, German/English parity, local-first operation and explicit separation
+between implemented and planned functionality.
 
 ## Licence
 
-No open-source licence has been selected yet.
-
-Until a licence is explicitly added, all rights are reserved.
+Kyrion is intended to be released as open source, but the licence decision is
+still pending. Until a `LICENSE` file is committed, all rights are reserved.
+Do not assume permission to copy, modify or redistribute the source yet.

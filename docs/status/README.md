@@ -2,6 +2,19 @@
 
 Last updated: 2026-08-12
 
+## Current focused plan — 2026-08-12
+
+The current execution focus is the reviewed fixed-asset workflow, shared
+Core-owned Action Orchestrator, semantic Room Types and the first reliable
+German Nanoleaf command through the physical Voice Satellite:
+
+- [Voice and Action MVP plan](2026-08-12-voice-action-mvp-plan.md)
+- [Voice and Action MVP TODO](2026-08-12-voice-action-mvp-todo.md)
+
+This focus does not reopen general Short-TTS discovery. Later Smart Home and
+non-device domains must reuse the same Core authority, policy and audit
+boundaries.
+
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
 `README.md` and the relevant architecture documents before changing code.
