@@ -1,10 +1,19 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-10
+Last updated: 2026-08-12
 
 This directory is the durable handoff point for continuing development in a
 new chat or work session. Read this file together with the root `AGENTS.md`,
 `README.md` and the relevant architecture documents before changing code.
+
+For a single-file overview suitable for referencing in a new chat, start with
+the [Chat Context Snapshot](CHAT-CONTEXT.md). This cumulative file retains the
+more detailed implementation history and evidence.
+
+For the current Voice continuation, start with the
+[Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md). It contains
+the latest decisions and supersedes conflicting older open XTTS/Short-TTS
+investigation items.
 
 ## Current vertical slices
 

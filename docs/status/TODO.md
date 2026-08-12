@@ -1,11 +1,14 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
 
 ## Stable Voice MVP
+
+Canonical continuation:
+[Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md).
 
 - [x] Close dedicated Short-TTS provider discovery with no accepted provider.
   Piper, Chatterbox, Qwen and CosyVoice are C; MOSS-TTS-Nano is not accepted;
@@ -46,7 +49,12 @@ session. The current implementation status is documented in [README.md](README.m
   accepted Short-TTS provider: **none**. See the
   [Short-TTS provider benchmark](2026-08-11-short-tts-provider-benchmark.md).
 
-## Tomorrow: XTTS physical-path recovery (2026-08-12)
+## Superseded: XTTS physical-path recovery plan (2026-08-12)
+
+This older checklist is retained as historical context only. The later Short
+completion and MVP decisions close XTTS Short optimisation and dedicated
+provider discovery. Do not execute the remaining items below unless the owner
+explicitly reopens that separate lane after the Fixed-asset/Pi MVP acceptance.
 
 Today's physical Raspberry Pi/Pebble run is rejected. Do not interpret the
 isolated XTTS benchmark as an end-to-end pass and do not make XTTS the default.

@@ -259,8 +259,9 @@ Current priorities:
    update and recovery foundations;
 5. build Simple and Expert experiences only on the same authoritative state.
 
-See the full [roadmap](docs/roadmap.md) and the current
-[development status](docs/status/README.md).
+See the full [roadmap](docs/roadmap.md), the current
+[development status](docs/status/README.md) and the single-file
+[chat context snapshot](docs/status/CHAT-CONTEXT.md).
 
 ## Licence
 
