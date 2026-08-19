@@ -62,6 +62,50 @@ def test_hue_recover_command_is_bounded_to_the_device_topic(
     completed.assert_called_once_with(config, "command-id", True)
 
 
+def test_zigbee_power_requires_confirmed_device_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
+    run = Mock(side_effect=[
+        Mock(returncode=0),
+        Mock(returncode=0, stdout='{"state":"ON"}'),
+    ])
+    monkeypatch.setattr(cli.subprocess, "run", run)
+    completed = Mock()
+    monkeypatch.setattr(cli, "complete_command", completed)
+
+    cli._execute_command(config, {
+        "id": "command-id",
+        "type": "zigbee.power",
+        "payload": {"deviceId": "0x001788010fdcc07d", "on": True},
+    })
+
+    completed.assert_called_once_with(config, "command-id", True)
+
+
+def test_zigbee_power_rejects_unconfirmed_device_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
+    run = Mock(side_effect=[
+        Mock(returncode=0),
+        Mock(returncode=0, stdout='{"state":"OFF"}'),
+    ])
+    monkeypatch.setattr(cli.subprocess, "run", run)
+    completed = Mock()
+    monkeypatch.setattr(cli, "complete_command", completed)
+
+    cli._execute_command(config, {
+        "id": "command-id",
+        "type": "zigbee.power",
+        "payload": {"deviceId": "0x001788010fdcc07d", "on": True},
+    })
+
+    completed.assert_called_once_with(
+        config, "command-id", False, "EXECUTION_FAILED",
+    )
+
+
 def test_zigbee_remove_uses_bounded_bridge_request(monkeypatch: pytest.MonkeyPatch) -> None:
     config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
     run = Mock(return_value=Mock(returncode=0))

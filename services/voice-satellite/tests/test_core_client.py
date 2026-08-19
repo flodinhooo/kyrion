@@ -102,3 +102,25 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
     assert turn.transcript == "Wer bist du?"
     assert turn.response_text == "Eine vollständige Antwort."
     assert turn.continue_session is True
+    assert turn.restart_session is False
+
+
+def test_turn_exposes_requested_session_restart(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    response = StreamingResponse([
+        {"type": "transcript", "transcript": "Hey Willorra!"},
+        {
+            "type": "completed",
+            "responseText": "Session restart",
+            "continueSession": False,
+            "restartSession": True,
+        },
+    ])
+
+    with patch("urllib.request.urlopen", return_value=response):
+        turn = CoreVoiceClient("http://core", "satellite", credential).turn(
+            "session", b"RIFF-audio", "de", lambda _audio: None, "turn-id",
+        )
+
+    assert turn.restart_session is True
