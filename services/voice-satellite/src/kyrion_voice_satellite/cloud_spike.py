@@ -66,7 +66,10 @@ def run(config: SatelliteConfig, ai_url: str, provider: str) -> None:
     client = SpikeClient(ai_url)
     session = client.open(provider, config.locale)
     session_id = str(session["sessionId"])
-    LOGGER.info("Cloud session active provider=%s model=%s", session["provider"], session["model"])
+    LOGGER.info(
+        "Cloud session active provider=%s model=%s startup_ms=%s",
+        session["provider"], session["model"], session["sessionStartupMs"],
+    )
     playback = PipeWirePlayback(config.playback_target)
     vad = WebRtcVoiceActivityDetector()
     try:
@@ -88,14 +91,17 @@ def run(config: SatelliteConfig, ai_url: str, provider: str) -> None:
             audio = base64.b64decode(str(result["audioBase64"]), validate=True)
             playback.play(audio)
             transcript = str(result.get("transcript", "")).casefold()
-            if any(phrase in transcript for phrase in ("beende das gespräch", "stop cloud", "end conversation")):
+            end_phrases = ("beende das gespräch", "stop cloud", "end conversation")
+            if any(phrase in transcript for phrase in end_phrases):
                 break
     finally:
         client.close(session_id)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Isolated Kyrion cloud conversation hardware spike")
+    parser = argparse.ArgumentParser(
+        description="Isolated Kyrion cloud conversation hardware spike"
+    )
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--ai-url", required=True)
     parser.add_argument(

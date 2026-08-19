@@ -32,6 +32,7 @@ class CloudSession:
     locale: str
     model: str
     touched_at: float
+    startup_ms: float = 0.0
     history: list[dict[str, str]] = field(default_factory=list)
     gemini_context: object | None = None
     gemini_session: object | None = None
@@ -54,6 +55,7 @@ class CloudConversationManager:
         self.sessions: dict[str, CloudSession] = {}
 
     async def open(self, provider: Provider, locale: str) -> CloudSession:
+        started = time.perf_counter()
         self._require_enabled()
         if provider == "gemini":
             if not self.settings.gemini_api_key:
@@ -72,6 +74,7 @@ class CloudConversationManager:
         session = CloudSession(str(uuid.uuid4()), provider, locale, model, time.monotonic())
         if provider == "gemini":
             await self._open_gemini(session)
+        session.startup_ms = (time.perf_counter() - started) * 1000
         self.sessions[session.id] = session
         LOGGER.info(
             "cloud_session event=started id=%s provider=%s model=%s", session.id, provider, model
@@ -196,6 +199,7 @@ class CloudConversationManager:
             {
                 "provider": "gemini",
                 "model": session.model,
+                "sessionStartupMs": session.startup_ms,
                 "firstResponseMs": first_audio_ms,
                 "firstAudioMs": first_audio_ms,
                 "completeMs": complete,
@@ -263,8 +267,9 @@ class CloudConversationManager:
             response_text,
             audio,
             {
-                "provider": "openrouter",
-                "model": actual_model,
+            "provider": "openrouter",
+            "model": actual_model,
+            "sessionStartupMs": session.startup_ms,
                 "firstResponseMs": first_token_ms,
                 "firstAudioMs": first_audio_ms,
                 "completeMs": first_audio_ms,

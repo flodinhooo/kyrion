@@ -75,7 +75,12 @@ async def open_cloud_session(request: CloudSessionRequest) -> Response:
     except CloudConversationError as error:
         return JSONResponse({"code": "CLOUD_UNAVAILABLE", "detail": str(error)}, status_code=503)
     return JSONResponse(
-        {"sessionId": session.id, "provider": session.provider, "model": session.model}
+        {
+            "sessionId": session.id,
+            "provider": session.provider,
+            "model": session.model,
+            "sessionStartupMs": session.startup_ms,
+        }
     )
 
 
