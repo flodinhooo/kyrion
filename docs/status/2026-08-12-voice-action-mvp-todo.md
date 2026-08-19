@@ -83,7 +83,7 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Record proposed, rejected, confirmation-required, executed and failed
   states without prompt or credential leakage.
 - [x] Add a Core action endpoint for authenticated Web clients.
-- [ ] Remove device proposal, execution and result wording from the Next.js chat
+- [x] Remove device proposal, execution and result wording from the Next.js chat
   route after the Core endpoint passes tests.
 - [x] Route browser chat/Voice Mode through the new Core path.
 - [ ] Route the physical Voice dialogue through the same orchestrator directly.
