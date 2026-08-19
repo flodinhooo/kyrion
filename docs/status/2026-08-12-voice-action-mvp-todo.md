@@ -35,48 +35,54 @@ both without marking planned work as implemented.
 
 ## Phase B — Architecture decision
 
-- [ ] Record an ADR for the Core-owned Action Orchestrator and domain handler
+- [x] Record an ADR for the Core-owned Action Orchestrator and domain handler
   boundary.
-- [ ] Define `ActionContext`, typed `ActionProposal`, `ActionDecision` and
+- [x] Define `ActionContext`, typed `ActionProposal`, `ActionDecision` and
   `ActionOutcome` without untyped provider payloads.
-- [ ] Define `read`, `routine`, `confirmation_required`, `restricted` and
+- [x] Define `read`, `routine`, `confirmation_required`, `restricted` and
   `forbidden` policy classes.
-- [ ] Represent Web, Voice, Mobile, Automation and Integration as explicit
+- [x] Represent Web, Voice, Mobile, Automation and Integration as explicit
   interaction channels.
-- [ ] Define stable machine-readable result and denial codes.
-- [ ] Specify correlation and idempotency identity across proposal, decision,
+- [x] Define stable machine-readable result and denial codes.
+- [x] Specify correlation and idempotency identity across proposal, decision,
   execution and response.
+
+The accepted foundation is recorded in
+[ADR 0011](../adr/0011-core-owned-action-orchestration.md). The authenticated
+Web endpoint now persists owner-scoped idempotency claims and completed typed
+outcomes; mismatched or still-running replays are rejected.
 
 ## Phase B — Room semantics
 
-- [ ] Add the bounded `RoomType` enum and lowercase wire values.
-- [ ] Add a Flyway migration with `room_type = 'other'` for existing rooms.
-- [ ] Extend Room repository, HTTP contracts and owner-scoped tests.
-- [ ] Extend the device catalog room projection with `roomType`.
-- [ ] Add German and English Room Type labels to locale resources.
-- [ ] Add Room Type selection to room creation/editing without making it
+- [x] Add the bounded `RoomType` enum and lowercase wire values.
+- [x] Add a Flyway migration with `room_type = 'other'` for existing rooms.
+- [x] Extend Room repository and HTTP contracts. Owner-scoped repository
+  integration remains covered by the full PostgreSQL/Testcontainers run.
+- [x] Extend the device catalog room projection with `roomType`.
+- [x] Add German and English Room Type labels to locale resources.
+- [x] Add Room Type selection to room creation/editing without making it
   prominent on ordinary Home cards.
-- [ ] Implement deterministic room-name normalization.
-- [ ] Implement localized `RoomType` synonyms in Core.
-- [ ] Resolve exact display name before semantic category.
-- [ ] Return ambiguity when more than one owner room matches a category.
-- [ ] Return not found instead of guessing.
-- [ ] Defer owner aliases to a separate table and follow-up slice.
+- [x] Implement deterministic room-name normalization.
+- [x] Implement localized `RoomType` synonyms in Core.
+- [x] Resolve exact display name before semantic category.
+- [x] Return ambiguity when more than one owner room matches a category.
+- [x] Return not found instead of guessing.
+- [x] Defer owner aliases to a separate table and follow-up slice.
 
 ## Phase B — Shared Core action path
 
-- [ ] Add the Core `ActionOrchestrator`.
-- [ ] Add the initial typed `DeviceActionProposal`.
-- [ ] Add `DeviceActionHandler` above the existing `DeviceCommandService`.
-- [ ] Let Core load the authoritative owner device/capability catalog.
+- [x] Add the Core `ActionOrchestrator`.
+- [x] Add the initial typed `DeviceActionProposal`.
+- [x] Add `DeviceActionHandler` above the existing `DeviceCommandService`.
+- [x] Let Core load the authoritative owner device/capability catalog.
 - [ ] Let the AI service propose only against the bounded supplied catalog.
-- [ ] Revalidate proposal type, owner scope, target, capability and arguments in
+- [x] Revalidate proposal type, owner scope, target, capability and arguments in
   Core.
 - [ ] Apply policy and Voice-channel permission before execution.
-- [ ] Return one correlated `ActionOutcome` from the real domain result.
-- [ ] Record proposed, rejected, confirmation-required, executed and failed
+- [x] Return one correlated `ActionOutcome` from the real domain result.
+- [x] Record proposed, rejected, confirmation-required, executed and failed
   states without prompt or credential leakage.
-- [ ] Add a Core action endpoint for authenticated Web clients.
+- [x] Add a Core action endpoint for authenticated Web clients.
 - [ ] Remove device proposal, execution and result wording from the Next.js chat
   route after the Core endpoint passes tests.
 - [ ] Route browser chat/Voice Mode through the new Core path.

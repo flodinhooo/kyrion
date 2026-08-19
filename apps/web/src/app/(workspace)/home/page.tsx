@@ -8,7 +8,7 @@ import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-di
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
-import { isRoomList, type Room } from "@/features/home/contracts";
+import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
   type IntegrationConnection,
   isConnectionList, isNanoleafState, type NanoleafState,
@@ -22,6 +22,7 @@ export default function HomePage() {
   const [nanoleafStates, setNanoleafStates] = useState<Record<string, NanoleafState>>({});
   const [selected, setSelected] = useState<RuntimeDevice | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
+  const [editingTypes, setEditingTypes] = useState<Record<string, RoomType>>({});
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
@@ -94,12 +95,13 @@ export default function HomePage() {
     event.preventDefault();
     const form = event.currentTarget;
     const name = String(new FormData(form).get("name") ?? "").trim();
+    const roomType = String(new FormData(form).get("roomType") ?? "other") as RoomType;
     if (!name) return;
     setPending(true);
     const response = await fetch("/api/home/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, roomType }),
     });
     if (response.ok) { form.reset(); await load(); } else setError(true);
     setPending(false);
@@ -112,10 +114,11 @@ export default function HomePage() {
     const response = await fetch(`/api/home/rooms/${room.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, roomType: editingTypes[room.id] ?? room.roomType }),
     });
     if (response.ok) {
       setEditing((current) => { const next = { ...current }; delete next[room.id]; return next; });
+      setEditingTypes((current) => { const next = { ...current }; delete next[room.id]; return next; });
       await load();
     } else setError(true);
     setPending(false);
@@ -248,6 +251,9 @@ export default function HomePage() {
           {pending ? t.homeRefreshingStatus : t.homeRefreshStatus}
         </button>
         <input name="name" maxLength={120} placeholder={t.homeRoomName} required />
+        <select name="roomType" aria-label={t.homeRoomType} defaultValue="other">
+          {roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}
+        </select>
         <button disabled={pending}>{t.homeCreateRoom}</button>
       </form>
     </header>
@@ -255,10 +261,13 @@ export default function HomePage() {
     <div className="room-grid">{groups.map((group) => <section className="room-card" key={group.id}>
       <div className="room-heading">
         {group.room && editing[group.id] !== undefined
-          ? <input autoFocus value={editing[group.id]} onChange={(event) => setEditing((current) => ({ ...current, [group.id]: event.target.value }))} />
+          ? <div><input autoFocus value={editing[group.id]} onChange={(event) => setEditing((current) => ({ ...current, [group.id]: event.target.value }))} />
+            <select aria-label={t.homeRoomType} value={editingTypes[group.id] ?? group.room.roomType} onChange={(event) => setEditingTypes((current) => ({ ...current, [group.id]: event.target.value as RoomType }))}>
+              {roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}
+            </select></div>
           : <h2>{group.name}</h2>}
         <div>{group.room && <>
-          <button onClick={() => editing[group.id] !== undefined ? void rename(group.room!) : setEditing((current) => ({ ...current, [group.id]: group.name }))}>
+          <button onClick={() => editing[group.id] !== undefined ? void rename(group.room!) : (setEditing((current) => ({ ...current, [group.id]: group.name })), setEditingTypes((current) => ({ ...current, [group.id]: group.room!.roomType })))}>
             {editing[group.id] !== undefined ? t.homeSaveRoom : t.homeRenameRoom}
           </button>
           <button className="danger" onClick={() => setDeleteRoom(group.room)}>{t.homeDeleteRoom}</button>
