@@ -26,6 +26,7 @@ class VoiceTurn:
     transcript: str
     response_text: str
     continue_session: bool
+    restart_session: bool
 
 
 class CoreVoiceClient:
@@ -82,6 +83,7 @@ class CoreVoiceClient:
         transcript = ""
         response_text = ""
         continue_session = False
+        restart_session = False
         try:
             with urllib.request.urlopen(request, timeout=180) as response:
                 for raw_line in response:
@@ -96,6 +98,7 @@ class CoreVoiceClient:
                     elif event_type == "completed":
                         response_text = event.get("responseText", "")
                         continue_session = bool(event.get("continueSession"))
+                        restart_session = bool(event.get("restartSession"))
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
@@ -106,7 +109,7 @@ class CoreVoiceClient:
             raise CoreVoiceError("Core voice stream failed") from error
         if not transcript or not response_text:
             raise CoreVoiceError("Core voice stream ended before completion")
-        return VoiceTurn(transcript, response_text, continue_session)
+        return VoiceTurn(transcript, response_text, continue_session, restart_session)
 
     def close_session(self, session_id: str, reason: str) -> None:
         self._request(

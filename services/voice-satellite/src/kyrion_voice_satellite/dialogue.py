@@ -42,6 +42,10 @@ class DialogueRunner:
         self.state = DialogueState.IDLE
 
     def run_session(self) -> None:
+        while self._run_session_once():
+            LOGGER.info("Wake word repeated; opening a fresh voice session")
+
+    def _run_session_once(self) -> bool:
         session = self._client.open_session()
         reason = "error"
         try:
@@ -65,7 +69,7 @@ class DialogueRunner:
                 )
                 if utterance is None:
                     reason = "inactivity"
-                    return
+                    return False
                 self.state = DialogueState.PROCESSING
                 turn_id = str(uuid.uuid4())
                 speech_end = time.time_ns() // 1_000_000
@@ -94,11 +98,15 @@ class DialogueRunner:
                     turn_id,
                 )
                 LOGGER.info("Voice turn transcribed and answered")
+                if turn.restart_session:
+                    reason = "explicit"
+                    return True
                 if not turn.continue_session:
                     reason = "explicit"
-                    return
+                    return False
         finally:
             self.state = DialogueState.CLOSING
             if reason != "explicit":
                 self._client.close_session(session.id, reason)
             self.state = DialogueState.IDLE
+        return False
