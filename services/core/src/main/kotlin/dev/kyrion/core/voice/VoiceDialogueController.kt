@@ -151,8 +151,9 @@ class VoiceDialogueService(
                 locale,
             ),
         )
-        satellites.activeSession(satelliteId, credential, sessionId)
-        emitAudio(responsePlan, turnId, emit)
+        emitAudio(responsePlan, turnId, emit) {
+            satellites.activeSession(satelliteId, credential, sessionId)
+        }
         val responseText = responsePlan.renderedText
         conversations.finishTurn(
             session.ownerId, session.conversationId, userMessage.id,
@@ -215,8 +216,10 @@ class VoiceDialogueService(
         plan: VoiceResponsePlan,
         turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
+        validateBeforeEmit: () -> Unit = {},
     ) {
         val audio = resolveAudio(plan, turnId)
+        validateBeforeEmit()
         emit(VoiceTurnEvent(type = "audio.chunk", audioBase64 = Base64.getEncoder().encodeToString(audio)))
         voiceEvent(turnId, "satellite_first_chunk_sent")
     }
