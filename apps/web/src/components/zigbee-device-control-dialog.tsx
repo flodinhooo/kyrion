@@ -5,22 +5,28 @@ import { useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isAsyncDeviceCommand, isDeviceCommandStatus, type RuntimeDevice } from "@/features/devices/contracts";
+import { hsvToHex } from "@/features/devices/color";
 
 export function ZigbeeDeviceControlDialog({ device, open, onOpenChange }: {
   device: RuntimeDevice | null; open: boolean; onOpenChange: (open: boolean) => void;
 }) {
+  if (!device) return null;
+  return <ZigbeeDeviceControlDialogContent key={device.id} device={device} open={open} onOpenChange={onOpenChange} />;
+}
+
+function ZigbeeDeviceControlDialogContent({ device, open, onOpenChange }: {
+  device: RuntimeDevice; open: boolean; onOpenChange: (open: boolean) => void;
+}) {
   const { t } = useWorkspace();
-  const [brightness, setBrightness] = useState(74);
-  const [color, setColor] = useState("#22d3ee");
+  const [brightness, setBrightness] = useState(device.state?.brightness ?? 50);
+  const [color, setColor] = useState(() => hsvToHex(device.state?.hue ?? null, device.state?.saturation ?? null));
   const [status, setStatus] = useState<"idle" | "pending" | "succeeded" | "failed">("idle");
   const pending = status === "pending";
-  if (!device) return null;
-
   async function command(capability: string, argumentsValue: object) {
     setStatus("pending");
     const response = await fetch("/api/device-commands/async", {
       method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ capability, selector: { provider: "zigbee", deviceId: device!.id }, arguments: argumentsValue }),
+      body: JSON.stringify({ capability, selector: { provider: "zigbee", deviceId: device.id }, arguments: argumentsValue }),
     });
     const value: unknown = await response.json().catch(() => null);
     if (!response.ok || !isAsyncDeviceCommand(value)) { setStatus("failed"); return; }

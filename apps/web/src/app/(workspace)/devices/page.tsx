@@ -10,6 +10,7 @@ import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-di
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
+import { hsvToHex } from "@/features/devices/color";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
   type IntegrationConnection,
@@ -256,7 +257,10 @@ export default function DevicesPage() {
       <div className="room-heading">
         <h2>{group.name}</h2>
         <div className="room-heading-actions">
-          {group.items.length > 0 && <><button disabled={pending} onClick={() => void roomPower(group.items, true)}>{t.devicesRoomOn}</button><button disabled={pending} onClick={() => void roomPower(group.items, false)}>{t.devicesRoomOff}</button></>}
+          {group.items.length > 0 && (() => {
+            const roomIsOn = group.items.some((device) => device.state?.on === true || nanoleafStates[device.id]?.on === true);
+            return <label className="room-power-switch"><span>{roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending} onClick={() => void roomPower(group.items, !roomIsOn)}><i /></button></label>;
+          })()}
           {group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={() => setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType })}>
           <Pencil aria-hidden="true" />
         </button>}</div>
@@ -285,7 +289,7 @@ export default function DevicesPage() {
             {liveState && <div className="device-live-state" aria-label={t.homeCurrentState}>
               <span className={`state-pill ${liveState.on ? "is-on" : "is-off"}`}>{liveState.on === null ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</span>
               <span>{t.homeCurrentBrightness}: <strong>{liveState.brightness ?? "–"}%</strong></span>
-              <span>{t.homeCurrentColor}: <i className="color-swatch" style={liveState.hue !== null && liveState.saturation !== null ? { backgroundColor: `hsl(${liveState.hue} ${liveState.saturation}% 50%)` } : undefined} /></span>
+              <span>{t.homeCurrentColor}: <i className="color-swatch" style={{ backgroundColor: hsvToHex(liveState.hue, liveState.saturation) }} /></span>
             </div>}
             <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>

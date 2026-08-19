@@ -688,6 +688,12 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .room-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; }
 .room-heading > div { display: flex; gap: 8px; }
 .room-heading-actions { flex-wrap: wrap; justify-content: flex-end; }
+.room-power-switch { display: inline-flex; align-items: center; gap: 9px; color: var(--muted-foreground); font-size: .82rem; font-weight: 650; }
+.room-power-switch > button { position: relative; width: 46px; height: 26px; border-color: var(--border); border-radius: 999px; padding: 2px; background: var(--muted); transition: border-color .2s,background .2s; }
+.room-power-switch > button i { display: block; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgb(0 0 0/.3); transition: transform .2s; }
+.room-power-switch > button[aria-checked="true"] { border-color: #23915b; background: #23915b; }
+.room-power-switch > button[aria-checked="true"] i { transform: translateX(20px); }
+.room-power-switch > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .room-heading .danger { color: var(--destructive); }
 .room-edit-button { display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; padding: 0 !important; }
 .room-edit-button svg { width: 17px; height: 17px; }
@@ -777,6 +783,8 @@ body { font-size: calc(15px + var(--text-size-step)); }
 [data-theme="light"] .device-dialog button:hover { background: color-mix(in srgb, var(--primary) 22%, white); }
 [data-theme="light"] .home-dashboard button.danger,
 [data-theme="light"] .confirm-dialog-actions button.danger { border-color: #dc9a94; background: #fff0ee; color: #a5271d; }
+[data-theme="light"] .room-power-switch > button { border-color: #c9c2b5; background: #d8d3ca; box-shadow: none; }
+[data-theme="light"] .room-power-switch > button[aria-checked="true"] { border-color: #23915b; background: #23915b; }
 [data-theme="light"] .scene-list button { border-color: #d8ccb5; background-color: #fffaf0; color: #3f3422; }
 [data-theme="light"] .scene-list button.active:not(.has-preview) { border-color: #b27a08; background: #fff3d7; color: #654604; }
 [data-theme="light"] .scene-list button.has-preview { color: white; }
