@@ -118,6 +118,8 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         )
         if result.returncode != 0:
             raise RuntimeError("mqtt publish failed")
+        if kind == "zigbee.power":
+            _confirm_power_state(device, body["state"])
         complete_command(config, command_id, True)
     except (
         KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError
@@ -127,6 +129,21 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             command_id, type(error).__name__, str(error)[:80],
         )
         complete_command(config, command_id, False, "EXECUTION_FAILED")
+
+
+def _confirm_power_state(device: str, expected: str) -> None:
+    result = subprocess.run(
+        [
+            "mosquitto_sub", "-h", "127.0.0.1", "-t", f"zigbee2mqtt/{device}",
+            "-C", "1", "-W", "7",
+        ],
+        capture_output=True, check=False, timeout=9, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("device state confirmation timed out")
+    state = json.loads(result.stdout).get("state")
+    if state != expected:
+        raise RuntimeError(f"device reported state {state!r} instead of {expected!r}")
 
 
 if __name__ == "__main__":

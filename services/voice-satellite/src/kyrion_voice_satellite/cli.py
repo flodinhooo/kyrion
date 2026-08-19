@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import time
 from pathlib import Path
 
 from kyrion_voice_satellite.audio import AlsaCapture
@@ -10,6 +11,8 @@ from kyrion_voice_satellite.detector import OpenWakeWordDetector
 from kyrion_voice_satellite.dialogue import DialogueRunner
 from kyrion_voice_satellite.pcm_uplink_runner import PcmUplinkRunner
 from kyrion_voice_satellite.runtime import listen, log_detection, wait_for_detection
+
+LOGGER = logging.getLogger("kyrion-voice-satellite")
 
 
 def main() -> None:
@@ -38,7 +41,13 @@ def main() -> None:
             finally:
                 frames.close()
             log_detection(score)
-            dialogue.run_session()
+            try:
+                dialogue.run_session()
+            except (OSError, RuntimeError):
+                # A failed Core stream or local playback must not disable wake-word
+                # detection until systemd has restarted and reloaded the model.
+                LOGGER.exception("Voice dialogue failed; returning to wake-word detection")
+                time.sleep(config.cooldown_seconds)
 
     detector = OpenWakeWordDetector(config.model_path)
 

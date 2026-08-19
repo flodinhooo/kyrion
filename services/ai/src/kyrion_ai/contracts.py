@@ -51,6 +51,7 @@ class RuntimeDevice(BaseModel):
 
     id: str = Field(min_length=1, max_length=128)
     provider: str = Field(min_length=1, max_length=60)
+    device_class: Literal["light"] = Field(alias="deviceClass")
     display_name: str = Field(alias="displayName", min_length=1, max_length=160)
     room_name: str | None = Field(default=None, alias="roomName", max_length=120)
     capabilities: list[RuntimeDeviceCapability] = Field(max_length=50)
@@ -75,13 +76,15 @@ class DeviceTargetSelector(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     room_name: str | None = Field(default=None, alias="roomName", min_length=1, max_length=120)
-    provider: Literal["nanoleaf"]
+    provider: Literal["nanoleaf", "zigbee", "light"]
     device_id: str | None = Field(default=None, alias="deviceId", min_length=1, max_length=128)
 
     @model_validator(mode="after")
     def exactly_one_target(self) -> "DeviceTargetSelector":
-        if (self.room_name is None) == (self.device_id is None):
+        if self.room_name is not None and self.device_id is not None:
             raise ValueError("exactly one device target is required")
+        if self.room_name is None and self.device_id is None and self.provider != "light":
+            raise ValueError("a global target is only valid for the light category")
         return self
 
 
