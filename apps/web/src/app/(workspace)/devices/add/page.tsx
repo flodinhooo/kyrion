@@ -15,6 +15,7 @@ export default function AddDevicePage() {
   const [networkDevices, setNetworkDevices] = useState<DiscoveredNanoleaf[] | null>(null);
   const [networkSearching, setNetworkSearching] = useState(false);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
+  const [deviceClasses, setDeviceClasses] = useState<Record<string, "light" | "switch" | "sensor" | "other">>({});
   const [addingDevice, setAddingDevice] = useState<string | null>(null);
   const [addedDevices, setAddedDevices] = useState<string[]>([]);
   const [error, setError] = useState(false);
@@ -89,7 +90,7 @@ export default function AddDevicePage() {
       const response = await fetch(`/api/gateways/${zigbeeNode.id}/zigbee/devices`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...csrfHeader() },
-        body: JSON.stringify({ deviceId, displayName }),
+        body: JSON.stringify({ deviceId, displayName, deviceClass: deviceClasses[deviceId] ?? "other" }),
       });
       if (!response.ok) throw new Error("add failed");
       setAddedDevices((current) => [...new Set([...current, deviceId])]);
@@ -109,7 +110,7 @@ export default function AddDevicePage() {
         {secondsLeft > 0 && <p className="discovery-hint">{t.addDeviceZigbeeHint}</p>}
         {secondsLeft > 0 && <div className="discovery-results"><strong>{t.addDeviceFound}</strong>{zigbeeCandidates.length === 0 ? <p>{t.addDeviceNoneFound}</p> : zigbeeCandidates.map((device) => {
           const fallbackName = `${device.vendor} ${device.model}`.trim();
-          return <div className="discovery-candidate" key={device.ieeeAddress}><div><span>{fallbackName}</span><code>{device.ieeeAddress}</code></div>{addedDevices.includes(device.ieeeAddress) ? <p className="device-status online">{t.addDeviceAdded}</p> : <><label>{t.addDeviceName}<input maxLength={160} value={deviceNames[device.ieeeAddress] ?? fallbackName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.ieeeAddress]: event.target.value }))} /></label><button disabled={addingDevice === device.ieeeAddress} onClick={() => void addZigbeeDevice(device.ieeeAddress, fallbackName)}>{addingDevice === device.ieeeAddress ? t.addDeviceAdding : t.addDeviceConfirm}</button></>}</div>;
+          return <div className="discovery-candidate" key={device.ieeeAddress}><div><span>{fallbackName}</span><code>{device.ieeeAddress}</code></div>{addedDevices.includes(device.ieeeAddress) ? <p className="device-status online">{t.addDeviceAdded}</p> : <><label>{t.addDeviceName}<input maxLength={160} value={deviceNames[device.ieeeAddress] ?? fallbackName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.ieeeAddress]: event.target.value }))} /></label><label>{t.deviceClass}<select value={deviceClasses[device.ieeeAddress] ?? "other"} onChange={(event) => setDeviceClasses((current) => ({ ...current, [device.ieeeAddress]: event.target.value as "light" | "switch" | "sensor" | "other" }))}>{(["light", "switch", "sensor", "other"] as const).map((value) => <option key={value} value={value}>{t.deviceClasses[value]}</option>)}</select></label><button disabled={addingDevice === device.ieeeAddress} onClick={() => void addZigbeeDevice(device.ieeeAddress, fallbackName)}>{addingDevice === device.ieeeAddress ? t.addDeviceAdding : t.addDeviceConfirm}</button></>}</div>;
         })}</div>}
       </article>
       <article className="pairing-card">

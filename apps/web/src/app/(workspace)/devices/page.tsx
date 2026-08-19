@@ -9,7 +9,7 @@ import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
+import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type DeviceClass, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
@@ -31,6 +31,7 @@ export default function DevicesPage() {
     roomType: RoomType;
   } | null>(null);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
+  const [deviceClasses, setDeviceClasses] = useState<Record<string, DeviceClass>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
   const [commandStates, setCommandStates] = useState<Record<string, "pending" | "succeeded" | "failed">>({});
@@ -147,10 +148,11 @@ export default function DevicesPage() {
     const response = await fetch(`/api/home/connections/${device.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, deviceClass: deviceClasses[device.id] ?? device.deviceClass }),
     });
     if (response.ok) {
       setDeviceNames((current) => { const next = { ...current }; delete next[device.id]; return next; });
+      setDeviceClasses((current) => { const next = { ...current }; delete next[device.id]; return next; });
       await load();
     } else setError(true);
     setPending(false);
@@ -315,7 +317,8 @@ export default function DevicesPage() {
             {commandStates[device.id] && <small className={commandStates[device.id] === "failed" ? "auth-error" : "command-status"} aria-live="polite">{commandStates[device.id] === "pending" ? t.commandPending : commandStates[device.id] === "succeeded" ? t.commandSucceeded : t.commandFailed}</small>}
             <div className="device-rename" onClick={(event) => event.stopPropagation()}>
               <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
-              <button disabled={pending || deviceNames[device.id] === undefined} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
+              <select aria-label={t.deviceClass} value={deviceClasses[device.id] ?? device.deviceClass} onChange={(event) => setDeviceClasses((current) => ({ ...current, [device.id]: event.target.value as DeviceClass }))}>{(["light", "switch", "sensor", "other"] as const).map((value) => <option key={value} value={value}>{t.deviceClasses[value]}</option>)}</select>
+              <button disabled={pending || (deviceNames[device.id] === undefined && deviceClasses[device.id] === undefined)} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
             </div>
             {device.provider === "zigbee" && <button className="danger" disabled={pending} onClick={(event) => { event.stopPropagation(); setRemoveDevice(device); }}>{t.homeRemoveDevice}</button>}
             <label onClick={(event) => event.stopPropagation()}>{t.homeAssignRoom}
