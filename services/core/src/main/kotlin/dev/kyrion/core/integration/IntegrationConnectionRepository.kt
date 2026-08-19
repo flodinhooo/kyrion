@@ -7,5 +7,7 @@ interface IntegrationConnectionRepository {
     fun find(ownerId: UUID, id: UUID): IntegrationConnection?
     fun save(connection: IntegrationConnection): IntegrationConnection
     fun rename(ownerId: UUID, id: UUID, displayName: String, updatedAt: java.time.Instant): IntegrationConnection?
+    fun update(ownerId: UUID, id: UUID, displayName: String, deviceClass: DeviceClass, updatedAt: java.time.Instant): IntegrationConnection? =
+        rename(ownerId, id, displayName, updatedAt)
     fun delete(ownerId: UUID, id: UUID): Boolean
 }

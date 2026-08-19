@@ -20,14 +20,21 @@ class JdbcIntegrationConnectionRepository(private val jdbc: JdbcClient) : Integr
         jdbc.sql(
             """INSERT INTO integration_connection
                (id, owner_id, provider, display_name, endpoint_host, credential_ciphertext, credential_nonce,
-                credential_version, created_at, updated_at)
-               VALUES (:id, :ownerId, :provider, :displayName, :endpointHost, :ciphertext, :nonce, :version, :createdAt, :updatedAt)""",
+                credential_version, created_at, updated_at, device_class)
+               VALUES (:id, :ownerId, :provider, :displayName, :endpointHost, :ciphertext, :nonce, :version, :createdAt, :updatedAt, :deviceClass)""",
         ).param("id", connection.id).param("ownerId", connection.ownerId).param("provider", connection.provider)
             .param("displayName", connection.displayName).param("endpointHost", connection.endpointHost)
             .param("ciphertext", connection.credentialCiphertext).param("nonce", connection.credentialNonce)
             .param("version", connection.credentialVersion).param("createdAt", Timestamp.from(connection.createdAt))
-            .param("updatedAt", Timestamp.from(connection.updatedAt)).update()
+            .param("updatedAt", Timestamp.from(connection.updatedAt)).param("deviceClass", connection.deviceClass.value).update()
         return connection
+    }
+
+    override fun update(ownerId: UUID, id: UUID, displayName: String, deviceClass: DeviceClass, updatedAt: java.time.Instant): IntegrationConnection? {
+        val updated = jdbc.sql("UPDATE integration_connection SET display_name=:displayName, device_class=:deviceClass, updated_at=:updatedAt WHERE owner_id=:ownerId AND id=:id")
+            .param("displayName", displayName).param("deviceClass", deviceClass.value).param("updatedAt", Timestamp.from(updatedAt))
+            .param("ownerId", ownerId).param("id", id).update()
+        return if (updated == 1) find(ownerId, id) else null
     }
 
     override fun rename(ownerId: UUID, id: UUID, displayName: String, updatedAt: java.time.Instant): IntegrationConnection? {
@@ -45,5 +52,6 @@ class JdbcIntegrationConnectionRepository(private val jdbc: JdbcClient) : Integr
         rs.getString("display_name"), rs.getString("endpoint_host"), rs.getBytes("credential_ciphertext"),
         rs.getBytes("credential_nonce"), rs.getInt("credential_version"), rs.getTimestamp("created_at").toInstant(),
         rs.getTimestamp("updated_at").toInstant(), rs.getObject("room_id", UUID::class.java),
+        DeviceClass.entries.single { it.value == rs.getString("device_class") },
     )
 }

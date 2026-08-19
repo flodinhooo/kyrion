@@ -13,6 +13,7 @@ import java.util.UUID
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.integration.IntegrationConnectionView
 import dev.kyrion.core.integration.view
+import dev.kyrion.core.integration.DeviceClass
 import dev.kyrion.core.gateway.GatewayCommandService
 import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
@@ -20,6 +21,7 @@ import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 data class RoomNameRequest(@field:NotBlank @field:Size(max = 120) val name: String)
 data class RoomRequest(@field:NotBlank @field:Size(max = 120) val name: String, val roomType: RoomType = RoomType.OTHER)
 data class RoomAssignmentRequest(val roomId: UUID?)
+data class DeviceUpdateRequest(@field:NotBlank @field:Size(max = 160) val name: String, val deviceClass: DeviceClass)
 
 @RestController
 @RequestMapping("/v1/home")
@@ -45,9 +47,9 @@ class RoomController(
     @PutMapping("/connections/{id}/room") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun assign(@PathVariable id: UUID, @RequestBody body: RoomAssignmentRequest, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.assignConnection(ownerId, id, body.roomId)) throw RoomAssignmentException(); record(ownerId, "home.device.assigned", "device.room.assigned", id) }
     @PatchMapping("/connections/{id}")
-    fun renameDevice(@PathVariable id: UUID, @Valid @RequestBody body: RoomNameRequest, request: HttpServletRequest): IntegrationConnectionView {
+    fun renameDevice(@PathVariable id: UUID, @Valid @RequestBody body: DeviceUpdateRequest, request: HttpServletRequest): IntegrationConnectionView {
         val ownerId = request.ownerId()
-        val updated = connections.rename(ownerId, id, body.name.trim(), clock.instant()) ?: throw RoomAssignmentException()
+        val updated = connections.update(ownerId, id, body.name.trim(), body.deviceClass, clock.instant()) ?: throw RoomAssignmentException()
         record(ownerId, "home.device.renamed", "device.renamed", id)
         return updated.view()
     }

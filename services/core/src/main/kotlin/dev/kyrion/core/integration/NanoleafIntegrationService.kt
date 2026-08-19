@@ -29,7 +29,8 @@ class NanoleafIntegrationService(
             val protected = cipher.protect(token, context)
             val connection = repository.save(
                 IntegrationConnection(id, ownerId, PROVIDER, displayName?.trim()?.takeIf { it.isNotBlank() } ?: "Nanoleaf",
-                    validatedHost, protected.ciphertext, protected.nonce, protected.version, now, now),
+                    validatedHost, protected.ciphertext, protected.nonce, protected.version, now, now,
+                    deviceClass = DeviceClass.LIGHT),
             )
             record(ownerId, "integration.nanoleaf.paired", ActivityStatus.SUCCEEDED, "nanoleaf.paired", correlationId)
             connection.view()

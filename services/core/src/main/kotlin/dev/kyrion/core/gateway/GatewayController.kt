@@ -47,6 +47,7 @@ data class GatewayCommandResultRequest(val succeeded: Boolean, @field:Size(max =
 data class AddZigbeeDeviceRequest(
     @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
     @field:NotBlank @field:Size(max = 160) val displayName: String,
+    val deviceClass: dev.kyrion.core.integration.DeviceClass = dev.kyrion.core.integration.DeviceClass.OTHER,
 )
 
 @RestController
@@ -73,7 +74,7 @@ class GatewayOwnerController(
     @PostMapping("/{id}/zigbee/devices")
     @ResponseStatus(HttpStatus.CREATED)
     fun addZigbeeDevice(@PathVariable id: UUID, @Valid @RequestBody body: AddZigbeeDeviceRequest, request: HttpServletRequest) =
-        zigbeeDevices.add(request.ownerId(), id, body.deviceId, body.displayName, commands)
+        zigbeeDevices.add(request.ownerId(), id, body.deviceId, body.displayName, body.deviceClass, commands)
 
     @GetMapping("/{id}/zigbee/devices")
     fun zigbeeCandidates(@PathVariable id: UUID, request: HttpServletRequest) =
