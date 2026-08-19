@@ -46,6 +46,7 @@ export type TextSize = "standard" | "comfortable" | "large";
 const navigation = [
   ["chat", Icons.chat, "/"],
   ["home", Icons.home, "/home"],
+  ["devices", Icons.power, "/devices"],
   ["addDevice", Icons.plus, "/devices/add"],
   ["automations", Icons.spark, "/automations"],
   ["plugins", Icons.plugins, "/plugins"],
@@ -83,6 +84,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
       [/^\/$/, t.chat],
       [/^\/conversations\//, t.chat],
       [/^\/home/, t.home],
+      [/^\/devices$/, t.devices],
       [/^\/devices\/add/, t.addDevice],
       [/^\/automations/, t.automations],
       [/^\/knowledge/, t.knowledge],
