@@ -1,23 +1,120 @@
 {
   "schemaVersion": 1,
   "catalogRevision": "voice-responses-v1",
-  "description": "Reviewed fixed-response assets only. No production audio is approved yet.",
+  "description": "Reviewed fixed-response assets only. Six German MVP assets are owner-approved; English counterparts remain pending.",
   "voiceProfiles": {
     "velora": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09"
   },
-  "assets": [],
+  "assets": [
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "neutral-01",
+      "text": "Hallo.",
+      "path": "assets/velora/de/session.greeting/neutral-01.wav",
+      "sha256": "9a27ca36f8da538dd91f5995aeaca8a394c7e6f271c549a96bbfd363a1c73b9b",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "warm-01",
+      "text": "Hallo, schön dich zu hören.",
+      "path": "assets/velora/de/session.greeting/warm-01.wav",
+      "sha256": "133515d69d3b65840b0d5204b4123b799704084c465c4300e76211c56c0e8f33",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.farewell",
+      "variantId": "neutral-01",
+      "text": "Bis später.",
+      "path": "assets/velora/de/session.farewell/neutral-01.wav",
+      "sha256": "4919158e9c2345e0ba4ffb05485dbdb347909b00b694d87d1e47941c693844b7",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.farewell",
+      "variantId": "warm-01",
+      "text": "Mach's gut.",
+      "path": "assets/velora/de/session.farewell/warm-01.wav",
+      "sha256": "d76c98fad9b444c595610ca2b04c90a046bda6dac2c03d01b0c4a5bb77d2ce94",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "dialogue.acknowledged",
+      "variantId": "neutral-01",
+      "text": "Okay.",
+      "path": "assets/velora/de/dialogue.acknowledged/neutral-01.wav",
+      "sha256": "f418252bf3d73b9bd3a0ac18f9428a6e41a646086707400541d9fa5d9582e112",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "dialogue.acknowledged",
+      "variantId": "neutral-02",
+      "text": "Alles klar.",
+      "path": "assets/velora/de/dialogue.acknowledged/neutral-02.wav",
+      "sha256": "8c02fb9571694c7d71f75de1e515712a5bb403199fc8b9185264a4b6543ef325",
+      "reviewedBy": "owner"
+    }
+  ],
   "pendingAssets": [
-    {"locale": "de", "responseKey": "session.greeting", "variantId": "neutral-01", "text": "Hallo."},
-    {"locale": "de", "responseKey": "session.greeting", "variantId": "warm-01", "text": "Hallo, schön dich zu hören."},
-    {"locale": "en", "responseKey": "session.greeting", "variantId": "neutral-01", "text": "Hello."},
-    {"locale": "en", "responseKey": "session.greeting", "variantId": "warm-01", "text": "Hello, good to hear you."},
-    {"locale": "de", "responseKey": "session.farewell", "variantId": "neutral-01", "text": "Bis später."},
-    {"locale": "de", "responseKey": "session.farewell", "variantId": "warm-01", "text": "Mach's gut."},
-    {"locale": "en", "responseKey": "session.farewell", "variantId": "neutral-01", "text": "Talk to you later."},
-    {"locale": "en", "responseKey": "session.farewell", "variantId": "warm-01", "text": "Take care."},
-    {"locale": "de", "responseKey": "dialogue.acknowledged", "variantId": "neutral-01", "text": "Okay."},
-    {"locale": "de", "responseKey": "dialogue.acknowledged", "variantId": "neutral-02", "text": "Alles klar."},
-    {"locale": "en", "responseKey": "dialogue.acknowledged", "variantId": "neutral-01", "text": "Okay."},
-    {"locale": "en", "responseKey": "dialogue.acknowledged", "variantId": "neutral-02", "text": "Got it."}
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "neutral-01",
+      "text": "Hello."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "warm-01",
+      "text": "Hello, good to hear you."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.farewell",
+      "variantId": "neutral-01",
+      "text": "Talk to you later."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.farewell",
+      "variantId": "warm-01",
+      "text": "Take care."
+    },
+    {
+      "locale": "en",
+      "responseKey": "dialogue.acknowledged",
+      "variantId": "neutral-01",
+      "text": "Okay."
+    },
+    {
+      "locale": "en",
+      "responseKey": "dialogue.acknowledged",
+      "variantId": "neutral-02",
+      "text": "Got it."
+    }
   ]
 }

@@ -9,6 +9,15 @@ both without marking planned work as implemented.
 
 ## Phase A — Voice assets
 
+Checkpoint 2026-08-19: the owner listened to and approved a 30-line German
+Qwen3-TTS 1.7B voice-clone selection derived from the checksum-verified
+immutable `velora-f` reference. Six entries matching the existing bilingual
+Core Fixed catalog (two greetings, two farewells and two acknowledgements) are
+registered in the production manifest. The other 24 approved German WAVs
+remain outside Git as reviewed expansion inventory until their typed outcome
+resolvers and English counterparts exist. The six English MVP assets remain
+pending, so Phase A and Raspberry Pi acceptance are not complete.
+
 - [ ] Install Audacity for local Windows recording and editing.
 - [ ] Install Seed-VC in an isolated Python 3.10 environment outside the Kyrion
   runtime and repository.
