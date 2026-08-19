@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -91,7 +90,6 @@ class ActionExecutionService(
     private val clock: Clock = Clock.systemUTC(),
     private val mapper: ObjectMapper = jacksonObjectMapper(),
 ) {
-    @Transactional
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
         val requestHash = sha256(mapper.writeValueAsBytes(mapOf(
             "channel" to context.channel.value,

@@ -132,25 +132,32 @@ class DeviceActionHandler(
     }
 
     override fun execute(context: ActionContext, proposal: DeviceActionProposal): ActionOutcome {
-        val target = catalog.devices(context.ownerId).singleOrNull { it.id == proposal.targetId }
-            ?: throw DeviceTargetNotFoundException()
-        if (target.capabilities.none { it.id == proposal.capability }) {
+        val requestedIds = (proposal.targetIds + listOfNotNull(proposal.targetId)).distinct()
+        val targets = catalog.devices(context.ownerId).filter { it.id in requestedIds }
+        if (targets.size != requestedIds.size) throw DeviceTargetNotFoundException()
+        if (targets.any { target -> target.capabilities.none { it.id == proposal.capability } }) {
             throw DeviceCapabilityUnsupportedException()
         }
-        val result = commands.execute(
-            context.ownerId,
-            ExecuteDeviceCommandRequest(
-                proposal.capability,
-                DeviceTargetSelector(provider = target.provider, deviceId = target.id),
-                proposal.arguments,
-            ),
-            context.correlationId,
-            recordProposal = false,
-        )
-        val unavailable = result.outcomes.all { it.status == "unavailable" }
+        val results = targets.map { target ->
+            commands.execute(
+                context.ownerId,
+                ExecuteDeviceCommandRequest(
+                    proposal.capability,
+                    DeviceTargetSelector(provider = target.provider, deviceId = target.id),
+                    proposal.arguments,
+                ),
+                context.correlationId,
+                recordProposal = false,
+            )
+        }
+        val outcomes = results.flatMap { it.outcomes }
+        val requested = outcomes.size
+        val succeeded = outcomes.count { it.status == "succeeded" }
+        val failed = requested - succeeded
+        val unavailable = outcomes.isNotEmpty() && outcomes.all { it.status == "unavailable" }
         val status = when {
-            result.succeeded == result.requested -> ActionOutcomeStatus.SUCCEEDED
-            result.succeeded > 0 -> ActionOutcomeStatus.PARTIALLY_SUCCEEDED
+            succeeded == requested -> ActionOutcomeStatus.SUCCEEDED
+            succeeded > 0 -> ActionOutcomeStatus.PARTIALLY_SUCCEEDED
             else -> ActionOutcomeStatus.FAILED
         }
         val code = when {
@@ -163,11 +170,11 @@ class DeviceActionHandler(
             status,
             code,
             context.correlationId,
-            result.capability,
-            result.requested,
-            result.succeeded,
-            result.failed,
-            result.outcomes.map { ActionTargetOutcome(it.deviceId, it.displayName, it.status) },
+            proposal.capability,
+            requested,
+            succeeded,
+            failed,
+            outcomes.map { ActionTargetOutcome(it.deviceId, it.displayName, it.status) },
         )
     }
 }

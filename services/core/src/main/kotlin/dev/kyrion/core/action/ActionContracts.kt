@@ -69,10 +69,13 @@ data class ActionContext(
 sealed interface ActionProposal
 
 data class DeviceActionProposal(
-    val targetId: UUID,
+    val targetId: UUID?,
     @field:NotBlank @field:Size(max = 80) val capability: String,
     @field:Valid val arguments: DeviceCommandArguments,
-) : ActionProposal
+    @field:Size(max = 50) val targetIds: List<UUID> = emptyList(),
+) : ActionProposal {
+    init { require(targetId != null || targetIds.isNotEmpty()) { "At least one device target is required" } }
+}
 
 data class ActionDecision(
     val type: ActionDecisionType,
