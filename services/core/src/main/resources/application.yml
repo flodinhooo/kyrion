@@ -22,5 +22,7 @@ management:
         include: health
 
 kyrion:
+  ai:
+    base-url: ${KYRION_AI_BASE_URL:http://127.0.0.1:8000}
   credentials:
     key-file: ${KYRION_CREDENTIAL_KEY_FILE:E:/Kyrion/Data/secrets/credential.key}
