@@ -77,9 +77,81 @@
       "path": "assets/velora/de/dialogue.acknowledged/neutral-02.wav",
       "sha256": "8c02fb9571694c7d71f75de1e515712a5bb403199fc8b9185264a4b6543ef325",
       "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "command.succeeded",
+      "variantId": "neutral-01",
+      "text": "Erledigt.",
+      "path": "assets/velora/de/command.succeeded/neutral-01.wav",
+      "sha256": "e93a2c8bc7ff64d8038c4ddfc5efa12d41eb0d06f6b2dc9ba6627fb531b26918",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "command.succeeded",
+      "variantId": "neutral-02",
+      "text": "Ist erledigt.",
+      "path": "assets/velora/de/command.succeeded/neutral-02.wav",
+      "sha256": "a0693bd7bbcfac2d0d7ec38c1cab79a34e36c12301cab987a0fadd4b6f125bad",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "command.failed",
+      "variantId": "neutral-01",
+      "text": "Das hat nicht funktioniert.",
+      "path": "assets/velora/de/command.failed/neutral-01.wav",
+      "sha256": "f20cb40fa78f31b3d8ca4d449efa016571bebb6a048a1df8dcc904df61a6a9d5",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "command.failed",
+      "variantId": "neutral-02",
+      "text": "Der Befehl ist fehlgeschlagen.",
+      "path": "assets/velora/de/command.failed/neutral-02.wav",
+      "sha256": "478e6ad5fad88e460a69b231b179eeeae4c39b6315efab352e8cfd6d292d0bc1",
+      "reviewedBy": "owner"
     }
   ],
   "pendingAssets": [
+    {
+      "locale": "en",
+      "responseKey": "command.succeeded",
+      "variantId": "neutral-01",
+      "text": "Done."
+    },
+    {
+      "locale": "en",
+      "responseKey": "command.succeeded",
+      "variantId": "neutral-02",
+      "text": "It's done."
+    },
+    {
+      "locale": "en",
+      "responseKey": "command.failed",
+      "variantId": "neutral-01",
+      "text": "That didn't work."
+    },
+    {
+      "locale": "en",
+      "responseKey": "command.failed",
+      "variantId": "neutral-02",
+      "text": "The command failed."
+    },
     {
       "locale": "en",
       "responseKey": "session.greeting",

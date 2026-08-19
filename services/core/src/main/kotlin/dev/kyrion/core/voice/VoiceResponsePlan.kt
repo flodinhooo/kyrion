@@ -122,6 +122,26 @@ class VoiceResponseCatalog {
                 VoiceResponseVariant("neutral-02", "Got it."),
             ),
         ),
+        "command.succeeded" to mapOf(
+            "de" to listOf(
+                VoiceResponseVariant("neutral-01", "Erledigt."),
+                VoiceResponseVariant("neutral-02", "Ist erledigt."),
+            ),
+            "en" to listOf(
+                VoiceResponseVariant("neutral-01", "Done."),
+                VoiceResponseVariant("neutral-02", "It's done."),
+            ),
+        ),
+        "command.failed" to mapOf(
+            "de" to listOf(
+                VoiceResponseVariant("neutral-01", "Das hat nicht funktioniert."),
+                VoiceResponseVariant("neutral-02", "Der Befehl ist fehlgeschlagen."),
+            ),
+            "en" to listOf(
+                VoiceResponseVariant("neutral-01", "That didn't work."),
+                VoiceResponseVariant("neutral-02", "The command failed."),
+            ),
+        ),
     )
 
     private val templates = mapOf(
@@ -212,20 +232,18 @@ private class CommandOutcomeResolver(
         if (!outcome.executionConfirmed) {
             throw VoiceResponseValidationException("COMMAND_OUTCOME_UNCONFIRMED")
         }
-        val templateKey = if (outcome.succeeded) "command.succeeded" else "command.failed"
-        val slots = mapOf(
-            "targetName" to VoiceResponseSlot(VoiceResponseSlotType.entityName, outcome.targetName),
-        )
-        return TemplateResponsePlan(
-            responseType = templateKey,
-            templateKey = templateKey,
-            slots = slots,
-            cacheScope = ownerCacheScope(context.ownerId),
+        val responseKey = if (outcome.succeeded) "command.succeeded" else "command.failed"
+        val variants = catalog.variants(responseKey, context.locale)
+        val variant = variants[deterministicVariantIndex(context, responseKey, variants.size)]
+        return FixedResponsePlan(
+            responseType = responseKey,
+            responseKey = responseKey,
+            variantId = variant.id,
             locale = context.locale,
             voiceProfileId = context.voiceProfileId,
             voiceProfileRevision = context.voiceProfileRevision,
             catalogRevision = catalog.revision,
-            renderedText = catalog.render(templateKey, context.locale, slots),
+            renderedText = variant.text,
         )
     }
 }
