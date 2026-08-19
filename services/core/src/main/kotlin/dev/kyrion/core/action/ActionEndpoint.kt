@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -33,6 +34,16 @@ data class WebActionRequest(
     @field:Valid val proposal: ActionProposal,
     val conversationId: UUID? = null,
 )
+
+data class WebActionIntentRequest(
+    val idempotencyKey: UUID,
+    @field:NotBlank @field:Size(max = 2_000) val message: String,
+    @field:NotBlank @field:Pattern(regexp = "de|en") val locale: String,
+    @field:Size(max = 6) val priorMessages: List<ActionPriorMessage> = emptyList(),
+    val conversationId: UUID? = null,
+)
+
+data class WebActionAttempt(val kind: String, val code: String? = null, val renderedText: String? = null, val outcome: ActionOutcome? = null)
 
 data class ActionExecutionRecord(
     val correlationId: UUID,
@@ -107,12 +118,62 @@ class WebActionService(
     companion object { private val ZERO_UUID = UUID(0, 0) }
 }
 
+@Service
+class WebActionIntentService(
+    private val proposals: DeviceProposalProvider,
+    private val actions: WebActionService,
+    private val renderer: ActionResultRenderer,
+) {
+    fun execute(ownerId: UUID, request: WebActionIntentRequest): WebActionAttempt = when (
+        val result = proposals.propose(ownerId, request.message.trim(), request.locale, request.priorMessages)
+    ) {
+        is ProposalResult.Proposed -> actions.execute(ownerId, WebActionRequest(
+                request.idempotencyKey, request.locale, result.proposal, request.conversationId,
+            )).let { WebActionAttempt("action", it.code, renderer.render(it, result.proposal, request.locale), it) }
+        ProposalResult.None -> WebActionAttempt("none")
+        ProposalResult.Ambiguous -> WebActionAttempt("rejected", "target.ambiguous", renderer.rejection("target.ambiguous", request.locale))
+        ProposalResult.Invalid -> WebActionAttempt("rejected", "proposal.invalid", renderer.rejection("proposal.invalid", request.locale))
+        ProposalResult.Unavailable -> WebActionAttempt("unavailable", "proposal.unavailable")
+    }
+}
+
+@Service
+class ActionResultRenderer {
+    fun render(outcome: ActionOutcome, proposal: DeviceActionProposal, locale: String): String {
+        val name = outcome.targets.singleOrNull()?.displayName
+        if (outcome.status == ActionOutcomeStatus.SUCCEEDED) {
+            if (name != null && proposal.capability == "power.set") {
+                val state = if (proposal.arguments.on == true) if (locale == "de") "eingeschaltet" else "turned on"
+                    else if (locale == "de") "ausgeschaltet" else "turned off"
+                return if (locale == "de") "„$name“ ist jetzt $state." else "“$name” is now $state."
+            }
+            if (name != null && proposal.capability == "light.setBrightness") return if (locale == "de")
+                "„$name“ ist jetzt auf ${proposal.arguments.brightness} % eingestellt."
+            else "“$name” is now set to ${proposal.arguments.brightness}%."
+            return if (locale == "de") "Erledigt." else "Done."
+        }
+        return rejection(outcome.code, locale)
+    }
+
+    fun rejection(code: String, locale: String) = when (code) {
+        "target.ambiguous" -> if (locale == "de") "Das Ziel ist nicht eindeutig." else "That target is ambiguous."
+        "target.not_found", "proposal.invalid" -> if (locale == "de") "Ich konnte das Ziel nicht finden." else "I couldn't find that target."
+        "device.offline" -> if (locale == "de") "Das Gerät ist momentan nicht erreichbar." else "The device is currently unavailable."
+        "action.denied" -> if (locale == "de") "Diese Aktion ist nicht erlaubt." else "That action isn't allowed."
+        else -> if (locale == "de") "Das hat nicht funktioniert." else "That didn't work."
+    }
+}
+
 @RestController
 @RequestMapping("/v1/actions")
-class ActionController(private val actions: WebActionService) {
+class ActionController(private val actions: WebActionService, private val intents: WebActionIntentService) {
     @PostMapping
     fun execute(@Valid @RequestBody body: WebActionRequest, request: HttpServletRequest) =
         actions.execute(request.ownerId(), body)
+
+    @PostMapping("/interpret")
+    fun interpret(@Valid @RequestBody body: WebActionIntentRequest, request: HttpServletRequest) =
+        intents.execute(request.ownerId(), body)
 
     private fun HttpServletRequest.ownerId() =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw ActionUnauthenticatedException()

@@ -1,5 +1,4 @@
 import type { ChatRequest } from "@/features/chat/contracts";
-import { isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
@@ -119,20 +118,17 @@ export async function POST(incomingRequest: Request) {
     }
     startedTurn = { conversationId: body.conversationId, turnId: contextValue.turnId, token: auth.token };
 
-    const devices = await loadDeviceCatalog(auth.token, incomingRequest.signal);
-    const proposal = await proposeDeviceCommand(
+    const action = await interpretAction(
       body.message.content,
       body.locale,
-      devices,
       contextValue.messages.slice(0, -1).slice(-6),
+      body.message.id,
+      body.conversationId,
+      auth.token,
       incomingRequest.signal,
     );
-    if (proposal) {
-      const commandResponse = await executeDeviceCommand(proposal, auth.token, incomingRequest.signal);
-      const commandMessage = commandResponse.ok
-        ? commandResultMessage(commandResponse.result, proposal, body.locale)
-        : commandErrorMessage(commandResponse.code, proposal, body.locale);
-      const commandStream = assistantMessageStream(commandMessage);
+    if (action?.renderedText) {
+      const commandStream = assistantMessageStream(action.renderedText);
       const persistedStream = persistAssistantStream(
         commandStream,
         body.conversationId,
@@ -206,43 +202,35 @@ export async function POST(incomingRequest: Request) {
   }
 }
 
-async function proposeDeviceCommand(
+async function interpretAction(
   message: string,
   locale: "de" | "en",
-  devices: RuntimeDevice[],
   priorMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  idempotencyKey: string,
+  conversationId: string,
+  token: string,
   signal: AbortSignal,
-): Promise<DeviceCommandProposal | null> {
+): Promise<{ kind: string; renderedText?: string | null } | null> {
   try {
-    const response = await fetch(`${AI_SERVICE_URL}/v1/device-commands/propose`, {
+    const response = await fetch(`${CORE_SERVICE_URL}/v1/actions/interpret`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        locale,
-        priorMessages,
-        devices: devices.map((device) => ({
-          id: device.id,
-          provider: device.provider,
-          displayName: device.displayName,
-          roomName: device.room?.name,
-          capabilities: device.capabilities,
-          availability: device.availability,
-          observedAt: device.observedAt,
-        })),
-      }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ message, locale, priorMessages, idempotencyKey, conversationId }),
       cache: "no-store",
       signal,
     });
     if (!response.ok) return null;
     const value: unknown = await response.json();
     if (!value || typeof value !== "object") return null;
-    const proposal = (value as { proposal?: unknown }).proposal;
-    return isDeviceCommandProposal(proposal) ? proposal : null;
-  } catch {
-    return null;
-  }
+    const attempt = value as { kind?: unknown; renderedText?: unknown };
+    return typeof attempt.kind === "string"
+      && (attempt.renderedText === undefined || attempt.renderedText === null || typeof attempt.renderedText === "string")
+      ? { kind: attempt.kind, renderedText: attempt.renderedText as string | null | undefined }
+      : null;
+  } catch { return null; }
 }
+
+/* Legacy device proposal helpers below are removed after Core-owned interpretation. */
 
 async function loadDeviceCatalog(token: string, signal: AbortSignal): Promise<RuntimeDevice[]> {
   try {
