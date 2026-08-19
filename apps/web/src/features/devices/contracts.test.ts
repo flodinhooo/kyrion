@@ -6,6 +6,7 @@ describe("runtime device contracts", () => {
     expect(isRuntimeDeviceList([{
       id: "f95ad0f2-b901-4f3b-9f14-d76884e48e29",
       provider: "nanoleaf",
+      deviceClass: "light",
       displayName: "Bedroom panels",
       hardwareName: "Nanoleaf",
       room: { id: "9adb72fc-9e91-48c5-b577-881714c21167", name: "Schlafzimmer", roomType: "bedroom" },
@@ -20,6 +21,7 @@ describe("runtime device contracts", () => {
     expect(isRuntimeDeviceList([{
       id: "device-1",
       provider: "nanoleaf",
+      deviceClass: "light",
       displayName: "Panels",
       hardwareName: "Nanoleaf",
       room: null,

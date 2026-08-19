@@ -1,8 +1,10 @@
 export type DeviceAvailability = "online" | "offline" | "degraded" | "unknown";
+export type DeviceClass = "light" | "switch" | "sensor" | "other";
 
 export type RuntimeDevice = {
   id: string;
   provider: string;
+  deviceClass: DeviceClass;
   displayName: string;
   hardwareName: string;
   room: { id: string; name: string; roomType: string } | null;
@@ -17,6 +19,7 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
   const device = value as Partial<RuntimeDevice>;
   const room = device.room as Partial<NonNullable<RuntimeDevice["room"]>> | null | undefined;
   return typeof device.id === "string" && typeof device.provider === "string"
+    && (device.deviceClass === "light" || device.deviceClass === "switch" || device.deviceClass === "sensor" || device.deviceClass === "other")
     && typeof device.displayName === "string"
     && typeof device.hardwareName === "string"
     && (room === null || (!!room && typeof room.id === "string" && typeof room.name === "string" && typeof room.roomType === "string"))

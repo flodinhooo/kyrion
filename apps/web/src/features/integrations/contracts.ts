@@ -1,4 +1,4 @@
-export type IntegrationConnection = { id: string; provider: "nanoleaf"; displayName: string; endpointHost: string; createdAt: string; roomId: string | null };
+export type IntegrationConnection = { id: string; provider: string; displayName: string; endpointHost: string; createdAt: string; roomId: string | null; deviceClass: "light" | "switch" | "sensor" | "other" };
 export type NanoleafState = { name: string; model: string | null; serialNumber: string | null; on: boolean; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null; colorMode: string | null };
 export type DiscoveredNanoleaf = { name: string; host: string; port: number };
 export type NanoleafScenes = { active: string | null; items: string[]; previews: Record<string, string[]> };
@@ -6,7 +6,8 @@ export type NanoleafScenes = { active: string | null; items: string[]; previews:
 export function isConnection(value: unknown): value is IntegrationConnection {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<IntegrationConnection>;
-  return typeof item.id === "string" && item.provider === "nanoleaf" && typeof item.displayName === "string"
+  return typeof item.id === "string" && typeof item.provider === "string" && typeof item.displayName === "string"
+    && (item.deviceClass === "light" || item.deviceClass === "switch" || item.deviceClass === "sensor" || item.deviceClass === "other")
     && typeof item.endpointHost === "string" && typeof item.createdAt === "string" && (item.roomId === null || typeof item.roomId === "string");
 }
 export function isConnectionList(value: unknown): value is IntegrationConnection[] { return Array.isArray(value) && value.every(isConnection); }
