@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Dialog } from "radix-ui";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
@@ -21,8 +23,12 @@ export default function HomePage() {
   const [devices, setDevices] = useState<RuntimeDevice[]>([]);
   const [nanoleafStates, setNanoleafStates] = useState<Record<string, NanoleafState>>({});
   const [selected, setSelected] = useState<RuntimeDevice | null>(null);
-  const [editing, setEditing] = useState<Record<string, string>>({});
-  const [editingTypes, setEditingTypes] = useState<Record<string, RoomType>>({});
+  const [roomEditor, setRoomEditor] = useState<{
+    mode: "create" | "edit";
+    room: Room | null;
+    name: string;
+    roomType: RoomType;
+  } | null>(null);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
@@ -93,32 +99,18 @@ export default function HomePage() {
 
   async function createRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
-    const name = String(new FormData(form).get("name") ?? "").trim();
-    const roomType = String(new FormData(form).get("roomType") ?? "other") as RoomType;
+    if (!roomEditor) return;
+    const name = roomEditor.name.trim();
     if (!name) return;
     setPending(true);
-    const response = await fetch("/api/home/rooms", {
-      method: "POST",
+    setError(false);
+    const response = await fetch(roomEditor.mode === "create" ? "/api/home/rooms" : `/api/home/rooms/${roomEditor.room?.id}`, {
+      method: roomEditor.mode === "create" ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name, roomType }),
-    });
-    if (response.ok) { form.reset(); await load(); } else setError(true);
-    setPending(false);
-  }
-
-  async function rename(room: Room) {
-    const name = editing[room.id]?.trim();
-    if (!name) return;
-    setPending(true);
-    const response = await fetch(`/api/home/rooms/${room.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name, roomType: editingTypes[room.id] ?? room.roomType }),
+      body: JSON.stringify({ name, roomType: roomEditor.roomType }),
     });
     if (response.ok) {
-      setEditing((current) => { const next = { ...current }; delete next[room.id]; return next; });
-      setEditingTypes((current) => { const next = { ...current }; delete next[room.id]; return next; });
+      setRoomEditor(null);
       await load();
     } else setError(true);
     setPending(false);
@@ -131,7 +123,7 @@ export default function HomePage() {
       method: "DELETE",
       headers: csrfHeader(),
     });
-    if (response.ok) { setDeleteRoom(null); await load(); } else setError(true);
+    if (response.ok) { setDeleteRoom(null); setRoomEditor(null); await load(); } else setError(true);
     setPending(false);
   }
 
@@ -245,33 +237,23 @@ export default function HomePage() {
   return <section className="home-dashboard">
     <header>
       <div><p className="eyebrow">Kyrion Home</p><h1>{t.homeTitle}</h1><p>{t.homeDescription}</p></div>
-      <form onSubmit={createRoom}>
+      <div className="home-actions">
         <Link className="home-add-device" href="/devices/add"><span>+</span>{t.addDevice}</Link>
         <button type="button" disabled={pending} onClick={() => void refreshObservations()}>
           {pending ? t.homeRefreshingStatus : t.homeRefreshStatus}
         </button>
-        <input name="name" maxLength={120} placeholder={t.homeRoomName} required />
-        <select name="roomType" aria-label={t.homeRoomType} defaultValue="other">
-          {roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}
-        </select>
-        <button disabled={pending}>{t.homeCreateRoom}</button>
-      </form>
+        <button type="button" disabled={pending} onClick={() => setRoomEditor({ mode: "create", room: null, name: "", roomType: "other" })}>
+          <Plus aria-hidden="true" />{t.homeCreateRoom}
+        </button>
+      </div>
     </header>
     {error && <p className="auth-error">{t.homeError}</p>}
     <div className="room-grid">{groups.map((group) => <section className="room-card" key={group.id}>
       <div className="room-heading">
-        {group.room && editing[group.id] !== undefined
-          ? <div><input autoFocus value={editing[group.id]} onChange={(event) => setEditing((current) => ({ ...current, [group.id]: event.target.value }))} />
-            <select aria-label={t.homeRoomType} value={editingTypes[group.id] ?? group.room.roomType} onChange={(event) => setEditingTypes((current) => ({ ...current, [group.id]: event.target.value as RoomType }))}>
-              {roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}
-            </select></div>
-          : <h2>{group.name}</h2>}
-        <div>{group.room && <>
-          <button onClick={() => editing[group.id] !== undefined ? void rename(group.room!) : (setEditing((current) => ({ ...current, [group.id]: group.name })), setEditingTypes((current) => ({ ...current, [group.id]: group.room!.roomType })))}>
-            {editing[group.id] !== undefined ? t.homeSaveRoom : t.homeRenameRoom}
-          </button>
-          <button className="danger" onClick={() => setDeleteRoom(group.room)}>{t.homeDeleteRoom}</button>
-        </>}</div>
+        <h2>{group.name}</h2>
+        <div>{group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={() => setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType })}>
+          <Pencil aria-hidden="true" />
+        </button>}</div>
       </div>
       {group.items.length === 0 ? <p className="room-empty">{t.homeNoDevices}</p> : <div className="room-devices">
         {group.items.map((device) => {
@@ -321,6 +303,33 @@ export default function HomePage() {
     </section>)}</div>
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <ZigbeeDeviceControlDialog device={selected?.provider === "zigbee" ? selected : null} open={selected?.provider === "zigbee"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
+    <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open && !pending && !deleteRoom) setRoomEditor(null); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="confirm-dialog-overlay" />
+        <Dialog.Content className="confirm-dialog-content room-dialog">
+          <Dialog.Title>{roomEditor?.mode === "create" ? t.homeCreateRoom : t.homeEditRoom}</Dialog.Title>
+          <Dialog.Description>{roomEditor?.mode === "create" ? t.homeCreateRoomDescription : t.homeEditRoomDescription}</Dialog.Description>
+          {roomEditor && <form onSubmit={createRoom}>
+            <label>{t.homeRoomName}
+              <input autoFocus maxLength={120} required value={roomEditor.name} onChange={(event) => setRoomEditor((current) => current ? { ...current, name: event.target.value } : current)} />
+            </label>
+            <label>{t.homeRoomType}
+              <select value={roomEditor.roomType} onChange={(event) => setRoomEditor((current) => current ? { ...current, roomType: event.target.value as RoomType } : current)}>
+                {roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}
+              </select>
+            </label>
+            <div className="room-dialog-actions">
+              {roomEditor.mode === "edit" && <button type="button" className="danger" disabled={pending} onClick={() => setDeleteRoom(roomEditor.room)}>
+                <Trash2 aria-hidden="true" />{t.homeDeleteRoom}
+              </button>}
+              <button type="submit" disabled={pending || !roomEditor.name.trim()}>
+                <Check aria-hidden="true" />{roomEditor.mode === "create" ? t.homeCreateRoom : t.homeSaveRoom}
+              </button>
+            </div>
+          </form>}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
     <ConfirmDialog open={deleteRoom !== null} onOpenChange={(open) => { if (!open) setDeleteRoom(null); }} title={t.homeDeleteRoom} description={t.homeDeleteRoomDescription} confirmLabel={t.homeDeleteRoom} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeRoom()} />
     <ConfirmDialog open={removeDevice !== null} onOpenChange={(open) => { if (!open) setRemoveDevice(null); }} title={t.homeRemoveDevice} description={t.homeRemoveDeviceDescription} confirmLabel={t.homeRemoveDevice} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeZigbeeDevice()} />
   </section>;

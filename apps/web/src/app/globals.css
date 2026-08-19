@@ -678,7 +678,9 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .home-dashboard > header { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 30px; }
 .home-dashboard > header h1 { margin: 4px 0 8px; font-size: clamp(2rem,5vw,3.5rem); }
 .home-dashboard > header p { color: var(--muted-foreground); }
-.home-dashboard > header form { display: flex; flex-wrap: wrap; gap: 9px; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.home-actions button, .home-actions a { display: inline-flex; align-items: center; gap: 7px; }
+.home-actions svg { width: 16px; height: 16px; }
 .home-dashboard input, .home-dashboard select { border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; background: var(--background); color: var(--foreground); }
 .home-dashboard button, .device-dialog button { border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; background: var(--secondary); }
 .room-grid { display: grid; gap: 20px; }
@@ -686,6 +688,16 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .room-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; }
 .room-heading > div { display: flex; gap: 8px; }
 .room-heading .danger { color: var(--destructive); }
+.room-edit-button { display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; padding: 0 !important; }
+.room-edit-button svg { width: 17px; height: 17px; }
+.room-dialog > div { margin-top: 4px; }
+.room-dialog form { display: grid; gap: 16px; margin-top: 22px; }
+.room-dialog label { display: grid; gap: 7px; color: var(--foreground); font-size: .86rem; font-weight: 600; }
+.room-dialog input, .room-dialog select { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--background); color: var(--foreground); font: inherit; }
+.room-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.room-dialog-actions button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; background: var(--secondary); color: var(--foreground); }
+.room-dialog-actions button.danger { margin-right: auto; border-color: color-mix(in srgb, var(--destructive) 45%, var(--border)); color: var(--destructive); }
+.room-dialog-actions svg { width: 16px; height: 16px; }
 .room-empty { color: var(--muted-foreground); }
 .room-devices { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 12px; }
 .room-devices article { display: grid; grid-template-columns: 1fr auto; gap: 14px; border: 1px solid var(--border); border-radius: 16px; padding: 16px; background: var(--background); cursor: pointer; transition: border-color .2s,transform .2s; }
@@ -717,7 +729,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .color-controls button { grid-column: 1/-1; }
 .device-dialog section { margin-top: 22px; }
 .device-dialog .dialog-close { display: block; margin: 24px 0 0 auto; }
-@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-dashboard>header form{width:100%}.home-dashboard>header form input{min-width:0;flex:1}.room-heading{align-items:flex-start;flex-direction:column}.room-devices{grid-template-columns:1fr}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}}
+@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-actions{width:100%}.room-heading{align-items:center}.room-devices{grid-template-columns:1fr}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}.room-dialog-actions{flex-wrap:wrap}.room-dialog-actions button{flex:1}.room-dialog-actions button.danger{margin-right:0}}
 [data-theme="light"] .home-dashboard button,
 [data-theme="light"] .device-dialog button,
 [data-theme="light"] .confirm-dialog-actions button { border-color: color-mix(in srgb, var(--primary) 42%, var(--border)); background: color-mix(in srgb, var(--primary) 13%, white); color: #5c4307; box-shadow: 0 1px 2px rgb(75 54 5 / .08); }
