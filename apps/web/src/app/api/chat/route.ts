@@ -1,4 +1,5 @@
 import type { ChatRequest } from "@/features/chat/contracts";
+import { isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";

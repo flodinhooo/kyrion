@@ -75,7 +75,7 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Add the initial typed `DeviceActionProposal`.
 - [x] Add `DeviceActionHandler` above the existing `DeviceCommandService`.
 - [x] Let Core load the authoritative owner device/capability catalog.
-- [ ] Let the AI service propose only against the bounded supplied catalog.
+- [x] Let the AI service propose only against the bounded supplied catalog.
 - [x] Revalidate proposal type, owner scope, target, capability and arguments in
   Core.
 - [ ] Apply policy and Voice-channel permission before execution.
@@ -85,9 +85,9 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Add a Core action endpoint for authenticated Web clients.
 - [ ] Remove device proposal, execution and result wording from the Next.js chat
   route after the Core endpoint passes tests.
-- [ ] Route browser chat/Voice Mode through the new Core path.
+- [x] Route browser chat/Voice Mode through the new Core path.
 - [ ] Route the physical Voice dialogue through the same orchestrator directly.
-- [ ] Preserve ordinary Dynamic dialogue when no valid Action Proposal exists.
+- [x] Preserve ordinary Dynamic dialogue when no valid Action Proposal exists.
 
 ## Phase B — Voice result policy
 

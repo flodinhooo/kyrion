@@ -133,7 +133,10 @@ class WebActionIntentService(
         ProposalResult.None -> WebActionAttempt("none")
         ProposalResult.Ambiguous -> WebActionAttempt("rejected", "target.ambiguous", renderer.rejection("target.ambiguous", request.locale))
         ProposalResult.Invalid -> WebActionAttempt("rejected", "proposal.invalid", renderer.rejection("proposal.invalid", request.locale))
-        ProposalResult.Unavailable -> WebActionAttempt("unavailable", "proposal.unavailable")
+        ProposalResult.Unavailable -> WebActionAttempt(
+            "unavailable", "proposal.unavailable",
+            if (request.locale == "de") "Ich konnte die Aktion gerade nicht sicher prüfen." else "I couldn't safely evaluate that action right now.",
+        )
     }
 }
 
