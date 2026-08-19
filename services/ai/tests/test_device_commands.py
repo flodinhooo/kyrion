@@ -7,6 +7,7 @@ _DEVICES = [
     {
         "id": "device-1",
         "provider": "nanoleaf",
+        "deviceClass": "light",
         "displayName": "Panels",
         "roomName": "Schlafzimmer",
         "capabilities": [{"id": "power.set"}, {"id": "light.setBrightness"}],
@@ -49,6 +50,49 @@ def test_proposes_german_power(message: str, expected: bool) -> None:
     assert proposal is not None
     assert proposal.capability == "power.set"
     assert proposal.selector.room_name == "Wohnzimmer"
+    assert proposal.arguments.on is expected
+
+
+def test_proposes_real_whispered_german_room_power_phrase() -> None:
+    proposal = propose_device_command(request("Macht das Licht im Büro an, bitte."))
+
+    assert proposal is not None
+    assert proposal.capability == "power.set"
+    assert proposal.selector.room_name == "Büro"
+    assert proposal.selector.provider == "light"
+    assert proposal.arguments.on is True
+
+
+def test_light_category_does_not_require_a_nanoleaf_device() -> None:
+    hue_only = DeviceCommandProposalRequest(
+        message="Mach die Lichter im Gang aus.",
+        locale="de",
+        devices=[{**_DEVICES[0], "provider": "zigbee", "roomName": "Gang"}],
+    )
+
+    proposal = propose_device_command(hue_only)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Gang"
+    assert proposal.arguments.on is False
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("Schalte die Lichter an.", True),
+        ("Schalte die Lichter aus, bitte.", False),
+        ("Schau dir die Lichter raus.", False),
+    ],
+)
+def test_proposes_global_german_light_power(message: str, expected: bool) -> None:
+    proposal = propose_device_command(request(message))
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name is None
+    assert proposal.selector.device_id is None
     assert proposal.arguments.on is expected
 
 

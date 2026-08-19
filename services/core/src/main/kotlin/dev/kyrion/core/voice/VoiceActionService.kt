@@ -51,7 +51,7 @@ class VoiceActionService(
                 ),
                 result.proposal,
             )
-            val targetName = outcome.targets.singleOrNull()?.displayName
+            val targetName = outcome.targets.joinToString(", ") { it.displayName }.takeIf { it.isNotBlank() }
             val response = if (targetName != null) {
                 CommandExecutionOutcome(
                     executionConfirmed = true,

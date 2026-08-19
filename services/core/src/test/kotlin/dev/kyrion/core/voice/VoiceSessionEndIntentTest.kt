@@ -6,6 +6,12 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class VoiceSessionEndIntentTest {
     @ParameterizedTest
+    @ValueSource(strings = ["Hey Velora", "Hey Willorra!", "Hey, Fedora?"])
+    fun `recognises repeated wake word as session restart`(transcript: String) {
+        assertThat(isVoiceSessionRestart(transcript)).isTrue()
+    }
+
+    @ParameterizedTest
     @ValueSource(
         strings = [
             "Bis später.",

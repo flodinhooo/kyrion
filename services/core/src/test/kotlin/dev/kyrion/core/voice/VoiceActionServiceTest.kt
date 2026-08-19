@@ -96,7 +96,7 @@ private class CapturingVoiceHandler : ActionHandler<DeviceActionProposal> {
         this.context = context
         return ActionOutcome(
             ActionOutcomeStatus.SUCCEEDED, "action.succeeded", context.correlationId, proposal.capability,
-            1, 1, 0, listOf(ActionTargetOutcome(proposal.targetId, "Bürolicht", "succeeded")),
+            1, 1, 0, listOf(ActionTargetOutcome(requireNotNull(proposal.targetId), "Bürolicht", "succeeded")),
         )
     }
 }

@@ -34,6 +34,7 @@ data class VoiceTurnEvent(
     val responseText: String? = null,
     val audioBase64: String? = null,
     val continueSession: Boolean? = null,
+    val restartSession: Boolean? = null,
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
@@ -99,6 +100,17 @@ class VoiceDialogueService(
         voiceEvent(turnId, "stt_complete")
         if (transcript.isBlank()) throw VoiceAudioInvalidException()
         emit(VoiceTurnEvent(type = "transcript", transcript = transcript))
+
+        if (isVoiceSessionRestart(transcript)) {
+            satellites.closeSession(satelliteId, credential, sessionId, "restart")
+            emit(VoiceTurnEvent(
+                type = "completed",
+                responseText = "Session restart",
+                continueSession = false,
+                restartSession = true,
+            ))
+            return
+        }
 
         val explicitEnd = isVoiceSessionEnd(transcript)
         val now = clock.instant()
@@ -287,6 +299,15 @@ internal fun isVoiceSessionEnd(transcript: String): Boolean {
         if (words.size < ending.size || words.takeLast(ending.size) != ending) return@any false
         words.dropLast(ending.size).all(SESSION_END_PREFIX_WORDS::contains)
     }
+}
+
+internal fun isVoiceSessionRestart(transcript: String): Boolean {
+    val words = normalizedVoiceWords(transcript)
+    return words in setOf(
+        listOf("hey", "velora"),
+        listOf("hey", "willorra"),
+        listOf("hey", "fedora"),
+    )
 }
 
 private fun normalizedVoiceWords(value: String): List<String> = Normalizer

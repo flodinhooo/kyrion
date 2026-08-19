@@ -10,6 +10,7 @@ import java.time.Clock
 import java.util.UUID
 import dev.kyrion.core.integration.IntegrationConnectionView
 import dev.kyrion.core.integration.view
+import dev.kyrion.core.integration.DeviceClass
 
 @Service
 class ZigbeeDeviceSyncService(
@@ -26,7 +27,7 @@ class ZigbeeDeviceSyncService(
         }
     }
 
-    fun add(ownerId: UUID, nodeId: UUID, ieeeAddress: String, displayName: String, commands: GatewayCommandService): IntegrationConnectionView {
+    fun add(ownerId: UUID, nodeId: UUID, ieeeAddress: String, displayName: String, deviceClass: DeviceClass, commands: GatewayCommandService): IntegrationConnectionView {
         val node = commands.gateway(ownerId, nodeId)
         val device = node.health?.zigbee?.devices?.singleOrNull {
             it.ieeeAddress == ieeeAddress && it.supported
@@ -39,10 +40,10 @@ class ZigbeeDeviceSyncService(
         val connection = if (existing == null) {
             connections.save(IntegrationConnection(
                 UUID.randomUUID(), ownerId, PROVIDER, name, ieeeAddress,
-                byteArrayOf(), byteArrayOf(), 1, now, now,
+                byteArrayOf(), byteArrayOf(), 1, now, now, deviceClass = deviceClass,
             ))
         } else {
-            connections.rename(ownerId, existing.id, name, now) ?: throw GatewayCommandInvalidException()
+            connections.update(ownerId, existing.id, name, deviceClass, now) ?: throw GatewayCommandInvalidException()
         }
         if (device.vendor.contains("Philips", ignoreCase = true) || device.vendor.contains("Signify", ignoreCase = true)) {
             commands.enqueue(ownerId, nodeId, "zigbee.hue_power_on_recover", mapOf("deviceId" to ieeeAddress))

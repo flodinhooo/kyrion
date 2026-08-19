@@ -21,8 +21,14 @@ _ENGLISH_BRIGHTNESS = re.compile(
     re.IGNORECASE,
 )
 _GERMAN_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach)\b.*?\bnanoleafs?\b\s+"
-    r"(?:im|in)\s+(?P<room>.+?)\s+(?P<state>an|ein|aus)(?:\s|[.!?]|$)",
+    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|macht)\b.*?"
+    r"\b(?P<kind>nanoleafs?|licht(?:er)?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
+    r"(?P<state>an|ein|aus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
+    re.IGNORECASE,
+)
+_GERMAN_GLOBAL_LIGHT_POWER = re.compile(
+    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|schau\s+dir)\s+"
+    r"(?:die\s+)?lichter?\s+(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 _ENGLISH_POWER = re.compile(
@@ -119,15 +125,36 @@ def _propose_direct(
             arguments=DeviceCommandArguments(brightness=value),
         )
 
+    if request.locale == "de":
+        global_light_match = _GERMAN_GLOBAL_LIGHT_POWER.search(request.message)
+        if global_light_match and _supports(request, "light", "power.set"):
+            state = global_light_match.group("state").lower()
+            return DeviceCommandProposal(
+                capability="power.set",
+                selector=DeviceTargetSelector(provider="light"),
+                arguments=DeviceCommandArguments(on=state in {"an", "ein"}),
+            )
+
     power_pattern = _GERMAN_POWER if request.locale == "de" else _ENGLISH_POWER
     power_match = power_pattern.search(request.message)
     if power_match:
         state = power_match.group("state").lower()
-        if not _supports(request, "nanoleaf", "power.set"):
+        provider = (
+            "light"
+            if request.locale == "de"
+            and power_match.group("kind").casefold().startswith("licht")
+            else "nanoleaf"
+        )
+        if not _supports(request, provider, "power.set"):
             return None
         return DeviceCommandProposal(
             capability="power.set",
-            selector=_room_selector(request, power_match.group("room"), "power.set"),
+            selector=_room_selector(
+                request,
+                power_match.group("room"),
+                "power.set",
+                provider,
+            ),
             arguments=DeviceCommandArguments(on=state in {"an", "ein", "on"}),
         )
     device_brightness_pattern = (
@@ -169,13 +196,14 @@ def _room_selector(
     request: DeviceCommandProposalRequest,
     room_name: str,
     capability: str,
+    provider: str = "nanoleaf",
 ) -> DeviceTargetSelector:
     normalised = room_name.strip(" .,!?").strip()
     normalised = re.sub(r"^(?:der|dem|das|die)\s+", "", normalised, flags=re.IGNORECASE)
     room_names = {
         device.room_name
         for device in request.devices
-        if device.provider == "nanoleaf"
+        if (provider == "light" and device.device_class == "light" or device.provider == provider)
         and device.room_name is not None
         and any(item.id == capability for item in device.capabilities)
     }
@@ -190,7 +218,7 @@ def _room_selector(
         ]
         if len(aliases) == 1:
             normalised = aliases[0]
-    return DeviceTargetSelector(roomName=normalised, provider="nanoleaf")
+    return DeviceTargetSelector(roomName=normalised, provider=provider)
 
 
 def _room_alias_key(room_name: str) -> str:
@@ -199,7 +227,7 @@ def _room_alias_key(room_name: str) -> str:
 
 def _supports(request: DeviceCommandProposalRequest, provider: str, capability: str) -> bool:
     return any(
-        device.provider == provider
+        (provider == "light" and device.device_class == "light" or device.provider == provider)
         and any(item.id == capability for item in device.capabilities)
         for device in request.devices
     )
