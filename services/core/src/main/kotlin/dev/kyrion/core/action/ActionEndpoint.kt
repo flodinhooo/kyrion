@@ -85,37 +85,46 @@ class JdbcActionExecutionRepository(private val jdbc: JdbcClient) : ActionExecut
 }
 
 @Service
-class WebActionService(
+class ActionExecutionService(
     private val executions: ActionExecutionRepository,
     private val orchestrator: ActionOrchestrator,
     private val clock: Clock = Clock.systemUTC(),
     private val mapper: ObjectMapper = jacksonObjectMapper(),
 ) {
     @Transactional
-    fun execute(ownerId: UUID, request: WebActionRequest): ActionOutcome {
-        val requestHash = sha256(mapper.writeValueAsBytes(request.copy(idempotencyKey = ZERO_UUID)))
-        val correlationId = UUID.randomUUID()
-        if (!executions.claim(ownerId, request.idempotencyKey, correlationId, requestHash, clock.instant())) {
-            val existing = executions.find(ownerId, request.idempotencyKey) ?: throw ActionExecutionConflictException()
+    fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
+        val requestHash = sha256(mapper.writeValueAsBytes(mapOf(
+            "channel" to context.channel.value,
+            "locale" to context.locale.language,
+            "sessionId" to context.sessionId,
+            "conversationId" to context.conversationId,
+            "proposal" to proposal,
+        )))
+        if (!executions.claim(context.ownerId, context.idempotencyKey, context.correlationId, requestHash, clock.instant())) {
+            val existing = executions.find(context.ownerId, context.idempotencyKey) ?: throw ActionExecutionConflictException()
             if (existing.requestHash != requestHash) throw ActionIdempotencyMismatchException()
             if (existing.status != "completed" || existing.outcomeJson == null) throw ActionExecutionPendingException()
             return mapper.readValue(existing.outcomeJson, ActionOutcome::class.java)
         }
-        val outcome = orchestrator.execute(
-            ActionContext(
-                ownerId, ActivityActorType.USER, ownerId.toString(), InteractionChannel.WEB,
-                Locale.forLanguageTag(request.locale), correlationId, request.idempotencyKey,
-                conversationId = request.conversationId,
-            ),
-            request.proposal,
-        )
-        check(executions.complete(ownerId, request.idempotencyKey, mapper.writeValueAsString(outcome), clock.instant()))
+        val outcome = orchestrator.execute(context, proposal)
+        check(executions.complete(context.ownerId, context.idempotencyKey, mapper.writeValueAsString(outcome), clock.instant()))
         return outcome
     }
 
     private fun sha256(value: ByteArray) = MessageDigest.getInstance("SHA-256").digest(value).joinToString("") { "%02x".format(it) }
 
-    companion object { private val ZERO_UUID = UUID(0, 0) }
+}
+
+@Service
+class WebActionService(private val executions: ActionExecutionService) {
+    fun execute(ownerId: UUID, request: WebActionRequest): ActionOutcome = executions.execute(
+        ActionContext(
+            ownerId, ActivityActorType.USER, ownerId.toString(), InteractionChannel.WEB,
+            Locale.forLanguageTag(request.locale), UUID.randomUUID(), request.idempotencyKey,
+            conversationId = request.conversationId,
+        ),
+        request.proposal,
+    )
 }
 
 @Service

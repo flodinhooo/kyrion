@@ -76,7 +76,9 @@ class WebActionServiceTest {
 
     private fun service(repository: InMemoryActionExecutions, handler: CountingWebActionHandler): WebActionService {
         val activity = ActivityService(EmptyWebActionActivityRepository(), Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
-        return WebActionService(repository, ActionOrchestrator(listOf(handler), ActionPolicyService(), activity), Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        return WebActionService(ActionExecutionService(
+            repository, ActionOrchestrator(listOf(handler), ActionPolicyService(), activity), Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
+        ))
     }
 
     private fun request() = WebActionRequest(UUID.randomUUID(), "de", proposal())
@@ -115,7 +117,9 @@ private class InMemoryActionExecutions : ActionExecutionRepository {
     fun forcePending(ownerId: UUID, request: WebActionRequest) {
         val probe = InMemoryActionExecutions()
         val handler = CountingWebActionHandler()
-        val service = WebActionService(probe, ActionOrchestrator(listOf(handler), ActionPolicyService(), ActivityService(EmptyWebActionActivityRepository())))
+        val service = WebActionService(ActionExecutionService(
+            probe, ActionOrchestrator(listOf(handler), ActionPolicyService(), ActivityService(EmptyWebActionActivityRepository())),
+        ))
         service.execute(ownerId, request)
         val completed = probe.find(ownerId, request.idempotencyKey)!!
         values[Key(ownerId, request.idempotencyKey)] = completed.copy(status = "pending", outcomeJson = null)

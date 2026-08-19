@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.conversation.ConversationMessage
 import dev.kyrion.core.conversation.ConversationRepository
 import dev.kyrion.core.conversation.ConversationTurnStatus
+import dev.kyrion.core.action.ActionPriorMessage
 import jakarta.validation.constraints.Pattern
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
@@ -43,6 +44,7 @@ class VoiceDialogueService(
     private val satellites: VoiceSatelliteService,
     private val conversations: ConversationRepository,
     private val responsePolicies: VoiceResponsePolicyRegistry,
+    private val voiceActions: VoiceActionService,
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
@@ -104,13 +106,28 @@ class VoiceDialogueService(
         val conversation = conversations.startTurn(
             session.ownerId, session.conversationId, "Voice conversation", userMessage, now,
         )
-        if (!explicitEnd) {
+        val voiceTurnId = UUID.fromString(turnId)
+        val actionAttempt = if (explicitEnd) null else voiceActions.interpret(
+            ownerId = session.ownerId,
+            satelliteId = satelliteId,
+            sessionId = sessionId,
+            conversationId = session.conversationId,
+            turnId = voiceTurnId,
+            locale = locale,
+            message = transcript,
+            priorMessages = conversation.messages
+                .filterNot { it.id == userMessage.id }
+                .takeLast(6)
+                .map { ActionPriorMessage(it.role, it.content) },
+            validateActive = { satellites.activeSession(satelliteId, credential, sessionId) },
+        )
+        if (actionAttempt == VoiceActionAttempt.NotAction) {
             val acknowledgement = responsePolicies.resolve(
                 DialogueAcknowledgedOutcome,
                 VoiceResponseContext(
                     session.ownerId,
                     sessionId,
-                    UUID.fromString(turnId),
+                    voiceTurnId,
                     locale,
                 ),
             )
@@ -118,6 +135,8 @@ class VoiceDialogueService(
         }
         val outcome = if (explicitEnd) {
             SessionFarewellOutcome
+        } else if (actionAttempt is VoiceActionAttempt.Respond) {
+            actionAttempt.outcome
         } else {
             DynamicDialogueOutcome(
                 chat(session.conversationId, locale, conversation.messages.takeLast(12), turnId),
@@ -128,10 +147,11 @@ class VoiceDialogueService(
             VoiceResponseContext(
                 session.ownerId,
                 sessionId,
-                UUID.fromString(turnId),
+                voiceTurnId,
                 locale,
             ),
         )
+        satellites.activeSession(satelliteId, credential, sessionId)
         emitAudio(responsePlan, turnId, emit)
         val responseText = responsePlan.renderedText
         conversations.finishTurn(
