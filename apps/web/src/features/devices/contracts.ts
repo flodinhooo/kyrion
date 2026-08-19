@@ -5,7 +5,7 @@ export type RuntimeDevice = {
   provider: string;
   displayName: string;
   hardwareName: string;
-  room: { id: string; name: string } | null;
+  room: { id: string; name: string; roomType: string } | null;
   capabilities: Array<{ id: string }>;
   availability: DeviceAvailability;
   observedAt: string | null;
@@ -19,7 +19,7 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
   return typeof device.id === "string" && typeof device.provider === "string"
     && typeof device.displayName === "string"
     && typeof device.hardwareName === "string"
-    && (room === null || (!!room && typeof room.id === "string" && typeof room.name === "string"))
+    && (room === null || (!!room && typeof room.id === "string" && typeof room.name === "string" && typeof room.roomType === "string"))
     && Array.isArray(device.capabilities)
     && device.capabilities.every((capability) => !!capability && typeof capability.id === "string")
     && (device.availability === "online" || device.availability === "offline"

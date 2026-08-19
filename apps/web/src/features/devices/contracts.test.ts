@@ -8,7 +8,7 @@ describe("runtime device contracts", () => {
       provider: "nanoleaf",
       displayName: "Bedroom panels",
       hardwareName: "Nanoleaf",
-      room: { id: "9adb72fc-9e91-48c5-b577-881714c21167", name: "Schlafzimmer" },
+      room: { id: "9adb72fc-9e91-48c5-b577-881714c21167", name: "Schlafzimmer", roomType: "bedroom" },
       capabilities: [{ id: "power.set" }, { id: "light.setBrightness" }],
       availability: "unknown",
       observedAt: null,
