@@ -722,6 +722,16 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .room-drawer-devices > a { display: grid; grid-template-columns: 30px 1fr 20px; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 14px; padding: 13px; background: var(--background); }
 .room-drawer-devices svg { width: 20px; }
 .room-drawer-devices small { margin-top: 4px; }
+.room-overview-dialog { width: min(94vw,820px); }
+.room-dialog-device-list { display: grid; gap: 10px; margin-top: 22px; }
+.room-dialog-device-list > p { color: var(--muted-foreground); }
+.room-dialog-device-list > button { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; }
+.room-dialog-device-list > button > svg { width: 22px; }
+.room-dialog-device-list > button > span:nth-child(2) { display: grid; gap: 3px; }
+.room-dialog-device-list > button small { color: var(--muted-foreground); }
+.room-dialog-device-list > button .device-status { margin-top: 3px; }
+.room-dialog-device-list > button > span:last-child { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); font-size: .84rem; font-weight: 650; }
+.room-dialog-device-list > button > span:last-child svg { width: 17px; }
 .unassigned-tray { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .unassigned-tray > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .unassigned-tray button { display: inline-flex; align-items: center; gap: 8px; cursor: grab; }
@@ -759,7 +769,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .device-dialog section { margin-top: 22px; }
 .device-dialog .dialog-close { display: block; margin: 24px 0 0 auto; }
 @media(max-width:900px){.home-plan{grid-template-columns:repeat(2,minmax(170px,1fr))}}
-@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-actions{width:100%}.room-heading{align-items:center}.room-devices{grid-template-columns:1fr}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}.room-dialog-actions{flex-wrap:wrap}.room-dialog-actions button{flex:1}.room-dialog-actions button.danger{margin-right:0}.home-plan{grid-template-columns:1fr;padding:12px}.plan-room{min-height:145px}.unassigned-tray{align-items:flex-start;flex-direction:column}.unassigned-tray>div:last-child{justify-content:flex-start}}
+@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-actions{width:100%}.room-heading{align-items:center}.room-devices{grid-template-columns:1fr}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}.room-dialog-actions{flex-wrap:wrap}.room-dialog-actions button{flex:1}.room-dialog-actions button.danger{margin-right:0}.home-plan{grid-template-columns:1fr;padding:12px}.plan-room{min-height:145px}.unassigned-tray{align-items:flex-start;flex-direction:column}.unassigned-tray>div:last-child{justify-content:flex-start}.room-dialog-device-list>button{grid-template-columns:30px 1fr}.room-dialog-device-list>button>span:last-child{grid-column:2}}
 [data-theme="light"] .home-dashboard button,
 [data-theme="light"] .device-dialog button,
 [data-theme="light"] .confirm-dialog-actions button { border-color: color-mix(in srgb, var(--primary) 42%, var(--border)); background: color-mix(in srgb, var(--primary) 13%, white); color: #5c4307; box-shadow: 0 1px 2px rgb(75 54 5 / .08); }

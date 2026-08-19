@@ -6,8 +6,11 @@ import dev.kyrion.core.home.RoomResolution
 import dev.kyrion.core.home.RoomResolver
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientResponseException
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 data class ActionPriorMessage(val role: String, val content: String)
@@ -50,6 +53,7 @@ class CoreDeviceProposalProvider(
     @Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") aiBaseUrl: String,
 ) : DeviceProposalProvider {
     private val client = RestClient.builder().baseUrl(aiBaseUrl).build()
+    private val mapper = jacksonObjectMapper()
 
     override fun propose(ownerId: UUID, message: String, locale: String, priorMessages: List<ActionPriorMessage>): ProposalResult {
         val devices = catalog.devices(ownerId)
@@ -60,6 +64,17 @@ class CoreDeviceProposalProvider(
                         it.capabilities.map { capability -> mapOf("id" to capability.id) }, it.availability.value,
                         it.observedAt?.toString())
                 })).retrieve().body(AiDeviceProposalResponse::class.java)
+        } catch (error: RestClientResponseException) {
+            val validation = runCatching {
+                mapper.readTree(error.responseBodyAsString).path("detail").map { detail ->
+                    mapOf(
+                        "location" to detail.path("loc").joinToString(".") { it.asText() },
+                        "type" to detail.path("type").asText(),
+                    )
+                }
+            }.getOrDefault(emptyList())
+            LOGGER.warn("AI proposal request rejected status={} validation={}", error.statusCode.value(), validation)
+            return ProposalResult.Unavailable
         } catch (_: RuntimeException) { return ProposalResult.Unavailable }
         val proposed = response?.proposal ?: return ProposalResult.None
         if (proposed.selector.provider != "nanoleaf") return ProposalResult.Invalid
@@ -85,5 +100,9 @@ class CoreDeviceProposalProvider(
             else -> null
         } ?: return ProposalResult.Invalid
         return ProposalResult.Proposed(DeviceActionProposal(target.id, proposed.capability, arguments))
+    }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(CoreDeviceProposalProvider::class.java)
     }
 }

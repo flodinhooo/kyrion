@@ -4,6 +4,8 @@
 
 - `/home` is now a spatial room overview instead of the detailed device-management screen.
 - Rooms are selectable and reveal a compact device overview.
+- Rooms can be created directly from the spatial Home view.
+- Selecting a room opens a dialog with its devices; selecting a device opens its existing full control dialog without leaving Home.
 - Unassigned devices can be dragged onto a room; the assignment still uses the existing Core-owned room API.
 - Detailed status, controls, rename, removal, and room administration moved to `/devices`.
 - The navigation exposes the new device-control page in German and English.
