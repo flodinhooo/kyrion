@@ -28,7 +28,7 @@ _GERMAN_POWER = re.compile(
 )
 _GERMAN_GLOBAL_LIGHT_POWER = re.compile(
     r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|schau\s+dir)\s+"
-    r"(?:die\s+)?lichter?\s+(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
+    r"(?:(?:die|alle)\s+)?lichter?\s+(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 _ENGLISH_POWER = re.compile(

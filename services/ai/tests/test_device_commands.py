@@ -83,6 +83,8 @@ def test_light_category_does_not_require_a_nanoleaf_device() -> None:
     [
         ("Schalte die Lichter an.", True),
         ("Schalte die Lichter aus, bitte.", False),
+        ("Schalte alle Lichter aus.", False),
+        ("Mach alle Lichter an.", True),
         ("Schau dir die Lichter raus.", False),
     ],
 )

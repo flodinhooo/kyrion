@@ -43,6 +43,15 @@ It closes after an explicit stop phrase, an inactivity timeout, a configured
 maximum lifetime, credential failure or an unrecoverable processing error.
 Each utterance has a strict duration and byte limit.
 
+A new local wake detection always establishes a fresh session, regardless of
+the previous session state. When the wake phrase is repeated while a session is
+still listening, Core closes the old session with the `restart` reason and
+returns a typed `restartSession` completion event. The satellite immediately
+opens a new authenticated session and plays its normal acknowledgement. The
+repeated wake phrase must not be stored as conversation content or forwarded to
+chat/action interpretation. Bounded STT variants observed for the deployed
+German model (`Hey Willorra` and `Hey Fedora`) follow the same restart path.
+
 The satellite owns local capture, wake detection, voice activity detection,
 acknowledgement cues, playback and interruption detection. It sends audio only
 after a local wake event and does not persist it after the bounded request has
@@ -75,6 +84,7 @@ idle -> acknowledging -> listening -> processing -> speaking
                          +------ follow-up -------+
 
 any active state -> closing -> idle
+any active session + wake phrase -> closing(restart) -> acknowledging(new session)
 speaking + user speech -> interrupted -> listening
 ```
 

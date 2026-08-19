@@ -34,6 +34,21 @@ The intended production wake phrase is `Hey Velora`. The custom model is not
 committed until its training data provenance, license and real-room false
 accept/reject measurements are recorded.
 
+## Dialogue session behaviour
+
+Say `Hey Velora` to open a fresh Core-owned voice session. After Velora answers,
+the satellite listens for a bounded follow-up window, so the next command can
+be spoken directly without repeating the wake phrase. After inactivity closes
+that window, use `Hey Velora` again.
+
+Repeating `Hey Velora` during an active follow-up window is also valid. Core
+closes the previous session with reason `restart`, and the satellite immediately
+opens and acknowledges a new session. The deployed German STT's observed
+`Hey Willorra` and `Hey Fedora` transcriptions are treated as wake-phrase
+restarts rather than chat messages. A failed Core stream is logged, but the
+satellite returns to local wake-word detection instead of terminating the
+runtime.
+
 The reproducible local training configuration and its E:-drive storage boundary
 are documented in [`training/README.md`](training/README.md). Training artifacts,
 datasets, caches and generated speech remain outside the repository.
