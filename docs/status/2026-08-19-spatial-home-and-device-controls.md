@@ -11,6 +11,7 @@
 - The navigation exposes the new device-control page in German and English.
 - Each room on `/devices` has one aggregate power switch. It turns the room off when any device is on and turns it on when all devices are off, reusing the existing validated device-command paths.
 - Zigbee colour controls initialize from the device's observed hue and saturation instead of a fixed cyan placeholder.
+- Manual status refresh is provider-neutral: Core delegates observation to registered provider observers. Nanoleaf performs a local state read and Zigbee/Hue derives availability and state from the current authenticated gateway heartbeat; future providers can join without changing the Web endpoint.
 
 ## Deliberate scope
 

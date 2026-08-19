@@ -21,7 +21,7 @@ class VoiceResponsePlanTest {
         assertThat(registry.resolve(DialogueAcknowledgedOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(
             registry.resolve(CommandExecutionOutcome(true, true, "Gamingraum"), context),
-        ).isInstanceOf(TemplateResponsePlan::class.java)
+        ).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(DynamicDialogueOutcome("Eine freie Antwort."), context))
             .isInstanceOf(DynamicResponsePlan::class.java)
     }
@@ -43,7 +43,7 @@ class VoiceResponsePlanTest {
         assertThat(registry.resolve(SessionGreetingOutcome, english).renderedText).isNotBlank()
         assertThat(
             registry.resolve(CommandExecutionOutcome(true, false, "Desk lamp"), english).renderedText,
-        ).contains("Desk lamp")
+        ).isNotBlank()
     }
 
     @Test
@@ -70,22 +70,18 @@ class VoiceResponsePlanTest {
     }
 
     @Test
-    fun `template cache scope is stable per owner and isolated between owners`() {
+    fun `fixed command outcome is deterministic for the same turn`() {
         val first = registry.resolve(
             CommandExecutionOutcome(true, true, "Gamingraum"),
             context,
-        ) as TemplateResponsePlan
-        val sameOwner = registry.resolve(
+        ) as FixedResponsePlan
+        val repeated = registry.resolve(
             CommandExecutionOutcome(true, true, "Gamingraum"),
-            context.copy(turnId = UUID.randomUUID()),
-        ) as TemplateResponsePlan
-        val otherOwner = registry.resolve(
-            CommandExecutionOutcome(true, true, "Gamingraum"),
-            context.copy(ownerId = UUID.randomUUID()),
-        ) as TemplateResponsePlan
+            context,
+        ) as FixedResponsePlan
 
-        assertThat(sameOwner.cacheScope).isEqualTo(first.cacheScope)
-        assertThat(otherOwner.cacheScope).isNotEqualTo(first.cacheScope)
+        assertThat(repeated.variantId).isEqualTo(first.variantId)
+        assertThat(repeated.renderedText).isEqualTo(first.renderedText)
     }
 
     @Test

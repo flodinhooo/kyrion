@@ -5,9 +5,12 @@ import dev.kyrion.core.activity.ActivityCategory
 import dev.kyrion.core.activity.ActivityService
 import dev.kyrion.core.activity.ActivityStatus
 import dev.kyrion.core.integration.IntegrationConnectionRepository
+import dev.kyrion.core.integration.IntegrationConnection
 import dev.kyrion.core.integration.NanoleafIntegrationService
 import dev.kyrion.core.integration.NanoleafInvalidResponseException
 import dev.kyrion.core.integration.NanoleafUnavailableException
+import dev.kyrion.core.gateway.GatewayService
+import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
@@ -26,6 +29,48 @@ data class DeviceObservation(
 interface DeviceObservationRepository {
     fun findAll(ownerId: UUID): List<DeviceObservation>
     fun save(observation: DeviceObservation): DeviceObservation
+}
+
+interface DeviceProviderObserver {
+    val provider: String
+    fun observe(ownerId: UUID, connection: IntegrationConnection): DeviceAvailability
+}
+
+@Service
+class NanoleafDeviceProviderObserver(
+    private val nanoleaf: NanoleafIntegrationService,
+) : DeviceProviderObserver {
+    override val provider = NanoleafIntegrationService.PROVIDER
+
+    override fun observe(ownerId: UUID, connection: IntegrationConnection): DeviceAvailability = try {
+        nanoleaf.state(ownerId, connection.id)
+        DeviceAvailability.ONLINE
+    } catch (_: NanoleafUnavailableException) {
+        DeviceAvailability.OFFLINE
+    } catch (_: NanoleafInvalidResponseException) {
+        DeviceAvailability.DEGRADED
+    } catch (_: RuntimeException) {
+        DeviceAvailability.DEGRADED
+    }
+}
+
+@Service
+class ZigbeeDeviceProviderObserver(
+    private val gateways: GatewayService,
+) : DeviceProviderObserver {
+    override val provider = ZigbeeDeviceSyncService.PROVIDER
+
+    override fun observe(ownerId: UUID, connection: IntegrationConnection): DeviceAvailability {
+        val gateway = gateways.all(ownerId).firstOrNull { node ->
+            node.health?.zigbee?.devices?.any { it.ieeeAddress == connection.endpointHost } == true
+        } ?: return DeviceAvailability.OFFLINE
+        return when (gateway.availability) {
+            "online" -> DeviceAvailability.ONLINE
+            "degraded" -> DeviceAvailability.DEGRADED
+            "offline" -> DeviceAvailability.OFFLINE
+            else -> DeviceAvailability.UNKNOWN
+        }
+    }
 }
 
 @Repository
@@ -61,15 +106,17 @@ class JdbcDeviceObservationRepository(private val jdbc: JdbcClient) : DeviceObse
 class DeviceObservationService(
     private val connections: IntegrationConnectionRepository,
     private val observations: DeviceObservationRepository,
-    private val nanoleaf: NanoleafIntegrationService,
+    providerObservers: List<DeviceProviderObserver>,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    private val providerObservers = providerObservers.associateBy { it.provider }
+
     fun refresh(ownerId: UUID): List<DeviceObservation> {
         val correlationId = UUID.randomUUID()
         val refreshed = connections.findAll(ownerId).take(MAX_REFRESH_DEVICES).mapNotNull { connection ->
-            if (connection.provider != NanoleafIntegrationService.PROVIDER) return@mapNotNull null
-            val availability = observeNanoleaf(ownerId, connection.id)
+            val observer = providerObservers[connection.provider] ?: return@mapNotNull null
+            val availability = observer.observe(ownerId, connection)
             observations.save(DeviceObservation(connection.id, ownerId, availability, clock.instant()))
         }
         activity.record(
@@ -83,17 +130,6 @@ class DeviceObservationService(
             correlationId,
         )
         return refreshed
-    }
-
-    private fun observeNanoleaf(ownerId: UUID, connectionId: UUID): DeviceAvailability = try {
-        nanoleaf.state(ownerId, connectionId)
-        DeviceAvailability.ONLINE
-    } catch (_: NanoleafUnavailableException) {
-        DeviceAvailability.OFFLINE
-    } catch (_: NanoleafInvalidResponseException) {
-        DeviceAvailability.DEGRADED
-    } catch (_: RuntimeException) {
-        DeviceAvailability.DEGRADED
     }
 
     companion object {
