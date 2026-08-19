@@ -5,11 +5,13 @@ import dev.kyrion.core.capability.DeviceCommandArguments
 import dev.kyrion.core.home.RoomResolution
 import dev.kyrion.core.home.RoomResolver
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
+import org.springframework.web.client.RestTemplate
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
@@ -52,18 +54,22 @@ class CoreDeviceProposalProvider(
     private val rooms: RoomResolver,
     @Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") aiBaseUrl: String,
 ) : DeviceProposalProvider {
-    private val client = RestClient.builder().baseUrl(aiBaseUrl).build()
+    private val proposalUrl = "${aiBaseUrl.trimEnd('/')}/v1/device-commands/propose"
+    private val client = RestTemplate()
     private val mapper = jacksonObjectMapper()
 
     override fun propose(ownerId: UUID, message: String, locale: String, priorMessages: List<ActionPriorMessage>): ProposalResult {
         val devices = catalog.devices(ownerId)
         val response = try {
-            client.post().uri("/v1/device-commands/propose").contentType(MediaType.APPLICATION_JSON)
-                .body(DeviceProposalIntentRequest(message, locale, priorMessages, devices.map {
+            client.postForEntity(
+                proposalUrl,
+                HttpEntity(DeviceProposalIntentRequest(message, locale, priorMessages, devices.map {
                     SafeDeviceProposalView(it.id, it.provider, it.displayName, it.room?.name,
                         it.capabilities.map { capability -> mapOf("id" to capability.id) }, it.availability.value,
                         it.observedAt?.toString())
-                })).retrieve().body(AiDeviceProposalResponse::class.java)
+                }), HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }),
+                AiDeviceProposalResponse::class.java,
+            ).body
         } catch (error: RestClientResponseException) {
             val validation = runCatching {
                 mapper.readTree(error.responseBodyAsString).path("detail").map { detail ->

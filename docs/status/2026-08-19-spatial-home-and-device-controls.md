@@ -9,7 +9,8 @@
 - Unassigned devices can be dragged onto a room; the assignment still uses the existing Core-owned room API.
 - Detailed status, controls, rename, removal, and room administration moved to `/devices`.
 - The navigation exposes the new device-control page in German and English.
-- Each room on `/devices` has aggregate on/off actions. These reuse the existing validated device-command paths rather than executing provider logic in the browser.
+- Each room on `/devices` has one aggregate power switch. It turns the room off when any device is on and turns it on when all devices are off, reusing the existing validated device-command paths.
+- Zigbee colour controls initialize from the device's observed hue and saturation instead of a fixed cyan placeholder.
 
 ## Deliberate scope
 
