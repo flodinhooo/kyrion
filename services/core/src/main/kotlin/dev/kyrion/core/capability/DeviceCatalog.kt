@@ -21,7 +21,7 @@ import java.time.Duration
 
 data class DeviceCapabilityView(val id: String)
 
-data class DeviceRoomView(val id: UUID, val name: String)
+data class DeviceRoomView(val id: UUID, val name: String, val roomType: dev.kyrion.core.home.RoomType)
 data class DeviceStateView(
     val on: Boolean?,
     val brightness: Int?,
@@ -73,7 +73,7 @@ class DeviceCatalogService(
                 displayName = connection.displayName,
                 hardwareName = zigbee?.let { listOf(it.vendor, it.description).filter(String::isNotBlank).joinToString(" ") }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,
-                room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name) },
+                room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name, it.roomType) },
                 capabilities = capabilities(connection),
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,

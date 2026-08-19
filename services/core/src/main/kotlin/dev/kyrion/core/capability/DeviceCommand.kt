@@ -96,7 +96,12 @@ class DeviceCommandService(
 
     fun status(ownerId: UUID, id: UUID) = gatewayCommands?.status(ownerId, id) ?: throw DeviceCommandInvalidException()
 
-    fun execute(ownerId: UUID, request: ExecuteDeviceCommandRequest): DeviceCommandResult {
+    fun execute(
+        ownerId: UUID,
+        request: ExecuteDeviceCommandRequest,
+        correlationId: UUID = UUID.randomUUID(),
+        recordProposal: Boolean = true,
+    ): DeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
         if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER)) {
             throw DeviceCapabilityUnsupportedException()
@@ -115,17 +120,18 @@ class DeviceCommandService(
         if (targets.isEmpty()) throw DeviceTargetNotFoundException()
 
         validateArguments(request)
-        val correlationId = UUID.randomUUID()
-        activity.record(
-            ActivityCategory.CAPABILITY,
-            "capability.device.proposed",
-            ActivityStatus.PROPOSED,
-            ActivityActorType.AI,
-            "velora",
-            "device.command.proposed",
-            ownerId.toString(),
-            correlationId,
-        )
+        if (recordProposal) {
+            activity.record(
+                ActivityCategory.CAPABILITY,
+                "capability.device.proposed",
+                ActivityStatus.PROPOSED,
+                ActivityActorType.AI,
+                "velora",
+                "device.command.proposed",
+                ownerId.toString(),
+                correlationId,
+            )
+        }
         val outcomes = targets.map { target ->
             try {
                 when (request.capability) {

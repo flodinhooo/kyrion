@@ -18,6 +18,7 @@ import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 
 data class RoomNameRequest(@field:NotBlank @field:Size(max = 120) val name: String)
+data class RoomRequest(@field:NotBlank @field:Size(max = 120) val name: String, val roomType: RoomType = RoomType.OTHER)
 data class RoomAssignmentRequest(val roomId: UUID?)
 
 @RestController
@@ -32,12 +33,12 @@ class RoomController(
 ) {
     @GetMapping("/rooms") fun rooms(request: HttpServletRequest) = rooms.all(request.ownerId())
     @PostMapping("/rooms") @ResponseStatus(HttpStatus.CREATED)
-    fun create(@Valid @RequestBody body: RoomNameRequest, request: HttpServletRequest): Room {
+    fun create(@Valid @RequestBody body: RoomRequest, request: HttpServletRequest): Room {
         val ownerId = request.ownerId(); val now = clock.instant()
-        return rooms.create(ownerId, Room(UUID.randomUUID(), body.name.trim(), now, now)).also { record(ownerId, "home.room.created", "room.created", it.id) }
+        return rooms.create(ownerId, Room(UUID.randomUUID(), body.name.trim(), now, now, body.roomType)).also { record(ownerId, "home.room.created", "room.created", it.id) }
     }
-    @PatchMapping("/rooms/{id}") fun rename(@PathVariable id: UUID, @Valid @RequestBody body: RoomNameRequest, request: HttpServletRequest): Room {
-        val ownerId = request.ownerId(); return (rooms.rename(ownerId, id, body.name.trim(), clock.instant()) ?: throw RoomNotFoundException()).also { record(ownerId, "home.room.renamed", "room.renamed", id) }
+    @PatchMapping("/rooms/{id}") fun update(@PathVariable id: UUID, @Valid @RequestBody body: RoomRequest, request: HttpServletRequest): Room {
+        val ownerId = request.ownerId(); return (rooms.update(ownerId, id, body.name.trim(), body.roomType, clock.instant()) ?: throw RoomNotFoundException()).also { record(ownerId, "home.room.updated", "room.updated", id) }
     }
     @DeleteMapping("/rooms/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(@PathVariable id: UUID, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.delete(ownerId, id)) throw RoomNotFoundException(); record(ownerId, "home.room.deleted", "room.deleted", id) }
