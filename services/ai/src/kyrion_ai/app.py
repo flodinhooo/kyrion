@@ -7,8 +7,12 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
+from kyrion_ai.cloud_conversation import (
+    CloudConversationError,
+    CloudConversationManager,
+    encode_result,
+)
 from kyrion_ai.config import Settings
-from kyrion_ai.cloud_conversation import CloudConversationError, CloudConversationManager, encode_result
 from kyrion_ai.contracts import (
     ChatRequest,
     DeviceCommandProposalRequest,
@@ -70,7 +74,9 @@ async def open_cloud_session(request: CloudSessionRequest) -> Response:
         session = await cloud_conversations.open(request.provider, request.locale)  # type: ignore[arg-type]
     except CloudConversationError as error:
         return JSONResponse({"code": "CLOUD_UNAVAILABLE", "detail": str(error)}, status_code=503)
-    return JSONResponse({"sessionId": session.id, "provider": session.provider, "model": session.model})
+    return JSONResponse(
+        {"sessionId": session.id, "provider": session.provider, "model": session.model}
+    )
 
 
 @app.post("/v1/cloud-conversations/sessions/{session_id}/turns")

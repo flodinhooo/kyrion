@@ -85,7 +85,8 @@ class Settings:
             ),
             cloud_conversation_enabled=os.getenv(
                 "KYRION_CLOUD_CONVERSATION_ENABLED", "false"
-            ).lower() in {"1", "true", "yes"},
+            ).lower()
+            in {"1", "true", "yes"},
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
             openrouter_model=os.getenv("KYRION_OPENROUTER_MODEL", "openrouter/free"),
             openrouter_explicit_free_model=os.getenv(
@@ -98,7 +99,5 @@ class Settings:
             cloud_session_timeout_seconds=float(
                 os.getenv("KYRION_CLOUD_SESSION_TIMEOUT_SECONDS", "300")
             ),
-            cloud_history_max_messages=int(
-                os.getenv("KYRION_CLOUD_HISTORY_MAX_MESSAGES", "12")
-            ),
+            cloud_history_max_messages=int(os.getenv("KYRION_CLOUD_HISTORY_MAX_MESSAGES", "12")),
         )

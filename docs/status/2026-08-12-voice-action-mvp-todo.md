@@ -87,7 +87,9 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Let the AI service propose only against the bounded supplied catalog.
 - [x] Revalidate proposal type, owner scope, target, capability and arguments in
   Core.
-- [ ] Apply policy and Voice-channel permission before execution.
+- [ ] Apply explicit Voice-channel permission rules before execution. Routine
+  actions currently pass through the shared policy service with a typed Voice
+  context; per-action channel restrictions remain follow-up work.
 - [x] Return one correlated `ActionOutcome` from the real domain result.
 - [x] Record proposed, rejected, confirmation-required, executed and failed
   states without prompt or credential leakage.
@@ -95,7 +97,7 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Remove device proposal, execution and result wording from the Next.js chat
   route after the Core endpoint passes tests.
 - [x] Route browser chat/Voice Mode through the new Core path.
-- [ ] Route the physical Voice dialogue through the same orchestrator directly.
+- [x] Route the physical Voice dialogue through the same orchestrator directly.
 - [x] Preserve ordinary Dynamic dialogue when no valid Action Proposal exists.
 
 ## Phase B — Voice result policy
@@ -104,13 +106,14 @@ outcomes; mismatched or still-running replays are rejected.
   `target.ambiguous`, `device.offline` and `action.denied`.
 - [ ] Add generic Fixed `command.succeeded` and `command.failed` variants while
   retaining target-specific Template responses.
-- [ ] Prevent `command.succeeded` unless a complete successful result is
+- [x] Prevent `command.succeeded` unless a complete successful result is
   confirmed.
 - [ ] Treat partial success as a separate Template outcome.
-- [ ] Do not play `dialogue.acknowledged` before command execution.
+- [x] Do not play `dialogue.acknowledged` before command execution.
 - [ ] Use silence or a semantically neutral earcon if processing feedback is
   later required.
-- [ ] Ensure cancelled or stale turns cannot emit queued result audio.
+- [x] Ensure cancelled or stale turns cannot execute after proposal or emit
+  queued result audio.
 
 ## Phase C — First physical command
 
