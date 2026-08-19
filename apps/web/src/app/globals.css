@@ -749,6 +749,8 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .room-devices article:hover { border-color: var(--primary); transform: translateY(-1px); }
 .room-devices article.device-on { border-color: color-mix(in srgb,var(--primary) 52%,var(--border)); box-shadow: inset 3px 0 0 var(--primary); }
 .room-devices article small { display: block; margin-top: 4px; color: var(--muted-foreground); }
+.room-devices article > .command-status,
+.room-devices article > .auth-error { grid-column: 1/-1; margin: 0; }
 .device-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--muted-foreground); font-size: .76rem; }
 .device-status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
 .device-status.online { color: #20a66a; }.device-status.offline { color: var(--destructive); }.device-status.degraded { color: #d59a1a; }.device-status.unknown { opacity: .7; }

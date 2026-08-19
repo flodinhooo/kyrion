@@ -34,6 +34,7 @@ export default function DevicesPage() {
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
   const [commandStates, setCommandStates] = useState<Record<string, "pending" | "succeeded" | "failed">>({});
+  const [roomCommandStates, setRoomCommandStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -235,8 +236,24 @@ export default function DevicesPage() {
     return t.homeOnline;
   }
 
-  async function roomPower(items: RuntimeDevice[], on: boolean) {
-    for (const device of items) await quickPower(device.id, on);
+  async function roomPower(roomId: string, items: RuntimeDevice[], on: boolean) {
+    if (roomCommandStates[roomId]) return;
+    setRoomCommandStates((current) => ({ ...current, [roomId]: true }));
+    setCommandStates((current) => {
+      const next = { ...current };
+      for (const device of items) delete next[device.id];
+      return next;
+    });
+    try {
+      for (const device of items) await quickPower(device.id, on);
+    } finally {
+      setRoomCommandStates((current) => ({ ...current, [roomId]: false }));
+      window.setTimeout(() => setCommandStates((current) => {
+        const next = { ...current };
+        for (const device of items) if (next[device.id] === "succeeded") delete next[device.id];
+        return next;
+      }), 2_500);
+    }
   }
 
   return <section className="home-dashboard">
@@ -259,7 +276,7 @@ export default function DevicesPage() {
         <div className="room-heading-actions">
           {group.items.length > 0 && (() => {
             const roomIsOn = group.items.some((device) => device.state?.on === true || nanoleafStates[device.id]?.on === true);
-            return <label className="room-power-switch"><span>{roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending} onClick={() => void roomPower(group.items, !roomIsOn)}><i /></button></label>;
+            return <label className="room-power-switch"><span>{roomCommandStates[group.id] ? t.commandPending : roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending || roomCommandStates[group.id]} onClick={() => void roomPower(group.id, group.items, !roomIsOn)}><i /></button></label>;
           })()}
           {group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={() => setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType })}>
           <Pencil aria-hidden="true" />
