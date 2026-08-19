@@ -40,6 +40,7 @@ enum class DeviceAvailability(@get:JsonValue val value: String) {
 data class DeviceCatalogItem(
     val id: UUID,
     val provider: String,
+    val deviceClass: String,
     val displayName: String,
     val hardwareName: String,
     val room: DeviceRoomView?,
@@ -70,6 +71,7 @@ class DeviceCatalogService(
             DeviceCatalogItem(
                 id = connection.id,
                 provider = connection.provider,
+                deviceClass = connection.deviceClass.value,
                 displayName = connection.displayName,
                 hardwareName = zigbee?.let { listOf(it.vendor, it.description).filter(String::isNotBlank).joinToString(" ") }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,

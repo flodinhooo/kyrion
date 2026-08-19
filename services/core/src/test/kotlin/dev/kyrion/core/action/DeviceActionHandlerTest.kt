@@ -45,6 +45,7 @@ class DeviceActionHandlerTest {
                 DeviceCatalogItem(
                     targetId,
                     "nanoleaf",
+                    "light",
                     "Desk light",
                     "Nanoleaf",
                     null,

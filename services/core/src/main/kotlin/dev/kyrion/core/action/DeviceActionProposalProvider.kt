@@ -25,6 +25,7 @@ data class DeviceProposalIntentRequest(
 data class SafeDeviceProposalView(
     val id: UUID,
     val provider: String,
+    val deviceClass: String,
     val displayName: String,
     val roomName: String?,
     val capabilities: List<Map<String, String>>,
@@ -64,7 +65,7 @@ class CoreDeviceProposalProvider(
             client.postForEntity(
                 proposalUrl,
                 HttpEntity(DeviceProposalIntentRequest(message, locale, priorMessages, devices.map {
-                    SafeDeviceProposalView(it.id, it.provider, it.displayName, it.room?.name,
+                    SafeDeviceProposalView(it.id, it.provider, it.deviceClass, it.displayName, it.room?.name,
                         it.capabilities.map { capability -> mapOf("id" to capability.id) }, it.availability.value,
                         it.observedAt?.toString())
                 }), HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }),
@@ -83,7 +84,7 @@ class CoreDeviceProposalProvider(
             return ProposalResult.Unavailable
         } catch (_: RuntimeException) { return ProposalResult.Unavailable }
         val proposed = response?.proposal ?: return ProposalResult.None
-        if (proposed.selector.provider != "nanoleaf") return ProposalResult.Invalid
+        if (proposed.selector.provider !in setOf("nanoleaf", "zigbee", "light")) return ProposalResult.Invalid
         val candidates = when {
             proposed.selector.deviceId != null -> {
                 val id = runCatching { UUID.fromString(proposed.selector.deviceId) }.getOrNull()
@@ -95,17 +96,26 @@ class CoreDeviceProposalProvider(
                 RoomResolution.Ambiguous -> return ProposalResult.Ambiguous
                 RoomResolution.NotFound -> return ProposalResult.Invalid
             }
+            proposed.selector.provider == "light" -> devices
             else -> return ProposalResult.Invalid
-        }.filter { device -> device.provider == proposed.selector.provider && device.capabilities.any { it.id == proposed.capability } }
-        if (candidates.size > 1) return ProposalResult.Ambiguous
-        val target = candidates.singleOrNull() ?: return ProposalResult.Invalid
+        }.filter { device ->
+            (proposed.selector.provider == "light" && device.deviceClass == "light" || device.provider == proposed.selector.provider) &&
+                device.capabilities.any { it.id == proposed.capability }
+        }
+        if (candidates.isEmpty()) return ProposalResult.Invalid
+        if (proposed.selector.deviceId != null && candidates.size > 1) return ProposalResult.Ambiguous
         val arguments = when (proposed.capability) {
             "power.set" -> proposed.arguments.on?.let { DeviceCommandArguments(on = it) }
             "light.setBrightness" -> proposed.arguments.brightness?.takeIf { it in 0..100 }
                 ?.let { DeviceCommandArguments(brightness = it) }
             else -> null
         } ?: return ProposalResult.Invalid
-        return ProposalResult.Proposed(DeviceActionProposal(target.id, proposed.capability, arguments))
+        return ProposalResult.Proposed(DeviceActionProposal(
+            targetId = candidates.singleOrNull()?.id,
+            capability = proposed.capability,
+            arguments = arguments,
+            targetIds = candidates.map { it.id },
+        ))
     }
 
     companion object {
