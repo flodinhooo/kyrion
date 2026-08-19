@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from kyrion_ai.config import Settings
+from kyrion_ai.cloud_conversation import CloudConversationError, CloudConversationManager, encode_result
 from kyrion_ai.contracts import (
     ChatRequest,
     DeviceCommandProposalRequest,
@@ -41,6 +42,7 @@ voice_responses = VoiceResponseAudioResolver(
     speech,
     short_response_fallback,
 )
+cloud_conversations = CloudConversationManager(settings, speech)
 logger = logging.getLogger("kyrion-ai")
 
 app = FastAPI(title="Kyrion AI", version="0.1.0")
@@ -52,9 +54,40 @@ class SynthesisRequest(BaseModel):
     voice_id: str | None = Field(default=None, alias="voiceId", pattern="^[a-z0-9_-]{1,40}$")
 
 
+class CloudSessionRequest(BaseModel):
+    provider: str = Field(pattern="^(gemini|openrouter|openrouter-explicit)$")
+    locale: str = Field(pattern="^(de|en)$")
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "provider": "ollama", "model": provider.model}
+
+
+@app.post("/v1/cloud-conversations/sessions")
+async def open_cloud_session(request: CloudSessionRequest) -> Response:
+    try:
+        session = await cloud_conversations.open(request.provider, request.locale)  # type: ignore[arg-type]
+    except CloudConversationError as error:
+        return JSONResponse({"code": "CLOUD_UNAVAILABLE", "detail": str(error)}, status_code=503)
+    return JSONResponse({"sessionId": session.id, "provider": session.provider, "model": session.model})
+
+
+@app.post("/v1/cloud-conversations/sessions/{session_id}/turns")
+async def cloud_turn(session_id: str, request: Request) -> Response:
+    if request.headers.get("content-type") != "audio/wav":
+        return JSONResponse({"code": "INVALID_AUDIO"}, status_code=415)
+    try:
+        result = await cloud_conversations.turn(session_id, await request.body())
+    except (CloudConversationError, SpeechUnavailableError) as error:
+        return JSONResponse({"code": "CLOUD_UNAVAILABLE", "detail": str(error)}, status_code=503)
+    return JSONResponse(encode_result(result), headers={"Cache-Control": "no-store"})
+
+
+@app.delete("/v1/cloud-conversations/sessions/{session_id}")
+async def close_cloud_session(session_id: str) -> Response:
+    await cloud_conversations.close(session_id)
+    return Response(status_code=204)
 
 
 @app.post("/v1/speech/transcribe")

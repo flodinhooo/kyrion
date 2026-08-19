@@ -28,6 +28,14 @@ class Settings:
     )
     voice_response_cache_dir: Path = Path(gettempdir()) / "kyrion-voice-response-cache"
     voice_response_synthesis_revision: str = "configured-normal-tts-v1"
+    cloud_conversation_enabled: bool = False
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openrouter/free"
+    openrouter_explicit_free_model: str = "openai/gpt-oss-120b:free"
+    gemini_api_key: str | None = None
+    gemini_live_model: str = "gemini-3.1-flash-live-preview"
+    cloud_session_timeout_seconds: float = 300.0
+    cloud_history_max_messages: int = 12
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -74,5 +82,23 @@ class Settings:
             voice_response_synthesis_revision=os.getenv(
                 "KYRION_VOICE_RESPONSE_SYNTHESIS_REVISION",
                 "configured-normal-tts-v1",
+            ),
+            cloud_conversation_enabled=os.getenv(
+                "KYRION_CLOUD_CONVERSATION_ENABLED", "false"
+            ).lower() in {"1", "true", "yes"},
+            openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
+            openrouter_model=os.getenv("KYRION_OPENROUTER_MODEL", "openrouter/free"),
+            openrouter_explicit_free_model=os.getenv(
+                "KYRION_OPENROUTER_EXPLICIT_FREE_MODEL", "openai/gpt-oss-120b:free"
+            ),
+            gemini_api_key=os.getenv("GEMINI_API_KEY"),
+            gemini_live_model=os.getenv(
+                "KYRION_GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview"
+            ),
+            cloud_session_timeout_seconds=float(
+                os.getenv("KYRION_CLOUD_SESSION_TIMEOUT_SECONDS", "300")
+            ),
+            cloud_history_max_messages=int(
+                os.getenv("KYRION_CLOUD_HISTORY_MAX_MESSAGES", "12")
             ),
         )
