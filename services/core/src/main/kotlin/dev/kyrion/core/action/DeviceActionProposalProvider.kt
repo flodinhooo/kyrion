@@ -32,7 +32,12 @@ data class SafeDeviceProposalView(
     val availability: String,
     val observedAt: String?,
 )
-data class AiDeviceSelector(val provider: String, val roomName: String? = null, val deviceId: String? = null)
+data class AiDeviceSelector(
+    val provider: String,
+    val roomName: String? = null,
+    val roomNames: List<String> = emptyList(),
+    val deviceId: String? = null,
+)
 data class AiDeviceArguments(val on: Boolean? = null, val brightness: Int? = null)
 data class AiDeviceProposal(val capability: String, val selector: AiDeviceSelector, val arguments: AiDeviceArguments)
 data class AiDeviceProposalResponse(val proposal: AiDeviceProposal? = null)
@@ -85,6 +90,12 @@ class CoreDeviceProposalProvider(
         } catch (_: RuntimeException) { return ProposalResult.Unavailable }
         val proposed = response?.proposal ?: return ProposalResult.None
         if (proposed.selector.provider !in setOf("nanoleaf", "zigbee", "light")) return ProposalResult.Invalid
+        val targetKinds = listOf(
+            proposed.selector.deviceId != null,
+            proposed.selector.roomName != null,
+            proposed.selector.roomNames.isNotEmpty(),
+        ).count { it }
+        if (targetKinds > 1 || proposed.selector.roomNames.size > 8) return ProposalResult.Invalid
         val candidates = when {
             proposed.selector.deviceId != null -> {
                 val id = runCatching { UUID.fromString(proposed.selector.deviceId) }.getOrNull()
@@ -95,6 +106,17 @@ class CoreDeviceProposalProvider(
                 is RoomResolution.Resolved -> devices.filter { it.room?.id == resolution.room.id }
                 RoomResolution.Ambiguous -> return ProposalResult.Ambiguous
                 RoomResolution.NotFound -> return ProposalResult.Invalid
+            }
+            proposed.selector.roomNames.isNotEmpty() -> {
+                val resolvedRoomIds = proposed.selector.roomNames.map { roomName ->
+                    when (val resolution = rooms.resolve(ownerId, roomName, locale)) {
+                        is RoomResolution.Resolved -> resolution.room.id
+                        RoomResolution.Ambiguous -> return ProposalResult.Ambiguous
+                        RoomResolution.NotFound -> return ProposalResult.Invalid
+                    }
+                }.distinct()
+                if (resolvedRoomIds.size != proposed.selector.roomNames.size) return ProposalResult.Invalid
+                devices.filter { it.room?.id in resolvedRoomIds }
             }
             proposed.selector.provider == "light" -> devices
             else -> return ProposalResult.Invalid

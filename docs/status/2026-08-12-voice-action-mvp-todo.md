@@ -99,6 +99,9 @@ outcomes; mismatched or still-running replays are rejected.
 - [x] Route browser chat/Voice Mode through the new Core path.
 - [x] Route the physical Voice dialogue through the same orchestrator directly.
 - [x] Preserve ordinary Dynamic dialogue when no valid Action Proposal exists.
+- [x] Resolve bounded German and English multi-room light power commands into
+  one Core-validated proposal. Every named room must resolve uniquely before
+  execution; unknown, ambiguous or duplicate rooms execute nothing.
 
 ## Phase B — Voice result policy
 

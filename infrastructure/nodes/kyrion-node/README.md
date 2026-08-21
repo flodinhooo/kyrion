@@ -18,3 +18,8 @@ package for separately scoped Home Assistant, OTBR, and Matter services. It
 does not add the interactive owner or the gateway agent to the `docker` group,
 because Docker socket access is equivalent to root authority. It also does not
 flash a radio or create a Thread or Matter network.
+
+`install-home-assistant.sh` starts Home Assistant Container with host networking
+for local discovery but without privileged mode, Linux capabilities, the Docker
+socket, D-Bus, or radio access. Its persistent configuration is kept under
+`/var/lib/homeassistant`. OTBR and Matter remain separate services.
