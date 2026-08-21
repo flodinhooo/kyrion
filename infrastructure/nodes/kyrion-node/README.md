@@ -33,3 +33,9 @@ infrastructure interface and starts the official OTBR image by immutable image
 digest. The container receives only `NET_ADMIN`, `NET_RAW`, `/dev/net/tun`, and
 the accepted ZBT-2 serial device. `NET_RAW` is required for IPv6 Multicast
 Listener Discovery. Persistent Thread state is kept under `/var/lib/otbr`.
+
+`install-matter-server.sh` starts the official matter.js Matter Server as an
+unprivileged, capability-free container. Its WebSocket API listens only on
+loopback for the colocated Home Assistant container, while host networking and
+the wired primary interface provide Matter IPv6 and mDNS connectivity. Matter
+fabric state is stored under `/var/lib/matter-server`.

@@ -105,6 +105,11 @@ outcomes; mismatched or still-running replays are rejected.
 
 ## Phase B — Voice result policy
 
+- [ ] After Core has recognized and validated a Voice action proposal, play an
+  immediate truthful processing response such as `Klar, gib mir einen
+  Augenblick.` before potentially slow adapter execution. This response must
+  never imply success; the confirmed success, partial-success or failure
+  response still follows the real action outcome.
 - [ ] Add typed outcomes and catalog resolvers for `target.not_found`,
   `target.ambiguous`, `device.offline` and `action.denied`.
 - [ ] Add generic Fixed `command.succeeded` and `command.failed` variants while
