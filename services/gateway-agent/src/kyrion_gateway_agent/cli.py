@@ -7,6 +7,12 @@ import subprocess
 import time
 from pathlib import Path
 
+from kyrion_gateway_agent.bluetooth import (
+    BluetoothLightError,
+    set_brightness,
+    set_colour,
+    set_power,
+)
 from kyrion_gateway_agent.client import (
     CoreRequestError,
     complete_command,
@@ -79,6 +85,18 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         complete_command(config, command_id, False, "INVALID_PAYLOAD")
         return
     try:
+        if kind in {"bluetooth.power", "bluetooth.brightness", "bluetooth.color"}:
+            address = str(payload["deviceId"])
+            if kind == "bluetooth.power":
+                if not isinstance(payload.get("on"), bool):
+                    raise ValueError("invalid power")
+                set_power(address, payload["on"])
+            elif kind == "bluetooth.brightness":
+                set_brightness(address, int(payload["brightness"]))
+            else:
+                set_colour(address, int(payload["hue"]), int(payload["saturation"]))
+            complete_command(config, command_id, True)
+            return
         if kind == "zigbee.permit_join":
             duration = int(payload["duration"])
             topic = "zigbee2mqtt/bridge/request/permit_join"
@@ -122,7 +140,8 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             _confirm_power_state(device, body["state"])
         complete_command(config, command_id, True)
     except (
-        KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError
+        KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError,
+        BluetoothLightError,
     ) as error:
         LOGGER.warning(
             "Gateway command %s failed locally: %s %s",

@@ -13,6 +13,8 @@ class Settings:
     stt_model: str = "small"
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
+    stt_provider: str = "http_openai"
+    http_stt_url: str = "http://127.0.0.1:8040"
     tts_provider: str = "http_batch"
     http_tts_url: str = "http://127.0.0.1:8020"
     # Compatibility only for existing explicit Qwen batch deployments.
@@ -57,6 +59,8 @@ class Settings:
             stt_model=os.getenv("KYRION_STT_MODEL", "small"),
             stt_device=os.getenv("KYRION_STT_DEVICE", "cpu"),
             stt_compute_type=os.getenv("KYRION_STT_COMPUTE_TYPE", "int8"),
+            stt_provider=os.getenv("KYRION_STT_PROVIDER", "http_openai").lower(),
+            http_stt_url=os.getenv("KYRION_HTTP_STT_URL", "http://127.0.0.1:8040").rstrip("/"),
             tts_provider=os.getenv("KYRION_TTS_PROVIDER", "http_batch").lower(),
             http_tts_url=os.getenv("KYRION_HTTP_TTS_URL", "http://127.0.0.1:8020").rstrip("/"),
             qwen_tts_url=os.getenv("KYRION_QWEN_TTS_URL", "http://127.0.0.1:8010").rstrip("/"),
