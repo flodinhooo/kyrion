@@ -137,6 +137,10 @@ outcomes; mismatched or still-running replays are rejected.
 
 ## Phase D — Reliability
 
+- [x] Replace the unreliable Faster-Whisper final-transcript path with the
+  provider-neutral local Parakeet/NeMo-Speech.cpp HTTP provider. Preserve VAD,
+  explicit locale, visible provider failure and no silent STT fallback; see
+  [`2026-08-21-parakeet-stt-replacement.md`](2026-08-21-parakeet-stt-replacement.md).
 - [ ] Complete at least twenty consecutive physical success repetitions.
 - [ ] Verify no duplicate command or duplicate playback.
 - [ ] Verify no command or audio survives a cancelled/closed session.

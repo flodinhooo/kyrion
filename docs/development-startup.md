@@ -66,7 +66,28 @@ Invoke-RestMethod http://127.0.0.1:11434/api/version
 & 'E:\Ollama\App\ollama.exe' list
 ```
 
-### 4. Start the Kyrion AI service
+### 4. Start local Parakeet STT
+
+Kyrion's default development STT is NVIDIA Parakeet TDT 0.6B v3 behind the
+provider-neutral OpenAI-compatible HTTP boundary. The model and native
+NeMo-Speech.cpp runtime live in the isolated `Kyrion-Voice-Training` WSL
+distribution and listen on loopback only from the Windows host's perspective:
+
+```powershell
+wsl.exe -d Kyrion-Voice-Training -- /training/tools/nemo-speech-install/bin/nemo-speech serve `
+  --host 0.0.0.0 --port 8040 `
+  --asr-model /training/models/parakeet-tdt-0.6b-v3/parakeet-tdt-0.6b-v3.q8_0.gguf `
+  --device cpu --no-ui --access-log
+```
+
+Verify it at `http://127.0.0.1:8040/health`. Keep the Satellite's upstream VAD
+enabled: the preserved noise gate showed short hallucinations on three of six
+noise-only clips when audio was submitted to Parakeet without VAD filtering.
+The HTTP boundary deliberately contains no fallback to Faster-Whisper, so an
+unavailable STT runtime is visible instead of silently changing recognition
+behaviour.
+
+### 5. Start the Kyrion AI service
 
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\services\ai'
@@ -113,7 +134,7 @@ The AI service buffers and validates the experimental stream before returning
 the WAV, so a crash, timeout, malformed stream or suspicious duration can fall
 back cleanly without releasing partial XTTS audio.
 
-### 5. Start Kyrion Web
+### 6. Start Kyrion Web
 
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\apps\web'

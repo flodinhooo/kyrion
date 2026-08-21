@@ -79,7 +79,7 @@ slices.
 - local streaming chat through a provider-neutral AI service and Ollama;
 - bounded German and English device-command proposals;
 - a Raspberry Pi Voice Satellite with local `Hey Velora` wake-word inference;
-- local VAD, microphone capture and Faster-Whisper transcription;
+- local VAD, microphone capture and provider-neutral Parakeet transcription;
 - authenticated, Core-owned multi-turn voice sessions;
 - Bluetooth/PipeWire playback through physical speakers;
 - provider-neutral Fixed, Template and Dynamic voice-response plans;
@@ -170,7 +170,7 @@ kyrion/
 - Python, FastAPI and Pydantic;
 - PostgreSQL and Flyway;
 - Ollama for replaceable local language-model execution;
-- Faster-Whisper for local speech recognition;
+- NVIDIA Parakeet behind a provider-neutral local HTTP boundary for speech recognition;
 - openWakeWord and ONNX on the Raspberry Pi;
 - Zigbee2MQTT and loopback-only Mosquitto for the current Zigbee adapter;
 - PipeWire, ALSA and Bluetooth for the Voice Satellite audio path.

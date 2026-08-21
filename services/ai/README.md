@@ -12,6 +12,12 @@ and Kyrion Core communicate only through Kyrion's provider-neutral chat events.
 5. Start the service with
    `uvicorn kyrion_ai.app:app --reload --port 8000 --env-file .env`.
 
+STT is selected independently with `KYRION_STT_PROVIDER`. The productive
+development profile and default use `http_openai` and a local NeMo-Speech.cpp server so
+the AI boundary stays independent of NVIDIA Parakeet. `faster_whisper` remains
+an explicit compatibility option; there is no silent fallback between STT
+engines.
+
 The local Ollama API requires no authentication and listens on
 `http://127.0.0.1:11434` by default. Do not expose it directly to the internet.
 
