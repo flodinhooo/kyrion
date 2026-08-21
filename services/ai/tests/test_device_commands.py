@@ -78,6 +78,42 @@ def test_light_category_does_not_require_a_nanoleaf_device() -> None:
     assert proposal.arguments.on is False
 
 
+def test_proposes_german_multi_room_light_power() -> None:
+    multi_room = DeviceCommandProposalRequest(
+        message="Hey Velora, schalte bitte das Licht im Schlafzimmer und im Flur aus.",
+        locale="de",
+        devices=[
+            _DEVICES[0],
+            {**_DEVICES[0], "id": "device-2", "provider": "zigbee", "roomName": "Flur"},
+        ],
+    )
+
+    proposal = propose_device_command(multi_room)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name is None
+    assert proposal.selector.room_names == ["Schlafzimmer", "Flur"]
+    assert proposal.arguments.on is False
+
+
+def test_proposes_english_multi_room_light_power() -> None:
+    multi_room = DeviceCommandProposalRequest(
+        message="Turn the lights in the bedroom and in the hallway off.",
+        locale="en",
+        devices=[
+            _DEVICES[0],
+            {**_DEVICES[0], "id": "device-2", "provider": "zigbee", "roomName": "hallway"},
+        ],
+    )
+
+    proposal = propose_device_command(multi_room)
+
+    assert proposal is not None
+    assert proposal.selector.room_names == ["bedroom", "hallway"]
+    assert proposal.arguments.on is False
+
+
 @pytest.mark.parametrize(
     ("message", "expected"),
     [

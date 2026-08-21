@@ -9,51 +9,52 @@ from kyrion_ai.contracts import (
 )
 
 _GERMAN_BRIGHTNESS = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:stelle|stell|setze|setz|mach)\b.*?"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:stelle|stell|setze|setz|mach)\b.*?"
     r"\bnanoleafs?\b\s+(?:im|in)\s+(?P<room>.+?)\s+auf\s+(?P<value>\d{1,3})\s*"
     r"(?:%|prozent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _ENGLISH_BRIGHTNESS = re.compile(
-    r"^(?:velora[,\s]+)?(?:please\s+)?(?:set|put)\b.*?\bnanoleafs?\b\s+in\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:set|put)\b.*?\bnanoleafs?\b\s+in\s+"
     r"(?:the\s+)?(?P<room>.+?)\s+(?:to|at)\s+(?P<value>\d{1,3})\s*"
     r"(?:%|percent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _GERMAN_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|macht)\b.*?"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|macht)\b.*?"
     r"\b(?P<kind>nanoleafs?|licht(?:er)?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
     r"(?P<state>an|ein|aus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 _GERMAN_GLOBAL_LIGHT_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|schau\s+dir)\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|schau\s+dir)\s+"
     r"(?:(?:die|alle)\s+)?lichter?\s+(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 _ENGLISH_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:please\s+)?(?:turn|switch)\b.*?\bnanoleafs?\b\s+in\s+"
-    r"(?:the\s+)?(?P<room>.+?)\s+(?P<state>on|off)(?:\s|[.!?]|$)",
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:turn|switch)\b.*?"
+    r"\b(?P<kind>nanoleafs?|lights?)\b\s+in\s+(?:the\s+)?(?P<room>.+?)\s+"
+    r"(?P<state>on|off)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _GERMAN_DEVICE_BRIGHTNESS = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:stelle|stell|setze|setz|mach)\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:stelle|stell|setze|setz|mach)\s+"
     r"(?P<target>.+?)\s+auf\s+(?P<value>\d{1,3})\s*(?:%|prozent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _ENGLISH_DEVICE_BRIGHTNESS = re.compile(
-    r"^(?:velora[,\s]+)?(?:please\s+)?(?:set|put)\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:set|put)\s+"
     r"(?P<target>.+?)\s+(?:to|at)\s+(?P<value>\d{1,3})\s*"
     r"(?:%|percent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _GERMAN_DEVICE_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach)\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach)\s+"
     r"(?P<target>.+?)\s+(?P<state>an|ein|aus)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _ENGLISH_DEVICE_POWER = re.compile(
-    r"^(?:velora[,\s]+)?(?:please\s+)?(?:turn|switch)\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:turn|switch)\s+"
     r"(?P<target>.+?)\s+(?P<state>on|off)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
@@ -139,12 +140,8 @@ def _propose_direct(
     power_match = power_pattern.search(request.message)
     if power_match:
         state = power_match.group("state").lower()
-        provider = (
-            "light"
-            if request.locale == "de"
-            and power_match.group("kind").casefold().startswith("licht")
-            else "nanoleaf"
-        )
+        kind = power_match.group("kind").casefold()
+        provider = "light" if kind.startswith(("licht", "light")) else "nanoleaf"
         if not _supports(request, provider, "power.set"):
             return None
         return DeviceCommandProposal(
@@ -154,6 +151,7 @@ def _propose_direct(
                 power_match.group("room"),
                 "power.set",
                 provider,
+                allow_multiple=True,
             ),
             arguments=DeviceCommandArguments(on=state in {"an", "ein", "on"}),
         )
@@ -197,7 +195,37 @@ def _room_selector(
     room_name: str,
     capability: str,
     provider: str = "nanoleaf",
+    allow_multiple: bool = False,
 ) -> DeviceTargetSelector:
+    if allow_multiple:
+        room_names = _split_room_names(request.locale, room_name)
+        if len(room_names) > 1:
+            return DeviceTargetSelector(
+                roomNames=[
+                    _normalise_room_name(request, name, capability, provider)
+                    for name in room_names
+                ],
+                provider=provider,
+            )
+    return DeviceTargetSelector(
+        roomName=_normalise_room_name(request, room_name, capability, provider),
+        provider=provider,
+    )
+
+
+def _split_room_names(locale: str, room_names: str) -> list[str]:
+    conjunction = r"\s*(?:,|\bund\b)\s*(?:(?:im|in)\s+)?" if locale == "de" else (
+        r"\s*(?:,|\band\b)\s*(?:in\s+(?:the\s+)?)?"
+    )
+    return [name for name in re.split(conjunction, room_names, flags=re.IGNORECASE) if name.strip()]
+
+
+def _normalise_room_name(
+    request: DeviceCommandProposalRequest,
+    room_name: str,
+    capability: str,
+    provider: str,
+) -> str:
     normalised = room_name.strip(" .,!?").strip()
     normalised = re.sub(r"^(?:der|dem|das|die)\s+", "", normalised, flags=re.IGNORECASE)
     room_names = {
@@ -218,7 +246,7 @@ def _room_selector(
         ]
         if len(aliases) == 1:
             normalised = aliases[0]
-    return DeviceTargetSelector(roomName=normalised, provider=provider)
+    return normalised
 
 
 def _room_alias_key(room_name: str) -> str:
