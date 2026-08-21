@@ -19,6 +19,7 @@ class VoiceResponsePlanTest {
         assertThat(registry.resolve(SessionGreetingOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(SessionFarewellOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(DialogueAcknowledgedOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
+        assertThat(registry.resolve(ActionProcessingOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(
             registry.resolve(CommandExecutionOutcome(true, true, "Gamingraum"), context),
         ).isInstanceOf(FixedResponsePlan::class.java)

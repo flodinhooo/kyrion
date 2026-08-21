@@ -46,6 +46,21 @@ class VoiceActionServiceTest {
     }
 
     @Test
+    fun `validated processing callback runs before device execution`() {
+        val order = mutableListOf<String>()
+        val proposal = DeviceActionProposal(UUID.randomUUID(), "power.set", DeviceCommandArguments(on = true))
+        val handler = CapturingVoiceHandler { order += "execute" }
+
+        service(ProposalResult.Proposed(proposal), handler).interpret(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            "de", "Mach das Licht an", emptyList(),
+            onValidated = { order += "processing" },
+        )
+
+        assertEquals(listOf("processing", "execute"), order)
+    }
+
+    @Test
     fun `ambiguous target is rejected without execution`() {
         val handler = CapturingVoiceHandler()
 
@@ -86,12 +101,13 @@ private class FixedProposalProvider(private val result: ProposalResult) : Device
     override fun propose(ownerId: UUID, message: String, locale: String, priorMessages: List<ActionPriorMessage>) = result
 }
 
-private class CapturingVoiceHandler : ActionHandler<DeviceActionProposal> {
+private class CapturingVoiceHandler(private val beforeExecute: () -> Unit = {}) : ActionHandler<DeviceActionProposal> {
     var executions = 0
     var context: ActionContext? = null
     override fun supports(proposal: ActionProposal) = proposal is DeviceActionProposal
     override fun policyClass(proposal: DeviceActionProposal) = ActionPolicyClass.ROUTINE
     override fun execute(context: ActionContext, proposal: DeviceActionProposal): ActionOutcome {
+        beforeExecute()
         executions += 1
         this.context = context
         return ActionOutcome(

@@ -34,8 +34,11 @@ class VoiceActionService(
         message: String,
         priorMessages: List<ActionPriorMessage>,
         validateActive: () -> Unit = {},
+        onValidated: () -> Unit = {},
     ): VoiceActionAttempt = when (val result = proposals.propose(ownerId, message.trim(), locale, priorMessages)) {
         is ProposalResult.Proposed -> {
+            validateActive()
+            onValidated()
             validateActive()
             val outcome = executions.execute(
                 ActionContext(

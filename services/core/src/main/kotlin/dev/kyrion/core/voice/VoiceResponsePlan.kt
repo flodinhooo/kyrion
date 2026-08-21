@@ -16,6 +16,7 @@ sealed interface DialogueOutcome
 data object SessionGreetingOutcome : DialogueOutcome
 data object SessionFarewellOutcome : DialogueOutcome
 data object DialogueAcknowledgedOutcome : DialogueOutcome
+data object ActionProcessingOutcome : DialogueOutcome
 data class CommandExecutionOutcome(
     val executionConfirmed: Boolean,
     val succeeded: Boolean,
@@ -96,10 +97,18 @@ class VoiceResponseCatalog {
             "de" to listOf(
                 VoiceResponseVariant("neutral-01", "Hallo."),
                 VoiceResponseVariant("warm-01", "Hallo, schön dich zu hören."),
+                VoiceResponseVariant("friendly-01", "Hey, schön, dass du da bist."),
+                VoiceResponseVariant("ready-01", "Hallo, ich bin bereit."),
+                VoiceResponseVariant("warm-02", "Schön, von dir zu hören."),
+                VoiceResponseVariant("helpful-01", "Hey, was kann ich für dich tun?"),
             ),
             "en" to listOf(
                 VoiceResponseVariant("neutral-01", "Hello."),
                 VoiceResponseVariant("warm-01", "Hello, good to hear you."),
+                VoiceResponseVariant("friendly-01", "Hey, it's good to have you here."),
+                VoiceResponseVariant("ready-01", "Hello, I'm ready."),
+                VoiceResponseVariant("warm-02", "Good to hear from you."),
+                VoiceResponseVariant("helpful-01", "Hey, what can I do for you?"),
             ),
         ),
         "session.farewell" to mapOf(
@@ -120,6 +129,20 @@ class VoiceResponseCatalog {
             "en" to listOf(
                 VoiceResponseVariant("neutral-01", "Okay."),
                 VoiceResponseVariant("neutral-02", "Got it."),
+            ),
+        ),
+        "action.processing" to mapOf(
+            "de" to listOf(
+                VoiceResponseVariant("neutral-01", "Klar, gib mir einen Augenblick."),
+                VoiceResponseVariant("neutral-02", "Alles klar, ich kümmere mich darum."),
+                VoiceResponseVariant("neutral-03", "Verstanden, einen Moment bitte."),
+                VoiceResponseVariant("warm-01", "Gerne, ich kümmere mich darum."),
+            ),
+            "en" to listOf(
+                VoiceResponseVariant("neutral-01", "Sure, give me a moment."),
+                VoiceResponseVariant("neutral-02", "All right, I'm taking care of it."),
+                VoiceResponseVariant("neutral-03", "Understood, one moment please."),
+                VoiceResponseVariant("warm-01", "Of course, I'm taking care of it."),
             ),
         ),
         "command.succeeded" to mapOf(
@@ -281,6 +304,7 @@ class VoiceResponsePolicyRegistry {
                 "dialogue.acknowledged",
                 catalog,
             ),
+            FixedOutcomeResolver(ActionProcessingOutcome::class, "action.processing", catalog),
             CommandOutcomeResolver(catalog),
             DynamicOutcomeResolver(catalog),
         ).associateBy { it.outcomeType }

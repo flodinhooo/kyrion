@@ -132,6 +132,15 @@ class VoiceDialogueService(
                 .takeLast(6)
                 .map { ActionPriorMessage(it.role, it.content) },
             validateActive = { satellites.activeSession(satelliteId, credential, sessionId) },
+            onValidated = {
+                val processing = responsePolicies.resolve(
+                    ActionProcessingOutcome,
+                    VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
+                )
+                emitAudio(processing, turnId, emit) {
+                    satellites.activeSession(satelliteId, credential, sessionId)
+                }
+            },
         )
         if (actionAttempt == VoiceActionAttempt.NotAction) {
             val acknowledgement = responsePolicies.resolve(
