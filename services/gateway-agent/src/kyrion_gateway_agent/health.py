@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Any  # noqa: UP035
 
+from kyrion_gateway_agent.bluetooth import BluetoothLightError, known_melk_lights
+
 SERVICE_UNITS = {
     "home-assistant": "home-assistant.service",
     "matter": "matter-server.service",
@@ -40,11 +42,19 @@ def collect_health() -> dict[str, Any]:
             "playback": _audio_endpoint("@DEFAULT_AUDIO_SINK@", "playback"),
         },
         "zigbee": _zigbee_health(),
+        "bluetoothDevices": _bluetooth_devices(),
         "services": [
             {"id": service_id, "status": _service_status(unit)}
             for service_id, unit in SERVICE_UNITS.items()
         ],
     }
+
+
+def _bluetooth_devices() -> list[dict[str, object]]:
+    try:
+        return known_melk_lights()
+    except BluetoothLightError:
+        return []
 
 
 def _audio_endpoint(target: str, direction: str) -> dict[str, str] | None:
