@@ -300,7 +300,7 @@ export default function DevicesPage() {
             <div>
               <strong>{device.displayName}</strong>
               <small>{hardwareName}</small>
-              <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : "Lokales Netzwerk · Nanoleaf"}</small>
+              <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : device.provider === "bluetooth" ? "Bluetooth · kyrion-node" : "Lokales Netzwerk · Nanoleaf"}</small>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
@@ -332,7 +332,7 @@ export default function DevicesPage() {
       </div>}
     </section>)}</div>
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
-    <GatewayLightControlDialog device={selected?.provider === "zigbee" || selected?.provider === "bluetooth" ? selected : null} open={selected?.provider === "zigbee" || selected?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
+    <GatewayLightControlDialog device={selected?.provider === "zigbee" || selected?.provider === "bluetooth" ? selected : null} open={selected?.provider === "zigbee" || selected?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelected(null); }} onCommandSucceeded={load} />
     <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open && !pending && !deleteRoom) setRoomEditor(null); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="confirm-dialog-overlay" />

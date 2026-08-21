@@ -9,15 +9,17 @@ import {
 } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
 
-export function GatewayLightControlDialog({ device, open, onOpenChange }: {
+export function GatewayLightControlDialog({ device, open, onOpenChange, onCommandSucceeded }: {
   device: RuntimeDevice | null; open: boolean; onOpenChange: (open: boolean) => void;
+  onCommandSucceeded?: () => void;
 }) {
   if (!device) return null;
-  return <Content key={device.id} device={device} open={open} onOpenChange={onOpenChange} />;
+  return <Content key={device.id} device={device} open={open} onOpenChange={onOpenChange} onCommandSucceeded={onCommandSucceeded} />;
 }
 
-function Content({ device, open, onOpenChange }: {
+function Content({ device, open, onOpenChange, onCommandSucceeded }: {
   device: RuntimeDevice; open: boolean; onOpenChange: (open: boolean) => void;
+  onCommandSucceeded?: () => void;
 }) {
   const { t } = useWorkspace();
   const [brightness, setBrightness] = useState(device.state?.brightness ?? 50);
@@ -43,7 +45,11 @@ function Content({ device, open, onOpenChange }: {
       const statusResponse = await fetch(`/api/device-commands/${value.commandId}`, { cache: "no-store" });
       const statusValue: unknown = await statusResponse.json().catch(() => null);
       if (!statusResponse.ok || !isDeviceCommandStatus(statusValue)) { setStatus("failed"); return; }
-      if (statusValue.status === "succeeded") { setStatus("succeeded"); return; }
+      if (statusValue.status === "succeeded") {
+        setStatus("succeeded");
+        window.setTimeout(() => onCommandSucceeded?.(), 5_500);
+        return;
+      }
       if (statusValue.status === "failed") { setStatus("failed"); return; }
     }
     setStatus("failed");
