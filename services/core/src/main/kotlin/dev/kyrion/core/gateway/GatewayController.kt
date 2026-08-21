@@ -49,6 +49,10 @@ data class AddZigbeeDeviceRequest(
     @field:NotBlank @field:Size(max = 160) val displayName: String,
     val deviceClass: dev.kyrion.core.integration.DeviceClass = dev.kyrion.core.integration.DeviceClass.OTHER,
 )
+data class AddBluetoothDeviceRequest(
+    @field:Pattern(regexp = "^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$") val deviceId: String,
+    @field:NotBlank @field:Size(max = 160) val displayName: String,
+)
 
 @RestController
 @RequestMapping("/v1/gateways")
@@ -56,6 +60,7 @@ class GatewayOwnerController(
     private val service: GatewayService,
     private val commands: GatewayCommandService,
     private val zigbeeDevices: ZigbeeDeviceSyncService,
+    private val bluetoothDevices: BluetoothDeviceSyncService,
 ) {
     @GetMapping fun all(request: HttpServletRequest) = service.all(request.ownerId())
 
@@ -79,6 +84,15 @@ class GatewayOwnerController(
     @GetMapping("/{id}/zigbee/devices")
     fun zigbeeCandidates(@PathVariable id: UUID, request: HttpServletRequest) =
         zigbeeDevices.candidates(request.ownerId(), id, commands)
+
+    @PostMapping("/{id}/bluetooth/devices")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addBluetoothDevice(@PathVariable id: UUID, @Valid @RequestBody body: AddBluetoothDeviceRequest, request: HttpServletRequest) =
+        bluetoothDevices.add(request.ownerId(), id, body.deviceId, body.displayName, commands)
+
+    @GetMapping("/{id}/bluetooth/devices")
+    fun bluetoothCandidates(@PathVariable id: UUID, request: HttpServletRequest) =
+        bluetoothDevices.candidates(request.ownerId(), id, commands)
 
     @PostMapping("/{id}/zigbee/power") @ResponseStatus(HttpStatus.ACCEPTED)
     fun power(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeeCommandRequest, request: HttpServletRequest): GatewayCommandResponse {
@@ -109,6 +123,7 @@ class GatewayAgentController(
     private val service: GatewayService,
     private val commands: GatewayCommandService,
     private val zigbeeDevices: ZigbeeDeviceSyncService,
+    private val bluetoothDevices: BluetoothDeviceSyncService,
 ) {
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
@@ -131,6 +146,7 @@ class GatewayAgentController(
         val credential = authorization.substring(7)
         service.heartbeat(nodeId, credential, body.health)
         zigbeeDevices.sync(service.authenticate(nodeId, credential), body.health)
+        bluetoothDevices.sync(service.authenticate(nodeId, credential), body.health)
     }
 
     @PostMapping("/commands/next")

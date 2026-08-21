@@ -6,6 +6,7 @@ import dev.kyrion.core.integration.IntegrationConnection
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.integration.NanoleafIntegrationService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
+import dev.kyrion.core.gateway.BluetoothDeviceSyncService
 import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import jakarta.servlet.http.HttpServletRequest
@@ -63,17 +64,21 @@ class DeviceCatalogService(
         val ownerObservations = observations.findAll(ownerId).associateBy { it.connectionId }
         val zigbeeDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.zigbee?.devices.orEmpty() }
             .associateBy { it.ieeeAddress }
+        val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
+            .associateBy { it.address }
         return connections.findAll(ownerId).map { connection ->
             val observation = ownerObservations[connection.id]
             val currentAvailability = observation?.takeIf { isFresh(it.observedAt) }?.availability
                 ?: DeviceAvailability.UNKNOWN
             val zigbee = zigbeeDevices[connection.endpointHost]
+            val bluetooth = bluetoothDevices[connection.endpointHost]
             DeviceCatalogItem(
                 id = connection.id,
                 provider = connection.provider,
                 deviceClass = connection.deviceClass.value,
                 displayName = connection.displayName,
                 hardwareName = zigbee?.let { listOf(it.vendor, it.description).filter(String::isNotBlank).joinToString(" ") }
+                    ?: bluetooth?.let { "${it.name} ${it.model}" }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,
                 room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name, it.roomType) },
                 capabilities = capabilities(connection),
@@ -82,6 +87,8 @@ class DeviceCatalogService(
                 state = zigbee?.let {
                     DeviceStateView(it.on, it.brightness?.let { raw -> (raw * 100 / 254).coerceIn(0, 100) },
                         it.hue, it.saturation, it.colorTemperature)
+                } ?: bluetooth?.let {
+                    DeviceStateView(it.on, it.brightness, it.hue, it.saturation, null)
                 },
             )
         }
@@ -95,6 +102,7 @@ class DeviceCatalogService(
     private fun capabilities(connection: IntegrationConnection): List<DeviceCapabilityView> = when (connection.provider) {
         NanoleafIntegrationService.PROVIDER -> NANOLEAF_CAPABILITIES.map(::DeviceCapabilityView)
         ZigbeeDeviceSyncService.PROVIDER -> ZIGBEE_CAPABILITIES.map(::DeviceCapabilityView)
+        BluetoothDeviceSyncService.PROVIDER -> BLUETOOTH_CAPABILITIES.map(::DeviceCapabilityView)
         else -> emptyList()
     }
 
@@ -111,6 +119,11 @@ class DeviceCatalogService(
             DeviceCommandService.POWER_SET,
             DeviceCommandService.BRIGHTNESS_SET,
             "light.setColour",
+        )
+        val BLUETOOTH_CAPABILITIES = listOf(
+            DeviceCommandService.POWER_SET,
+            DeviceCommandService.BRIGHTNESS_SET,
+            DeviceCommandService.COLOR_SET,
         )
     }
 }

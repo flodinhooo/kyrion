@@ -66,6 +66,24 @@ class GatewayServiceTest {
         }.isInstanceOf(GatewayHealthInvalidException::class.java)
     }
 
+    @Test
+    fun `heartbeat rejects unsupported bluetooth devices`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "kyrion-node")
+        val registered = service.enroll(
+            enrollment.enrollmentToken, "kyrion-node", "0.1.0", "Debian", "13", "aarch64",
+        )
+        val invalid = GatewayBluetoothDevice(
+            "C7:7C:08:10:37:EA", "Unknown", "OA20", true, null, null, null, null,
+        )
+
+        assertThatThrownBy {
+            service.heartbeat(
+                registered.node.id, registered.gatewayToken,
+                validHealth().copy(bluetoothDevices = listOf(invalid)),
+            )
+        }.isInstanceOf(GatewayHealthInvalidException::class.java)
+    }
+
     private fun validHealth() = GatewayHealth(
         42.2, false, 8_000, 7_000, 64_000, 48_000,
         GatewayInterfaceHealth(true, true), GatewayInterfaceHealth(true, false),

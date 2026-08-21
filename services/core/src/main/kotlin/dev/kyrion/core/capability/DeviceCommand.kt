@@ -11,6 +11,7 @@ import dev.kyrion.core.integration.NanoleafUnavailableException
 import dev.kyrion.core.gateway.GatewayCommandService
 import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
+import dev.kyrion.core.gateway.BluetoothDeviceSyncService
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -76,18 +77,28 @@ class DeviceCommandService(
     private val gatewayCommands: GatewayCommandService? = null,
 ) {
     fun enqueue(ownerId: UUID, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
-        if (request.selector.provider.trim().lowercase() != ZigbeeDeviceSyncService.PROVIDER
+        val provider = request.selector.provider.trim().lowercase()
+        if (provider !in setOf(ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER)
             || request.selector.deviceId == null || request.selector.roomName != null) throw DeviceCommandInvalidException()
         validateArguments(request)
         val target = connections.find(ownerId, request.selector.deviceId)
-            ?.takeIf { it.provider == ZigbeeDeviceSyncService.PROVIDER } ?: throw DeviceTargetNotFoundException()
+            ?.takeIf { it.provider == provider } ?: throw DeviceTargetNotFoundException()
         val node = gateways?.all(ownerId)?.singleOrNull { view ->
-            view.health?.zigbee?.devices?.any { it.ieeeAddress == target.endpointHost } == true
+            if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                view.health?.zigbee?.devices?.any { it.ieeeAddress == target.endpointHost } == true
+            } else {
+                view.health?.bluetoothDevices?.any { it.address == target.endpointHost } == true
+            }
         } ?: throw DeviceTargetNotFoundException()
         val (type, payload) = when (request.capability) {
-            POWER_SET -> "zigbee.power" to mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!)
-            BRIGHTNESS_SET -> "zigbee.brightness" to mapOf("deviceId" to target.endpointHost, "brightness" to (request.arguments.brightness!! * 254 / 100))
-            COLOR_SET -> "zigbee.color" to mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!)
+            POWER_SET -> "$provider.power" to mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!)
+            BRIGHTNESS_SET -> "$provider.brightness" to mapOf(
+                "deviceId" to target.endpointHost,
+                "brightness" to if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                    request.arguments.brightness!! * 254 / 100
+                } else request.arguments.brightness!!,
+            )
+            COLOR_SET -> "$provider.color" to mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!)
             else -> throw DeviceCapabilityUnsupportedException()
         }
         val commandId = gatewayCommands?.enqueue(ownerId, node.id, type, payload) ?: throw DeviceCommandInvalidException()
@@ -103,7 +114,7 @@ class DeviceCommandService(
         recordProposal: Boolean = true,
     ): DeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
-        if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER)) {
+        if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER)) {
             throw DeviceCapabilityUnsupportedException()
         }
         val roomName = request.selector.roomName?.trim()?.takeIf { it.isNotBlank() }
@@ -135,14 +146,15 @@ class DeviceCommandService(
         val outcomes = targets.map { target ->
             try {
                 when (request.capability) {
-                    POWER_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
-                        executeZigbee(ownerId, target.endpointHost, "zigbee.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!))
+                    POWER_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
+                        executeGateway(ownerId, provider, target.endpointHost, "$provider.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!))
                     } else nanoleaf.power(ownerId, target.id, request.arguments.on!!, true, correlationId)
-                    BRIGHTNESS_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
-                        executeZigbee(ownerId, target.endpointHost, "zigbee.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to (request.arguments.brightness!! * 254 / 100)))
+                    BRIGHTNESS_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
+                        val value = if (provider == ZigbeeDeviceSyncService.PROVIDER) request.arguments.brightness!! * 254 / 100 else request.arguments.brightness!!
+                        executeGateway(ownerId, provider, target.endpointHost, "$provider.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to value))
                     } else nanoleaf.brightness(ownerId, target.id, request.arguments.brightness!!, true, correlationId)
-                    COLOR_SET -> if (provider == ZigbeeDeviceSyncService.PROVIDER) {
-                        executeZigbee(ownerId, target.endpointHost, "zigbee.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!))
+                    COLOR_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
+                        executeGateway(ownerId, provider, target.endpointHost, "$provider.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!))
                     } else throw DeviceCapabilityUnsupportedException()
                 }
                 observe(ownerId, target.id, DeviceAvailability.ONLINE)
@@ -167,9 +179,13 @@ class DeviceCommandService(
         )
     }
 
-    private fun executeZigbee(ownerId: UUID, ieeeAddress: String, type: String, payload: Map<String, Any>) {
+    private fun executeGateway(ownerId: UUID, provider: String, deviceAddress: String, type: String, payload: Map<String, Any>) {
         val node = gateways?.all(ownerId)?.singleOrNull { view ->
-            view.health?.zigbee?.devices?.any { it.ieeeAddress == ieeeAddress } == true
+            if (provider == ZigbeeDeviceSyncService.PROVIDER) {
+                view.health?.zigbee?.devices?.any { it.ieeeAddress == deviceAddress } == true
+            } else {
+                view.health?.bluetoothDevices?.any { it.address == deviceAddress } == true
+            }
         } ?: throw DeviceTargetNotFoundException()
         if (gatewayCommands?.enqueueAndAwait(ownerId, node.id, type, payload) != true) throw RuntimeException("Gateway command failed")
     }
