@@ -23,3 +23,13 @@ flash a radio or create a Thread or Matter network.
 for local discovery but without privileged mode, Linux capabilities, the Docker
 socket, D-Bus, or radio access. Its persistent configuration is kept under
 `/var/lib/homeassistant`. OTBR and Matter remain separate services.
+
+`prepare-zbt2-thread-firmware.sh` creates a root-only, checksum-verified restore
+set for the accepted ZBT-2. `flash-zbt2-thread.sh` switches that adapter from
+Zigbee NCP to OpenThread RCP and verifies the resulting Spinel version.
+
+`install-otbr.sh` enables the documented forwarding settings for the wired
+infrastructure interface and starts the official OTBR image by immutable image
+digest. The container receives only `NET_ADMIN`, `NET_RAW`, `/dev/net/tun`, and
+the accepted ZBT-2 serial device. `NET_RAW` is required for IPv6 Multicast
+Listener Discovery. Persistent Thread state is kept under `/var/lib/otbr`.
