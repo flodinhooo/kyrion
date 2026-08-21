@@ -6,7 +6,7 @@ import { ArrowRight, Box, LampDesk, Plus } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
-import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
+import { GatewayLightControlDialog } from "@/components/gateway-light-control-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isRuntimeDeviceList, type RuntimeDevice } from "@/features/devices/contracts";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
@@ -125,6 +125,6 @@ export default function HomePage() {
       {roomEditor && <form onSubmit={createRoom}><label>{t.homeRoomName}<input autoFocus required maxLength={120} value={roomEditor.name} onChange={(event) => setRoomEditor((current) => current ? { ...current, name: event.target.value } : current)} /></label><label>{t.homeRoomType}<select value={roomEditor.roomType} onChange={(event) => setRoomEditor((current) => current ? { ...current, roomType: event.target.value as RoomType } : current)}>{roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}</select></label><div className="room-dialog-actions"><button type="submit" disabled={!roomEditor.name.trim()}><Plus aria-hidden="true" />{t.homeCreateRoom}</button></div></form>}
     </Dialog.Content></Dialog.Portal></Dialog.Root>
     <DeviceControlDialog connection={selectedDevice?.provider === "nanoleaf" ? connections.find((item) => item.id === selectedDevice.id) ?? null : null} open={selectedDevice?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelectedDevice(null); }} />
-    <ZigbeeDeviceControlDialog device={selectedDevice?.provider === "zigbee" ? selectedDevice : null} open={selectedDevice?.provider === "zigbee"} onOpenChange={(open) => { if (!open) setSelectedDevice(null); }} />
+    <GatewayLightControlDialog device={selectedDevice?.provider === "zigbee" || selectedDevice?.provider === "bluetooth" ? selectedDevice : null} open={selectedDevice?.provider === "zigbee" || selectedDevice?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelectedDevice(null); }} />
   </section>;
 }

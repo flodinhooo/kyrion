@@ -6,7 +6,7 @@ import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
-import { ZigbeeDeviceControlDialog } from "@/components/zigbee-device-control-dialog";
+import { GatewayLightControlDialog } from "@/components/gateway-light-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type DeviceClass, type RuntimeDevice } from "@/features/devices/contracts";
@@ -168,11 +168,11 @@ export default function DevicesPage() {
 
   async function quickPower(id: string, on: boolean) {
     const device = devices.find((item) => item.id === id);
-    if (device?.provider === "zigbee") {
+    if (device?.provider === "zigbee" || device?.provider === "bluetooth") {
       setCommandStates((current) => ({ ...current, [id]: "pending" }));
       const response = await fetch("/api/device-commands/async", {
         method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
-        body: JSON.stringify({ capability: "power.set", selector: { provider: "zigbee", deviceId: id }, arguments: { on } }),
+        body: JSON.stringify({ capability: "power.set", selector: { provider: device.provider, deviceId: id }, arguments: { on } }),
       });
       const value: unknown = await response.json().catch(() => null);
       if (!response.ok || !isAsyncDeviceCommand(value)) { setCommandStates((current) => ({ ...current, [id]: "failed" })); return; }
@@ -332,7 +332,7 @@ export default function DevicesPage() {
       </div>}
     </section>)}</div>
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
-    <ZigbeeDeviceControlDialog device={selected?.provider === "zigbee" ? selected : null} open={selected?.provider === "zigbee"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
+    <GatewayLightControlDialog device={selected?.provider === "zigbee" || selected?.provider === "bluetooth" ? selected : null} open={selected?.provider === "zigbee" || selected?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open && !pending && !deleteRoom) setRoomEditor(null); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="confirm-dialog-overlay" />

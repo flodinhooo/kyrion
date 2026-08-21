@@ -4,13 +4,17 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isGatewayNodeList, isGatewayZigbeeDeviceList, type GatewayNode, type GatewayZigbeeDevice } from "@/features/gateways/contracts";
+import {
+  isGatewayBluetoothDeviceList, isGatewayNodeList, isGatewayZigbeeDeviceList,
+  type GatewayBluetoothDevice, type GatewayNode, type GatewayZigbeeDevice,
+} from "@/features/gateways/contracts";
 import { isDiscoveredNanoleafList, type DiscoveredNanoleaf } from "@/features/integrations/contracts";
 
 export default function AddDevicePage() {
   const { t } = useWorkspace();
   const [nodes, setNodes] = useState<GatewayNode[]>([]);
   const [zigbeeCandidates, setZigbeeCandidates] = useState<GatewayZigbeeDevice[]>([]);
+  const [bluetoothCandidates, setBluetoothCandidates] = useState<GatewayBluetoothDevice[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [networkDevices, setNetworkDevices] = useState<DiscoveredNanoleaf[] | null>(null);
   const [networkSearching, setNetworkSearching] = useState(false);
@@ -58,6 +62,26 @@ export default function AddDevicePage() {
     return () => { disposed = true; window.clearInterval(interval); };
   }, [secondsLeft, zigbeeNode]);
 
+  const bluetoothNode = useMemo(() => nodes.find((node) =>
+    node.availability === "online" && node.health?.bluetooth), [nodes]);
+  useEffect(() => {
+    if (!bluetoothNode) return;
+    let disposed = false;
+    const loadCandidates = async () => {
+      try {
+        const response = await fetch(
+          `/api/gateways/${bluetoothNode.id}/bluetooth/devices`, { cache: "no-store" },
+        );
+        const value: unknown = await response.json();
+        if (!response.ok || !isGatewayBluetoothDeviceList(value)) throw new Error("invalid candidates");
+        if (!disposed) setBluetoothCandidates(value);
+      } catch { if (!disposed) setError(true); }
+    };
+    void loadCandidates();
+    const interval = window.setInterval(loadCandidates, 3_000);
+    return () => { disposed = true; window.clearInterval(interval); };
+  }, [bluetoothNode]);
+
   async function startZigbeeSearch() {
     if (!zigbeeNode) return;
     setError(false);
@@ -97,6 +121,22 @@ export default function AddDevicePage() {
     } catch { setError(true); } finally { setAddingDevice(null); }
   }
 
+  async function addBluetoothDevice(deviceId: string, fallbackName: string) {
+    if (!bluetoothNode) return;
+    const displayName = (deviceNames[deviceId] ?? fallbackName).trim();
+    if (!displayName) return;
+    setAddingDevice(deviceId); setError(false);
+    try {
+      const response = await fetch(`/api/gateways/${bluetoothNode.id}/bluetooth/devices`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ deviceId, displayName }),
+      });
+      if (!response.ok) throw new Error("add failed");
+      setAddedDevices((current) => [...new Set([...current, deviceId])]);
+    } catch { setError(true); } finally { setAddingDevice(null); }
+  }
+
   return <section className="plugins-stage add-device-stage">
     <Link className="back-link" href="/home">← {t.addDeviceBackHome}</Link>
     <header className="plugins-header"><div><p className="eyebrow">Kyrion Discovery</p><h1>{t.addDeviceTitle}</h1><p>{t.addDeviceDescription}</p></div></header>
@@ -112,6 +152,22 @@ export default function AddDevicePage() {
           const fallbackName = `${device.vendor} ${device.model}`.trim();
           return <div className="discovery-candidate" key={device.ieeeAddress}><div><span>{fallbackName}</span><code>{device.ieeeAddress}</code></div>{addedDevices.includes(device.ieeeAddress) ? <p className="device-status online">{t.addDeviceAdded}</p> : <><label>{t.addDeviceName}<input maxLength={160} value={deviceNames[device.ieeeAddress] ?? fallbackName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.ieeeAddress]: event.target.value }))} /></label><label>{t.deviceClass}<select value={deviceClasses[device.ieeeAddress] ?? "other"} onChange={(event) => setDeviceClasses((current) => ({ ...current, [device.ieeeAddress]: event.target.value as "light" | "switch" | "sensor" | "other" }))}>{(["light", "switch", "sensor", "other"] as const).map((value) => <option key={value} value={value}>{t.deviceClasses[value]}</option>)}</select></label><button disabled={addingDevice === device.ieeeAddress} onClick={() => void addZigbeeDevice(device.ieeeAddress, fallbackName)}>{addingDevice === device.ieeeAddress ? t.addDeviceAdding : t.addDeviceConfirm}</button></>}</div>;
         })}</div>}
+      </article>
+      <article className="pairing-card">
+        <div className="discovery-heading"><div><small>Bluetooth LE · 2.4 GHz</small><h2>{t.addDeviceBluetoothTitle}</h2></div><span className={`device-status ${bluetoothNode ? "online" : "unknown"}`}>{bluetoothNode ? t.addDeviceReady : t.addDeviceUnavailable}</span></div>
+        <p>{t.addDeviceBluetoothDescription}</p>
+        <p className="discovery-hint">{t.addDeviceBluetoothHint}</p>
+        <div className="discovery-results"><strong>{t.addDeviceFound}</strong>
+          {bluetoothCandidates.length === 0 ? <p>{t.addDeviceNoneFound}</p> : bluetoothCandidates.map((device) => {
+            const fallbackName = `${device.name} ${device.model}`;
+            return <div className="discovery-candidate" key={device.address}><div><span>{fallbackName}</span><code>{device.address}</code></div>
+              {addedDevices.includes(device.address) ? <p className="device-status online">{t.addDeviceAdded}</p> : <>
+                <label>{t.addDeviceName}<input maxLength={160} value={deviceNames[device.address] ?? fallbackName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.address]: event.target.value }))} /></label>
+                <button disabled={addingDevice === device.address} onClick={() => void addBluetoothDevice(device.address, fallbackName)}>{addingDevice === device.address ? t.addDeviceAdding : t.addDeviceConfirm}</button>
+              </>}
+            </div>;
+          })}
+        </div>
       </article>
       <article className="pairing-card">
         <div className="discovery-heading"><div><small>mDNS · IPv4</small><h2>{t.addDeviceNetworkTitle}</h2></div><span className="device-status online">{t.addDeviceReady}</span></div>
