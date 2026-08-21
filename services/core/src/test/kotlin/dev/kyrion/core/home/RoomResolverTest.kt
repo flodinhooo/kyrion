@@ -25,6 +25,26 @@ class RoomResolverTest {
     }
 
     @Test
+    fun `german hallway synonyms resolve one unique semantic room`() {
+        val hallway = room("Gang", RoomType.HALLWAY)
+        val resolver = RoomResolver(RoomResolverRepository(owner, listOf(hallway)))
+
+        listOf("Flur", "Gang", "Diele").forEach { requested ->
+            assertEquals(hallway, (resolver.resolve(owner, requested, "de") as RoomResolution.Resolved).room)
+        }
+    }
+
+    @Test
+    fun `english hallway synonyms resolve one unique semantic room`() {
+        val hallway = room("Passage", RoomType.HALLWAY)
+        val resolver = RoomResolver(RoomResolverRepository(owner, listOf(hallway)))
+
+        listOf("hallway", "hall", "corridor").forEach { requested ->
+            assertEquals(hallway, (resolver.resolve(owner, requested, "en") as RoomResolution.Resolved).room)
+        }
+    }
+
+    @Test
     fun `semantic category never guesses between multiple matching rooms`() {
         val result = RoomResolver(RoomResolverRepository(owner, listOf(room("Setup", RoomType.OFFICE), room("Studio", RoomType.OFFICE))))
             .resolve(owner, "Büro", "de")

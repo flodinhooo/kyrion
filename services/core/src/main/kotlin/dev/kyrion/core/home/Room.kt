@@ -64,6 +64,8 @@ class RoomResolver(private val rooms: RoomRepository) {
                 "badezimmer" to setOf(RoomType.BATHROOM), "garten" to setOf(RoomType.GARDEN),
                 "garage" to setOf(RoomType.GARAGE), "werkstatt" to setOf(RoomType.WORKSHOP),
                 "gamingraum" to setOf(RoomType.GAMING_ROOM),
+                "flur" to setOf(RoomType.HALLWAY), "gang" to setOf(RoomType.HALLWAY),
+                "diele" to setOf(RoomType.HALLWAY),
             ),
             "en" to mapOf(
                 "office" to setOf(RoomType.OFFICE), "study" to setOf(RoomType.STUDY),
@@ -71,6 +73,8 @@ class RoomResolver(private val rooms: RoomRepository) {
                 "kitchen" to setOf(RoomType.KITCHEN), "bathroom" to setOf(RoomType.BATHROOM),
                 "garden" to setOf(RoomType.GARDEN), "garage" to setOf(RoomType.GARAGE),
                 "workshop" to setOf(RoomType.WORKSHOP), "gaming room" to setOf(RoomType.GAMING_ROOM),
+                "hallway" to setOf(RoomType.HALLWAY), "hall" to setOf(RoomType.HALLWAY),
+                "corridor" to setOf(RoomType.HALLWAY),
             ),
         )
     }
