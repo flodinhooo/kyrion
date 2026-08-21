@@ -60,6 +60,7 @@ data class GatewayHealth(
     val audio: GatewayAudioHealth? = null,
     val zigbee: GatewayZigbeeHealth?,
     val services: List<GatewayServiceHealth>,
+    val bluetoothDevices: List<GatewayBluetoothDevice> = emptyList(),
 )
 
 data class GatewayInterfaceHealth(val present: Boolean, val connected: Boolean)
@@ -94,6 +95,16 @@ data class GatewayZigbeeDevice(
     val hue: Double? = null,
     val saturation: Double? = null,
     val colorTemperature: Int? = null,
+)
+data class GatewayBluetoothDevice(
+    val address: String,
+    val name: String,
+    val model: String,
+    val supported: Boolean,
+    val on: Boolean?,
+    val brightness: Int?,
+    val hue: Double?,
+    val saturation: Double?,
 )
 data class GatewayServiceHealth(val id: String, val status: String)
 
@@ -274,6 +285,13 @@ class GatewayService(
                         (it.colorTemperature != null && it.colorTemperature !in 1..1000) ||
                         (it.linkquality != null && it.linkquality !in 0..255)
                 })) throw GatewayHealthInvalidException()
+        if (health.bluetoothDevices.size > 32 || health.bluetoothDevices.any {
+                !it.address.matches(Regex("^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")) ||
+                    it.name != "MELK-OA20" || it.model != "OA20" || !it.supported ||
+                    (it.brightness != null && it.brightness !in 0..100) ||
+                    (it.hue != null && it.hue !in 0.0..360.0) ||
+                    (it.saturation != null && it.saturation !in 0.0..100.0)
+            }) throw GatewayHealthInvalidException()
         if (health.services.size > 32 || health.services.any {
                 it.id.length !in 1..80 || !it.id.matches(Regex("^[a-z0-9.-]+$")) ||
                     it.status !in setOf("ready", "unavailable", "not_configured", "degraded", "unknown")
