@@ -1,6 +1,6 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-12
+Last updated: 2026-08-21
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
@@ -10,21 +10,38 @@ session. The current implementation status is documented in [README.md](README.m
 Canonical continuation:
 [Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md).
 
+Latest physical checkpoint:
+[Voice Satellite closeout — 2026-08-21](2026-08-21-voice-satellite-closeout.md).
+
+- [x] Replace productive Faster-Whisper final STT with the provider-neutral
+  local Parakeet/NeMo-Speech.cpp HTTP path; retain explicit locale, upstream
+  VAD, visible failure and no silent fallback.
+- [x] Execute one German multi-room light command successfully through the
+  physical Voice Satellite after the Parakeet switch.
+- [x] Emit a truthful fixed `action.processing` response only after Core has
+  validated an action proposal and revalidate the session before execution.
+- [x] Owner-review and register four German processing responses and four
+  additional German greetings with checksum-pinned audio.
+- [ ] Physically verify the deployed audible sequence: processing response,
+  device change and final outcome response.
+- [ ] Record twenty consecutive physical action attempts covering multi-room,
+  polarity, unavailable targets and partial success.
+- [ ] Add a typed partial-success Voice outcome and fixed/template response.
+
 - [x] Close dedicated Short-TTS provider discovery with no accepted provider.
   Piper, Chatterbox, Qwen and CosyVoice are C; MOSS-TTS-Nano is not accepted;
   Zonos remains research-only. Do not run further discovery or downloads for
   this MVP.
 - [x] Route session greeting, acknowledgement, farewell and dynamic replies
   through the existing typed response resolver in the live batch Voice path.
-- [x] Keep registered command success/failure templates on the complete-
-  utterance cache with the existing NormalTtsFallback on a miss. Do not expose
-  them as spoken Voice outcomes until the Voice orchestrator receives a real
-  Core-confirmed command result.
-- [ ] Record, listen to and owner-approve the twelve Fixed Velora WAVs listed in
-  the [Voice MVP completion report](2026-08-11-stable-voice-mvp.md), then
-  register them with the checksum-pinned asset pipeline.
-- [ ] Run the documented Raspberry Pi batch-Voice acceptance after the approved
-  Fixed assets are deployed.
+- [x] Speak registered command success/failure responses only from the real
+  Core-confirmed Action Orchestrator outcome; never infer success from model
+  text.
+- [ ] Complete the remaining English Fixed Velora WAV review and registration.
+  German greeting, farewell, acknowledgement, command-result and processing
+  assets are registered; English assets remain pending.
+- [ ] Complete the documented Raspberry Pi batch-Voice acceptance, including
+  processing/result order, repeated action reliability and English assets.
 
 ## Closed Short-TTS provider benchmark
 

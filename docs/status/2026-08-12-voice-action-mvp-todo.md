@@ -117,14 +117,14 @@ outcomes; mismatched or still-running replays are rejected.
   response still follows the real action outcome.
 - [ ] Add typed outcomes and catalog resolvers for `target.not_found`,
   `target.ambiguous`, `device.offline` and `action.denied`.
-- [ ] Add generic Fixed `command.succeeded` and `command.failed` variants while
+- [x] Add generic Fixed `command.succeeded` and `command.failed` variants while
   retaining target-specific Template responses.
 - [x] Prevent `command.succeeded` unless a complete successful result is
   confirmed.
 - [ ] Treat partial success as a separate Template outcome.
 - [x] Do not play `dialogue.acknowledged` before command execution.
-- [ ] Use silence or a semantically neutral earcon if processing feedback is
-  later required.
+- [x] Resolve processing feedback with the typed, truthful `action.processing`
+  catalog rather than an untyped acknowledgement or success-like response.
 - [x] Ensure cancelled or stale turns cannot execute after proposal or emit
   queued result audio.
 
@@ -160,7 +160,8 @@ outcomes; mismatched or still-running replays are rejected.
 
 ## Phase E — Hardware and integrations
 
-- [ ] Reuse the accepted action path for Zigbee Hue power.
+- [x] Reuse the accepted action path for Zigbee Hue power, including one
+  physically successful German multi-room Voice command after the STT switch.
 - [ ] Add brightness only after power reliability passes.
 - [ ] Harden Zigbee async timeout, retry and idempotency boundaries.
 - [ ] Add Sonoff button events as a bounded event slice.

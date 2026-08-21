@@ -1,6 +1,18 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-12
+Last updated: 2026-08-21
+
+## Latest Voice checkpoint — 2026-08-21
+
+The physical German multi-room light command succeeded on its first attempt
+after replacing Faster-Whisper with local NVIDIA Parakeet behind a
+provider-neutral HTTP boundary. Core now emits owner-approved, checksum-pinned
+`action.processing` audio only after proposal validation and before execution,
+then follows with the real action outcome. Four additional German greetings
+are also active. Continue from the
+[Voice Satellite closeout](2026-08-21-voice-satellite-closeout.md), the
+[Parakeet decision](2026-08-21-parakeet-stt-replacement.md) and the
+[processing-feedback report](2026-08-21-voice-processing-feedback.md).
 
 ## Current focused plan — 2026-08-12
 
@@ -663,13 +675,14 @@ in browser local storage. Continue with one verified vertical slice at a time.
 In a new agent chat, use this prompt:
 
 > Read `AGENTS.md`, `README.md`, `docs/status/README.md`,
-> `docs/status/TODO.md`, the Phase 3.1 report, both 2026-08-10 STT spike reports,
-> ADR 0009 and the Qwen streaming closeout. Inspect uncommitted changes. Phase
-> 3.1 physical PCM uplink acceptance passed. Faster-Whisper rolling streaming
-> and Nemotron 3.5 integration were both rejected; retain bounded final
-> `small/int8` and Chatterbox as fallbacks. Do not change Core or the Voice
-> Pipeline unless a new stateful local STT candidate clearly wins the preserved
-> private quality and latency benchmark.
+> `docs/status/TODO.md` and
+> `docs/status/2026-08-21-voice-satellite-closeout.md`. Inspect uncommitted
+> changes and do not touch concurrent Thread/Matter work. The productive final
+> STT path is local Parakeet through NeMo-Speech.cpp on port 8040;
+> Faster-Whisper is explicit compatibility only. The first physical German
+> multi-room action succeeded after the switch. Next verify the deployed
+> processing-response/device/result order, then run the twenty-attempt physical
+> reliability matrix and add typed partial-success feedback.
 
 For runtime commands, see [Local Development Startup](../development-startup.md).
 

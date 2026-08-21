@@ -127,32 +127,35 @@ out beyond scaffolding.
   cancellation/reconnect, bounded jitter buffering and raw PipeWire playback
   passed automated and physical checks. Clean playback uses a 320 ms prebuffer.
 - Core owns authenticated voice sessions and typed Fixed/Template/Dynamic plans
-  (ADR 0010). Live batch dialogue requests a greeting, acknowledges valid
-  non-terminal STT, synthesises dynamic dialogue and closes on deterministic
-  farewell intent.
+  (ADR 0010). Live batch dialogue requests a greeting, routes valid actions
+  through the shared Action Orchestrator, emits `action.processing` only after
+  proposal validation, executes after a second active-session check and speaks
+  the confirmed outcome.
 - Fixed audio is checksum-pinned in a manifest. Templates use trusted slots and
   an owner-isolated complete-utterance WAV cache. Misses and dynamic answers use
   the provider-neutral normal batch fallback.
-- Twelve DE/EN greeting/farewell/acknowledgement WAVs are specified but not yet
-  owner-created, listened to or approved; the manifest marks them pending.
+- German greeting, farewell, acknowledgement, command-result and processing
+  WAVs are owner-reviewed and checksum-pinned. Four additional German
+  greetings and four processing variants were approved on 2026-08-21. English
+  counterparts remain pending.
 - A first XTTS-generated review batch exists outside Git: eight candidates were
   rejected, four remain unreviewed, none was accepted or registered. Do not
   trim, repair, register or regenerate these as an implicit Short-TTS experiment.
   A curated sound-engineering comparison package also exists outside Git; the
   immediate continuation is to agree the performance/recording approach and
   create twelve high-quality reviewed recordings.
-- Command success/failure templates exist, but live Pi voice does not yet speak
-  them because the controller does not receive the actual Core command result
-  and correlation ID. It must never infer success from model text or introduce
-  a second execution path.
+- Live Pi Voice uses the shared Core action result and correlation path for
+  command success/failure. It never infers success from model text. Typed
+  partial-success speech remains open.
 - Adaptive voice answers allow concise two-to-four-sentence responses, prior
   claim correction and a 256-token safety ceiling; physical before/after
   acceptance is still open.
 
 Provider conclusions:
 
-- Faster-Whisper `small/int8` remains bounded final-STT baseline; rolling
-  streaming failed latency.
+- NVIDIA Parakeet TDT 0.6B v3 through NeMo-Speech.cpp is the productive bounded
+  final-STT provider. Faster-Whisper remains explicit compatibility only and
+  is never a silent fallback. Upstream VAD remains mandatory.
 - Nemotron 3.5 CPU Q8 did not clearly beat the quality gate and is frozen no-go.
 - Qwen 1.7B streaming mapped/cancelled correctly but failed latency/continuity.
 - CosyVoice failed its cheap streaming gate.
@@ -192,15 +195,15 @@ These results predate future changes; rerun proportionate checks after edits.
 
 ## Immediate open checkpoints
 
-1. Discuss the curated examples with the sound engineer, then create,
-   listen-review and register the twelve fixed Velora WAVs one by one.
-2. Run physical DE/EN Pi stable-Voice-MVP acceptance.
-3. Connect spoken command templates only to real Core results/correlation IDs.
-4. Repeat physical DE/EN text, brightness and browser Voice commands; verify
-   explicit refresh and truthful unavailable-controller feedback.
-5. Harden async Zigbee failure boundaries and tests.
-6. Record Pi reboot/network-loss recovery and validate ZBT-2.
-7. Continue Device Manager, permissions, audit and health before integration
+1. Physically verify processing audio, device execution and final-result order.
+2. Complete twenty consecutive physical Voice action attempts.
+3. Add typed partial-success Voice feedback.
+4. Complete English fixed assets and physical DE/EN acceptance.
+5. Repeat brightness and browser Voice commands; verify explicit refresh and
+   truthful unavailable-controller feedback.
+6. Harden async Zigbee failure boundaries and tests.
+7. Record Pi reboot/network-loss recovery and validate ZBT-2.
+8. Continue Device Manager, permissions, audit and health before integration
    breadth.
 
 ## Detailed source of truth
