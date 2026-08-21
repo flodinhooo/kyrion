@@ -15,6 +15,7 @@ describe("gateway contracts", () => {
         adapters: [{ id: "sonoff", protocol: "zigbee", vendor: "Itead", model: "Sonoff", serial: "serial", path: "/dev/serial/by-id/sonoff" }],
         audio: { capture: { id: "mic", displayName: "Microphone", transport: "usb" }, playback: { id: "speaker", displayName: "Pebble V3", transport: "bluetooth" } },
         zigbee: { permitJoin: false, channel: 15, devices: [] },
+        bluetoothDevices: [],
         services: [{ id: "zigbee", status: "not_configured" }],
       },
     }])).toBe(true);

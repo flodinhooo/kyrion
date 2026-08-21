@@ -6,6 +6,10 @@ export type GatewayZigbeeDevice = {
   brightness: number | null; linkquality: number | null;
   hue: number | null; saturation: number | null; colorTemperature: number | null;
 };
+export type GatewayBluetoothDevice = {
+  address: string; name: "MELK-OA20"; model: "OA20"; supported: true;
+  on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null;
+};
 
 export type GatewayHealth = {
   temperatureCelsius: number | null;
@@ -31,6 +35,7 @@ export type GatewayHealth = {
     channel: number;
     devices: GatewayZigbeeDevice[];
   };
+  bluetoothDevices: GatewayBluetoothDevice[];
   services: Array<{ id: string; status: GatewayServiceStatus }>;
 };
 
@@ -81,9 +86,20 @@ function isHealth(value: unknown): value is GatewayHealth {
       && isAudioEndpoint(item.audio.capture) && isAudioEndpoint(item.audio.playback)))
     && (item.zigbee === null || (!!item.zigbee && typeof item.zigbee.permitJoin === "boolean"
       && typeof item.zigbee.channel === "number" && isGatewayZigbeeDeviceList(item.zigbee.devices)))
+    && isGatewayBluetoothDeviceList(item.bluetoothDevices)
     && Array.isArray(item.services) && item.services.length <= 32
     && item.services.every((service) => !!service && typeof service.id === "string"
       && serviceStatuses.has(service.status));
+}
+
+export function isGatewayBluetoothDeviceList(value: unknown): value is GatewayBluetoothDevice[] {
+  return Array.isArray(value) && value.length <= 32 && value.every((device) =>
+    !!device && typeof device.address === "string" && device.name === "MELK-OA20"
+    && device.model === "OA20" && device.supported === true
+    && (device.on === null || typeof device.on === "boolean")
+    && (device.brightness === null || typeof device.brightness === "number")
+    && (device.hue === null || typeof device.hue === "number")
+    && (device.saturation === null || typeof device.saturation === "number"));
 }
 
 function isAudioEndpoint(value: unknown): boolean {
