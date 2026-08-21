@@ -18,6 +18,32 @@ def test_transcription_rejects_non_wav_before_loading_runtime() -> None:
         LocalSpeechService(settings()).transcribe(b"not audio", "de")
 
 
+def test_http_stt_sends_wav_and_explicit_locale() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == "http://stt.local/v1/audio/transcriptions"
+        body = request.read()
+        assert b'filename="utterance.wav"' in body
+        assert b"RIFF0000WAVE" in body
+        assert b' name="language"' in body
+        assert b"de" in body
+        return httpx.Response(200, json={"text": "  Schalte das Licht aus.  "})
+
+    configured = Settings(
+        "http://127.0.0.1:11434",
+        "model",
+        ("model",),
+        1.0,
+        stt_provider="http_openai",
+        http_stt_url="http://stt.local",
+    )
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    assert (
+        LocalSpeechService(configured, client).transcribe(b"RIFF0000WAVE", "de")
+        == "Schalte das Licht aus."
+    )
+
+
 def test_synthesis_reports_unavailable_http_batch_runtime() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)

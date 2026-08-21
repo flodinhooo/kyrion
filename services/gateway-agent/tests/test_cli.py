@@ -123,3 +123,21 @@ def test_zigbee_remove_uses_bounded_bridge_request(monkeypatch: pytest.MonkeyPat
     assert arguments[4] == "zigbee2mqtt/bridge/request/device/remove"
     assert arguments[6] == '{"id": "0x001788010fdcc07d", "force": true}'
     completed.assert_called_once_with(config, "command-id", True)
+
+
+def test_bluetooth_power_delegates_only_validated_typed_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
+    power = Mock()
+    completed = Mock()
+    monkeypatch.setattr(cli, "set_power", power)
+    monkeypatch.setattr(cli, "complete_command", completed)
+
+    cli._execute_command(config, {
+        "id": "command-id", "type": "bluetooth.power",
+        "payload": {"deviceId": "C7:7C:08:10:37:EA", "on": True},
+    })
+
+    power.assert_called_once_with("C7:7C:08:10:37:EA", True)
+    completed.assert_called_once_with(config, "command-id", True)

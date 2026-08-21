@@ -42,6 +42,10 @@ class SpeechService:
     def transcribe(self, audio: bytes, locale: str) -> str:
         if not audio.startswith(b"RIFF") or b"WAVE" not in audio[:16]:
             raise InvalidAudioError("Expected a WAV container")
+        if self._settings.stt_provider == "http_openai":
+            return self._transcribe_http(audio, locale)
+        if self._settings.stt_provider != "faster_whisper":
+            raise SpeechUnavailableError("Configured STT provider is unsupported")
         try:
             from faster_whisper import WhisperModel
         except ImportError as error:
@@ -67,6 +71,27 @@ class SpeechService:
             return " ".join(segment.text.strip() for segment in segments).strip()
         finally:
             source.unlink(missing_ok=True)
+
+    def _transcribe_http(self, audio: bytes, locale: str) -> str:
+        client = self._http_client or httpx.Client(timeout=30.0)
+        owns_client = self._http_client is None
+        try:
+            response = client.post(
+                f"{self._settings.http_stt_url}/v1/audio/transcriptions",
+                files={"file": ("utterance.wav", audio, "audio/wav")},
+                data={"language": locale, "response_format": "json"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            text = payload.get("text") if isinstance(payload, dict) else None
+            if not isinstance(text, str):
+                raise SpeechUnavailableError("Local HTTP STT returned an invalid response")
+            return text.strip()
+        except (httpx.HTTPError, ValueError) as error:
+            raise SpeechUnavailableError("Local HTTP STT request failed") from error
+        finally:
+            if owns_client:
+                client.close()
 
     def voices(self) -> dict[str, object]:
         if self._settings.tts_provider == "xtts":
