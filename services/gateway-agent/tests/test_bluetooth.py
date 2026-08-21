@@ -5,6 +5,11 @@ import pytest
 from kyrion_gateway_agent import bluetooth
 
 
+@pytest.fixture(autouse=True)
+def isolated_state(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setattr(bluetooth, "STATE_PATH", tmp_path / "bluetooth-state.json")
+
+
 def completed(stdout: str = "", returncode: int = 0) -> Mock:
     return Mock(stdout=stdout, stderr="", returncode=returncode)
 
@@ -33,6 +38,7 @@ def test_power_uses_fixed_nine_byte_packet(monkeypatch: pytest.MonkeyPatch) -> N
         "9", "126", "4", "4", "0", "0", "0", "255", "0", "239",
         "1", "type", "s", "command",
     ]
+    assert bluetooth._load_states()["C7:7C:08:10:37:EA"]["on"] is False
 
 
 def test_colour_selects_rgb_and_writes_expected_channels(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -45,6 +51,9 @@ def test_colour_selects_rgb_and_writes_expected_channels(monkeypatch: pytest.Mon
     assert run.call_args_list[3].args[0][-14:-5] == [
         "9", "126", "7", "5", "3", "0", "255", "255", "16",
     ]
+    assert bluetooth._load_states()["C7:7C:08:10:37:EA"] == {
+        "on": True, "brightness": None, "hue": 180, "saturation": 100,
+    }
 
 
 @pytest.mark.parametrize("address", ["", "C7:7C:08:10:37:EA;reboot", "AA:BB"])

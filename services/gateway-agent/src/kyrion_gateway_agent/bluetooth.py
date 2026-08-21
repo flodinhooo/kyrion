@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import colorsys
+import json
+import os
 import re
 import subprocess
+from pathlib import Path
 
 MELK_NAME = "MELK-OA20"
 MAC_PATTERN = re.compile(r"^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")
 SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
 COMMAND_UUID = "0000fff3-0000-1000-8000-00805f9b34fb"
+STATE_PATH = Path(os.getenv(
+    "KYRION_BLUETOOTH_STATE", "/var/lib/kyrion-gateway/bluetooth-state.json",
+))
 
 
 class BluetoothLightError(RuntimeError):
@@ -16,6 +22,7 @@ class BluetoothLightError(RuntimeError):
 
 def known_melk_lights() -> list[dict[str, object]]:
     result = _run(["bluetoothctl", "devices"])
+    states = _load_states()
     lights: list[dict[str, object]] = []
     for row in result.stdout.splitlines()[:100]:
         parts = row.split(maxsplit=2)
@@ -24,21 +31,23 @@ def known_melk_lights() -> list[dict[str, object]]:
         address = parts[1].upper()
         if not MAC_PATTERN.fullmatch(address):
             continue
+        state = states.get(address, {})
         lights.append({
             "address": address,
             "name": MELK_NAME,
             "model": "OA20",
             "supported": True,
-            "on": None,
-            "brightness": None,
-            "hue": None,
-            "saturation": None,
+            "on": state.get("on"),
+            "brightness": state.get("brightness"),
+            "hue": state.get("hue"),
+            "saturation": state.get("saturation"),
         })
     return lights
 
 
 def set_power(address: str, on: bool) -> None:
     _write(address, [0x7E, 0x04, 0x04, int(on), 0x00, int(on), 0xFF, 0x00, 0xEF])
+    _record_state(address, on=on)
 
 
 def set_brightness(address: str, brightness: int) -> None:
@@ -46,6 +55,7 @@ def set_brightness(address: str, brightness: int) -> None:
         raise BluetoothLightError("invalid brightness")
     raw = round(brightness * 255 / 100)
     _write(address, [0x7E, 0x04, 0x01, raw, 0x01, 0xFF, 0xFF, 0x00, 0xEF])
+    _record_state(address, on=True, brightness=brightness)
 
 
 def set_colour(address: str, hue: int, saturation: int) -> None:
@@ -57,6 +67,38 @@ def set_colour(address: str, hue: int, saturation: int) -> None:
     )
     _write(address, [0x7E, 0x04, 0x04, 0xE0, 0x01, 0x01, 0xFF, 0x00, 0xEF])
     _write(address, [0x7E, 0x07, 0x05, 0x03, red, green, blue, 0x10, 0xEF])
+    _record_state(address, on=True, hue=hue % 360, saturation=saturation)
+
+
+def _load_states() -> dict[str, dict[str, object]]:
+    try:
+        value = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(value, dict):
+        return {}
+    return {
+        address: state for address, state in value.items()
+        if isinstance(address, str) and MAC_PATTERN.fullmatch(address)
+        and isinstance(state, dict)
+    }
+
+
+def _record_state(address: str, **changes: object) -> None:
+    normalized = address.upper()
+    states = _load_states()
+    state = {"on": None, "brightness": None, "hue": None, "saturation": None}
+    state.update(states.get(normalized, {}))
+    state.update(changes)
+    states[normalized] = state
+    try:
+        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        temporary = STATE_PATH.with_suffix(".tmp")
+        temporary.write_text(json.dumps(states, sort_keys=True), encoding="utf-8")
+        temporary.chmod(0o600)
+        temporary.replace(STATE_PATH)
+    except OSError as error:
+        raise BluetoothLightError("bluetooth state persistence failed") from error
 
 
 def _write(address: str, packet: list[int]) -> None:
