@@ -72,6 +72,8 @@ slices.
 - Zigbee discovery and explicit approval through Zigbee2MQTT;
 - physical control of two Philips Hue colour lamps through the shared Core
   command path;
+- direct discovery, explicit approval and bounded Bluetooth control of a
+  physically verified MELK-OA20 colour lamp through the same Core command path;
 - explicit `online`, `offline`, `degraded` and `unknown` availability.
 
 ### AI and voice

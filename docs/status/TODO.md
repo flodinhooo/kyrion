@@ -506,10 +506,13 @@ Success criterion:
 - [x] Separate heartbeat-reported Zigbee candidates from owner-approved Home
   devices in the first UI slice; require an explicit name and Add action before
   Core creates or reconciles the stable inventory record.
-- [ ] Apply the same post-approval contract to Zigbee, Thread/Matter,
-  Bluetooth, local-network and future adapter discovery: create or reconcile a
+- [ ] Apply the same post-approval contract to Thread/Matter, local-network and
+  future adapter discovery: create or reconcile a
   stable database device record, display it automatically on `/home`, and
   persist every room assignment, rename and removal lifecycle change.
+- [x] Apply explicit candidate approval, owner naming, stable catalog
+  persistence and typed async Core commands to the first bounded Bluetooth
+  model (`MELK-OA20`) without routing control through Home Assistant.
 - [x] Define stable USB adapter identity/configuration without assuming device
   paths before the Raspberry Pi and radios are available.
 - [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
@@ -599,6 +602,9 @@ integrations work end to end:
   Mode commands.
 - [ ] Physically verify explicit status refresh and truthful
   unavailable-controller feedback.
+- [ ] Activate and physically verify OA20 last-command state reporting in Web;
+  test external-app and power-cycle drift without presenting it as live
+  device telemetry.
 
 ### Physical gateway and hardware validation
 
@@ -613,11 +619,15 @@ integrations work end to end:
   including temporary capture, direct/browser playback, reboot reconnect and
   bounded authenticated gateway health.
 - [ ] Validate the Home Assistant Connect ZBT-2 after attaching it.
+- [ ] Complete Bluetooth OA20 acceptance: add and independently control the
+  second discovered lamp, repeat brightness after dark, add bounded Web-driven
+  scanning, and test reconnect plus power-cycle behaviour. First-lamp Web
+  power and direct RGB colour commands are physically proven.
 - [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
   behaviour on the real Raspberry Pi node. Registration, repeated heartbeat
   and agent-service restart are proven; Pi reboot and network-loss recovery
   remain open.
-- [ ] Accept Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice independently
+- [ ] Accept Matter-over-Thread, Wi-Fi, general Bluetooth and voice independently
   through recorded end-to-end results.
 
 This grouping is a status view over the authoritative tasks above and does not

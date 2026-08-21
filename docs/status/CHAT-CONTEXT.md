@@ -102,6 +102,19 @@ out beyond scaffolding.
   Supported Hue Add also configures recover-last-state power-on behaviour.
 - Retry, timeout and idempotency hardening remain open.
 
+### Direct Bluetooth OA20 lights
+
+- `MELK-OA20` candidates are reported by the authenticated gateway heartbeat
+  and require an explicit owner name and Add action before Core persists them.
+- Power, brightness and colour use typed, audited asynchronous Core commands;
+  Web and AI never receive Bluetooth privileges or manufacturer packets.
+- `Lampe Rechts` (`C7:7C:08:10:37:EA`) passed physical Web power control and
+  direct red, green, blue, violet and cyan tests. The second discovered lamp is
+  `C7:7C:08:10:38:9B`; its explicit Web approval remains to be recorded.
+- OA20 readback is not proven. The gateway reports the last successfully
+  applied Kyrion command, which can drift after external-app changes or power
+  interruption. Brightness, second-lamp and recovery acceptance remain open.
+
 ## Physically verified hardware
 
 - Raspberry Pi 5 (8 GB) registered as `kyrion-node`; host, storage, Ethernet,
@@ -113,8 +126,8 @@ out beyond scaffolding.
   default sink and reboot reconnect passed.
 - Full Pi reboot heartbeat recovery and temporary network-loss recovery remain
   to be recorded. Home Assistant Connect ZBT-2 is not accepted. Matter/Thread,
-  general Bluetooth and Wi-Fi integrations are not accepted merely from
-  discovery.
+  general Bluetooth beyond the bounded OA20 slice, and Wi-Fi integrations are
+  not accepted merely from discovery.
 
 ## Voice implementation and decisions
 
@@ -205,6 +218,8 @@ These results predate future changes; rerun proportionate checks after edits.
 7. Record Pi reboot/network-loss recovery and validate ZBT-2.
 8. Continue Device Manager, permissions, audit and health before integration
    breadth.
+9. Finish OA20 activation/state verification, second-lamp approval, dark-room
+   brightness and reconnect/power-cycle checks; then add bounded Web scanning.
 
 ## Detailed source of truth
 

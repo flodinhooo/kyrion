@@ -173,7 +173,10 @@ outcomes; mismatched or still-running replays are rejected.
   over Thread.
 - [ ] Integrate Shelly H&T Gen3 temperature/humidity observations.
 - [ ] Integrate myStrom WiFi Switch 2 power and energy capabilities.
-- [ ] Validate Bluetooth discovery as a separate least-privilege slice.
+- [x] Validate the first bounded Bluetooth discovery/control slice with an
+  explicitly approved `MELK-OA20` lamp, strict gateway commands and no Home
+  Assistant dependency. Second-lamp, brightness, recovery and verified state
+  readback remain tracked in the repository-wide TODO.
 - [ ] Record Pi reboot and temporary-network-loss recovery.
 
 ## Raspberry Pi runtime cleanup

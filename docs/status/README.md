@@ -450,6 +450,12 @@ remains [Voice Satellite and Wake-Word Session —
 - The Sonoff Zigbee adapter and two Philips Hue colour lamps are accepted end to
   end. The Delock USB microphone and Pebble V3 audio output are accepted. The
   ZBT-2 Thread/Matter adapter remains unvalidated.
+- A direct, bounded `MELK-OA20` Bluetooth adapter now follows the authenticated
+  Gateway → Core → Web path without Home Assistant. `Lampe Rechts` passed
+  physical Web power control and direct RGB validation. OA20 does not yet have
+  proven state readback, so the gateway reports only the last successfully
+  applied Kyrion command; second-lamp, brightness and recovery acceptance
+  remain open. See the [dated Bluetooth handoff](2026-08-21-bluetooth-oa20-lights.md).
 - Zigbee discovery requires explicit approval and naming. Owner-confirmed
   removal publishes the bounded Zigbee2MQTT remove request through the gateway,
   deletes the Core record only after success and permits subsequent re-pairing.
@@ -657,7 +663,9 @@ execution remains to be repeated by the owner.
   the USB voice hardware and local wake-word test path are validated; attach
   and validate the Thread adapter through a stable device identity;
 - prove heartbeat recovery across a full Pi restart and temporary network loss;
-- prove Zigbee, Matter-over-Thread, Wi-Fi, Bluetooth and voice as separate
+- complete the second OA20 lamp, brightness and recovery checks, while keeping
+  last-command state distinct from live Bluetooth telemetry;
+- prove Zigbee, Matter-over-Thread, Wi-Fi, general Bluetooth and voice as separate
   end-to-end slices rather than treating discovery or pairing as completion.
 
 Cross-cutting follow-up remains wake-word model quality, local STT/TTS and interruption,
