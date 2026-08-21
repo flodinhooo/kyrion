@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "catalogRevision": "voice-responses-v1",
-  "description": "Reviewed fixed-response assets only. Six German MVP assets are owner-approved; English counterparts remain pending.",
+  "description": "Reviewed fixed-response assets only. German greetings, farewells, acknowledgements, command outcomes and action-processing variants are owner-approved; English counterparts remain pending.",
   "voiceProfiles": {
     "velora": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09"
   },

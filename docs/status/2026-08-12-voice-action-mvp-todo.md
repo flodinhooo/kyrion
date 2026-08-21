@@ -18,6 +18,11 @@ remain outside Git as reviewed expansion inventory until their typed outcome
 resolvers and English counterparts exist. The six English MVP assets remain
 pending, so Phase A and Raspberry Pi acceptance are not complete.
 
+Checkpoint 2026-08-21: the owner selected and approved four additional German
+greetings and four truthful `action.processing` variants from a new two-take
+Qwen3-TTS batch. All eight are checksum-pinned in the production manifest.
+Their English counterparts remain pending.
+
 - [ ] Install Audacity for local Windows recording and editing.
 - [ ] Install Seed-VC in an isolated Python 3.10 environment outside the Kyrion
   runtime and repository.
@@ -105,7 +110,7 @@ outcomes; mismatched or still-running replays are rejected.
 
 ## Phase B — Voice result policy
 
-- [ ] After Core has recognized and validated a Voice action proposal, play an
+- [x] After Core has recognized and validated a Voice action proposal, play an
   immediate truthful processing response such as `Klar, gib mir einen
   Augenblick.` before potentially slow adapter execution. This response must
   never imply success; the confirmed success, partial-success or failure
