@@ -12,3 +12,9 @@ The development node currently runs the hardened gateway agent, Mosquitto and
 Zigbee2MQTT. Applying updated service files still requires an explicit
 privileged installation on the node; copying source to a temporary user-owned
 path alone does not change the running service.
+
+`install-container-runtime.sh` installs Debian's maintained Docker Engine
+package for separately scoped Home Assistant, OTBR, and Matter services. It
+does not add the interactive owner or the gateway agent to the `docker` group,
+because Docker socket access is equivalent to root authority. It also does not
+flash a radio or create a Thread or Matter network.

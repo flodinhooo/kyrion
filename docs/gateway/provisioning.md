@@ -66,10 +66,19 @@ disabled. The Sonoff coordinator uses its stable `/dev/serial/by-id` identity,
 the Ember driver, firmware 7.4.4 and channel 15. Root-only pre-pairing and
 post-Hue-pairing snapshots are under `/var/backups/kyrion/zigbee`.
 
-Kyrion Core currently runs at `192.168.1.107:8080`. A Windows firewall rule
-permits that port only from the Pi's reserved `192.168.1.115` Wi-Fi and
-`192.168.1.116` Ethernet addresses. These development addresses are deployment
-metadata, not gateway identity.
+Kyrion Core is reached through the router-provided local DNS name
+`kyrion-core.home`, currently as `http://kyrion-core.home:8080`. Gateway and
+Voice Satellite configuration must use that name instead of a numeric Core
+address. This avoids configuration changes when DHCP assigns the Core host a
+different address while keeping discovery explicit and auditable. It is local
+DNS, not public DNS or automatic trust: node credentials still authenticate
+every request, and a Windows firewall rule permits Core port 8080 only from the
+Pi's reserved `192.168.1.115` Wi-Fi and `192.168.1.116` Ethernet addresses.
+
+The router entry must remain named `kyrion-core`, and the Pi must resolve
+`kyrion-core.home` before either runtime is reconfigured. If router DNS is
+unavailable, restore the previous protected configuration rather than falling
+back to network scanning or accepting an unverified Core.
 
 ## Deferred owner onboarding
 

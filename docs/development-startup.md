@@ -34,12 +34,21 @@ Use the same password selected in `infrastructure\.env`:
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\services\core'
 $env:KYRION_DATABASE_PASSWORD = 'your-local-database-password'
+$env:KYRION_CORE_ADDRESS = '0.0.0.0'
 .\gradlew.bat bootRun
 ```
 
 Leave this window open. Verify Core at
 `http://127.0.0.1:8080/actuator/health`. Recent persisted events are available
 at `http://127.0.0.1:8080/v1/activity`.
+
+The LAN bind is required for the authenticated gateway and Voice Satellite.
+The development router publishes the Core host as `kyrion-core.home`, so node
+configuration uses `http://kyrion-core.home:8080` instead of a numeric IPv4
+address. Router DNS follows DHCP changes without making an address part of the
+Kyrion contract. The Windows firewall must still restrict port 8080 to the
+reserved Ethernet and Wi-Fi addresses of `kyrion-node`; the DNS name does not
+replace authentication or firewall policy.
 
 ### 3. Start Ollama
 
