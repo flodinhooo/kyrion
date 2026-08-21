@@ -125,9 +125,153 @@
       "path": "assets/velora/de/command.failed/neutral-02.wav",
       "sha256": "478e6ad5fad88e460a69b231b179eeeae4c39b6315efab352e8cfd6d292d0bc1",
       "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "action.processing",
+      "variantId": "neutral-01",
+      "text": "Klar, gib mir einen Augenblick.",
+      "path": "assets/velora/de/action.processing/neutral-01.wav",
+      "sha256": "481ec752ca7438e2f09600bbff4acc34e51695af4397c77d63c73fe38f3652db",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "action.processing",
+      "variantId": "neutral-02",
+      "text": "Alles klar, ich kümmere mich darum.",
+      "path": "assets/velora/de/action.processing/neutral-02.wav",
+      "sha256": "97e59f9d23dca9e08ad30e5bd148d232cc3e2a6f11336a644919148983608c51",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "action.processing",
+      "variantId": "neutral-03",
+      "text": "Verstanden, einen Moment bitte.",
+      "path": "assets/velora/de/action.processing/neutral-03.wav",
+      "sha256": "58ad00a144eedcf13a9e2447638a639b02d46507b14699de60ae119b386a47b6",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "action.processing",
+      "variantId": "warm-01",
+      "text": "Gerne, ich kümmere mich darum.",
+      "path": "assets/velora/de/action.processing/warm-01.wav",
+      "sha256": "ba46f79b2710357ca32a2055d93d586b5051d66a575611075575149e2b1a5274",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "friendly-01",
+      "text": "Hey, schön, dass du da bist.",
+      "path": "assets/velora/de/session.greeting/friendly-01.wav",
+      "sha256": "f3c4dc5beaf56c9eb41a7ac427650164de4d680be1a471d8964aba9ffa6f7402",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "helpful-01",
+      "text": "Hey, was kann ich für dich tun?",
+      "path": "assets/velora/de/session.greeting/helpful-01.wav",
+      "sha256": "e5bcab8c1178b6d0e54ab8866116071c238b6821d4f19dc7810a22732417e777",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "ready-01",
+      "text": "Hallo, ich bin bereit.",
+      "path": "assets/velora/de/session.greeting/ready-01.wav",
+      "sha256": "0a043fc4060b9a07e2fcd1aa416d713f75a919cca3014cdd0de54c2b2e7aea4b",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.greeting",
+      "variantId": "warm-02",
+      "text": "Schön, von dir zu hören.",
+      "path": "assets/velora/de/session.greeting/warm-02.wav",
+      "sha256": "20be82193355a3ce47d5cac7b66b5ebe1cc96c13bd3abee7fe38cf75973c6feb",
+      "reviewedBy": "owner"
     }
   ],
   "pendingAssets": [
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "friendly-01",
+      "text": "Hey, it's good to have you here."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "ready-01",
+      "text": "Hello, I'm ready."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "warm-02",
+      "text": "Good to hear from you."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.greeting",
+      "variantId": "helpful-01",
+      "text": "Hey, what can I do for you?"
+    },
+    {
+      "locale": "en",
+      "responseKey": "action.processing",
+      "variantId": "neutral-01",
+      "text": "Sure, give me a moment."
+    },
+    {
+      "locale": "en",
+      "responseKey": "action.processing",
+      "variantId": "neutral-02",
+      "text": "All right, I'm taking care of it."
+    },
+    {
+      "locale": "en",
+      "responseKey": "action.processing",
+      "variantId": "neutral-03",
+      "text": "Understood, one moment please."
+    },
+    {
+      "locale": "en",
+      "responseKey": "action.processing",
+      "variantId": "warm-01",
+      "text": "Of course, I'm taking care of it."
+    },
     {
       "locale": "en",
       "responseKey": "command.succeeded",
