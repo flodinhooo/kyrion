@@ -23,7 +23,7 @@ _ENGLISH_BRIGHTNESS = re.compile(
 _GERMAN_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|macht)\b.*?"
     r"\b(?P<kind>nanoleafs?|licht(?:er)?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
-    r"(?P<state>an|ein|aus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
+    r"(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
 _GERMAN_GLOBAL_LIGHT_POWER = re.compile(
@@ -214,8 +214,10 @@ def _room_selector(
 
 
 def _split_room_names(locale: str, room_names: str) -> list[str]:
-    conjunction = r"\s*(?:,|\bund\b)\s*(?:(?:im|in)\s+)?" if locale == "de" else (
-        r"\s*(?:,|\band\b)\s*(?:in\s+(?:the\s+)?)?"
+    conjunction = (
+        r"\s*(?:,|\bund\b)\s*(?:(?:im|in)\s+|(?:der|dem|den|das|die)\s+)?"
+        if locale == "de"
+        else r"\s*(?:,|\band\b)\s*(?:in\s+(?:the\s+)?)?"
     )
     return [name for name in re.split(conjunction, room_names, flags=re.IGNORECASE) if name.strip()]
 
@@ -227,7 +229,7 @@ def _normalise_room_name(
     provider: str,
 ) -> str:
     normalised = room_name.strip(" .,!?").strip()
-    normalised = re.sub(r"^(?:der|dem|das|die)\s+", "", normalised, flags=re.IGNORECASE)
+    normalised = re.sub(r"^(?:der|dem|den|das|die)\s+", "", normalised, flags=re.IGNORECASE)
     room_names = {
         device.room_name
         for device in request.devices

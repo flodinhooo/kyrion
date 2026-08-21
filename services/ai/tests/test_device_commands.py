@@ -97,6 +97,23 @@ def test_proposes_german_multi_room_light_power() -> None:
     assert proposal.arguments.on is False
 
 
+def test_proposes_real_asr_multi_room_light_power_variation() -> None:
+    asr_variation = DeviceCommandProposalRequest(
+        message="Schalte bitte das Licht im Flur und den Schlafzimmer raus.",
+        locale="de",
+        devices=[
+            _DEVICES[0],
+            {**_DEVICES[0], "id": "device-2", "provider": "zigbee", "roomName": "Gang"},
+        ],
+    )
+
+    proposal = propose_device_command(asr_variation)
+
+    assert proposal is not None
+    assert proposal.selector.room_names == ["Flur", "Schlafzimmer"]
+    assert proposal.arguments.on is False
+
+
 def test_proposes_english_multi_room_light_power() -> None:
     multi_room = DeviceCommandProposalRequest(
         message="Turn the lights in the bedroom and in the hallway off.",
