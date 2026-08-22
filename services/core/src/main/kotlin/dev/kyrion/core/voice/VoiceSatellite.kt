@@ -192,7 +192,7 @@ class VoiceSatelliteService(
         activity.record(
             ActivityCategory.SYSTEM, "voice.session.started", ActivityStatus.SUCCEEDED,
             ActivityActorType.INTEGRATION, "kyrion-voice-satellite", "voice.session.started",
-            satellite.id.toString(), session.id,
+            satellite.id.toString(), session.id, satellite.ownerId,
         )
         return session
     }
@@ -234,7 +234,7 @@ class VoiceSatelliteService(
         activity.record(
             ActivityCategory.SECURITY, "voice.satellite.registered", ActivityStatus.SUCCEEDED,
             ActivityActorType.INTEGRATION, "kyrion-core", "voice.satellite.registered",
-            satellite.id.toString(), satellite.id,
+            satellite.id.toString(), satellite.id, satellite.ownerId,
         )
         return RegisteredVoiceSatellite(satellite, credential.rawToken)
     }

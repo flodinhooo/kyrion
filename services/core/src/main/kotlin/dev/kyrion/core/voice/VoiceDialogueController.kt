@@ -37,12 +37,18 @@ data class VoiceTurnEvent(
     val responseText: String? = null,
     val audioBase64: String? = null,
     val playbackAcknowledgementRequired: Boolean? = null,
+    val pendingAction: Boolean? = null,
     val continueSession: Boolean? = null,
     val restartSession: Boolean? = null,
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
 data class VoiceGreetingResponse(val responseText: String, val audioBase64: String)
+data class VoiceActionCompletionResponse(
+    val responseText: String,
+    val audioBase64: String,
+    val continueSession: Boolean = true,
+)
 
 @Service
 class VoiceDialogueService(
@@ -51,6 +57,7 @@ class VoiceDialogueService(
     private val responsePolicies: VoiceResponsePolicyRegistry,
     private val voiceActions: VoiceActionService,
     private val playbackAcknowledgements: VoicePlaybackAcknowledgements,
+    private val pendingActions: PendingVoiceActions,
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
@@ -137,16 +144,23 @@ class VoiceDialogueService(
                 .takeLast(6)
                 .map { ActionPriorMessage(it.role, it.content) },
             validateActive = { satellites.activeSession(satelliteId, credential, sessionId) },
-            onValidated = {
-                val processing = responsePolicies.resolve(
-                    ActionProcessingOutcome,
-                    VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
-                )
-                emitAudio(processing, turnId, emit) {
-                    satellites.activeSession(satelliteId, credential, sessionId)
-                }
-            },
+            deferExecution = true,
         )
+        if (actionAttempt is VoiceActionAttempt.Pending) {
+            val processing = responsePolicies.resolve(
+                ActionProcessingOutcome,
+                VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
+            )
+            emitAudio(processing, turnId, emit) {
+                satellites.activeSession(satelliteId, credential, sessionId)
+            }
+            pendingActions.put(
+                turnId,
+                PendingVoiceAction(actionAttempt, session.ownerId, session.conversationId, userMessage.id, locale),
+            )
+            emit(VoiceTurnEvent(type = "action.pending", pendingAction = true))
+            return
+        }
         if (actionAttempt == VoiceActionAttempt.NotAction) {
             val acknowledgement = responsePolicies.resolve(
                 DialogueAcknowledgedOutcome,
@@ -188,6 +202,34 @@ class VoiceDialogueService(
         )
         if (explicitEnd) satellites.closeSession(satelliteId, credential, sessionId, "explicit")
         emit(VoiceTurnEvent(type = "completed", responseText = responseText, continueSession = !explicitEnd))
+    }
+
+    fun completePendingAction(
+        satelliteId: UUID,
+        credential: String,
+        sessionId: UUID,
+        turnId: UUID,
+    ): VoiceActionCompletionResponse {
+        satellites.activeSession(satelliteId, credential, sessionId)
+        val pending = pendingActions.take(turnId.toString())
+        if (pending.attempt.context.sessionId != sessionId || pending.attempt.context.actorId != satelliteId.toString()) {
+            throw VoicePlaybackAcknowledgementInvalidException()
+        }
+        val response = voiceActions.execute(pending.attempt.context, pending.attempt.proposal)
+        val plan = responsePolicies.resolve(
+            response.outcome,
+            VoiceResponseContext(pending.ownerId, sessionId, turnId, pending.locale),
+        )
+        val audio = resolveAudio(plan, turnId.toString())
+        conversations.finishTurn(
+            pending.ownerId, pending.conversationId, pending.userMessageId,
+            ConversationMessage(UUID.randomUUID(), "assistant", plan.renderedText, clock.instant()),
+            ConversationTurnStatus.completed, null, clock.instant(),
+        )
+        return VoiceActionCompletionResponse(
+            plan.renderedText,
+            Base64.getEncoder().encodeToString(audio),
+        )
     }
 
     private fun chat(
@@ -289,6 +331,26 @@ class VoiceDialogueService(
     companion object {
         private val LOGGER = LoggerFactory.getLogger(VoiceDialogueService::class.java)
     }
+}
+
+data class PendingVoiceAction(
+    val attempt: VoiceActionAttempt.Pending,
+    val ownerId: UUID,
+    val conversationId: UUID,
+    val userMessageId: UUID,
+    val locale: String,
+)
+
+@Service
+class PendingVoiceActions {
+    private val pending = ConcurrentHashMap<String, PendingVoiceAction>()
+
+    fun put(turnId: String, action: PendingVoiceAction) {
+        check(pending.putIfAbsent(turnId, action) == null)
+    }
+
+    fun take(turnId: String): PendingVoiceAction = pending.remove(turnId)
+        ?: throw VoicePlaybackAcknowledgementInvalidException()
 }
 
 @Service
@@ -420,6 +482,18 @@ class VoiceDialogueController(
         satellites.activeSession(satelliteId, credential, sessionId)
         playbackAcknowledgements.acknowledge(turnId.toString())
         return mapOf("status" to "acknowledged")
+    }
+
+    @PostMapping("/{sessionId}/turns/{turnId}/execute", produces = ["application/json"])
+    fun executePending(
+        @PathVariable sessionId: UUID,
+        @PathVariable turnId: UUID,
+        @RequestHeader("X-Kyrion-Satellite-Id") satelliteId: UUID,
+        @RequestHeader("Authorization") authorization: String,
+    ): VoiceActionCompletionResponse {
+        val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
+            ?: throw VoiceSatelliteUnauthenticatedException()
+        return dialogue.completePendingAction(satelliteId, credential, sessionId, turnId)
     }
 
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
