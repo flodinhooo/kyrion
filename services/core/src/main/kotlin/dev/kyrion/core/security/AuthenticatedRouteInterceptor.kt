@@ -41,6 +41,8 @@ class AuthenticatedRouteConfiguration(
             "/v1/gateways/**",
             "/v1/voice-satellites/**",
             "/v1/actions/**",
+            "/v1/retention/**",
+            "/v1/backups/**",
         )
     }
 }
