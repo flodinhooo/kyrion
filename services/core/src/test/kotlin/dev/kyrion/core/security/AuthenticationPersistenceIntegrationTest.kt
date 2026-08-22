@@ -1,5 +1,9 @@
 package dev.kyrion.core.security
 
+import dev.kyrion.core.activity.ActivityActorType
+import dev.kyrion.core.activity.ActivityCategory
+import dev.kyrion.core.activity.ActivityService
+import dev.kyrion.core.activity.ActivityStatus
 import dev.kyrion.core.conversation.Conversation
 import dev.kyrion.core.conversation.ConversationMessage
 import dev.kyrion.core.conversation.ConversationRepository
@@ -41,6 +45,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val jdbc: JdbcClient,
     private val memories: PersonalMemoryRepository,
     private val mockMvc: MockMvc,
+    private val activity: ActivityService,
 ) {
     @BeforeEach
     fun cleanDatabase() {
@@ -171,6 +176,66 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
                 .header("Authorization", "Bearer $currentToken"),
         ).andExpect(status().isNoContent)
         assertThat(authentication.authenticate(otherSession.rawToken)).isNull()
+    }
+
+    @Test
+    fun `HTTP activity feed includes owner and safe system events but excludes another owner`() {
+        val firstToken = setupToken()
+        val firstOwner = authentication.authenticate(firstToken)!!.id
+        val secondOwner = insertAdditionalOwner("second")
+        val firstCorrelation = UUID.randomUUID()
+        val secondCorrelation = UUID.randomUUID()
+        activity.record(
+            ActivityCategory.INTEGRATION, "integration.first", ActivityStatus.SUCCEEDED,
+            ActivityActorType.INTEGRATION, "test-adapter", "integration.first", correlationId = firstCorrelation,
+            ownerId = firstOwner,
+        )
+        activity.record(
+            ActivityCategory.INTEGRATION, "integration.second", ActivityStatus.SUCCEEDED,
+            ActivityActorType.INTEGRATION, "test-adapter", "integration.second", correlationId = secondCorrelation,
+            ownerId = secondOwner,
+        )
+
+        val response = mockMvc.perform(get("/v1/activity").header("Authorization", "Bearer $firstToken"))
+            .andExpect(status().isOk)
+            .andReturn().response.contentAsString
+
+        assertThat(response).contains(firstCorrelation.toString())
+        assertThat(response).doesNotContain(secondCorrelation.toString())
+        assertThat(response).doesNotContain("ownerId")
+        assertThat(
+            jdbc.sql("SELECT owner_id FROM activity_event WHERE correlation_id = :id")
+                .param("id", firstCorrelation).query(UUID::class.java).single(),
+        ).isEqualTo(firstOwner)
+    }
+
+    @Test
+    fun `HTTP retention policy is owner scoped typed and non enforcing`() {
+        val firstToken = setupToken()
+        mockMvc.perform(get("/v1/retention").header("Authorization", "Bearer $firstToken"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.conversations").value("keep_forever"))
+            .andExpect(jsonPath("$.enforcementActive").value(false))
+
+        mockMvc.perform(
+            put("/v1/retention").header("Authorization", "Bearer $firstToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"conversations":"365_days","activity":"3_years","personalMemory":"90_days"}"""),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.conversations").value("365_days"))
+            .andExpect(jsonPath("$.enforcementActive").value(false))
+
+        insertAdditionalOwner("second")
+        val secondToken = authentication.login("second", OTHER_PASSWORD).session.rawToken
+        mockMvc.perform(get("/v1/retention").header("Authorization", "Bearer $secondToken"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.conversations").value("keep_forever"))
+
+        mockMvc.perform(
+            put("/v1/retention").header("Authorization", "Bearer $firstToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"conversations":"7_days","activity":"3_years","personalMemory":"90_days"}"""),
+        ).andExpect(status().isBadRequest)
     }
 
     @Test
