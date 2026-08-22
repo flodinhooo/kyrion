@@ -15,6 +15,7 @@ const val VELORA_VOICE_PROFILE_REVISION =
 sealed interface DialogueOutcome
 data object SessionGreetingOutcome : DialogueOutcome
 data object SessionFarewellOutcome : DialogueOutcome
+data object SessionGratitudeOutcome : DialogueOutcome
 data object DialogueAcknowledgedOutcome : DialogueOutcome
 data object ActionProcessingOutcome : DialogueOutcome
 data class CommandExecutionOutcome(
@@ -119,6 +120,22 @@ class VoiceResponseCatalog {
             "en" to listOf(
                 VoiceResponseVariant("neutral-01", "Talk to you later."),
                 VoiceResponseVariant("warm-01", "Take care."),
+            ),
+        ),
+        "session.gratitude" to mapOf(
+            "de" to listOf(
+                VoiceResponseVariant("neutral-01", "Kein Problem!"),
+                VoiceResponseVariant("neutral-02", "Gern geschehen."),
+                VoiceResponseVariant("warm-01", "Sehr gerne."),
+                VoiceResponseVariant("helpful-01", "Gib Bescheid, wenn ich noch etwas für dich tun kann."),
+                VoiceResponseVariant("warm-02", "Immer gerne."),
+            ),
+            "en" to listOf(
+                VoiceResponseVariant("neutral-01", "No problem!"),
+                VoiceResponseVariant("neutral-02", "You're welcome."),
+                VoiceResponseVariant("warm-01", "My pleasure."),
+                VoiceResponseVariant("helpful-01", "Let me know if there's anything else I can do for you."),
+                VoiceResponseVariant("warm-02", "Anytime."),
             ),
         ),
         "dialogue.acknowledged" to mapOf(
@@ -299,6 +316,7 @@ class VoiceResponsePolicyRegistry {
         listOf(
             FixedOutcomeResolver(SessionGreetingOutcome::class, "session.greeting", catalog),
             FixedOutcomeResolver(SessionFarewellOutcome::class, "session.farewell", catalog),
+            FixedOutcomeResolver(SessionGratitudeOutcome::class, "session.gratitude", catalog),
             FixedOutcomeResolver(
                 DialogueAcknowledgedOutcome::class,
                 "dialogue.acknowledged",

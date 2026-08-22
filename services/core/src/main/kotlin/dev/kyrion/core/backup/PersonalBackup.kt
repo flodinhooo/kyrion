@@ -59,6 +59,18 @@ class PersonalBackupCipher(
         key.fill(0)
         return EncryptedBackupEnvelope(salt = salt.b64(), nonce = nonce.b64(), ciphertext = encrypted.b64())
     }
+    fun decrypt(envelope: EncryptedBackupEnvelope, passphrase: String): PersonalBackupPayload {
+        require(envelope.format == FORMAT && envelope.formatVersion == 1 && envelope.iterations == ITERATIONS)
+        val decoder = Base64.getDecoder()
+        val salt = decoder.decode(envelope.salt); val nonce = decoder.decode(envelope.nonce)
+        val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            .generateSecret(PBEKeySpec(passphrase.toCharArray(), salt, ITERATIONS, 256)).encoded
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, nonce))
+        cipher.updateAAD("$FORMAT:1".toByteArray())
+        val plain = cipher.doFinal(decoder.decode(envelope.ciphertext)); key.fill(0)
+        return mapper.readValue(plain, PersonalBackupPayload::class.java)
+    }
     private fun ByteArray.b64() = Base64.getEncoder().encodeToString(this)
 }
 

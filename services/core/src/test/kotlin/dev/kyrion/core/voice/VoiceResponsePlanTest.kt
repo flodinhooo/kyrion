@@ -18,6 +18,7 @@ class VoiceResponsePlanTest {
     fun `registry dispatches every initial outcome category`() {
         assertThat(registry.resolve(SessionGreetingOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(SessionFarewellOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
+        assertThat(registry.resolve(SessionGratitudeOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(DialogueAcknowledgedOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(registry.resolve(ActionProcessingOutcome, context)).isInstanceOf(FixedResponsePlan::class.java)
         assertThat(

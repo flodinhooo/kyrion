@@ -124,7 +124,8 @@ class VoiceDialogueService(
             return
         }
 
-        val explicitEnd = isVoiceSessionEnd(transcript)
+        val gratitudeEnd = isVoiceSessionGratitude(transcript)
+        val explicitEnd = gratitudeEnd || isVoiceSessionEnd(transcript)
         val now = clock.instant()
         val userMessage = ConversationMessage(UUID.randomUUID(), "user", transcript, now)
         val conversation = conversations.startTurn(
@@ -173,7 +174,9 @@ class VoiceDialogueService(
             )
             emitAudio(acknowledgement, turnId, emit)
         }
-        val outcome = if (explicitEnd) {
+        val outcome = if (gratitudeEnd) {
+            SessionGratitudeOutcome
+        } else if (explicitEnd) {
             SessionFarewellOutcome
         } else if (actionAttempt is VoiceActionAttempt.Respond) {
             actionAttempt.outcome
@@ -381,7 +384,6 @@ private val SESSION_ENDINGS = listOf(
     listOf("tschuss"),
     listOf("auf", "wiedersehen"),
     listOf("das", "wars"),
-    listOf("danke"),
     listOf("goodbye"),
     listOf("thanks"),
     listOf("thank", "you"),
@@ -407,6 +409,12 @@ internal fun isVoiceSessionEnd(transcript: String): Boolean {
         if (words.size < ending.size || words.takeLast(ending.size) != ending) return@any false
         words.dropLast(ending.size).all(SESSION_END_PREFIX_WORDS::contains)
     }
+}
+
+internal fun isVoiceSessionGratitude(transcript: String): Boolean {
+    val words = normalizedVoiceWords(transcript)
+    return words == listOf("danke", "velora") ||
+        words == listOf("vielen", "dank", "velora")
 }
 
 internal fun isVoiceSessionRestart(transcript: String): Boolean {

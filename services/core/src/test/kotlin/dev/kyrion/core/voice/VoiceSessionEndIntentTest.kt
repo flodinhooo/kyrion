@@ -19,7 +19,6 @@ class VoiceSessionEndIntentTest {
             "Passt. Danke. Bis später.",
             "Okay, tschüss.",
             "Danke dir, das war's.",
-            "Danke.",
             "Okay, danke dir, bis spaeter!",
             "Alright, goodbye.",
             "Thanks, talk to you later.",
@@ -42,5 +41,17 @@ class VoiceSessionEndIntentTest {
     )
     fun `does not end on quoted or contextual mentions`(transcript: String) {
         assertThat(isVoiceSessionEnd(transcript)).isFalse()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Danke Velora.", "Vielen Dank, Velora!"])
+    fun `recognises only explicit Velora gratitude endings`(transcript: String) {
+        assertThat(isVoiceSessionGratitude(transcript)).isTrue()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Danke.", "Vielen Dank.", "Danke Velora, aber ich habe noch eine Frage."])
+    fun `does not mistake other gratitude for the explicit Velora ending`(transcript: String) {
+        assertThat(isVoiceSessionGratitude(transcript)).isFalse()
     }
 }
