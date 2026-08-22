@@ -81,3 +81,17 @@ export function isDeviceCommandStatus(value: unknown): value is DeviceCommandSta
   return typeof command.id === "string" && ["pending", "running", "succeeded", "failed"].includes(command.status ?? "")
     && (command.errorCode === null || typeof command.errorCode === "string");
 }
+
+export type ButtonGesture = "single" | "double" | "long";
+export type ButtonAction = "toggle" | "turn_on" | "turn_off";
+export type ButtonBinding = { gesture: ButtonGesture; targetDeviceId: string; action: ButtonAction };
+
+export function isButtonBindingList(value: unknown): value is ButtonBinding[] {
+  return Array.isArray(value) && value.length <= 3 && value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const binding = item as Partial<ButtonBinding>;
+    return (binding.gesture === "single" || binding.gesture === "double" || binding.gesture === "long")
+      && typeof binding.targetDeviceId === "string"
+      && (binding.action === "toggle" || binding.action === "turn_on" || binding.action === "turn_off");
+  });
+}

@@ -9,7 +9,7 @@ import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { GatewayLightControlDialog } from "@/components/gateway-light-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isAsyncDeviceCommand, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type DeviceClass, type RuntimeDevice } from "@/features/devices/contracts";
+import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
@@ -36,6 +36,8 @@ export default function DevicesPage() {
   const [removeDevice, setRemoveDevice] = useState<RuntimeDevice | null>(null);
   const [commandStates, setCommandStates] = useState<Record<string, "pending" | "succeeded" | "failed">>({});
   const [roomCommandStates, setRoomCommandStates] = useState<Record<string, boolean>>({});
+  const [buttonBindings, setButtonBindings] = useState<Record<string, ButtonBinding[]>>({});
+  const [savingBindings, setSavingBindings] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -81,6 +83,42 @@ export default function DevicesPage() {
     const interval = window.setInterval(() => void refreshNanoleafStates(), 10_000);
     return () => { window.clearTimeout(timeout); window.clearInterval(interval); };
   }, [connections.length, refreshNanoleafStates]);
+
+  useEffect(() => {
+    const buttons = devices.filter((device) => device.capabilities.some((capability) => capability.id === "button.events"));
+    if (buttons.length === 0) return;
+    let disposed = false;
+    void Promise.all(buttons.map(async (button) => {
+      const response = await fetch(`/api/devices/${button.id}/button-bindings`, { cache: "no-store" });
+      const value: unknown = await response.json().catch(() => null);
+      return response.ok && isButtonBindingList(value) ? [button.id, value] as const : null;
+    })).then((entries) => {
+      if (!disposed) setButtonBindings((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry) => entry !== null)) }));
+    });
+    return () => { disposed = true; };
+  }, [devices]);
+
+  function updateButtonBinding(buttonId: string, gesture: ButtonGesture, targetDeviceId: string, action?: ButtonAction) {
+    setButtonBindings((current) => {
+      const existing = current[buttonId] ?? [];
+      const previous = existing.find((binding) => binding.gesture === gesture);
+      const next = existing.filter((binding) => binding.gesture !== gesture);
+      if (targetDeviceId) next.push({ gesture, targetDeviceId, action: action ?? previous?.action ?? "toggle" });
+      return { ...current, [buttonId]: next };
+    });
+  }
+
+  async function saveButtonBindings(buttonId: string) {
+    setSavingBindings(buttonId); setError(false);
+    const response = await fetch(`/api/devices/${buttonId}/button-bindings`, {
+      method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
+      body: JSON.stringify({ bindings: buttonBindings[buttonId] ?? [] }),
+    });
+    const value: unknown = await response.json().catch(() => null);
+    if (response.ok && isButtonBindingList(value)) setButtonBindings((current) => ({ ...current, [buttonId]: value }));
+    else setError(true);
+    setSavingBindings(null);
+  }
 
   async function refreshObservations() {
     setPending(true);
@@ -302,6 +340,8 @@ export default function DevicesPage() {
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
           const controllable = device.capabilities.some((capability) => capability.id === "power.set");
+          const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
+          const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
           return <article key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
             <div>
               <strong>{device.displayName}</strong>
@@ -322,6 +362,23 @@ export default function DevicesPage() {
               {liveState.illumination !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illumination === "dim" ? t.sensorDim : t.sensorBright}</strong></span>}
               {liveState.battery !== null && <span>{t.sensorBattery}: <strong>{liveState.battery}%</strong></span>}
               {liveState.action && <span>{t.sensorLastAction}: <strong>{liveState.action}</strong></span>}
+            </div>}
+            {buttonDevice && <div className="button-bindings" onClick={(event) => event.stopPropagation()}>
+              <div><strong>{t.buttonBindingsTitle}</strong><small>{t.buttonBindingsDescription}</small></div>
+              {(["single", "double", "long"] as const).map((gesture) => {
+                const binding = (buttonBindings[device.id] ?? []).find((item) => item.gesture === gesture);
+                return <div className="button-binding-row" key={gesture}>
+                  <span>{gesture === "single" ? t.buttonGestureSingle : gesture === "double" ? t.buttonGestureDouble : t.buttonGestureLong}</span>
+                  <select aria-label={`${gesture}: ${t.buttonTarget}`} value={binding?.targetDeviceId ?? ""} onChange={(event) => updateButtonBinding(device.id, gesture, event.target.value)}>
+                    <option value="">{t.buttonNotAssigned}</option>
+                    {powerTargets.map((target) => <option value={target.id} key={target.id}>{target.displayName}</option>)}
+                  </select>
+                  <select aria-label={`${gesture}: ${t.buttonAction}`} disabled={!binding} value={binding?.action ?? "toggle"} onChange={(event) => updateButtonBinding(device.id, gesture, binding?.targetDeviceId ?? "", event.target.value as ButtonAction)}>
+                    <option value="toggle">{t.buttonActionToggle}</option><option value="turn_on">{t.buttonActionOn}</option><option value="turn_off">{t.buttonActionOff}</option>
+                  </select>
+                </div>;
+              })}
+              <button type="button" disabled={savingBindings === device.id} onClick={() => void saveButtonBindings(device.id)}>{savingBindings === device.id ? t.buttonSaving : t.buttonSave}</button>
             </div>}
             {controllable && <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
