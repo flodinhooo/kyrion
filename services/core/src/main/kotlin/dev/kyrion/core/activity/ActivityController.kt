@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 data class ActivityResponse(val items: List<ActivityEvent>)
+data class ActivityIntegrityResponse(val owner: ActivityIntegrityChainReport, val system: ActivityIntegrityChainReport)
 
 @Validated
 @RestController
 @RequestMapping("/v1/activity")
 class ActivityController(
     private val activityService: ActivityService,
+    private val integrityVerifier: ActivityIntegrityVerifier,
 ) {
     @GetMapping
     fun recent(
@@ -27,6 +29,12 @@ class ActivityController(
         limit: Int,
         request: HttpServletRequest,
     ): ActivityResponse = ActivityResponse(activityService.recent(request.ownerId(), limit))
+
+    @GetMapping("/integrity")
+    fun integrity(request: HttpServletRequest): ActivityIntegrityResponse {
+        val ownerId = request.ownerId()
+        return ActivityIntegrityResponse(integrityVerifier.verify(ownerId.toString()), integrityVerifier.verify(SYSTEM_SCOPE))
+    }
 
     private fun HttpServletRequest.ownerId() =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? java.util.UUID ?: throw UnauthenticatedException()

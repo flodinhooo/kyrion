@@ -2,22 +2,34 @@ package dev.kyrion.core.activity
 
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.support.TransactionTemplate
 import java.sql.ResultSet
 import java.sql.Timestamp
 
 @Repository
 class JdbcActivityEventRepository(
     private val jdbcClient: JdbcClient,
+    private val transactions: TransactionTemplate,
+    private val integrity: ActivityIntegrity,
 ) : ActivityEventRepository {
-    override fun append(event: ActivityEvent): ActivityEvent {
+    override fun append(event: ActivityEvent): ActivityEvent = transactions.execute {
+        val scope = event.ownerId?.toString() ?: SYSTEM_SCOPE
+        jdbcClient.sql("""INSERT INTO activity_integrity_chain(chain_scope,anchor_mac,updated_at) VALUES(:scope,:anchorMac,CURRENT_TIMESTAMP)
+            ON CONFLICT(chain_scope) DO NOTHING""")
+            .param("scope", scope).param("anchorMac", integrity.anchorMac(scope, null)).update()
+        val previousHash = jdbcClient.sql("SELECT last_hash FROM activity_integrity_chain WHERE chain_scope=:scope FOR UPDATE")
+            .param("scope", scope).query(ByteArray::class.java).optional().orElse(null)
+        val eventHash = integrity.eventHash(event, scope, previousHash)
         jdbcClient.sql(
             """
             INSERT INTO activity_event (
                 id, occurred_at, category, event_type, status, actor_type,
-                actor_id, source, correlation_id, summary_code, owner_id
+                actor_id, source, correlation_id, summary_code, owner_id,
+                integrity_version, chain_scope, previous_hash, event_hash
             ) VALUES (
                 :id, :occurredAt, :category, :eventType, :status, :actorType,
-                :actorId, :source, :correlationId, :summaryCode, :ownerId
+                :actorId, :source, :correlationId, :summaryCode, :ownerId,
+                1, :chainScope, :previousHash, :eventHash
             )
             """.trimIndent(),
         )
@@ -32,9 +44,13 @@ class JdbcActivityEventRepository(
             .param("correlationId", event.correlationId)
             .param("summaryCode", event.summaryCode)
             .param("ownerId", event.ownerId)
+            .param("chainScope", scope)
+            .param("previousHash", previousHash)
+            .param("eventHash", eventHash)
             .update()
-
-        return event
+        jdbcClient.sql("UPDATE activity_integrity_chain SET last_event_id=:eventId,last_hash=:eventHash,updated_at=CURRENT_TIMESTAMP WHERE chain_scope=:scope")
+            .param("eventId", event.id).param("eventHash", eventHash).param("scope", scope).update()
+        event
     }
 
     override fun findRecent(limit: Int): List<ActivityEvent> = jdbcClient.sql(

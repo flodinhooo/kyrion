@@ -4,6 +4,8 @@ import dev.kyrion.core.activity.ActivityActorType
 import dev.kyrion.core.activity.ActivityCategory
 import dev.kyrion.core.activity.ActivityService
 import dev.kyrion.core.activity.ActivityStatus
+import dev.kyrion.core.activity.ActivityIntegrityPruner
+import dev.kyrion.core.activity.ActivityIntegrityPruningException
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import dev.kyrion.core.security.UnauthenticatedException
 import jakarta.servlet.http.HttpServletRequest
@@ -64,6 +66,7 @@ class RetentionPolicyController(
     private val jdbc: JdbcClient,
     private val activityService: ActivityService,
     private val transactions: TransactionTemplate,
+    private val activityIntegrityPruner: ActivityIntegrityPruner,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     @GetMapping
@@ -105,6 +108,7 @@ class RetentionPolicyController(
             val current = preview(ownerId, load(ownerId), now)
             val memoriesDeleted = deleteBefore("personal_memory", "updated_at", ownerId, current.personalMemory.cutoff)
             val conversationsDeleted = deleteBefore("conversation", "updated_at", ownerId, current.conversations.cutoff)
+            current.activity.cutoff?.let { activityIntegrityPruner.authorizeOwnerPrefix(ownerId, it) }
             val activityDeleted = deleteBefore("activity_event", "occurred_at", ownerId, current.activity.cutoff)
             activityService.record(
                 ActivityCategory.SECURITY, "retention.cleanup.executed", ActivityStatus.SUCCEEDED,
@@ -165,4 +169,7 @@ class RetentionCleanupErrorHandler {
     @ExceptionHandler(RetentionCleanupConfirmationException::class)
     @ResponseStatus(HttpStatus.CONFLICT)
     fun confirmation() = mapOf("code" to "RETENTION_CLEANUP_CONFIRMATION_REQUIRED")
+    @ExceptionHandler(ActivityIntegrityPruningException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun integrityOrder() = mapOf("code" to "RETENTION_ACTIVITY_NOT_SAFE_TO_PRUNE")
 }

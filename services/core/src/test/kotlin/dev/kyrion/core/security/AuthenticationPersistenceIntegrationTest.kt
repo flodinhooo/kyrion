@@ -34,6 +34,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import java.nio.file.Files
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -50,7 +51,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     @BeforeEach
     fun cleanDatabase() {
         jdbc.sql(
-            "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event CASCADE",
+            "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
     }
 
@@ -279,6 +280,24 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(conversations.recent(secondOwner, 10).map { it.title }).containsExactly("Other owner expired")
         assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE owner_id=:owner AND event_type='retention.cleanup.executed'")
             .param("owner", ownerId).query(Int::class.java).single()).isEqualTo(1)
+        mockMvc.perform(get("/v1/activity/integrity").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.owner.valid").value(true))
+    }
+
+    @Test
+    fun `activity integrity verification detects database tampering`() {
+        val token = setupToken()
+        val ownerId = authentication.authenticate(token)!!.id
+        activity.record(ActivityCategory.SECURITY, "integrity.test", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+            "test", "integrity.test", actorId = ownerId.toString(), ownerId = ownerId)
+        mockMvc.perform(get("/v1/activity/integrity").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.owner.valid").value(true))
+            .andExpect(jsonPath("$.owner.sealedEvents").value(org.hamcrest.Matchers.greaterThan(0)))
+        jdbc.sql("UPDATE activity_event SET summary_code='tampered' WHERE owner_id=:owner AND event_type='integrity.test'")
+            .param("owner", ownerId).update()
+        mockMvc.perform(get("/v1/activity/integrity").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.owner.valid").value(false))
     }
 
     @Test
@@ -523,6 +542,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         private const val OLD_PASSWORD = "old-secure-password"
         private const val NEW_PASSWORD = "new-secure-password"
         private const val OTHER_PASSWORD = "other-secure-password"
+        private val auditKeyPath = Files.createTempDirectory("kyrion-audit-test").resolve("integrity.key").toString()
 
         @Container
         @JvmStatic
@@ -534,6 +554,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
+            registry.add("kyrion.audit.integrity-key-file") { auditKeyPath }
         }
     }
 }
