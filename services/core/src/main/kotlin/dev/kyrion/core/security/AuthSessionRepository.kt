@@ -1,6 +1,7 @@
 package dev.kyrion.core.security
 
 import java.time.Instant
+import java.util.UUID
 
 interface AuthSessionRepository {
     fun create(session: AuthSession): AuthSession
@@ -10,5 +11,7 @@ interface AuthSessionRepository {
     fun updateLastSeen(tokenHash: String, lastSeenAt: Instant)
 
     fun revoke(tokenHash: String, revokedAt: Instant): Boolean
-    fun revokeAllForUser(userId: java.util.UUID, revokedAt: Instant): Int
+    fun findActiveForUser(userId: UUID, at: Instant): List<AuthSession>
+    fun revokeForUser(userId: UUID, sessionId: UUID, revokedAt: Instant): Boolean
+    fun revokeAllForUser(userId: UUID, revokedAt: Instant): Int
 }

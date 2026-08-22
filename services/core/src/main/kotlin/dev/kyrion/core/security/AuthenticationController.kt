@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -62,6 +64,14 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     fun changePassword(@Valid @RequestBody body: ChangePasswordRequest, request: HttpServletRequest): SessionResponse =
         authentication.changePassword(request.bearerToken(), body.currentPassword, body.newPassword).response()
 
+    @GetMapping("/sessions")
+    fun sessions(request: HttpServletRequest) = authentication.activeSessions(request.bearerToken())
+
+    @DeleteMapping("/sessions/{sessionId}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun revokeSession(@PathVariable sessionId: UUID, request: HttpServletRequest) {
+        authentication.revokeSession(request.bearerToken(), sessionId)
+    }
+
     private fun AuthenticatedOwner.response() = SessionResponse(
         UserResponse(user.id, user.username), session.rawToken, session.session.expiresAt,
     )
@@ -100,6 +110,14 @@ class AuthenticationErrorHandler {
     @ExceptionHandler(PasswordUnchangedException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun passwordUnchanged() = ErrorResponse("PASSWORD_UNCHANGED")
+
+    @ExceptionHandler(AuthSessionNotFoundException::class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    fun sessionNotFound() = ErrorResponse("AUTH_SESSION_NOT_FOUND")
+
+    @ExceptionHandler(CurrentSessionRevocationException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun currentSessionRevocation() = ErrorResponse("CURRENT_SESSION_REQUIRES_LOGOUT")
 
     @ExceptionHandler(MethodArgumentNotValidException::class, HttpMessageNotReadableException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

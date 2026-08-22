@@ -45,6 +45,11 @@ class AuthSessionService(
         revokedAt = clock.instant(),
     )
 
+    fun activeForUser(userId: UUID): List<AuthSession> = repository.findActiveForUser(userId, clock.instant())
+
+    fun revokeForUser(userId: UUID, sessionId: UUID): Boolean =
+        repository.revokeForUser(userId, sessionId, clock.instant())
+
     fun revokeAllForUser(userId: UUID): Int = repository.revokeAllForUser(userId, clock.instant())
 
     private companion object {

@@ -76,6 +76,17 @@ private class InMemoryAuthSessionRepository : AuthSessionRepository {
         return true
     }
 
+    override fun findActiveForUser(userId: UUID, at: Instant): List<AuthSession> =
+        listOfNotNull(session?.takeIf { it.userId == userId && it.isActive(at) })
+
+    override fun revokeForUser(userId: UUID, sessionId: UUID, revokedAt: Instant): Boolean {
+        val current = session?.takeIf {
+            it.id == sessionId && it.userId == userId && it.isActive(revokedAt)
+        } ?: return false
+        session = current.copy(revokedAt = revokedAt)
+        return true
+    }
+
     override fun revokeAllForUser(userId: UUID, revokedAt: Instant): Int {
         val current = session?.takeIf { it.userId == userId && it.revokedAt == null } ?: return 0
         session = current.copy(revokedAt = revokedAt)
