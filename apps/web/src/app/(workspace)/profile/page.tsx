@@ -7,6 +7,7 @@ import { PasswordChangeForm } from "@/components/password-change-form";
 import { MemoryPanel } from "@/components/memory-panel";
 import { ActiveSessionsPanel } from "@/components/active-sessions-panel";
 import { RetentionPolicyPanel } from "@/components/retention-policy-panel";
+import { PersonalBackupPanel } from "@/components/personal-backup-panel";
 
 export default function ProfilePage() {
   const { username, t } = useWorkspace();
@@ -31,6 +32,7 @@ export default function ProfilePage() {
           </div>
           <ActiveSessionsPanel />
           <RetentionPolicyPanel />
+          <PersonalBackupPanel />
         </div>
 
         <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
