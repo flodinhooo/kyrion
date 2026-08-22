@@ -453,9 +453,12 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 - [x] Define owner-controlled conversation and activity retention policies with
   safe `keep_forever` defaults. Flyway V18 persists typed policy intent; this
   first slice performs no automatic deletion and reports enforcement as inactive.
-- [ ] Define personal-memory archival and implement reviewed retention
-  enforcement. Owner policy intent is persisted, but expiry, preview,
-  activation and cleanup remain deliberately inactive.
+- [x] Implement reviewed manual retention enforcement for conversations,
+  activity and personal memory. Preview reports owner-scoped cutoffs and counts;
+  cleanup requires exact confirmation, recalculates inside one transaction and
+  records an audit event. Automatic deletion remains inactive.
+- [ ] Define personal-memory archival separately from permanent retention
+  cleanup, including legal holds and future household administration.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
   claims.
 - [x] Add PostgreSQL backup and isolated restore verification. The operational

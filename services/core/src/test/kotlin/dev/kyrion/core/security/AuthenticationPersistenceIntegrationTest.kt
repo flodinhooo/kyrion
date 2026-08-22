@@ -246,12 +246,14 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val recent = Instant.now()
         conversations.replace(ownerId, Conversation(UUID.randomUUID(), "Expired", old, old, listOf()))
         conversations.replace(ownerId, Conversation(UUID.randomUUID(), "Current", recent, recent, listOf()))
+        val secondOwner = insertAdditionalOwner("retention-second")
+        conversations.replace(secondOwner, Conversation(UUID.randomUUID(), "Other owner expired", old, old, listOf()))
         jdbc.sql("""INSERT INTO personal_memory(id,owner_id,category,content,sensitivity,origin,status,created_at,updated_at,confirmed_at)
             VALUES(:id,:owner,'other','expired memory','standard','explicit','confirmed',:old,:old,:old)""")
             .param("id", UUID.randomUUID()).param("owner", ownerId).param("old", Timestamp.from(old)).update()
         activity.record(ActivityCategory.SECURITY, "recent.event", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
             "test", "recent.event", actorId = ownerId.toString(), ownerId = ownerId)
-        jdbc.sql("UPDATE activity_event SET occurred_at=:old WHERE owner_id=:owner")
+        jdbc.sql("UPDATE activity_event SET occurred_at=:old WHERE owner_id=:owner AND event_type='recent.event'")
             .param("old", Timestamp.from(old)).param("owner", ownerId).update()
 
         mockMvc.perform(put("/v1/retention").header("Authorization", "Bearer $token")
@@ -274,6 +276,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.activityDeleted").value(1))
             .andExpect(jsonPath("$.personalMemoriesDeleted").value(1))
         assertThat(conversations.recent(ownerId, 10).map { it.title }).containsExactly("Current")
+        assertThat(conversations.recent(secondOwner, 10).map { it.title }).containsExactly("Other owner expired")
         assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE owner_id=:owner AND event_type='retention.cleanup.executed'")
             .param("owner", ownerId).query(Int::class.java).single()).isEqualTo(1)
     }

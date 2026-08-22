@@ -17,16 +17,20 @@ and personal memory. Supported choices are `keep_forever`, `30_days`,
 `90_days`, `365_days` and `3_years`. New owners and missing rows resolve to
 `keep_forever`.
 
-This first slice persists and exposes policy intent but does not enforce
-automatic deletion. The API returns `enforcementActive: false`, and Web states
-clearly that changing the setting deletes nothing yet. Enforcement requires a
-separate reviewed slice with previews, explicit activation, backup interaction,
-transaction boundaries and auditable cleanup results.
+Core persists and exposes policy intent but does not run automatic deletion.
+The API returns `enforcementActive: false`, and changing the policy never
+deletes data. An owner may request a preview containing per-domain cutoffs and
+record counts, then manually execute cleanup by entering the exact confirmation
+`DELETE`. Core recalculates eligibility inside one transaction, deletes only the
+authenticated owner's expired records and appends a data-minimised audit event.
+Web recommends creating a backup before confirmation.
 
 ## Consequences
 
 - Retention intent is explicit, typed and owner-scoped.
-- No data is deleted merely by deploying or configuring this slice.
-- Future enforcement can use a stable policy without inventing defaults.
+- No data is deleted merely by deploying or configuring this slice, and no
+  unattended cleanup job is active.
+- Manual enforcement is previewed, explicitly confirmed, transactional and
+  owner-scoped.
 - Household administration, legal holds, export and archival remain future
   policies rather than implicit side effects.
