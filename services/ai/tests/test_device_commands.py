@@ -107,6 +107,28 @@ def test_proposes_power_for_bluetooth_lamps_in_a_room() -> None:
     assert proposal.arguments.on is True
 
 
+def test_proposes_polite_web_chat_room_power_command() -> None:
+    hallway_lights = DeviceCommandProposalRequest(
+        message="Kannst du die Lampen im Flur bitte ausschalten?",
+        locale="de",
+        devices=[
+            {
+                **_DEVICES[0],
+                "provider": "zigbee",
+                "displayName": "Flurlampe",
+                "roomName": "Flur",
+            }
+        ],
+    )
+
+    proposal = propose_device_command(hallway_lights)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Flur"
+    assert proposal.arguments.on is False
+
+
 def test_proposes_brightness_for_bluetooth_lamps_in_a_room() -> None:
     bluetooth_lamps = DeviceCommandProposalRequest(
         message="Stelle die Lampen im Wohnzimmer auf 40 Prozent.",

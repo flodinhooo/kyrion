@@ -27,6 +27,12 @@ _GERMAN_POWER = re.compile(
     r"(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
+_GERMAN_POLITE_POWER = re.compile(
+    r"^(?:(?:hey\s+)?velora[,\s]+)?kannst\s+du\s+(?:bitte\s+)?(?:die|das)\s+"
+    r"(?P<kind>nanoleafs?|licht(?:er)?|lampen?)\s+(?:im|in)\s+(?P<room>.+?)\s+"
+    r"(?:bitte\s+)?(?P<state>an|ein|aus)schalten[.!?]*\s*$",
+    re.IGNORECASE,
+)
 _GERMAN_GLOBAL_LIGHT_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:schalte|schalt|mach|schau\s+dir)\s+"
     r"(?:(?:die|alle)\s+)?lichter?\s+(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
@@ -137,6 +143,26 @@ def _propose_direct(
             return DeviceCommandProposal(
                 capability="power.set",
                 selector=DeviceTargetSelector(provider="light"),
+                arguments=DeviceCommandArguments(on=state in {"an", "ein"}),
+            )
+
+    if request.locale == "de":
+        polite_power_match = _GERMAN_POLITE_POWER.search(request.message)
+        if polite_power_match:
+            state = polite_power_match.group("state").lower()
+            kind = polite_power_match.group("kind").casefold()
+            provider = "nanoleaf" if kind.startswith("nanoleaf") else "light"
+            if not _supports(request, provider, "power.set"):
+                return None
+            return DeviceCommandProposal(
+                capability="power.set",
+                selector=_room_selector(
+                    request,
+                    polite_power_match.group("room"),
+                    "power.set",
+                    provider,
+                    allow_multiple=True,
+                ),
                 arguments=DeviceCommandArguments(on=state in {"an", "ein"}),
             )
 
