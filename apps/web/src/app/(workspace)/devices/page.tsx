@@ -296,6 +296,7 @@ export default function DevicesPage() {
             colorTemperature: nanoleafState.colorTemperature,
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
+          const controllable = device.capabilities.some((capability) => capability.id === "power.set");
           return <article key={device.id} onClick={() => setSelected(device)}>
             <div>
               <strong>{device.displayName}</strong>
@@ -304,16 +305,22 @@ export default function DevicesPage() {
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
-            <button>{t.homeOpenControls}</button>
-            {liveState && <div className="device-live-state" aria-label={t.homeCurrentState}>
+            {controllable && <button>{t.homeOpenControls}</button>}
+            {liveState && controllable && <div className="device-live-state" aria-label={t.homeCurrentState}>
               <span className={`state-pill ${liveState.on ? "is-on" : "is-off"}`}>{liveState.on === null ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</span>
               <span>{t.homeCurrentBrightness}: <strong>{liveState.brightness ?? "–"}%</strong></span>
               <span>{t.homeCurrentColor}: <i className="color-swatch" style={{ backgroundColor: hsvToHex(liveState.hue, liveState.saturation) }} /></span>
             </div>}
-            <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
+            {liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
+              {liveState.occupancy !== null && <span>{t.sensorMotion}: <strong>{liveState.occupancy ? t.sensorDetected : t.sensorClear}</strong></span>}
+              {liveState.illuminance !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illuminance} lx</strong></span>}
+              {liveState.battery !== null && <span>{t.sensorBattery}: <strong>{liveState.battery}%</strong></span>}
+              {liveState.action && <span>{t.sensorLastAction}: <strong>{liveState.action}</strong></span>}
+            </div>}
+            {controllable && <div className="quick-controls" onClick={(event) => event.stopPropagation()}>
               <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, true)}>{t.nanoleafTurnOn}</button>
               <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
-            </div>
+            </div>}
             {commandStates[device.id] && <small className={commandStates[device.id] === "failed" ? "auth-error" : "command-status"} aria-live="polite">{commandStates[device.id] === "pending" ? t.commandPending : commandStates[device.id] === "succeeded" ? t.commandSucceeded : t.commandFailed}</small>}
             <div className="device-rename" onClick={(event) => event.stopPropagation()}>
               <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
