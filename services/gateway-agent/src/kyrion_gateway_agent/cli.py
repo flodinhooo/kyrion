@@ -16,10 +16,10 @@ from kyrion_gateway_agent.bluetooth import (
 )
 from kyrion_gateway_agent.client import (
     CoreRequestError,
+    button_event,
     complete_command,
     enroll,
     heartbeat,
-    button_event,
     next_command,
 )
 from kyrion_gateway_agent.config import DEFAULT_CONFIG_PATH, AgentConfig
@@ -59,7 +59,12 @@ def main() -> None:
     heartbeat_interval = max(5, min(args.interval, 60))
     command_interval = max(0.1, min(args.command_interval, 2.0))
     next_heartbeat_at = 0.0
-    threading.Thread(target=_forward_button_events, args=(config,), daemon=True, name="zigbee-button-events").start()
+    threading.Thread(
+        target=_forward_button_events,
+        args=(config,),
+        daemon=True,
+        name="zigbee-button-events",
+    ).start()
     while True:
         try:
             for _ in range(5):
@@ -104,10 +109,16 @@ def _forward_button_events(config: AgentConfig) -> None:
                 friendly_name = topic.removeprefix("zigbee2mqtt/")
                 health = collect_health()
                 devices = health.get("zigbee", {}).get("devices", [])
-                device = next((item for item in devices if item.get("friendlyName") == friendly_name), None)
+                device = next(
+                    (item for item in devices if item.get("friendlyName") == friendly_name),
+                    None,
+                )
                 device_id = device.get("ieeeAddress") if isinstance(device, dict) else None
                 if not isinstance(device_id, str):
-                    LOGGER.warning("Ignoring button event from unknown Zigbee topic %s", friendly_name[:80])
+                    LOGGER.warning(
+                        "Ignoring button event from unknown Zigbee topic %s",
+                        friendly_name[:80],
+                    )
                     continue
                 try:
                     button_event(config, device_id, action)
