@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
+import org.springframework.core.task.TaskExecutor
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -34,7 +35,8 @@ import java.util.UUID
 
 data class ZigbeeButtonBinding(
     val gesture: String,
-    val targetDeviceId: UUID,
+    val targetDeviceId: UUID? = null,
+    val targetRoomId: UUID? = null,
     val action: String,
 )
 
@@ -43,10 +45,13 @@ data class ReplaceZigbeeButtonBindingsRequest(val bindings: List<@Valid ZigbeeBu
 @Repository
 class ZigbeeButtonBindingRepository(private val jdbc: JdbcClient) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> = jdbc.sql(
-        """SELECT gesture, target_connection_id, action FROM zigbee_button_binding
+        """SELECT gesture, target_connection_id, target_room_id, action FROM zigbee_button_binding
            WHERE owner_id=:ownerId AND button_connection_id=:buttonId ORDER BY gesture""",
     ).param("ownerId", ownerId).param("buttonId", buttonId).query { rs, _ ->
-        ZigbeeButtonBinding(rs.getString("gesture"), rs.getObject("target_connection_id", UUID::class.java), rs.getString("action"))
+        ZigbeeButtonBinding(
+            rs.getString("gesture"), rs.getObject("target_connection_id", UUID::class.java),
+            rs.getObject("target_room_id", UUID::class.java), rs.getString("action"),
+        )
     }.list()
 
     @Transactional
@@ -56,10 +61,11 @@ class ZigbeeButtonBindingRepository(private val jdbc: JdbcClient) {
         bindings.forEach { binding ->
             jdbc.sql(
                 """INSERT INTO zigbee_button_binding
-                   (owner_id, button_connection_id, gesture, target_connection_id, action, updated_at)
-                   VALUES (:ownerId, :buttonId, :gesture, :targetId, :action, :updatedAt)""",
+                   (owner_id, button_connection_id, gesture, target_connection_id, target_room_id, action, updated_at)
+                   VALUES (:ownerId, :buttonId, :gesture, :targetId, :roomId, :action, :updatedAt)""",
             ).param("ownerId", ownerId).param("buttonId", buttonId).param("gesture", binding.gesture)
-                .param("targetId", binding.targetDeviceId).param("action", binding.action)
+                .param("targetId", binding.targetDeviceId).param("roomId", binding.targetRoomId)
+                .param("action", binding.action)
                 .param("updatedAt", Timestamp.from(now)).update()
         }
     }
@@ -71,6 +77,7 @@ class ZigbeeButtonBindingService(
     private val connections: IntegrationConnectionRepository,
     private val catalog: DeviceCatalogService,
     private val orchestrator: ActionOrchestrator,
+    private val taskExecutor: TaskExecutor,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> {
@@ -83,9 +90,14 @@ class ZigbeeButtonBindingService(
         if (bindings.size > 3 || bindings.map { it.gesture }.distinct().size != bindings.size ||
             bindings.any { it.gesture !in GESTURES || it.action !in ACTIONS }) throw ZigbeeButtonBindingInvalidException()
         val targets = catalog.devices(ownerId).associateBy { it.id }
+        val roomIds = targets.values.mapNotNull { it.room?.id }.toSet()
         if (bindings.any { binding ->
-                val target = targets[binding.targetDeviceId]
-                target == null || target.id == buttonId || target.capabilities.none { it.id == DeviceCommandService.POWER_SET }
+                val hasDevice = binding.targetDeviceId != null
+                val hasRoom = binding.targetRoomId != null
+                val target = binding.targetDeviceId?.let(targets::get)
+                hasDevice == hasRoom || (hasDevice && (target == null || target.id == buttonId ||
+                    target.capabilities.none { it.id == DeviceCommandService.POWER_SET })) ||
+                    (hasRoom && binding.targetRoomId !in roomIds)
             }) throw ZigbeeButtonBindingInvalidException()
         repository.replace(ownerId, buttonId, bindings, clock.instant())
         return repository.find(ownerId, buttonId)
@@ -98,18 +110,28 @@ class ZigbeeButtonBindingService(
         } ?: throw ZigbeeButtonBindingInvalidException()
         requireButton(node.ownerId, button.id)
         val binding = repository.find(node.ownerId, button.id).singleOrNull { it.gesture == gesture } ?: return
-        val target = catalog.devices(node.ownerId).singleOrNull { it.id == binding.targetDeviceId }
-            ?: throw ZigbeeButtonBindingInvalidException()
+        taskExecutor.execute { execute(node, button.id, binding) }
+    }
+
+    private fun execute(node: GatewayNode, buttonId: UUID, binding: ZigbeeButtonBinding) {
+        val allDevices = catalog.devices(node.ownerId)
+        val targets = if (binding.targetDeviceId != null) {
+            allDevices.filter { it.id == binding.targetDeviceId }
+        } else {
+            allDevices.filter { it.room?.id == binding.targetRoomId &&
+                it.capabilities.any { capability -> capability.id == DeviceCommandService.POWER_SET } }
+        }
+        if (targets.isEmpty()) throw ZigbeeButtonBindingInvalidException()
         val on = when (binding.action) {
             "turn_on" -> true
             "turn_off" -> false
-            "toggle" -> !(target.state?.on ?: false)
+            "toggle" -> targets.none { it.state?.on == true }
             else -> throw ZigbeeButtonBindingInvalidException()
         }
         orchestrator.execute(
-            ActionContext(node.ownerId, ActivityActorType.INTEGRATION, button.id.toString(), InteractionChannel.AUTOMATION,
+            ActionContext(node.ownerId, ActivityActorType.INTEGRATION, buttonId.toString(), InteractionChannel.AUTOMATION,
                 Locale.GERMAN, UUID.randomUUID(), UUID.randomUUID()),
-            DeviceActionProposal(target.id, DeviceCommandService.POWER_SET, DeviceCommandArguments(on = on)),
+            DeviceActionProposal(null, DeviceCommandService.POWER_SET, DeviceCommandArguments(on = on), targets.map { it.id }),
         )
     }
 
