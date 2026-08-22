@@ -302,7 +302,7 @@ export default function DevicesPage() {
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
           const controllable = device.capabilities.some((capability) => capability.id === "power.set");
-          return <article key={device.id} onClick={() => setSelected(device)}>
+          return <article key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
             <div>
               <strong>{device.displayName}</strong>
               <small>{hardwareName}</small>
@@ -345,7 +345,7 @@ export default function DevicesPage() {
       </div>}
     </section>)}</div>
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
-    <GatewayLightControlDialog device={selected?.provider === "zigbee" || selected?.provider === "bluetooth" ? selected : null} open={selected?.provider === "zigbee" || selected?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelected(null); }} onCommandSucceeded={load} />
+    <GatewayLightControlDialog device={(selected?.provider === "zigbee" || selected?.provider === "bluetooth") && selected.capabilities.some((capability) => capability.id === "power.set") ? selected : null} open={!!selected && (selected.provider === "zigbee" || selected.provider === "bluetooth") && selected.capabilities.some((capability) => capability.id === "power.set")} onOpenChange={(open) => { if (!open) setSelected(null); }} onCommandSucceeded={load} />
     <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open && !pending && !deleteRoom) setRoomEditor(null); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="confirm-dialog-overlay" />
