@@ -221,6 +221,66 @@
       "path": "assets/velora/de/session.greeting/warm-02.wav",
       "sha256": "20be82193355a3ce47d5cac7b66b5ebe1cc96c13bd3abee7fe38cf75973c6feb",
       "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.gratitude",
+      "variantId": "neutral-01",
+      "text": "Kein Problem!",
+      "path": "assets/velora/de/session.gratitude/neutral-01.wav",
+      "sha256": "5f97fcb3bcb966c21b224b9bc9e38b46d7a18b9eb6d47f09a479fbc7a25f2303",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.gratitude",
+      "variantId": "neutral-02",
+      "text": "Gern geschehen.",
+      "path": "assets/velora/de/session.gratitude/neutral-02.wav",
+      "sha256": "3846c0b76df1e06016ed934c85e038ad0544c638c6fff3caeabf4f1f200198b0",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.gratitude",
+      "variantId": "warm-01",
+      "text": "Sehr gerne.",
+      "path": "assets/velora/de/session.gratitude/warm-01.wav",
+      "sha256": "2f1f7fbd60bf860730ffec2bf3698044929ef8155a5a1eacbdcdbc5666d55fe0",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.gratitude",
+      "variantId": "helpful-01",
+      "text": "Gib Bescheid, wenn ich noch etwas für dich tun kann.",
+      "path": "assets/velora/de/session.gratitude/helpful-01.wav",
+      "sha256": "6fce5fb587a910d278ce49915fad44479d17e725f002b0b2ed5707d61cc556fc",
+      "reviewedBy": "owner"
+    },
+    {
+      "catalogRevision": "voice-responses-v1",
+      "voiceProfileId": "velora",
+      "voiceProfileRevision": "d2afdc5faa3fb6cc41756daaaac3db63c30679e3bcd3e87f6dab0055d08dad09",
+      "locale": "de",
+      "responseKey": "session.gratitude",
+      "variantId": "warm-02",
+      "text": "Immer gerne.",
+      "path": "assets/velora/de/session.gratitude/warm-02.wav",
+      "sha256": "50be8be351a678aa46a09c3839830773ebb2d8491ff7b2801985ebbd61515da4",
+      "reviewedBy": "owner"
     }
   ],
   "pendingAssets": [
@@ -331,6 +391,36 @@
       "responseKey": "dialogue.acknowledged",
       "variantId": "neutral-02",
       "text": "Got it."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.gratitude",
+      "variantId": "neutral-01",
+      "text": "No problem!"
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.gratitude",
+      "variantId": "neutral-02",
+      "text": "You're welcome."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.gratitude",
+      "variantId": "warm-01",
+      "text": "My pleasure."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.gratitude",
+      "variantId": "helpful-01",
+      "text": "Let me know if there's anything else I can do for you."
+    },
+    {
+      "locale": "en",
+      "responseKey": "session.gratitude",
+      "variantId": "warm-02",
+      "text": "Anytime."
     }
   ]
 }
