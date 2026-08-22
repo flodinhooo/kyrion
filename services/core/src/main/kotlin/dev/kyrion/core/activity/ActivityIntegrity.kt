@@ -11,7 +11,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.sql.Timestamp
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -24,7 +23,7 @@ class ActivityIntegrity(
 
     fun eventHash(event: ActivityEvent, scope: String, previousHash: ByteArray?): ByteArray = authenticate(
         listOf(
-            "event-v1", scope, previousHash?.hex().orEmpty(), event.id.toString(), event.occurredAt.truncatedTo(ChronoUnit.MICROS).toString(),
+            "event-v1", scope, previousHash?.hex().orEmpty(), event.id.toString(), event.occurredAt.databasePrecision().toString(),
             event.category.name, event.eventType, event.status.name, event.actorType.name, event.actorId.orEmpty(),
             event.source, event.correlationId.toString(), event.summaryCode, event.ownerId?.toString().orEmpty(),
         ).joinToString("\u001f"),
@@ -50,6 +49,10 @@ class ActivityIntegrity(
     }
 
     private fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
+    private fun Instant.databasePrecision(): Instant {
+        val epochMicros = Math.addExact(Math.multiplyExact(epochSecond, 1_000_000L), (nano + 500L) / 1_000L)
+        return Instant.ofEpochSecond(epochMicros / 1_000_000L, (epochMicros % 1_000_000L) * 1_000L)
+    }
 }
 
 data class ActivityIntegrityChainReport(
@@ -58,6 +61,7 @@ data class ActivityIntegrityChainReport(
     val sealedEvents: Int,
     val legacyEvents: Int,
     val authorizedPruning: Boolean,
+    val issues: List<String>,
 )
 
 @Component
@@ -73,16 +77,17 @@ class ActivityIntegrityVerifier(private val jdbc: JdbcClient, private val integr
             ) }.list()
         val legacy = if (scope == SYSTEM_SCOPE) jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE owner_id IS NULL AND integrity_version IS NULL").query(Int::class.java).single()
         else jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE owner_id=:owner AND integrity_version IS NULL").param("owner",UUID.fromString(scope)).query(Int::class.java).single()
-        if (head == null) return ActivityIntegrityChainReport(scope, events.isEmpty(), events.size, legacy, false)
+        if (head == null) return ActivityIntegrityChainReport(scope, events.isEmpty(), events.size, legacy, false, if(events.isEmpty()) emptyList() else listOf("HEAD_MISSING"))
+        val issues = mutableListOf<String>()
         var expectedPrevious = head.anchorPreviousHash
-        var valid = integrity.matches(integrity.anchorMac(scope, expectedPrevious), head.anchorMac)
+        if (!integrity.matches(integrity.anchorMac(scope, expectedPrevious), head.anchorMac)) issues += "ANCHOR_INVALID"
         events.forEach { sealed ->
-            valid = valid && hashesEqual(expectedPrevious, sealed.previousHash)
-            valid = valid && integrity.matches(integrity.eventHash(sealed.event, scope, sealed.previousHash), sealed.eventHash)
+            if (!hashesEqual(expectedPrevious, sealed.previousHash)) issues += "LINK_INVALID"
+            if (!integrity.matches(integrity.eventHash(sealed.event, scope, sealed.previousHash), sealed.eventHash)) issues += "EVENT_HASH_INVALID:${sealed.event.eventType}"
             expectedPrevious = sealed.eventHash
         }
-        valid = valid && hashesEqual(expectedPrevious, head.lastHash) && (events.lastOrNull()?.event?.id == head.lastEventId || events.isEmpty())
-        return ActivityIntegrityChainReport(scope, valid, events.size, legacy, head.anchorPreviousHash != null)
+        if (!hashesEqual(expectedPrevious, head.lastHash) || (events.isNotEmpty() && events.last().event.id != head.lastEventId)) issues += "HEAD_INVALID"
+        return ActivityIntegrityChainReport(scope, issues.isEmpty(), events.size, legacy, head.anchorPreviousHash != null, issues.distinct())
     }
 
     private fun hashesEqual(first: ByteArray?, second: ByteArray?) =
