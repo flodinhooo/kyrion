@@ -418,7 +418,10 @@ remains [Voice Satellite and Wake-Word Session —
   personal memory, rooms and the first broad Nanoleaf integration slice;
   provider-neutral capability contracts and broader plugin lifecycle remain
   planned.
-- Activity actor ownership, retention and tamper-evidence are not implemented.
+- Activity events now separate owner scope from actor identity through Flyway
+  V17, and authenticated feeds expose only the current owner's events plus safe
+  installation-level system events. Retention enforcement and tamper evidence
+  are not implemented.
 - Available models remain deployment-controlled through `KYRION_ALLOWED_MODELS`;
   each browser can select one locally for its chat requests.
 - Model benchmark results currently live only in page state and are discarded
