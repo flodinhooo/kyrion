@@ -454,6 +454,11 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
   claims.
 - [ ] Add backup and restore verification for PostgreSQL data.
+- [x] Add a portable passphrase-encrypted personal backup export for
+  conversations, personal memories and retention settings. The versioned V1
+  envelope excludes authentication, sessions, integration credentials, device
+  tokens and private keys; preview, owner-remapped import and restore
+  verification remain follow-up work.
 
 ## Next vertical slice: Velora device control through Core
 
