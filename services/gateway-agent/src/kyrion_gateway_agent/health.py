@@ -199,7 +199,7 @@ def _zigbee_health() -> dict[str, Any] | None:
         ieee_address = item.get("ieee_address")
         if not isinstance(friendly_name, str) or not isinstance(ieee_address, str):
             continue
-        raw_state = _zigbee_device_state(friendly_name)
+        raw_state = _zigbee_device_state(friendly_name, str(definition.get("model", "")))
         try:
             state = json.loads(raw_state)
         except json.JSONDecodeError:
@@ -276,14 +276,32 @@ def _zigbee_health() -> dict[str, Any] | None:
     }
 
 
-def _zigbee_device_state(friendly_name: str) -> str:
-    return _command(
-        [
-            "mosquitto_sub", "-h", "127.0.0.1", "-t",
-            f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "2",
-        ],
-        "",
-    )
+def _zigbee_device_state(friendly_name: str, model: str = "") -> str:
+    if model.upper() in {"SNZB-01P", "SNZB-03P"}:
+        return ""
+    subscriber: subprocess.Popen[str] | None = None
+    try:
+        subscriber = subprocess.Popen(
+            [
+                "mosquitto_sub", "-h", "127.0.0.1", "-t",
+                f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "2",
+            ],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+        )
+        subprocess.run(
+            [
+                "mosquitto_pub", "-h", "127.0.0.1", "-t",
+                f"zigbee2mqtt/{friendly_name}/get", "-m",
+                '{"state":"","brightness":"","color":"","color_temp":""}',
+            ],
+            capture_output=True, check=False, timeout=2,
+        )
+        stdout, _ = subscriber.communicate(timeout=3)
+        return stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        if subscriber is not None:
+            subscriber.kill()
+        return ""
 
 
 def platform_identity() -> dict[str, str]:

@@ -51,7 +51,7 @@ def test_zigbee_health_reports_sensor_values(monkeypatch) -> None:
     monkeypatch.setattr(
         health_module,
         "_zigbee_device_state",
-        lambda _name: '{"occupancy":true,"battery":87,"illuminance":42,"linkquality":155}',
+        lambda _name, _model: '{"occupancy":true,"battery":87,"illuminance":42,"linkquality":155}',
     )
 
     health = health_module._zigbee_health()

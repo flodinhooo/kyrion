@@ -22,7 +22,7 @@ _ENGLISH_BRIGHTNESS = re.compile(
 )
 _GERMAN_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?"
-    r"(?:schalte|schalt|schau(?:t)?\s+dir|mach|macht)\b.*?"
+    r"(?:schalte|schalt|schaute|schau(?:t)?\s+dir|mach|macht)\b.*?"
     r"\b(?P<kind>nanoleafs?|licht(?:er)?|lampen?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
     r"(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,

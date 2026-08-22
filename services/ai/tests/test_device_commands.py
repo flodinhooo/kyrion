@@ -184,6 +184,26 @@ def test_non_light_catalog_entries_do_not_reject_a_light_command() -> None:
     assert proposal.arguments.on is True
 
 
+def test_real_parakeet_schalte_as_schaute_transcript_is_a_power_command() -> None:
+    request = DeviceCommandProposalRequest.model_validate({
+        "message": "Schaute das Licht im Wohnzimmer aus.",
+        "locale": "de",
+        "priorMessages": [],
+        "devices": [{
+            "id": "light-1", "provider": "bluetooth", "deviceClass": "light",
+            "displayName": "Lampe Links", "roomName": "Wohnzimmer",
+            "capabilities": [{"id": "power.set"}], "availability": "online",
+            "observedAt": None,
+        }],
+    })
+
+    proposal = propose_device_command(request)
+
+    assert proposal is not None
+    assert proposal.selector.room_name == "Wohnzimmer"
+    assert proposal.arguments.on is False
+
+
 def test_proposes_brightness_for_bluetooth_lamps_in_a_room() -> None:
     bluetooth_lamps = DeviceCommandProposalRequest(
         message="Stelle die Lampen im Wohnzimmer auf 40 Prozent.",
