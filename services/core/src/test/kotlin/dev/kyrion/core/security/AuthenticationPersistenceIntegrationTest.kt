@@ -154,7 +154,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         mockMvc.perform(get("/v1/auth/sessions").header("Authorization", "Bearer $currentToken"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[?(@.current == true)].length()").value(1))
+            .andExpect(jsonPath("$[*].current").value(org.hamcrest.Matchers.containsInAnyOrder(true, false)))
             .andExpect(jsonPath("$[*].tokenHash").doesNotExist())
 
         val secondOwnerId = insertAdditionalOwner("second")

@@ -142,7 +142,7 @@ class VoiceDialogueService(
                     ActionProcessingOutcome,
                     VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
                 )
-                emitAudio(processing, turnId, emit, awaitPlayback = true) {
+                emitAudio(processing, turnId, emit) {
                     satellites.activeSession(satelliteId, credential, sessionId)
                 }
             },
