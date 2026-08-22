@@ -28,8 +28,8 @@ available.
 ## Verification
 
 - AI Ruff passed.
-- All 109 AI tests passed, including Bluetooth room power, room brightness and
-  exact-device power proposals.
+- All 110 AI tests passed, including Bluetooth room power, room brightness,
+  exact-device power and a provider-agnostic future-light regression.
 - The complete Core test suite passed.
 - Physical Voice Satellite execution remains to be verified after restarting
   the local AI and Core services with this change.

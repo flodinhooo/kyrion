@@ -424,7 +424,13 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 
 ## Security and operations follow-up
 
-- [ ] Add login throttling and temporary backoff before remote exposure.
+- [x] Add Core-owned login throttling before remote exposure. Five consecutive
+  failures for a normalised account key now trigger a 30-second temporary
+  backoff that doubles to a 15-minute cap; successful login resets the state,
+  and rejected requests return `LOGIN_RATE_LIMITED` with `Retry-After` without
+  logging credentials or the attempted username. The current single-Core
+  development deployment keeps this bounded state in memory; a future
+  multi-instance deployment must move it to shared protected storage.
 - [ ] Add active-session listing and selective session revocation to the profile.
 - [ ] Define conversation and activity retention policies.
 - [ ] Define personal-memory retention expiry and archival policy.
