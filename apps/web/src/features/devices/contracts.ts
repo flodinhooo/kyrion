@@ -96,3 +96,14 @@ export function isButtonBindingList(value: unknown): value is ButtonBinding[] {
       && (binding.action === "toggle" || binding.action === "turn_on" || binding.action === "turn_off");
   });
 }
+
+export type MotionEvent = { id: string; detected: boolean; occurredAt: string };
+
+export function isMotionEventList(value: unknown): value is MotionEvent[] {
+  return Array.isArray(value) && value.length <= 12 && value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const event = item as Partial<MotionEvent>;
+    return typeof event.id === "string" && typeof event.detected === "boolean"
+      && typeof event.occurredAt === "string";
+  });
+}
