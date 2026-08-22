@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.http.HttpStatus
 import java.security.SecureRandom
 import java.time.Clock
 import java.time.Instant
@@ -26,6 +29,11 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 data class PersonalBackupRequest(@field:Size(min = 12, max = 200) val passphrase: String)
+data class PersonalBackupPreviewRequest(val envelope: EncryptedBackupEnvelope, @field:Size(min = 12, max = 200) val passphrase: String)
+data class PersonalBackupPreview(
+    val formatVersion: Int, val createdAt: String, val conversations: Int, val messages: Int,
+    val memories: Int, val memoryEnabled: Boolean, val retention: Map<String, String>, val excluded: List<String>,
+)
 data class EncryptedBackupEnvelope(
     val format: String = FORMAT, val formatVersion: Int = 1, val algorithm: String = "AES-256-GCM",
     val kdf: String = "PBKDF2-HMAC-SHA256", val iterations: Int = ITERATIONS,
@@ -88,6 +96,20 @@ class PersonalBackupController(
         val filename = "kyrion-personal-backup-${clock.instant().toString().take(10)}.json"
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"").body(cipher.encrypt(payload, body.passphrase))
     }
+    @PostMapping("/personal/preview")
+    fun preview(@Valid @RequestBody body: PersonalBackupPreviewRequest, request: HttpServletRequest): PersonalBackupPreview {
+        request.ownerId()
+        if (body.envelope.ciphertext.length > 70_000_000) throw PersonalBackupInvalidException()
+        val payload = try { cipher.decrypt(body.envelope, body.passphrase) } catch (_: Exception) { throw PersonalBackupInvalidException() }
+        if (payload.formatVersion != 1 || payload.conversations.size > 100_000 || payload.memories.size > 100_000) {
+            throw PersonalBackupInvalidException()
+        }
+        return PersonalBackupPreview(
+            payload.formatVersion, payload.createdAt, payload.conversations.size,
+            payload.conversations.sumOf { it.messages.size }, payload.memories.size,
+            payload.memoryEnabled, payload.retention, payload.excluded,
+        )
+    }
     private fun conversations(ownerId: UUID) = jdbc.sql("SELECT id,title,created_at,updated_at FROM conversation WHERE owner_id=:ownerId ORDER BY created_at")
         .param("ownerId", ownerId).query { rs, _ ->
             val id=rs.getObject("id",UUID::class.java); BackupConversation(id,rs.getString("title"),rs.getTimestamp("created_at").toInstant().toString(),rs.getTimestamp("updated_at").toInstant().toString(),
@@ -98,4 +120,13 @@ class PersonalBackupController(
         .param("id",ownerId).query { rs,_ -> BackupMemory(rs.getObject("id",UUID::class.java),rs.getString("category"),rs.getString("content"),rs.getString("sensitivity"),rs.getString("status"),rs.getTimestamp("created_at").toInstant().toString(),rs.getTimestamp("updated_at").toInstant().toString(),rs.getTimestamp("confirmed_at")?.toInstant()?.toString()) }.list()
     private fun retention(ownerId: UUID): Map<String,String> = jdbc.sql("SELECT conversation_policy,activity_policy,personal_memory_policy FROM owner_retention_policy WHERE owner_id=:id").param("id",ownerId).query { rs,_ -> mapOf("conversations" to rs.getString(1),"activity" to rs.getString(2),"personalMemory" to rs.getString(3)) }.optional().orElse(mapOf("conversations" to "keep_forever","activity" to "keep_forever","personalMemory" to "keep_forever"))
     private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw UnauthenticatedException()
+}
+
+class PersonalBackupInvalidException : RuntimeException()
+
+@org.springframework.web.bind.annotation.RestControllerAdvice
+class PersonalBackupErrorHandler {
+    @ExceptionHandler(PersonalBackupInvalidException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun invalid() = mapOf("code" to "BACKUP_INVALID_OR_PASSPHRASE_WRONG")
 }

@@ -392,6 +392,7 @@ button { color: inherit; }
 .backup-panel label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
 .backup-panel input { min-height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); }
 .backup-panel form p { margin: 0; color: var(--text-muted); font-size: 12px; }
+.backup-panel .backup-requirements { margin-top: -7px; }
 .backup-panel button { min-height: 40px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--primary-soft); color: var(--primary); cursor: pointer; font-weight: 750; }
 .password-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--border); }
 .password-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
