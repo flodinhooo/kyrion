@@ -67,9 +67,8 @@ class LocalAuthenticationServiceTest {
                 .isInstanceOf(InvalidCredentialsException::class.java)
         }
         assertThatThrownBy { service.login("flo", "a-secure-local-password") }
-            .isInstanceOf(LoginRateLimitedException::class.java)
-            .satisfies { exception ->
-                assertThat((exception as LoginRateLimitedException).retryAfter).isEqualTo(Duration.ofSeconds(30))
+            .isInstanceOfSatisfying(LoginRateLimitedException::class.java) { exception ->
+                assertThat(exception.retryAfter).isEqualTo(Duration.ofSeconds(30))
             }
 
         clock.advance(Duration.ofSeconds(30))
