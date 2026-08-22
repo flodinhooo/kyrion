@@ -20,7 +20,15 @@ export function ActiveSessionsPanel() {
     } catch { setError(true); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let disposed = false;
+    void fetch("/api/auth/sessions", { cache: "no-store" }).then(async (response) => {
+      const value: unknown = await response.json();
+      if (!response.ok || !isActiveSessionList(value)) throw new Error("Invalid session response");
+      if (!disposed) { setSessions(value); setError(false); }
+    }).catch(() => { if (!disposed) setError(true); });
+    return () => { disposed = true; };
+  }, []);
 
   async function revoke(id: string) {
     setPendingId(id); setError(false);
