@@ -95,6 +95,10 @@ data class GatewayZigbeeDevice(
     val hue: Double? = null,
     val saturation: Double? = null,
     val colorTemperature: Int? = null,
+    val occupancy: Boolean? = null,
+    val battery: Double? = null,
+    val illuminance: Double? = null,
+    val action: String? = null,
 )
 data class GatewayBluetoothDevice(
     val address: String,
@@ -284,7 +288,10 @@ class GatewayService(
                         (it.hue != null && it.hue !in 0.0..360.0) ||
                         (it.saturation != null && it.saturation !in 0.0..100.0) ||
                         (it.colorTemperature != null && it.colorTemperature !in 1..1000) ||
-                        (it.linkquality != null && it.linkquality !in 0..255)
+                        (it.linkquality != null && it.linkquality !in 0..255) ||
+                        (it.battery != null && it.battery !in 0.0..100.0) ||
+                        (it.illuminance != null && it.illuminance !in 0.0..1_000_000.0) ||
+                        (it.action != null && (it.action.length !in 1..40 || !it.action.matches(Regex("^[a-z0-9_]+$"))))
                 })) throw GatewayHealthInvalidException()
         if (health.bluetoothDevices.size > 32 || health.bluetoothDevices.any {
                 !it.address.matches(Regex("^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$")) ||

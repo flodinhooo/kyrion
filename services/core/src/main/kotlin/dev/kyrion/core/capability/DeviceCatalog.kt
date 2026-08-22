@@ -29,6 +29,10 @@ data class DeviceStateView(
     val hue: Double?,
     val saturation: Double?,
     val colorTemperature: Int?,
+    val occupancy: Boolean? = null,
+    val battery: Double? = null,
+    val illuminance: Double? = null,
+    val action: String? = null,
 )
 
 enum class DeviceAvailability(@get:JsonValue val value: String) {
@@ -81,12 +85,12 @@ class DeviceCatalogService(
                     ?: bluetooth?.let { "${it.name} ${it.model}" }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,
                 room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name, it.roomType) },
-                capabilities = capabilities(connection),
+                capabilities = capabilities(connection, zigbee),
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,
                 state = zigbee?.let {
                     DeviceStateView(it.on, it.brightness?.let { raw -> (raw * 100 / 254).coerceIn(0, 100) },
-                        it.hue, it.saturation, it.colorTemperature)
+                        it.hue, it.saturation, it.colorTemperature, it.occupancy, it.battery, it.illuminance, it.action)
                 } ?: bluetooth?.let {
                     DeviceStateView(it.on, it.brightness, it.hue, it.saturation, null)
                 },
@@ -99,11 +103,17 @@ class DeviceCatalogService(
         return !observedAt.isAfter(now) && Duration.between(observedAt, now) <= OBSERVATION_TTL
     }
 
-    private fun capabilities(connection: IntegrationConnection): List<DeviceCapabilityView> = when (connection.provider) {
+    private fun capabilities(connection: IntegrationConnection, zigbee: dev.kyrion.core.gateway.GatewayZigbeeDevice?): List<DeviceCapabilityView> = when (connection.provider) {
         NanoleafIntegrationService.PROVIDER -> NANOLEAF_CAPABILITIES.map(::DeviceCapabilityView)
-        ZigbeeDeviceSyncService.PROVIDER -> ZIGBEE_CAPABILITIES.map(::DeviceCapabilityView)
+        ZigbeeDeviceSyncService.PROVIDER -> zigbeeCapabilities(zigbee).map(::DeviceCapabilityView)
         BluetoothDeviceSyncService.PROVIDER -> BLUETOOTH_CAPABILITIES.map(::DeviceCapabilityView)
         else -> emptyList()
+    }
+
+    private fun zigbeeCapabilities(device: dev.kyrion.core.gateway.GatewayZigbeeDevice?): List<String> = when (device?.model?.uppercase()) {
+        "SNZB-03P" -> listOf("occupancy.read", "illuminance.read", "battery.read")
+        "SNZB-01P" -> listOf("button.events", "battery.read")
+        else -> if (device?.on != null || device?.brightness != null) ZIGBEE_LIGHT_CAPABILITIES else emptyList()
     }
 
     companion object {
@@ -115,7 +125,7 @@ class DeviceCatalogService(
             "light.setColourTemperature",
             "light.activateScene",
         )
-        val ZIGBEE_CAPABILITIES = listOf(
+        val ZIGBEE_LIGHT_CAPABILITIES = listOf(
             DeviceCommandService.POWER_SET,
             DeviceCommandService.BRIGHTNESS_SET,
             "light.setColour",
