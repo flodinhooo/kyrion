@@ -237,6 +237,26 @@ def _zigbee_health() -> dict[str, Any] | None:
                 if isinstance(state, dict) and isinstance(state.get("linkquality"), int)
                 else None
             ),
+            "occupancy": (
+                state.get("occupancy")
+                if isinstance(state, dict) and isinstance(state.get("occupancy"), bool)
+                else None
+            ),
+            "battery": (
+                state.get("battery")
+                if isinstance(state, dict) and isinstance(state.get("battery"), (int, float))
+                else None
+            ),
+            "illuminance": (
+                state.get("illuminance")
+                if isinstance(state, dict) and isinstance(state.get("illuminance"), (int, float))
+                else None
+            ),
+            "action": (
+                state.get("action")[:40]
+                if isinstance(state, dict) and isinstance(state.get("action"), str)
+                else None
+            ),
         })
     return {
         "permitJoin": bool(info.get("permit_join", False)),
@@ -260,7 +280,7 @@ def _zigbee_device_state(friendly_name: str) -> str:
             [
                 "mosquitto_pub", "-h", "127.0.0.1", "-t",
                 f"zigbee2mqtt/{friendly_name}/get", "-m",
-                '{"state":"","brightness":"","color":"","color_temp":""}',
+                '{"state":"","brightness":"","color":"","color_temp":"","occupancy":"","battery":"","illuminance":""}',
             ],
             capture_output=True, check=False, timeout=2,
         )

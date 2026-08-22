@@ -38,6 +38,22 @@ def test_health_contract_contains_bounded_platform_values() -> None:
     assert identity["architecture"]
 
 
+def test_zigbee_health_reports_sensor_values(monkeypatch) -> None:
+    devices = '[{"type":"EndDevice","friendly_name":"hall-motion","ieee_address":"0x00124b0024abcdef","supported":true,"definition":{"vendor":"SONOFF","model":"SNZB-03P","description":"Motion sensor"}}]'
+    info = '{"permit_join":false,"network":{"channel":15}}'
+    responses = iter([devices, info])
+    monkeypatch.setattr(health_module, "_command", lambda _command, _default: next(responses))
+    monkeypatch.setattr(health_module, "_zigbee_device_state", lambda _name: '{"occupancy":true,"battery":87,"illuminance":42,"linkquality":155}')
+
+    health = health_module._zigbee_health()
+
+    assert health is not None
+    assert health["devices"][0] | {"friendlyName": "hall-motion"} == health["devices"][0]
+    assert health["devices"][0]["occupancy"] is True
+    assert health["devices"][0]["battery"] == 87
+    assert health["devices"][0]["illuminance"] == 42
+
+
 def test_audio_endpoint_reports_only_the_expected_pipewire_direction(monkeypatch) -> None:
     source = """
       * media.class = "Audio/Source"
