@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -83,6 +84,14 @@ class AuthenticationErrorHandler {
     @ExceptionHandler(InvalidCredentialsException::class, UnauthenticatedException::class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     fun unauthorized() = ErrorResponse("UNAUTHENTICATED")
+
+    @ExceptionHandler(LoginRateLimitedException::class)
+    fun loginRateLimited(exception: LoginRateLimitedException): ResponseEntity<ErrorResponse> {
+        val retryAfterSeconds = exception.retryAfter.seconds.coerceAtLeast(1)
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", retryAfterSeconds.toString())
+            .body(ErrorResponse("LOGIN_RATE_LIMITED"))
+    }
 
     @ExceptionHandler(InvalidCurrentPasswordException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

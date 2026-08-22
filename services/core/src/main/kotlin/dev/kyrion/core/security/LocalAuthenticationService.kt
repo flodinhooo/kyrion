@@ -18,6 +18,7 @@ class LocalAuthenticationService(
     private val sessions: AuthSessionService,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val loginAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
 ) {
     fun setupRequired() = !users.exists()
 
@@ -31,11 +32,18 @@ class LocalAuthenticationService(
     }
 
     fun login(username: String, password: String): AuthenticatedOwner {
-        val account = users.findByUsername(normalizeUsername(username))
+        val normalized = normalizeUsername(username)
+        loginAttempts.backoffFor(normalized)?.let { backoff ->
+            record("auth.login", ActivityStatus.DENIED, "activity.auth.loginRateLimited")
+            throw LoginRateLimitedException(backoff.retryAfter(clock.instant()))
+        }
+        val account = users.findByUsername(normalized)
         if (account == null || !account.enabled || !passwords.matches(password, account.passwordHash)) {
             record("auth.login", ActivityStatus.DENIED, "activity.auth.loginFailed")
+            loginAttempts.recordFailure(normalized)
             throw InvalidCredentialsException()
         }
+        loginAttempts.recordSuccess(normalized)
         record("auth.login", ActivityStatus.SUCCEEDED, "activity.auth.loginSucceeded", account.id)
         return AuthenticatedOwner(account, sessions.create(account.id))
     }

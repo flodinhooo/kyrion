@@ -9,18 +9,20 @@ import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.Duration
 import java.util.UUID
 
 class LocalAuthenticationServiceTest {
     private val now = Instant.parse("2026-08-03T20:00:00Z")
+    private val clock = MutableClock(now)
     private val users = InMemoryUserAccountRepository()
     private val sessions = InMemoryAuthSessionRepositoryForAuthentication()
     private val service = LocalAuthenticationService(
         users,
         PasswordHashingService(),
-        AuthSessionService(sessions, SessionTokenService(), Clock.fixed(now, ZoneOffset.UTC)),
-        ActivityService(InMemorySecurityActivityRepository(), Clock.fixed(now, ZoneOffset.UTC)),
-        Clock.fixed(now, ZoneOffset.UTC),
+        AuthSessionService(sessions, SessionTokenService(), clock),
+        ActivityService(InMemorySecurityActivityRepository(), clock),
+        clock,
     )
 
     @Test
@@ -55,6 +57,35 @@ class LocalAuthenticationServiceTest {
         assertThatThrownBy { service.login("flo", "a-secure-local-password") }.isInstanceOf(InvalidCredentialsException::class.java)
         assertThat(service.login("flo", "a-brand-new-password").user.id).isEqualTo(owner.user.id)
     }
+
+    @Test
+    fun `temporarily backs off repeated login failures and resets after success`() {
+        service.setup("flo", "a-secure-local-password")
+
+        repeat(5) {
+            assertThatThrownBy { service.login("FLO", "definitely-the-wrong-password") }
+                .isInstanceOf(InvalidCredentialsException::class.java)
+        }
+        assertThatThrownBy { service.login("flo", "a-secure-local-password") }
+            .isInstanceOf(LoginRateLimitedException::class.java)
+            .satisfies { exception ->
+                assertThat((exception as LoginRateLimitedException).retryAfter).isEqualTo(Duration.ofSeconds(30))
+            }
+
+        clock.advance(Duration.ofSeconds(30))
+        assertThat(service.login("flo", "a-secure-local-password").user.username).isEqualTo("flo")
+
+        assertThatThrownBy { service.login("flo", "wrong-password-again") }
+            .isInstanceOf(InvalidCredentialsException::class.java)
+        assertThat(service.login("flo", "a-secure-local-password").user.username).isEqualTo("flo")
+    }
+}
+
+private class MutableClock(private var current: Instant) : Clock() {
+    override fun getZone() = ZoneOffset.UTC
+    override fun withZone(zone: java.time.ZoneId): Clock = this
+    override fun instant(): Instant = current
+    fun advance(duration: Duration) { current = current.plus(duration) }
 }
 
 private class InMemoryUserAccountRepository : UserAccountRepository {
