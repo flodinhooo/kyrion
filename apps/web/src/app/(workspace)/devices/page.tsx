@@ -9,7 +9,7 @@ import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { GatewayLightControlDialog } from "@/components/gateway-light-control-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
-import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type RuntimeDevice } from "@/features/devices/contracts";
+import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isMotionEventList, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type MotionEvent, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
@@ -38,6 +38,7 @@ export default function DevicesPage() {
   const [roomCommandStates, setRoomCommandStates] = useState<Record<string, boolean>>({});
   const [buttonBindings, setButtonBindings] = useState<Record<string, ButtonBinding[]>>({});
   const [savingBindings, setSavingBindings] = useState<string | null>(null);
+  const [motionEvents, setMotionEvents] = useState<Record<string, MotionEvent[]>>({});
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -96,6 +97,23 @@ export default function DevicesPage() {
       if (!disposed) setButtonBindings((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry) => entry !== null)) }));
     });
     return () => { disposed = true; };
+  }, [devices]);
+
+  useEffect(() => {
+    const sensors = devices.filter((device) => device.capabilities.some((capability) => capability.id === "occupancy.read"));
+    if (sensors.length === 0) return;
+    let disposed = false;
+    const refresh = async () => {
+      const entries = await Promise.all(sensors.map(async (sensor) => {
+        const response = await fetch(`/api/devices/${sensor.id}/motion-events`, { cache: "no-store" });
+        const value: unknown = await response.json().catch(() => null);
+        return response.ok && isMotionEventList(value) ? [sensor.id, value] as const : null;
+      }));
+      if (!disposed) setMotionEvents((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry) => entry !== null)) }));
+    };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 5_000);
+    return () => { disposed = true; window.clearInterval(interval); };
   }, [devices]);
 
   function updateButtonBinding(buttonId: string, gesture: ButtonGesture, targetValue: string, action?: ButtonAction) {
@@ -348,6 +366,7 @@ export default function DevicesPage() {
           const controllable = device.deviceClass === "light" && device.capabilities.some((capability) => capability.id === "power.set");
           const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
           const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
+          const hasLiveState = !!liveState && Object.values(liveState).some((value) => value !== null);
           const DeviceIcon = device.deviceClass === "light" ? LampDesk : device.deviceClass === "sensor" ? ScanLine : device.deviceClass === "switch" ? RadioTower : Cpu;
           return <article className={`device-card device-card-${device.deviceClass}${controllable ? " is-controllable" : ""}`} key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
             <div>
@@ -357,13 +376,18 @@ export default function DevicesPage() {
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
-            {controllable && <button>{t.homeOpenControls}</button>}
-            {liveState && controllable && <div className="device-live-state" aria-label={t.homeCurrentState}>
+            {device.capabilities.some((capability) => capability.id === "occupancy.read") && <aside className="motion-log" aria-label={t.motionHistory}>
+              <strong>{t.motionHistory}</strong>
+              {(motionEvents[device.id] ?? []).length === 0 ? <small>{t.motionNoEvents}</small> : (motionEvents[device.id] ?? []).slice(0, 5).map((event) => <span key={event.id} className={event.detected ? "detected" : "clear"}>
+                <i />{event.detected ? t.sensorDetected : t.sensorClear}<time>{new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(event.occurredAt))}</time>
+              </span>)}
+            </aside>}
+            {hasLiveState && liveState && controllable && <div className="device-live-state" aria-label={t.homeCurrentState}>
               <span className={`state-pill ${liveState.on ? "is-on" : "is-off"}`}>{liveState.on === null ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</span>
               <span>{t.homeCurrentBrightness}: <strong>{liveState.brightness ?? "–"}%</strong></span>
               <span>{t.homeCurrentColor}: <i className="color-swatch" style={{ backgroundColor: hsvToHex(liveState.hue, liveState.saturation) }} /></span>
             </div>}
-            {liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
+            {hasLiveState && liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
               {liveState.occupancy !== null && <span>{t.sensorMotion}: <strong>{liveState.occupancy ? t.sensorDetected : t.sensorClear}</strong></span>}
               {liveState.illuminance !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illuminance} lx</strong></span>}
               {liveState.illumination !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illumination === "dim" ? t.sensorDim : t.sensorBright}</strong></span>}
