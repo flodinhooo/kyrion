@@ -78,6 +78,57 @@ def test_light_category_does_not_require_a_nanoleaf_device() -> None:
     assert proposal.arguments.on is False
 
 
+def test_proposes_power_for_bluetooth_lamps_in_a_room() -> None:
+    bluetooth_lamps = DeviceCommandProposalRequest(
+        message="Schalte die Lampen im Wohnzimmer an.",
+        locale="de",
+        devices=[
+            {
+                **_DEVICES[0],
+                "provider": "bluetooth",
+                "displayName": "Lampe Rechts",
+                "roomName": "Wohnzimmer",
+            },
+            {
+                **_DEVICES[0],
+                "id": "device-2",
+                "provider": "bluetooth",
+                "displayName": "Lampe Links",
+                "roomName": "Wohnzimmer",
+            },
+        ],
+    )
+
+    proposal = propose_device_command(bluetooth_lamps)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Wohnzimmer"
+    assert proposal.arguments.on is True
+
+
+def test_proposes_brightness_for_bluetooth_lamps_in_a_room() -> None:
+    bluetooth_lamps = DeviceCommandProposalRequest(
+        message="Stelle die Lampen im Wohnzimmer auf 40 Prozent.",
+        locale="de",
+        devices=[
+            {
+                **_DEVICES[0],
+                "provider": "bluetooth",
+                "displayName": "Lampe Rechts",
+                "roomName": "Wohnzimmer",
+            }
+        ],
+    )
+
+    proposal = propose_device_command(bluetooth_lamps)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Wohnzimmer"
+    assert proposal.arguments.brightness == 40
+
+
 def test_proposes_german_multi_room_light_power() -> None:
     multi_room = DeviceCommandProposalRequest(
         message="Hey Velora, schalte bitte das Licht im Schlafzimmer und im Flur aus.",
@@ -229,6 +280,50 @@ def test_proposes_power_for_one_exact_device_name() -> None:
     proposal = propose_device_command(request("Schalte Panels aus"))
 
     assert proposal is not None
+    assert proposal.selector.device_id == "device-1"
+    assert proposal.arguments.on is False
+
+
+def test_proposes_power_for_one_exact_bluetooth_device_name() -> None:
+    bluetooth = DeviceCommandProposalRequest(
+        message="Schalte Lampe Rechts aus",
+        locale="de",
+        devices=[
+            {
+                **_DEVICES[0],
+                "provider": "bluetooth",
+                "displayName": "Lampe Rechts",
+                "roomName": "Wohnzimmer",
+            }
+        ],
+    )
+
+    proposal = propose_device_command(bluetooth)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.device_id == "device-1"
+    assert proposal.arguments.on is False
+
+
+def test_exact_name_uses_light_category_for_a_future_light_provider() -> None:
+    future_light = DeviceCommandProposalRequest(
+        message="Schalte Leselampe aus",
+        locale="de",
+        devices=[
+            {
+                **_DEVICES[0],
+                "provider": "future-matter-provider",
+                "displayName": "Leselampe",
+                "roomName": "Wohnzimmer",
+            }
+        ],
+    )
+
+    proposal = propose_device_command(future_light)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
     assert proposal.selector.device_id == "device-1"
     assert proposal.arguments.on is False
 

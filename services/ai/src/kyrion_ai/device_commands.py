@@ -10,12 +10,12 @@ from kyrion_ai.contracts import (
 
 _GERMAN_BRIGHTNESS = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?(?:stelle|stell|setze|setz|mach)\b.*?"
-    r"\bnanoleafs?\b\s+(?:im|in)\s+(?P<room>.+?)\s+auf\s+(?P<value>\d{1,3})\s*"
+    r"\b(?P<kind>nanoleafs?|lichter?|lampen?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+auf\s+(?P<value>\d{1,3})\s*"
     r"(?:%|prozent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
 _ENGLISH_BRIGHTNESS = re.compile(
-    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:set|put)\b.*?\bnanoleafs?\b\s+in\s+"
+    r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:set|put)\b.*?\b(?P<kind>nanoleafs?|lights?|lamps?)\b\s+in\s+"
     r"(?:the\s+)?(?P<room>.+?)\s+(?:to|at)\s+(?P<value>\d{1,3})\s*"
     r"(?:%|percent)(?:\s|[.!?]|$)",
     re.IGNORECASE,
@@ -23,7 +23,7 @@ _ENGLISH_BRIGHTNESS = re.compile(
 _GERMAN_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:bitte\s+)?"
     r"(?:schalte|schalt|schau(?:t)?\s+dir|mach|macht)\b.*?"
-    r"\b(?P<kind>nanoleafs?|licht(?:er)?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
+    r"\b(?P<kind>nanoleafs?|licht(?:er)?|lampen?)\b\s+(?:im|in)\s+(?P<room>.+?)\s+"
     r"(?P<state>an|ein|aus|raus)(?:\s*,?\s*bitte)?[.!?]*\s*$",
     re.IGNORECASE,
 )
@@ -34,7 +34,7 @@ _GERMAN_GLOBAL_LIGHT_POWER = re.compile(
 )
 _ENGLISH_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?(?:please\s+)?(?:turn|switch)\b.*?"
-    r"\b(?P<kind>nanoleafs?|lights?)\b\s+in\s+(?:the\s+)?(?P<room>.+?)\s+"
+    r"\b(?P<kind>nanoleafs?|lights?|lamps?)\b\s+in\s+(?:the\s+)?(?P<room>.+?)\s+"
     r"(?P<state>on|off)(?:\s|[.!?]|$)",
     re.IGNORECASE,
 )
@@ -113,9 +113,11 @@ def _propose_direct(
     brightness_match = brightness_pattern.search(request.message)
     if brightness_match:
         value = int(brightness_match.group("value"))
+        kind = brightness_match.group("kind").casefold()
+        provider = "nanoleaf" if kind.startswith("nanoleaf") else "light"
         if value > 100:
             return None
-        if not _supports(request, "nanoleaf", "light.setBrightness"):
+        if not _supports(request, provider, "light.setBrightness"):
             return None
         return DeviceCommandProposal(
             capability="light.setBrightness",
@@ -123,6 +125,7 @@ def _propose_direct(
                 request,
                 brightness_match.group("room"),
                 "light.setBrightness",
+                provider,
             ),
             arguments=DeviceCommandArguments(brightness=value),
         )
@@ -142,7 +145,7 @@ def _propose_direct(
     if power_match:
         state = power_match.group("state").lower()
         kind = power_match.group("kind").casefold()
-        provider = "light" if kind.startswith(("licht", "light")) else "nanoleaf"
+        provider = "nanoleaf" if kind.startswith("nanoleaf") else "light"
         if not _supports(request, provider, "power.set"):
             return None
         return DeviceCommandProposal(
@@ -172,7 +175,7 @@ def _propose_direct(
         if value <= 100 and device is not None:
             return DeviceCommandProposal(
                 capability="light.setBrightness",
-                selector=DeviceTargetSelector(provider="nanoleaf", deviceId=device.id),
+                selector=DeviceTargetSelector(provider="light", deviceId=device.id),
                 arguments=DeviceCommandArguments(brightness=value),
             )
     device_power_pattern = (
@@ -185,7 +188,7 @@ def _propose_direct(
             state = device_power_match.group("state").lower()
             return DeviceCommandProposal(
                 capability="power.set",
-                selector=DeviceTargetSelector(provider="nanoleaf", deviceId=device.id),
+                selector=DeviceTargetSelector(provider="light", deviceId=device.id),
                 arguments=DeviceCommandArguments(on=state in {"an", "ein", "on"}),
             )
     return None
@@ -274,7 +277,7 @@ def _exact_device(
     matches = [
         device
         for device in request.devices
-        if device.provider == "nanoleaf"
+        if device.device_class == "light"
         and device.display_name.casefold() == normalised.casefold()
         and any(item.id == capability for item in device.capabilities)
     ]
