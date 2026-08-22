@@ -114,6 +114,7 @@ class DeviceCatalogService(
     private fun zigbeeCapabilities(device: dev.kyrion.core.gateway.GatewayZigbeeDevice?): List<String> = when (device?.model?.uppercase()) {
         "SNZB-03P" -> listOf("occupancy.read", "illumination.read", "battery.read")
         "SNZB-01P" -> listOf("button.events", "battery.read")
+        "8720169364066" -> ZIGBEE_LIGHT_CAPABILITIES
         else -> if (device?.on != null || device?.brightness != null) ZIGBEE_LIGHT_CAPABILITIES else emptyList()
     }
 

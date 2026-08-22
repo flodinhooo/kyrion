@@ -8,6 +8,7 @@ import dev.kyrion.core.activity.ActivityActorType
 import dev.kyrion.core.capability.DeviceCatalogService
 import dev.kyrion.core.capability.DeviceCommandArguments
 import dev.kyrion.core.capability.DeviceCommandService
+import dev.kyrion.core.capability.CommandedPowerStateStore
 import dev.kyrion.core.gateway.GatewayNode
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
@@ -79,6 +80,7 @@ class ZigbeeButtonBindingService(
     private val orchestrator: ActionOrchestrator,
     private val taskExecutor: TaskExecutor,
     private val clock: Clock = Clock.systemUTC(),
+    private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
 ) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> {
         requireButton(ownerId, buttonId)
@@ -125,7 +127,9 @@ class ZigbeeButtonBindingService(
         val on = when (binding.action) {
             "turn_on" -> true
             "turn_off" -> false
-            "toggle" -> targets.none { it.state?.on == true }
+            "toggle" -> targets.none { target ->
+                (target.state?.on ?: powerStates.get(node.ownerId, target.id)) == true
+            }
             else -> throw ZigbeeButtonBindingInvalidException()
         }
         orchestrator.execute(

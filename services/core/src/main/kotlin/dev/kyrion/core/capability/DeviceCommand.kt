@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.UUID
 import java.time.Clock
+import java.util.concurrent.ConcurrentHashMap
 
 data class DeviceTargetSelector(
     @field:Size(max = 120) val roomName: String? = null,
@@ -66,6 +67,17 @@ data class DeviceCommandResult(
 data class AsyncDeviceCommandResult(val commandId: UUID, val deviceId: UUID, val status: String = "pending")
 
 @Service
+class CommandedPowerStateStore {
+    private val states = ConcurrentHashMap<Pair<UUID, UUID>, Boolean>()
+
+    fun get(ownerId: UUID, deviceId: UUID): Boolean? = states[ownerId to deviceId]
+
+    fun record(ownerId: UUID, deviceId: UUID, on: Boolean) {
+        states[ownerId to deviceId] = on
+    }
+}
+
+@Service
 class DeviceCommandService(
     private val rooms: RoomRepository,
     private val connections: IntegrationConnectionRepository,
@@ -75,6 +87,7 @@ class DeviceCommandService(
     private val clock: Clock = Clock.systemUTC(),
     private val gateways: GatewayService? = null,
     private val gatewayCommands: GatewayCommandService? = null,
+    private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
 ) {
     fun enqueue(ownerId: UUID, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
         val provider = request.selector.provider.trim().lowercase()
@@ -157,6 +170,9 @@ class DeviceCommandService(
                     COLOR_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
                         executeGateway(ownerId, provider, target.endpointHost, "$provider.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!))
                     } else throw DeviceCapabilityUnsupportedException()
+                }
+                if (request.capability == POWER_SET) {
+                    powerStates.record(ownerId, target.id, request.arguments.on!!)
                 }
                 observe(ownerId, target.id, DeviceAvailability.ONLINE)
                 DeviceCommandOutcome(target.id, target.displayName, "succeeded")
