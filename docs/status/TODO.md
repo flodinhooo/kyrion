@@ -1,11 +1,17 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).
 
 ## Stable Voice MVP
+
+- [x] Include every approved `light` device in provider-neutral Voice room,
+  global and exact-name power commands without a provider-specific Voice
+  change; include room-scoped brightness when the device advertises it.
+- [ ] Physically verify `Schalte die Lampen im Wohnzimmer an/aus` and
+  `Schalte Lampe Rechts an/aus` through the Voice Satellite.
 
 Canonical continuation:
 [Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md).
