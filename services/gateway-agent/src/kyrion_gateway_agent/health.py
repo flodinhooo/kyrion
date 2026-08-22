@@ -252,6 +252,11 @@ def _zigbee_health() -> dict[str, Any] | None:
                 if isinstance(state, dict) and isinstance(state.get("illuminance"), (int, float))
                 else None
             ),
+            "illumination": (
+                state.get("illumination")
+                if isinstance(state, dict) and state.get("illumination") in {"dim", "bright"}
+                else None
+            ),
             "action": (
                 state.get("action")[:40]
                 if isinstance(state, dict) and isinstance(state.get("action"), str)

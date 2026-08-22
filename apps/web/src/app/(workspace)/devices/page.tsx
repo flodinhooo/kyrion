@@ -294,6 +294,11 @@ export default function DevicesPage() {
             hue: nanoleafState.hue,
             saturation: nanoleafState.saturation,
             colorTemperature: nanoleafState.colorTemperature,
+            occupancy: null,
+            battery: null,
+            illuminance: null,
+            action: null,
+            illumination: null,
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
           const controllable = device.capabilities.some((capability) => capability.id === "power.set");
@@ -314,6 +319,7 @@ export default function DevicesPage() {
             {liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
               {liveState.occupancy !== null && <span>{t.sensorMotion}: <strong>{liveState.occupancy ? t.sensorDetected : t.sensorClear}</strong></span>}
               {liveState.illuminance !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illuminance} lx</strong></span>}
+              {liveState.illumination !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illumination === "dim" ? t.sensorDim : t.sensorBright}</strong></span>}
               {liveState.battery !== null && <span>{t.sensorBattery}: <strong>{liveState.battery}%</strong></span>}
               {liveState.action && <span>{t.sensorLastAction}: <strong>{liveState.action}</strong></span>}
             </div>}
