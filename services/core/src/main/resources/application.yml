@@ -26,3 +26,5 @@ kyrion:
     base-url: ${KYRION_AI_BASE_URL:http://127.0.0.1:8000}
   credentials:
     key-file: ${KYRION_CREDENTIAL_KEY_FILE:E:/Kyrion/Data/secrets/credential.key}
+  audit:
+    integrity-key-file: ${KYRION_AUDIT_INTEGRITY_KEY_FILE:E:/Kyrion/Data/secrets/audit-integrity.key}
