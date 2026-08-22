@@ -398,6 +398,12 @@ button { color: inherit; }
 .backup-preview-result { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--surface); }
 .backup-preview-result strong { grid-column: 1 / -1; }
 .backup-preview-result span { color: var(--text-muted); font-size: 12px; }
+.backup-import-confirm { display: grid; gap: 10px; margin-top: 14px; padding: 13px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); }
+.backup-import-confirm p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.backup-import-confirm label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
+.backup-import-result { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin-top: 14px; padding: 13px; border-radius: 10px; background: var(--surface); }
+.backup-import-result strong { grid-column: 1 / -1; color: var(--primary); }
+.backup-import-result span { color: var(--text-muted); font-size: 12px; }
 .password-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--border); }
 .password-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
 .password-form label:first-child { grid-column: 1 / -1; }
