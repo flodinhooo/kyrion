@@ -64,7 +64,10 @@ export default function DevicesPage() {
     const timeout = window.setTimeout(() => {
       void load().catch(() => { if (!disposed) setError(true); });
     }, 0);
-    return () => { disposed = true; window.clearTimeout(timeout); };
+    const interval = window.setInterval(() => {
+      void load().catch(() => { if (!disposed) setError(true); });
+    }, 5_000);
+    return () => { disposed = true; window.clearTimeout(timeout); window.clearInterval(interval); };
   }, [load]);
 
   const refreshNanoleafStates = useCallback(async () => {
@@ -367,6 +370,10 @@ export default function DevicesPage() {
           const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
           const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
           const hasLiveState = !!liveState && Object.values(liveState).some((value) => value !== null);
+          const currentColor = liveState?.hue !== null && liveState?.hue !== undefined
+            && liveState?.saturation !== null && liveState?.saturation !== undefined
+            ? hsvToHex(liveState.hue, liveState.saturation, liveState.brightness ?? 100)
+            : null;
           const DeviceIcon = device.deviceClass === "light" ? LampDesk : device.deviceClass === "sensor" ? ScanLine : device.deviceClass === "switch" ? RadioTower : Cpu;
           return <article className={`device-card device-card-${device.deviceClass}${controllable ? " is-controllable" : ""}`} key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
             <div>
@@ -382,10 +389,11 @@ export default function DevicesPage() {
                 <i />{event.detected ? t.sensorDetected : t.sensorClear}<time>{new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(event.occurredAt))}</time>
               </span>)}
             </aside>}
-            {hasLiveState && liveState && controllable && <div className="device-live-state" aria-label={t.homeCurrentState}>
-              <span className={`state-pill ${liveState.on ? "is-on" : "is-off"}`}>{liveState.on === null ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</span>
-              <span>{t.homeCurrentBrightness}: <strong>{liveState.brightness ?? "–"}%</strong></span>
-              <span>{t.homeCurrentColor}: <i className="color-swatch" style={{ backgroundColor: hsvToHex(liveState.hue, liveState.saturation) }} /></span>
+            {controllable && <button className="open-device-controls" type="button">{t.homeOpenControls}</button>}
+            {controllable && <div className="device-live-state lamp-live-state" aria-label={t.homeCurrentState}>
+              <span><small>{t.homeCurrentState}</small><strong className={`state-pill ${liveState?.on ? "is-on" : "is-off"}`}>{liveState?.on === null || liveState?.on === undefined ? t.homeUnknown : liveState.on ? t.zigbeeOn : t.zigbeeOff}</strong></span>
+              <span><small>{t.homeCurrentBrightness}</small><strong>{liveState?.brightness === null || liveState?.brightness === undefined ? "–" : `${liveState.brightness}%`}</strong></span>
+              <span><small>{t.homeCurrentColor}</small><strong className="lamp-color-value"><i className={`color-swatch${currentColor ? "" : " unknown"}`} style={currentColor ? { backgroundColor: currentColor } : undefined} />{currentColor ?? t.homeUnknown}</strong></span>
             </div>}
             {hasLiveState && liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
               {liveState.occupancy !== null && <span>{t.sensorMotion}: <strong>{liveState.occupancy ? t.sensorDetected : t.sensorClear}</strong></span>}
@@ -417,12 +425,14 @@ export default function DevicesPage() {
               <button disabled={pending || commandStates[device.id] === "pending"} onClick={() => void quickPower(device.id, false)}>{t.nanoleafTurnOff}</button>
             </div>}
             {commandStates[device.id] && <small className={commandStates[device.id] === "failed" ? "auth-error" : "command-status"} aria-live="polite">{commandStates[device.id] === "pending" ? t.commandPending : commandStates[device.id] === "succeeded" ? t.commandSucceeded : t.commandFailed}</small>}
-            <div className="device-rename" onClick={(event) => event.stopPropagation()}>
-              <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
-              <select aria-label={t.deviceClass} value={deviceClasses[device.id] ?? device.deviceClass} onChange={(event) => setDeviceClasses((current) => ({ ...current, [device.id]: event.target.value as DeviceClass }))}>{(["light", "switch", "sensor", "other"] as const).map((value) => <option key={value} value={value}>{t.deviceClasses[value]}</option>)}</select>
-              <button disabled={pending || (deviceNames[device.id] === undefined && deviceClasses[device.id] === undefined)} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
+            <div className="device-management" onClick={(event) => event.stopPropagation()}>
+              <div className="device-rename">
+                <input aria-label={t.homeRenameDevice} maxLength={160} value={deviceNames[device.id] ?? device.displayName} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} />
+                <select aria-label={t.deviceClass} value={deviceClasses[device.id] ?? device.deviceClass} onChange={(event) => setDeviceClasses((current) => ({ ...current, [device.id]: event.target.value as DeviceClass }))}>{(["light", "switch", "sensor", "other"] as const).map((value) => <option key={value} value={value}>{t.deviceClasses[value]}</option>)}</select>
+                <button disabled={pending || (deviceNames[device.id] === undefined && deviceClasses[device.id] === undefined)} onClick={() => void renameDevice(device)}>{t.homeRenameDevice}</button>
+              </div>
+              <button className="danger remove-device-button" disabled={pending} onClick={() => setRemoveDevice(device)}>{t.homeRemoveDevice}</button>
             </div>
-            {device.provider === "zigbee" && <button className="danger" disabled={pending} onClick={(event) => { event.stopPropagation(); setRemoveDevice(device); }}>{t.homeRemoveDevice}</button>}
             <label onClick={(event) => event.stopPropagation()}>{t.homeAssignRoom}
               <select value={device.room?.id ?? ""} disabled={pending} onChange={(event) => void assign(device.id, event.target.value || null)}>
                 <option value="">{t.homeUnassigned}</option>

@@ -696,7 +696,19 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .discovery-candidate input { border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 10px; padding: 10px 12px; }
 .device-rename { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .device-rename input { min-width: 0; border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 9px; padding: 8px 10px; }
+.device-management { grid-column: 1/-1; display: grid; grid-template-columns: minmax(0,1fr) 140px; gap: 10px; }
+.device-management .device-rename { min-width: 0; }
+.device-management .device-rename > button { grid-column: 1/-1; }
+.remove-device-button { min-height: 100%; }
 .device-live-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; color: var(--muted-foreground); font-size: .82rem; }
+.lamp-live-state { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 10px; }
+.lamp-live-state > span { display: grid; align-content: center; min-height: 58px; gap: 6px; border-radius: 8px; padding: 8px 10px; background: color-mix(in srgb,var(--device-accent) 6%,var(--background)); }
+.lamp-live-state small { margin: 0 !important; font-size: .7rem; }
+.lamp-live-state strong { color: var(--foreground); }
+.lamp-live-state .state-pill { justify-self: start; }
+.lamp-color-value { display: inline-flex; align-items: center; gap: 8px; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: .76rem; }
+.lamp-color-value .color-swatch { width: 24px; height: 24px; margin: 0; }
+.color-swatch.unknown { background: repeating-linear-gradient(135deg,var(--muted),var(--muted) 4px,var(--background) 4px,var(--background) 8px); }
 .state-pill { border-radius: 999px; padding: 3px 8px; font-weight: 700; }
 .state-pill.is-on { color: #86efac; background: color-mix(in srgb, #22c55e 16%, transparent); }
 .state-pill.is-off { color: #fca5a5; background: color-mix(in srgb, #ef4444 18%, transparent); }
@@ -834,6 +846,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .motion-log > span.detected i { background: #e08b20; box-shadow: 0 0 0 3px color-mix(in srgb,#e08b20 18%,transparent); }
 .motion-log time { font-variant-numeric: tabular-nums; }
 .sensor-live-state { grid-column: 1/-1; }
+.open-device-controls { align-self: start; min-width: 132px; min-height: 44px; border-color: color-mix(in srgb,var(--device-accent) 55%,var(--border)); background: color-mix(in srgb,var(--device-accent) 10%,var(--background)); color: var(--foreground); font-weight: 650; }
 .room-devices article.device-on { border-color: color-mix(in srgb,var(--primary) 52%,var(--border)); box-shadow: inset 3px 0 0 var(--primary); }
 .room-devices article small { display: block; margin-top: 4px; color: var(--muted-foreground); }
 .room-devices article > .command-status,
@@ -870,7 +883,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .device-dialog section { margin-top: 22px; }
 .device-dialog .dialog-close { display: block; margin: 24px 0 0 auto; }
 @media(max-width:900px){.home-plan{grid-template-columns:repeat(2,minmax(170px,1fr))}}
-@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-actions{width:100%}.room-heading{align-items:center}.room-devices{grid-template-columns:1fr}.motion-log{grid-column:1/-1;grid-row:auto;max-width:none}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}.button-binding-row{grid-template-columns:1fr}.room-dialog-actions{flex-wrap:wrap}.room-dialog-actions button{flex:1}.room-dialog-actions button.danger{margin-right:0}.home-plan{grid-template-columns:1fr;padding:12px}.plan-room{min-height:145px}.unassigned-tray{align-items:flex-start;flex-direction:column}.unassigned-tray>div:last-child{justify-content:flex-start}.room-dialog-device-list>button{grid-template-columns:30px 1fr}.room-dialog-device-list>button>span:last-child{grid-column:2}}
+@media(max-width:760px){.home-dashboard{padding:24px 14px 60px}.home-dashboard>header{align-items:stretch;flex-direction:column}.home-actions{width:100%}.room-heading{align-items:center}.room-devices{grid-template-columns:1fr}.motion-log{grid-column:1/-1;grid-row:auto;max-width:none}.lamp-live-state{grid-template-columns:1fr}.device-management{grid-template-columns:1fr}.device-power span{width:100%;margin:0}.color-controls{grid-template-columns:1fr}.button-binding-row{grid-template-columns:1fr}.room-dialog-actions{flex-wrap:wrap}.room-dialog-actions button{flex:1}.room-dialog-actions button.danger{margin-right:0}.home-plan{grid-template-columns:1fr;padding:12px}.plan-room{min-height:145px}.unassigned-tray{align-items:flex-start;flex-direction:column}.unassigned-tray>div:last-child{justify-content:flex-start}.room-dialog-device-list>button{grid-template-columns:30px 1fr}.room-dialog-device-list>button>span:last-child{grid-column:2}}
 [data-theme="light"] .home-dashboard button,
 [data-theme="light"] .device-dialog button,
 [data-theme="light"] .confirm-dialog-actions button { border-color: color-mix(in srgb, var(--primary) 42%, var(--border)); background: color-mix(in srgb, var(--primary) 13%, white); color: #5c4307; box-shadow: 0 1px 2px rgb(75 54 5 / .08); }
