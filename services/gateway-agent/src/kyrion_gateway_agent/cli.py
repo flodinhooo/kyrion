@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from kyrion_gateway_agent.client import (
     complete_command,
     enroll,
     heartbeat,
+    button_event,
     next_command,
 )
 from kyrion_gateway_agent.config import DEFAULT_CONFIG_PATH, AgentConfig
@@ -57,6 +59,7 @@ def main() -> None:
     heartbeat_interval = max(5, min(args.interval, 60))
     command_interval = max(0.1, min(args.command_interval, 2.0))
     next_heartbeat_at = 0.0
+    threading.Thread(target=_forward_button_events, args=(config,), daemon=True, name="zigbee-button-events").start()
     while True:
         try:
             for _ in range(5):
@@ -75,6 +78,48 @@ def main() -> None:
             time.sleep(min(heartbeat_interval, 5))
             continue
         time.sleep(command_interval)
+
+
+def _forward_button_events(config: AgentConfig) -> None:
+    while True:
+        process: subprocess.Popen[str] | None = None
+        try:
+            process = subprocess.Popen(
+                ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/+", "-v"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            )
+            if process.stdout is None:
+                raise RuntimeError("mqtt subscription unavailable")
+            for line in process.stdout:
+                topic, separator, raw_payload = line.rstrip("\n").partition(" ")
+                if not separator:
+                    continue
+                try:
+                    payload = json.loads(raw_payload)
+                except json.JSONDecodeError:
+                    continue
+                action = payload.get("action") if isinstance(payload, dict) else None
+                if action not in {"single", "double", "long"}:
+                    continue
+                friendly_name = topic.removeprefix("zigbee2mqtt/")
+                health = collect_health()
+                devices = health.get("zigbee", {}).get("devices", [])
+                device = next((item for item in devices if item.get("friendlyName") == friendly_name), None)
+                device_id = device.get("ieeeAddress") if isinstance(device, dict) else None
+                if not isinstance(device_id, str):
+                    LOGGER.warning("Ignoring button event from unknown Zigbee topic %s", friendly_name[:80])
+                    continue
+                try:
+                    button_event(config, device_id, action)
+                    LOGGER.info("Forwarded Zigbee button event %s for %s", action, device_id)
+                except CoreRequestError as error:
+                    LOGGER.warning("Button event forwarding failed: %s", error)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            LOGGER.warning("Zigbee button subscription failed: %s", error)
+        finally:
+            if process is not None and process.poll() is None:
+                process.terminate()
+        time.sleep(2)
 
 
 def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:

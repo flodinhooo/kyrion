@@ -50,6 +50,16 @@ def heartbeat(config: AgentConfig, health: dict[str, Any]) -> None:
     )
 
 
+def button_event(config: AgentConfig, device_id: str, action: str) -> None:
+    _request(
+        f"{config.core_url}/v1/gateway-agent/zigbee/button-events",
+        "POST",
+        {"deviceId": device_id, "action": action},
+        _auth(config),
+        expect_json=False,
+    )
+
+
 def next_command(config: AgentConfig) -> dict[str, Any] | None:
     value = _request(
         f"{config.core_url}/v1/gateway-agent/commands/next", "POST", {}, _auth(config)
