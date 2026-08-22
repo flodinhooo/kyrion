@@ -458,7 +458,10 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
   activation and cleanup remain deliberately inactive.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
   claims.
-- [ ] Add backup and restore verification for PostgreSQL data.
+- [x] Add PostgreSQL backup and isolated restore verification. The operational
+  scripts create a custom-format dump plus SHA-256 manifest outside the
+  repository, restore into a random temporary database, validate Flyway history
+  and public tables, and never overwrite the active production database.
 - [x] Add a portable passphrase-encrypted personal backup export for
   conversations, personal memories and retention settings. The versioned V1
   envelope excludes authentication, sessions, integration credentials, device
