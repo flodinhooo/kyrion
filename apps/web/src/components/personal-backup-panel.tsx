@@ -26,7 +26,7 @@ export function PersonalBackupPanel() {
   }
   async function previewBackup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const data=new FormData(event.currentTarget); const file=data.get("backup");
-    if(!(file instanceof File)){setState("error");return;} setState("working"); setPreview(null);
+    if(!(file instanceof File)){setState("error");return;} setState("working"); setPreview(null); setImportSource(null); setImportResult(null); setConfirmation("");
     try{
       const envelope:unknown=JSON.parse(await file.text());
       const response=await fetch("/api/backups/personal/preview",{method:"POST",headers:{"Content-Type":"application/json",...csrfHeader()},body:JSON.stringify({envelope,passphrase:data.get("importPassphrase")})});

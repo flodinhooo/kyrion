@@ -2,6 +2,10 @@ package dev.kyrion.core.backup
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.kyrion.core.activity.ActivityActorType
+import dev.kyrion.core.activity.ActivityCategory
+import dev.kyrion.core.activity.ActivityService
+import dev.kyrion.core.activity.ActivityStatus
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import dev.kyrion.core.security.UnauthenticatedException
 import jakarta.servlet.http.HttpServletRequest
@@ -98,6 +102,7 @@ class PersonalBackupCipher(
 class PersonalBackupController(
     private val jdbc: JdbcClient,
     private val transactions: TransactionTemplate,
+    private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
     private val cipher: PersonalBackupCipher = PersonalBackupCipher(),
 ) {
@@ -111,11 +116,7 @@ class PersonalBackupController(
     @PostMapping("/personal/preview")
     fun preview(@Valid @RequestBody body: PersonalBackupPreviewRequest, request: HttpServletRequest): PersonalBackupPreview {
         request.ownerId()
-        if (body.envelope.ciphertext.length > 70_000_000) throw PersonalBackupInvalidException()
-        val payload = try { cipher.decrypt(body.envelope, body.passphrase) } catch (_: Exception) { throw PersonalBackupInvalidException() }
-        if (payload.formatVersion != 1 || payload.conversations.size > 100_000 || payload.memories.size > 100_000) {
-            throw PersonalBackupInvalidException()
-        }
+        val payload = decryptAndValidate(body.envelope, body.passphrase)
         return PersonalBackupPreview(
             payload.formatVersion, payload.createdAt, payload.conversations.size,
             payload.conversations.sumOf { it.messages.size }, payload.memories.size,
@@ -151,21 +152,40 @@ class PersonalBackupController(
                 if(importTarget(ownerId,"memory",source.id)!=null)return@forEach
                 validateMemory(source); val target=memoryIds.getValue(source.id)
                 jdbc.sql("""INSERT INTO personal_memory(id,owner_id,category,content,sensitivity,origin,status,source_conversation_id,source_message_id,created_at,updated_at,confirmed_at,conflicts_with_memory_id)
-                    VALUES(:id,:owner,:category,:content,:sensitivity,'explicit',:status,:conversation,:message,:created,:updated,:confirmed,:conflict)""")
+                    VALUES(:id,:owner,:category,:content,:sensitivity,'explicit',:status,:conversation,:message,:created,:updated,:confirmed,NULL)""")
                     .param("id",target).param("owner",ownerId).param("category",source.category).param("content",source.content).param("sensitivity",source.sensitivity).param("status",source.status)
                     .param("conversation",source.sourceConversationId?.let(conversationIds::get)).param("message",source.sourceMessageId?.let(messageIds::get))
-                    .param("created",Timestamp.from(Instant.parse(source.createdAt))).param("updated",Timestamp.from(Instant.parse(source.updatedAt))).param("confirmed",source.confirmedAt?.let{Timestamp.from(Instant.parse(it))})
-                    .param("conflict",source.conflictsWithMemoryId?.let(memoryIds::get)).update()
+                    .param("created",Timestamp.from(Instant.parse(source.createdAt))).param("updated",Timestamp.from(Instant.parse(source.updatedAt))).param("confirmed",source.confirmedAt?.let{Timestamp.from(Instant.parse(it))}).update()
                 track(ownerId,"memory",source.id,target,now);memoriesImported++
+            }
+            payload.memories.forEach { source ->
+                val conflictTarget=source.conflictsWithMemoryId?.let(memoryIds::get) ?: return@forEach
+                jdbc.sql("UPDATE personal_memory SET conflicts_with_memory_id=:conflict WHERE id=:id AND owner_id=:owner")
+                    .param("conflict",conflictTarget).param("id",memoryIds.getValue(source.id)).param("owner",ownerId).update()
             }
             jdbc.sql("""INSERT INTO owner_memory_settings(owner_id,enabled,updated_at) VALUES(:id,:enabled,:now) ON CONFLICT(owner_id) DO UPDATE SET enabled=EXCLUDED.enabled,updated_at=EXCLUDED.updated_at""")
                 .param("id",ownerId).param("enabled",payload.memoryEnabled).param("now",Timestamp.from(now)).update()
+            val retention=validatedRetention(payload.retention)
+            jdbc.sql("""INSERT INTO owner_retention_policy(owner_id,conversation_policy,activity_policy,personal_memory_policy,updated_at)
+                VALUES(:owner,:conversations,:activity,:memory,:now) ON CONFLICT(owner_id) DO UPDATE SET conversation_policy=EXCLUDED.conversation_policy,activity_policy=EXCLUDED.activity_policy,personal_memory_policy=EXCLUDED.personal_memory_policy,updated_at=EXCLUDED.updated_at""")
+                .param("owner",ownerId).param("conversations",retention.getValue("conversations")).param("activity",retention.getValue("activity"))
+                .param("memory",retention.getValue("personalMemory")).param("now",Timestamp.from(now)).update()
+            activity.record(ActivityCategory.SECURITY,"personal.backup.imported",ActivityStatus.SUCCEEDED,ActivityActorType.USER,"kyrion-core","personal.backup.imported",actorId=ownerId.toString(),ownerId=ownerId)
             PersonalBackupImportResult(conversationsImported,conversationsSkipped,messagesImported,memoriesImported,memoriesSkipped)
         }
     }
     private fun decryptAndValidate(envelope:EncryptedBackupEnvelope,passphrase:String):PersonalBackupPayload {
+        if(envelope.ciphertext.length>70_000_000)throw PersonalBackupInvalidException()
         val payload=try{cipher.decrypt(envelope,passphrase)}catch(_:Exception){throw PersonalBackupInvalidException()}
-        if(payload.formatVersion!=1||payload.conversations.size>100_000||payload.memories.size>100_000)throw PersonalBackupInvalidException();return payload
+        try { validatePayload(payload) } catch (_: PersonalBackupInvalidException) { throw PersonalBackupInvalidException() } catch (_: Exception) { throw PersonalBackupInvalidException() }
+        return payload
+    }
+    private fun validatePayload(payload:PersonalBackupPayload){
+        if(payload.formatVersion!=1||payload.conversations.size>100_000||payload.memories.size>100_000)throw PersonalBackupInvalidException()
+        val conversationIds=payload.conversations.map{it.id};val messages=payload.conversations.flatMap{it.messages};val messageIds=messages.map{it.id};val memoryIds=payload.memories.map{it.id}
+        if(conversationIds.toSet().size!=conversationIds.size||messageIds.toSet().size!=messageIds.size||memoryIds.toSet().size!=memoryIds.size)throw PersonalBackupInvalidException()
+        payload.conversations.forEach(::validateConversation);messages.forEach(::validateMessage);payload.memories.forEach(::validateMemory);validatedRetention(payload.retention)
+        if(payload.memories.any{it.sourceConversationId!=null&&it.sourceConversationId !in conversationIds||it.sourceMessageId!=null&&it.sourceMessageId !in messageIds||it.conflictsWithMemoryId!=null&&it.conflictsWithMemoryId !in memoryIds})throw PersonalBackupInvalidException()
     }
     private fun importTarget(owner:UUID,type:String,source:UUID)=jdbc.sql("SELECT target_id FROM personal_backup_import_record WHERE owner_id=:owner AND record_type=:type AND source_id=:source")
         .param("owner",owner).param("type",type).param("source",source).query(UUID::class.java).optional().orElse(null)
@@ -173,7 +193,8 @@ class PersonalBackupController(
         .param("owner",owner).param("type",type).param("source",source).param("target",target).param("at",Timestamp.from(at)).update()}
     private fun validateConversation(value:BackupConversation){if(value.title.isBlank()||value.title.length>160||value.messages.size>100_000)throw PersonalBackupInvalidException();Instant.parse(value.createdAt);Instant.parse(value.updatedAt)}
     private fun validateMessage(value:BackupMessage){if(value.role !in setOf("user","assistant")||value.content.isBlank())throw PersonalBackupInvalidException();Instant.parse(value.createdAt)}
-    private fun validateMemory(value:BackupMemory){if(value.category !in setOf("preference","person","project","value","other")||value.sensitivity !in setOf("standard","sensitive")||value.status !in setOf("proposed","confirmed","superseded")||value.content.isBlank()||value.content.length>1000)throw PersonalBackupInvalidException();Instant.parse(value.createdAt);Instant.parse(value.updatedAt)}
+    private fun validateMemory(value:BackupMemory){if(value.category !in setOf("preference","person","project","value","other")||value.sensitivity !in setOf("standard","sensitive")||value.status !in setOf("proposed","confirmed","superseded")||value.content.isBlank()||value.content.length>1000||(value.status=="proposed")!=(value.confirmedAt==null))throw PersonalBackupInvalidException();Instant.parse(value.createdAt);Instant.parse(value.updatedAt);value.confirmedAt?.let(Instant::parse)}
+    private fun validatedRetention(value:Map<String,String>):Map<String,String>{val allowed=setOf("keep_forever","30_days","90_days","365_days","3_years");val result=mapOf("conversations" to (value["conversations"]?:"keep_forever"),"activity" to (value["activity"]?:"keep_forever"),"personalMemory" to (value["personalMemory"]?:"keep_forever"));if(result.values.any{it !in allowed})throw PersonalBackupInvalidException();return result}
     private fun conversations(ownerId: UUID) = jdbc.sql("SELECT id,title,created_at,updated_at FROM conversation WHERE owner_id=:ownerId ORDER BY created_at")
         .param("ownerId", ownerId).query { rs, _ ->
             val id=rs.getObject("id",UUID::class.java); BackupConversation(id,rs.getString("title"),rs.getTimestamp("created_at").toInstant().toString(),rs.getTimestamp("updated_at").toInstant().toString(),
