@@ -31,11 +31,11 @@ data class EncryptedBackupEnvelope(
     val kdf: String = "PBKDF2-HMAC-SHA256", val iterations: Int = ITERATIONS,
     val salt: String, val nonce: String, val ciphertext: String,
 )
-data class BackupConversation(val id: UUID, val title: String, val createdAt: Instant, val updatedAt: Instant, val messages: List<BackupMessage>)
-data class BackupMessage(val id: UUID, val role: String, val content: String, val position: Int, val createdAt: Instant)
-data class BackupMemory(val id: UUID, val category: String, val content: String, val sensitivity: String, val status: String, val createdAt: Instant, val updatedAt: Instant, val confirmedAt: Instant?)
+data class BackupConversation(val id: UUID, val title: String, val createdAt: String, val updatedAt: String, val messages: List<BackupMessage>)
+data class BackupMessage(val id: UUID, val role: String, val content: String, val position: Int, val createdAt: String)
+data class BackupMemory(val id: UUID, val category: String, val content: String, val sensitivity: String, val status: String, val createdAt: String, val updatedAt: String, val confirmedAt: String?)
 data class PersonalBackupPayload(
-    val formatVersion: Int, val createdAt: Instant, val conversations: List<BackupConversation>,
+    val formatVersion: Int, val createdAt: String, val conversations: List<BackupConversation>,
     val memoryEnabled: Boolean, val memories: List<BackupMemory>, val retention: Map<String, String>,
     val excluded: List<String> = listOf("authentication", "sessions", "integrationCredentials", "deviceTokens", "privateKeys"),
 )
@@ -84,18 +84,18 @@ class PersonalBackupController(
     @PostMapping("/personal")
     fun export(@Valid @RequestBody body: PersonalBackupRequest, request: HttpServletRequest): ResponseEntity<EncryptedBackupEnvelope> {
         val ownerId = request.ownerId()
-        val payload = PersonalBackupPayload(1, clock.instant(), conversations(ownerId), memoryEnabled(ownerId), memories(ownerId), retention(ownerId))
+        val payload = PersonalBackupPayload(1, clock.instant().toString(), conversations(ownerId), memoryEnabled(ownerId), memories(ownerId), retention(ownerId))
         val filename = "kyrion-personal-backup-${clock.instant().toString().take(10)}.json"
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"").body(cipher.encrypt(payload, body.passphrase))
     }
     private fun conversations(ownerId: UUID) = jdbc.sql("SELECT id,title,created_at,updated_at FROM conversation WHERE owner_id=:ownerId ORDER BY created_at")
         .param("ownerId", ownerId).query { rs, _ ->
-            val id=rs.getObject("id",UUID::class.java); BackupConversation(id,rs.getString("title"),rs.getTimestamp("created_at").toInstant(),rs.getTimestamp("updated_at").toInstant(),
-                jdbc.sql("SELECT id,role,content,position,created_at FROM conversation_message WHERE conversation_id=:id ORDER BY position").param("id",id).query { m,_ -> BackupMessage(m.getObject("id",UUID::class.java),m.getString("role"),m.getString("content"),m.getInt("position"),m.getTimestamp("created_at").toInstant()) }.list())
+            val id=rs.getObject("id",UUID::class.java); BackupConversation(id,rs.getString("title"),rs.getTimestamp("created_at").toInstant().toString(),rs.getTimestamp("updated_at").toInstant().toString(),
+                jdbc.sql("SELECT id,role,content,position,created_at FROM conversation_message WHERE conversation_id=:id ORDER BY position").param("id",id).query { m,_ -> BackupMessage(m.getObject("id",UUID::class.java),m.getString("role"),m.getString("content"),m.getInt("position"),m.getTimestamp("created_at").toInstant().toString()) }.list())
         }.list()
     private fun memoryEnabled(ownerId: UUID) = jdbc.sql("SELECT enabled FROM owner_memory_settings WHERE owner_id=:id").param("id",ownerId).query(Boolean::class.java).optional().orElse(false)
     private fun memories(ownerId: UUID) = jdbc.sql("SELECT id,category,content,sensitivity,status,created_at,updated_at,confirmed_at FROM personal_memory WHERE owner_id=:id ORDER BY created_at")
-        .param("id",ownerId).query { rs,_ -> BackupMemory(rs.getObject("id",UUID::class.java),rs.getString("category"),rs.getString("content"),rs.getString("sensitivity"),rs.getString("status"),rs.getTimestamp("created_at").toInstant(),rs.getTimestamp("updated_at").toInstant(),rs.getTimestamp("confirmed_at")?.toInstant()) }.list()
+        .param("id",ownerId).query { rs,_ -> BackupMemory(rs.getObject("id",UUID::class.java),rs.getString("category"),rs.getString("content"),rs.getString("sensitivity"),rs.getString("status"),rs.getTimestamp("created_at").toInstant().toString(),rs.getTimestamp("updated_at").toInstant().toString(),rs.getTimestamp("confirmed_at")?.toInstant()?.toString()) }.list()
     private fun retention(ownerId: UUID): Map<String,String> = jdbc.sql("SELECT conversation_policy,activity_policy,personal_memory_policy FROM owner_retention_policy WHERE owner_id=:id").param("id",ownerId).query { rs,_ -> mapOf("conversations" to rs.getString(1),"activity" to rs.getString(2),"personalMemory" to rs.getString(3)) }.optional().orElse(mapOf("conversations" to "keep_forever","activity" to "keep_forever","personalMemory" to "keep_forever"))
     private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw UnauthenticatedException()
 }

@@ -11,9 +11,9 @@ class PersonalBackupCipherTest {
     fun `encrypted portable backup round trips and rejects wrong passphrase`() {
         val cipher = PersonalBackupCipher()
         val payload = PersonalBackupPayload(
-            1, Instant.parse("2026-08-22T15:00:00Z"),
-            listOf(BackupConversation(UUID.randomUUID(), "Private", Instant.EPOCH, Instant.EPOCH,
-                listOf(BackupMessage(UUID.randomUUID(), "user", "secret text", 0, Instant.EPOCH)))),
+            1, "2026-08-22T15:00:00Z",
+            listOf(BackupConversation(UUID.randomUUID(), "Private", Instant.EPOCH.toString(), Instant.EPOCH.toString(),
+                listOf(BackupMessage(UUID.randomUUID(), "user", "secret text", 0, Instant.EPOCH.toString())))),
             true, emptyList(), mapOf("conversations" to "keep_forever"),
         )
         val envelope = cipher.encrypt(payload, "a-strong-backup-passphrase")
