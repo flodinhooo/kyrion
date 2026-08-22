@@ -239,6 +239,46 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `retention cleanup previews and deletes only expired owner records after confirmation`() {
+        val token = setupToken()
+        val ownerId = authentication.authenticate(token)!!.id
+        val old = Instant.parse("2020-01-01T00:00:00Z")
+        val recent = Instant.now()
+        conversations.replace(ownerId, Conversation(UUID.randomUUID(), "Expired", old, old, listOf()))
+        conversations.replace(ownerId, Conversation(UUID.randomUUID(), "Current", recent, recent, listOf()))
+        jdbc.sql("""INSERT INTO personal_memory(id,owner_id,category,content,sensitivity,origin,status,created_at,updated_at,confirmed_at)
+            VALUES(:id,:owner,'other','expired memory','standard','explicit','confirmed',:old,:old,:old)""")
+            .param("id", UUID.randomUUID()).param("owner", ownerId).param("old", Timestamp.from(old)).update()
+        activity.record(ActivityCategory.SECURITY, "recent.event", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+            "test", "recent.event", actorId = ownerId.toString(), ownerId = ownerId)
+        jdbc.sql("UPDATE activity_event SET occurred_at=:old WHERE owner_id=:owner")
+            .param("old", Timestamp.from(old)).param("owner", ownerId).update()
+
+        mockMvc.perform(put("/v1/retention").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""{"conversations":"30_days","activity":"30_days","personalMemory":"30_days"}"""))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/v1/retention/preview").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.conversations.records").value(1))
+            .andExpect(jsonPath("$.activity.records").value(1))
+            .andExpect(jsonPath("$.personalMemory.records").value(1))
+        mockMvc.perform(post("/v1/retention/cleanup").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"NO"}"""))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("RETENTION_CLEANUP_CONFIRMATION_REQUIRED"))
+        mockMvc.perform(post("/v1/retention/cleanup").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"DELETE"}"""))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.conversationsDeleted").value(1))
+            .andExpect(jsonPath("$.activityDeleted").value(1))
+            .andExpect(jsonPath("$.personalMemoriesDeleted").value(1))
+        assertThat(conversations.recent(ownerId, 10).map { it.title }).containsExactly("Current")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE owner_id=:owner AND event_type='retention.cleanup.executed'")
+            .param("owner", ownerId).query(Int::class.java).single()).isEqualTo(1)
+    }
+
+    @Test
     fun `HTTP personal backup exports encrypted owner data without credentials`() {
         val token = setupToken()
         val ownerId = authentication.authenticate(token)!!.id
