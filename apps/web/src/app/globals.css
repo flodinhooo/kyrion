@@ -387,6 +387,11 @@ button { color: inherit; }
 .retention-fields select { min-height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); }
 .retention-fields button { min-height: 40px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--primary-soft); color: var(--primary); cursor: pointer; font-weight: 750; }
 .retention-notice { margin: 0; padding: 10px; border-radius: 9px; background: var(--surface); color: var(--text-muted); font-size: 12px; }
+.retention-cleanup-preview { display: grid; gap: 10px; margin-top: 16px; padding: 14px; border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--destructive) 7%, var(--surface)); }
+.retention-cleanup-preview span { color: var(--text-muted); font-size: 13px; }
+.retention-cleanup-preview p { margin: 2px 0; color: var(--text); font-size: 13px; }
+.retention-cleanup-preview label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.retention-cleanup-preview input { min-height: 40px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface); color: var(--text); }
 .settings-link-card.backup-panel { display: block; border-color: var(--border-strong); background: linear-gradient(145deg, var(--primary-soft), var(--surface-muted) 52%); cursor: default; }
 .backup-panel form { display: grid; gap: 12px; margin-top: 16px; }
 .backup-panel label { display: grid; gap: 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
