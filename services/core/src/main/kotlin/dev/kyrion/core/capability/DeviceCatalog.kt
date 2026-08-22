@@ -33,6 +33,7 @@ data class DeviceStateView(
     val battery: Double? = null,
     val illuminance: Double? = null,
     val action: String? = null,
+    val illumination: String? = null,
 )
 
 enum class DeviceAvailability(@get:JsonValue val value: String) {
@@ -90,7 +91,7 @@ class DeviceCatalogService(
                 observedAt = observation?.observedAt,
                 state = zigbee?.let {
                     DeviceStateView(it.on, it.brightness?.let { raw -> (raw * 100 / 254).coerceIn(0, 100) },
-                        it.hue, it.saturation, it.colorTemperature, it.occupancy, it.battery, it.illuminance, it.action)
+                        it.hue, it.saturation, it.colorTemperature, it.occupancy, it.battery, it.illuminance, it.action, it.illumination)
                 } ?: bluetooth?.let {
                     DeviceStateView(it.on, it.brightness, it.hue, it.saturation, null)
                 },
@@ -111,7 +112,7 @@ class DeviceCatalogService(
     }
 
     private fun zigbeeCapabilities(device: dev.kyrion.core.gateway.GatewayZigbeeDevice?): List<String> = when (device?.model?.uppercase()) {
-        "SNZB-03P" -> listOf("occupancy.read", "illuminance.read", "battery.read")
+        "SNZB-03P" -> listOf("occupancy.read", "illumination.read", "battery.read")
         "SNZB-01P" -> listOf("button.events", "battery.read")
         else -> if (device?.on != null || device?.brightness != null) ZIGBEE_LIGHT_CAPABILITIES else emptyList()
     }
