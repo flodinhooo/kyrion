@@ -6,6 +6,7 @@ export type GatewayZigbeeDevice = {
   brightness: number | null; linkquality: number | null;
   hue: number | null; saturation: number | null; colorTemperature: number | null;
   occupancy: boolean | null; battery: number | null; illuminance: number | null; action: string | null;
+  illumination: "dim" | "bright" | null;
 };
 export type GatewayBluetoothDevice = {
   address: string; name: "MELK-OA20"; model: "OA20"; supported: true;
@@ -125,6 +126,7 @@ export function isGatewayZigbeeDeviceList(value: unknown): value is GatewayZigbe
     && (device.battery === null || typeof device.battery === "number")
     && (device.illuminance === null || typeof device.illuminance === "number")
     && (device.action === null || typeof device.action === "string")
+    && (device.illumination === null || device.illumination === "dim" || device.illumination === "bright")
     && (device.linkquality === null || typeof device.linkquality === "number"));
 }
 
