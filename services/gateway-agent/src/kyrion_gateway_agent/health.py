@@ -44,7 +44,14 @@ def collect_health() -> dict[str, Any]:
         "zigbee": _zigbee_health(),
         "bluetoothDevices": _bluetooth_devices(),
         "services": [
-            {"id": service_id, "status": _service_status(unit)}
+            {
+                "id": service_id,
+                "status": (
+                    _voice_service_status()
+                    if service_id == "voice"
+                    else _service_status(unit)
+                ),
+            }
             for service_id, unit in SERVICE_UNITS.items()
         ],
     }
@@ -378,6 +385,12 @@ def _service_status(unit: str) -> str:
     if active_state == "failed":
         return "degraded"
     return "unavailable"
+
+
+def _voice_service_status() -> str:
+    """Observe the separately owned user service without requiring its D-Bus session."""
+    pid = _command(["pgrep", "-f", "kyrion-voice-satellite --config"], "")
+    return "ready" if pid else "unavailable"
 
 
 def _os_release() -> dict[str, str]:

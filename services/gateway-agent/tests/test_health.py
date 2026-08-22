@@ -78,3 +78,13 @@ def test_audio_endpoint_reports_only_the_expected_pipewire_direction(monkeypatch
         "transport": "usb",
     }
     assert health_module._audio_endpoint("@DEFAULT_AUDIO_SOURCE@", "playback") is None
+
+
+def test_voice_service_status_uses_bounded_process_observation(monkeypatch) -> None:
+    monkeypatch.setattr(
+        health_module,
+        "_command",
+        lambda command, _default: "1234" if command[0] == "pgrep" else "",
+    )
+
+    assert health_module._voice_service_status() == "ready"
