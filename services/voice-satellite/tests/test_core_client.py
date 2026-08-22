@@ -105,6 +105,46 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
     assert turn.restart_session is False
 
 
+def test_turn_acknowledges_required_playback_only_after_playing(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    audio = b"processing-wave"
+    response = StreamingResponse(
+        [
+            {"type": "transcript", "transcript": "Schalte das Licht an."},
+            {
+                "type": "audio.chunk",
+                "audioBase64": base64.b64encode(audio).decode(),
+                "playbackAcknowledgementRequired": True,
+            },
+            {
+                "type": "completed",
+                "responseText": "Erledigt.",
+                "continueSession": True,
+            },
+        ],
+    )
+    order: list[str] = []
+    acknowledgement = StreamingResponse([{"status": "acknowledged"}])
+
+    def urlopen(request, timeout=0):
+        if request.full_url.endswith("/playback-completed"):
+            order.append("acknowledged")
+            return acknowledgement
+        return response
+
+    with patch("urllib.request.urlopen", side_effect=urlopen):
+        CoreVoiceClient("http://core", "satellite", credential).turn(
+            "session",
+            b"RIFF-audio",
+            "de",
+            lambda _audio: order.append("played"),
+            "turn-id",
+        )
+
+    assert order == ["played", "acknowledged"]
+
+
 def test_turn_exposes_requested_session_restart(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")

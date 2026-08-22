@@ -95,6 +95,14 @@ class CoreVoiceClient:
                         transcript = event.get("transcript", "")
                     elif event_type == "audio.chunk":
                         play_audio(base64.b64decode(event["audioBase64"], validate=True))
+                        if event.get("playbackAcknowledgementRequired") is True:
+                            self._request(
+                                "POST",
+                                f"/v1/voice-satellite/sessions/{session_id}/turns/"
+                                f"{turn_id}/playback-completed",
+                                b"",
+                                "application/json",
+                            )
                     elif event_type == "completed":
                         response_text = event.get("responseText", "")
                         continue_session = bool(event.get("continueSession"))

@@ -27,12 +27,16 @@ import java.time.Clock
 import java.text.Normalizer
 import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 data class VoiceTurnEvent(
     val type: String,
     val transcript: String? = null,
     val responseText: String? = null,
     val audioBase64: String? = null,
+    val playbackAcknowledgementRequired: Boolean? = null,
     val continueSession: Boolean? = null,
     val restartSession: Boolean? = null,
 )
@@ -46,6 +50,7 @@ class VoiceDialogueService(
     private val conversations: ConversationRepository,
     private val responsePolicies: VoiceResponsePolicyRegistry,
     private val voiceActions: VoiceActionService,
+    private val playbackAcknowledgements: VoicePlaybackAcknowledgements,
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
@@ -137,7 +142,7 @@ class VoiceDialogueService(
                     ActionProcessingOutcome,
                     VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
                 )
-                emitAudio(processing, turnId, emit) {
+                emitAudio(processing, turnId, emit, awaitPlayback = true) {
                     satellites.activeSession(satelliteId, credential, sessionId)
                 }
             },
@@ -237,12 +242,22 @@ class VoiceDialogueService(
         plan: VoiceResponsePlan,
         turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
+        awaitPlayback: Boolean = false,
         validateBeforeEmit: () -> Unit = {},
     ) {
         val audio = resolveAudio(plan, turnId)
         validateBeforeEmit()
-        emit(VoiceTurnEvent(type = "audio.chunk", audioBase64 = Base64.getEncoder().encodeToString(audio)))
+        if (awaitPlayback) playbackAcknowledgements.expect(turnId)
+        emit(VoiceTurnEvent(
+            type = "audio.chunk",
+            audioBase64 = Base64.getEncoder().encodeToString(audio),
+            playbackAcknowledgementRequired = awaitPlayback.takeIf { it },
+        ))
         voiceEvent(turnId, "satellite_first_chunk_sent")
+        if (awaitPlayback) {
+            playbackAcknowledgements.await(turnId)
+            voiceEvent(turnId, "satellite_playback_completed")
+        }
     }
 
     private fun resolveAudio(plan: VoiceResponsePlan, turnId: String): ByteArray {
@@ -273,6 +288,28 @@ class VoiceDialogueService(
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(VoiceDialogueService::class.java)
+    }
+}
+
+@Service
+class VoicePlaybackAcknowledgements {
+    private val pending = ConcurrentHashMap<String, CountDownLatch>()
+
+    fun expect(turnId: String) {
+        check(pending.putIfAbsent(turnId, CountDownLatch(1)) == null)
+    }
+
+    fun acknowledge(turnId: String) {
+        pending[turnId]?.countDown() ?: throw VoicePlaybackAcknowledgementInvalidException()
+    }
+
+    fun await(turnId: String) {
+        val latch = pending[turnId] ?: throw VoicePlaybackAcknowledgementInvalidException()
+        try {
+            if (!latch.await(30, TimeUnit.SECONDS)) throw VoicePlaybackAcknowledgementTimeoutException()
+        } finally {
+            pending.remove(turnId, latch)
+        }
     }
 }
 
@@ -331,7 +368,11 @@ private fun normalizedVoiceWords(value: String): List<String> = Normalizer
 
 @RestController
 @RequestMapping("/v1/voice-satellite/sessions")
-class VoiceDialogueController(private val dialogue: VoiceDialogueService) {
+class VoiceDialogueController(
+    private val dialogue: VoiceDialogueService,
+    private val satellites: VoiceSatelliteService,
+    private val playbackAcknowledgements: VoicePlaybackAcknowledgements,
+) {
     @PostMapping("/{sessionId}/greeting", produces = ["application/json"])
     fun greeting(
         @PathVariable sessionId: UUID,
@@ -367,8 +408,24 @@ class VoiceDialogueController(private val dialogue: VoiceDialogueService) {
         }
     }
 
+    @PostMapping("/{sessionId}/turns/{turnId}/playback-completed")
+    fun playbackCompleted(
+        @PathVariable sessionId: UUID,
+        @PathVariable turnId: UUID,
+        @RequestHeader("X-Kyrion-Satellite-Id") satelliteId: UUID,
+        @RequestHeader("Authorization") authorization: String,
+    ): Map<String, String> {
+        val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
+            ?: throw VoiceSatelliteUnauthenticatedException()
+        satellites.activeSession(satelliteId, credential, sessionId)
+        playbackAcknowledgements.acknowledge(turnId.toString())
+        return mapOf("status" to "acknowledged")
+    }
+
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 }
 
 class VoiceAudioInvalidException : RuntimeException()
 class VoiceSpeechUnavailableException : RuntimeException()
+class VoicePlaybackAcknowledgementInvalidException : RuntimeException()
+class VoicePlaybackAcknowledgementTimeoutException : RuntimeException()
