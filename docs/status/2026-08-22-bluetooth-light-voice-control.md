@@ -39,3 +39,13 @@ available.
 - Room brightness remains intentionally unverified until ambient light permits
   a reliable visual judgement.
 - Exact-name power control remains to be physically verified independently.
+
+## Explicit gratitude close
+
+The complete German utterances `Danke Velora` and `Vielen Dank Velora` now
+close the active Voice session and select one of five fixed responses. Plain
+`Danke` and longer contextual sentences do not trigger this bounded intent.
+The owner reviewed two Velora candidates per line and selected takes
+`1, 2, 1, 2, 2`. Those five mono PCM16/24 kHz WAVs are checksum-pinned in the
+production manifest. All five resolved from the restarted AI service as HTTP
+200 RIFF/WAV responses. Physical Voice Satellite acceptance remains pending.

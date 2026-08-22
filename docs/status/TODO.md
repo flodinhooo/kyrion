@@ -7,6 +7,11 @@ session. The current implementation status is documented in [README.md](README.m
 
 ## Stable Voice MVP
 
+- [x] Add exact `Danke Velora` and `Vielen Dank Velora` session-close intents
+  with five owner-reviewed, checksum-pinned German fixed responses.
+- [ ] Physically verify both explicit gratitude phrases, response playback and
+  that the following `Hey Velora` opens a fresh session.
+
 - [x] Include every approved `light` device in provider-neutral Voice room,
   global and exact-name power commands without a provider-specific Voice
   change; include room-scoped brightness when the device advertises it.
