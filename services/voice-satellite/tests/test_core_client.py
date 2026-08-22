@@ -145,6 +145,44 @@ def test_turn_acknowledges_required_playback_only_after_playing(tmp_path):
     assert order == ["played", "acknowledged"]
 
 
+def test_pending_action_executes_only_after_processing_playback(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("secret", encoding="utf-8")
+    processing = b"processing-wave"
+    final = b"final-wave"
+    response = StreamingResponse([
+        {"type": "transcript", "transcript": "Schalte das Licht an."},
+        {"type": "audio.chunk", "audioBase64": base64.b64encode(processing).decode()},
+        {"type": "action.pending", "pendingAction": True},
+    ])
+    completion = StreamingResponse([{
+        "responseText": "Erledigt.",
+        "audioBase64": base64.b64encode(final).decode(),
+        "continueSession": True,
+    }])
+    order: list[str] = []
+
+    def urlopen(request, timeout=0):
+        if request.full_url.endswith("/execute"):
+            order.append("execute")
+            return completion
+        return response
+
+    with patch("urllib.request.urlopen", side_effect=urlopen):
+        turn = CoreVoiceClient("http://core", "satellite", credential).turn(
+            "session",
+            b"RIFF-audio",
+            "de",
+            lambda audio: order.append(
+                "processing-played" if audio == processing else "result-played"
+            ),
+            "turn-id",
+        )
+
+    assert order == ["processing-played", "execute", "result-played"]
+    assert turn.response_text == "Erledigt."
+
+
 def test_turn_exposes_requested_session_restart(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")

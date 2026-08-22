@@ -84,6 +84,7 @@ class CoreVoiceClient:
         response_text = ""
         continue_session = False
         restart_session = False
+        pending_action = False
         try:
             with urllib.request.urlopen(request, timeout=180) as response:
                 for raw_line in response:
@@ -107,6 +108,8 @@ class CoreVoiceClient:
                         response_text = event.get("responseText", "")
                         continue_session = bool(event.get("continueSession"))
                         restart_session = bool(event.get("restartSession"))
+                    elif event_type == "action.pending":
+                        pending_action = True
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
@@ -115,6 +118,23 @@ class CoreVoiceClient:
             KeyError,
         ) as error:
             raise CoreVoiceError("Core voice stream failed") from error
+        if pending_action:
+            completion = self._request(
+                "POST",
+                f"/v1/voice-satellite/sessions/{session_id}/turns/"
+                f"{turn_id}/execute",
+                b"",
+                "application/json",
+            )
+            try:
+                final_audio = base64.b64decode(
+                    completion["audioBase64"], validate=True,
+                )
+                response_text = str(completion["responseText"])
+                continue_session = bool(completion.get("continueSession", True))
+            except (KeyError, TypeError, ValueError) as error:
+                raise CoreVoiceError("Core returned an invalid action result") from error
+            play_audio(final_audio)
         if not transcript or not response_text:
             raise CoreVoiceError("Core voice stream ended before completion")
         return VoiceTurn(transcript, response_text, continue_session, restart_session)
