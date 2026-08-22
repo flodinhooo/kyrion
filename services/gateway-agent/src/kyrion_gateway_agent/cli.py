@@ -186,14 +186,15 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
                 }
         else:
             raise ValueError("unsupported command")
-        result = subprocess.run(
-            ["mosquitto_pub", "-h", "127.0.0.1", "-t", topic, "-m", json.dumps(body)],
-            capture_output=True, check=False, timeout=5,
-        )
-        if result.returncode != 0:
-            raise RuntimeError("mqtt publish failed")
         if kind == "zigbee.power":
-            _confirm_power_state(device, body["state"])
+            _publish_and_confirm_power(topic, body, device, body["state"])
+        else:
+            result = subprocess.run(
+                ["mosquitto_pub", "-h", "127.0.0.1", "-t", topic, "-m", json.dumps(body)],
+                capture_output=True, check=False, timeout=5,
+            )
+            if result.returncode != 0:
+                raise RuntimeError("mqtt publish failed")
         complete_command(config, command_id, True)
     except (
         KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError,
@@ -206,19 +207,33 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         complete_command(config, command_id, False, "EXECUTION_FAILED")
 
 
-def _confirm_power_state(device: str, expected: str) -> None:
-    result = subprocess.run(
+def _publish_and_confirm_power(
+    topic: str, body: dict[str, object], device: str, expected: str
+) -> None:
+    subscriber = subprocess.Popen(
         [
             "mosquitto_sub", "-h", "127.0.0.1", "-t", f"zigbee2mqtt/{device}",
-            "-C", "1", "-W", "7",
+            "-R", "-C", "1", "-W", "7",
         ],
-        capture_output=True, check=False, timeout=9, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
-    if result.returncode != 0:
-        raise RuntimeError("device state confirmation timed out")
-    state = json.loads(result.stdout).get("state")
-    if state != expected:
-        raise RuntimeError(f"device reported state {state!r} instead of {expected!r}")
+    try:
+        time.sleep(0.05)
+        result = subprocess.run(
+            ["mosquitto_pub", "-h", "127.0.0.1", "-t", topic, "-m", json.dumps(body)],
+            capture_output=True, check=False, timeout=5,
+        )
+        if result.returncode != 0:
+            raise RuntimeError("mqtt publish failed")
+        output, _ = subscriber.communicate(timeout=9)
+        if subscriber.returncode != 0:
+            raise RuntimeError("device state confirmation timed out")
+        state = json.loads(output).get("state")
+        if state != expected:
+            raise RuntimeError(f"device reported state {state!r} instead of {expected!r}")
+    finally:
+        if subscriber.poll() is None:
+            subscriber.terminate()
 
 
 if __name__ == "__main__":

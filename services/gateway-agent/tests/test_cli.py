@@ -66,11 +66,12 @@ def test_zigbee_power_requires_confirmed_device_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
-    run = Mock(side_effect=[
-        Mock(returncode=0),
-        Mock(returncode=0, stdout='{"state":"ON"}'),
-    ])
+    run = Mock(return_value=Mock(returncode=0))
+    subscriber = Mock(returncode=0)
+    subscriber.communicate.return_value = ('{"state":"ON"}', "")
+    subscriber.poll.return_value = 0
     monkeypatch.setattr(cli.subprocess, "run", run)
+    monkeypatch.setattr(cli.subprocess, "Popen", Mock(return_value=subscriber))
     completed = Mock()
     monkeypatch.setattr(cli, "complete_command", completed)
 
@@ -87,11 +88,12 @@ def test_zigbee_power_rejects_unconfirmed_device_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
-    run = Mock(side_effect=[
-        Mock(returncode=0),
-        Mock(returncode=0, stdout='{"state":"OFF"}'),
-    ])
+    run = Mock(return_value=Mock(returncode=0))
+    subscriber = Mock(returncode=0)
+    subscriber.communicate.return_value = ('{"state":"OFF"}', "")
+    subscriber.poll.return_value = 0
     monkeypatch.setattr(cli.subprocess, "run", run)
+    monkeypatch.setattr(cli.subprocess, "Popen", Mock(return_value=subscriber))
     completed = Mock()
     monkeypatch.setattr(cli, "complete_command", completed)
 
