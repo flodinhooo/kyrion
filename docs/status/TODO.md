@@ -462,8 +462,11 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 - [x] Add a portable passphrase-encrypted personal backup export for
   conversations, personal memories and retention settings. The versioned V1
   envelope excludes authentication, sessions, integration credentials, device
-  tokens and private keys; preview, owner-remapped import and restore
-  verification remain follow-up work.
+  tokens and private keys. Preview and confirmed transactional import remap data
+  to the authenticated destination owner, preserve relationships and skip
+  records already imported from the same backup. Automated integration coverage
+  verifies cross-owner restore and repeat-import safety; clean-room operational
+  restore exercises remain follow-up work.
 
 ## Next vertical slice: Velora device control through Core
 

@@ -23,14 +23,20 @@ diagnostics are omitted because they can be regenerated. Password hashes,
 sessions, CSRF values, integration credentials, device tokens and private key
 material are never exported.
 
-Stable source record IDs are retained inside the encrypted payload so a future
-import can resolve relationships and conflicts. Import will always assign data
-to the authenticated destination owner; source ownership is not authority.
+Stable source record IDs are retained inside the encrypted payload so import
+can resolve relationships and conflicts. Import always assigns new record IDs
+and data ownership to the authenticated destination owner; source ownership is
+not authority. A Core-owned import ledger makes repeated imports idempotent per
+destination owner. Import is transactional, requires explicit confirmation and
+restores memory and retention settings without replacing existing conversation
+or memory records.
 
 ## Consequences
 
 - The backup is portable across machines and future owner accounts.
 - Losing the passphrase makes the backup unrecoverable by design.
-- Export is useful now; preview, conflict planning and transactional import are
-  separate follow-up slices.
+- Preview exposes only metadata and record counts before the owner confirms the
+  transactional import.
+- Automated integration coverage proves cross-owner and repeated import
+  behaviour; periodic clean-room restore exercises remain necessary.
 - Device and integration reconnection remains explicit.
