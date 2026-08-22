@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.UUID
+import dev.kyrion.core.automation.ZigbeeButtonBindingService
 
 data class CreateGatewayEnrollmentRequest(@field:NotBlank @field:Size(max = 120) val displayName: String)
 data class GatewayEnrollmentResponse(val id: UUID, val enrollmentToken: String, val expiresAt: java.time.Instant)
@@ -44,6 +45,10 @@ data class ZigbeeCommandRequest(
 )
 data class GatewayCommandResponse(val id: UUID)
 data class GatewayCommandResultRequest(val succeeded: Boolean, @field:Size(max = 80) val error: String?)
+data class ZigbeeButtonEventRequest(
+    @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
+    @field:Pattern(regexp = "^(single|double|long)$") val action: String,
+)
 data class AddZigbeeDeviceRequest(
     @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
     @field:NotBlank @field:Size(max = 160) val displayName: String,
@@ -124,6 +129,7 @@ class GatewayAgentController(
     private val commands: GatewayCommandService,
     private val zigbeeDevices: ZigbeeDeviceSyncService,
     private val bluetoothDevices: BluetoothDeviceSyncService,
+    private val buttonBindings: ZigbeeButtonBindingService,
 ) {
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
@@ -160,6 +166,14 @@ class GatewayAgentController(
         @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: GatewayCommandResultRequest) {
         if (!authorization.startsWith("Bearer ")) throw GatewayUnauthenticatedException()
         commands.complete(nodeId, authorization.substring(7), id, body.succeeded, body.error)
+    }
+
+    @PostMapping("/zigbee/button-events")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun buttonEvent(@RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
+        @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: ZigbeeButtonEventRequest) {
+        if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
+        buttonBindings.handle(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.action)
     }
 }
 

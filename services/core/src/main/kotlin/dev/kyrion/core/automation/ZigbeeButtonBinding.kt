@@ -13,7 +13,7 @@ import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Pattern
+import org.springframework.http.HttpStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
@@ -24,6 +24,9 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.sql.Timestamp
 import java.time.Clock
 import java.util.Locale
@@ -136,3 +139,10 @@ class ZigbeeButtonBindingController(private val service: ZigbeeButtonBindingServ
 }
 
 class ZigbeeButtonBindingInvalidException : RuntimeException()
+
+@RestControllerAdvice
+class ZigbeeButtonBindingErrorHandler {
+    @ExceptionHandler(ZigbeeButtonBindingInvalidException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun invalid() = mapOf("code" to "BUTTON_BINDING_INVALID")
+}
