@@ -265,6 +265,23 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `personal backup imports into another owner once without overwriting source data`() {
+        val firstToken=setupToken();val firstOwner=authentication.authenticate(firstToken)!!.id;val now=Instant.parse("2026-08-22T15:00:00Z")
+        conversations.replace(firstOwner,Conversation(UUID.randomUUID(),"Portable conversation",now,now,listOf(ConversationMessage(UUID.randomUUID(),"user","portable private text",now))))
+        val envelope=mockMvc.perform(post("/v1/backups/personal").header("Authorization","Bearer $firstToken").contentType(MediaType.APPLICATION_JSON).content("""{"passphrase":"a-strong-portable-passphrase"}"""))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        val secondOwner=insertAdditionalOwner("second");val secondToken=authentication.login("second",OTHER_PASSWORD).session.rawToken
+        val importBody="""{"envelope":$envelope,"passphrase":"a-strong-portable-passphrase","confirmation":"IMPORT"}"""
+        mockMvc.perform(post("/v1/backups/personal/import").header("Authorization","Bearer $secondToken").contentType(MediaType.APPLICATION_JSON).content(importBody))
+            .andExpect(status().isOk).andExpect(jsonPath("$.conversationsImported").value(1)).andExpect(jsonPath("$.messagesImported").value(1))
+        mockMvc.perform(post("/v1/backups/personal/import").header("Authorization","Bearer $secondToken").contentType(MediaType.APPLICATION_JSON).content(importBody))
+            .andExpect(status().isOk).andExpect(jsonPath("$.conversationsImported").value(0)).andExpect(jsonPath("$.conversationsSkipped").value(1))
+        assertThat(conversations.recent(secondOwner,10).map{it.title}).containsExactly("Portable conversation")
+        assertThat(conversations.recent(firstOwner,10).map{it.title}).containsExactly("Portable conversation")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM conversation WHERE title='Portable conversation'").query(Int::class.java).single()).isEqualTo(2)
+    }
+
+    @Test
     fun `HTTP conversation lifecycle supports save rename and confirmed deletion semantics`() {
         val token = setupToken()
         val conversationId = UUID.randomUUID()

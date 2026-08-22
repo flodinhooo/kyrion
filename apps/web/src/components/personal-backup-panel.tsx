@@ -8,6 +8,9 @@ export function PersonalBackupPanel() {
   const { t } = useWorkspace();
   const [state,setState]=useState<"idle"|"working"|"error"|"mismatch"|"done">("idle");
   const [preview,setPreview]=useState<{createdAt:string;conversations:number;messages:number;memories:number}|null>(null);
+  const [importSource,setImportSource]=useState<{envelope:unknown;passphrase:string}|null>(null);
+  const [confirmation,setConfirmation]=useState("");
+  const [importResult,setImportResult]=useState<{conversationsImported:number;conversationsSkipped:number;messagesImported:number;memoriesImported:number;memoriesSkipped:number}|null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form=event.currentTarget; const data=new FormData(form);
     const passphrase=String(data.get("passphrase")??"");
@@ -29,8 +32,13 @@ export function PersonalBackupPanel() {
       const response=await fetch("/api/backups/personal/preview",{method:"POST",headers:{"Content-Type":"application/json",...csrfHeader()},body:JSON.stringify({envelope,passphrase:data.get("importPassphrase")})});
       const value=await response.json() as {createdAt?:unknown;conversations?:unknown;messages?:unknown;memories?:unknown};
       if(!response.ok||typeof value.createdAt!=="string"||typeof value.conversations!=="number"||typeof value.messages!=="number"||typeof value.memories!=="number")throw new Error("preview failed");
-      setPreview(value as {createdAt:string;conversations:number;messages:number;memories:number}); setState("idle");
+      setPreview(value as {createdAt:string;conversations:number;messages:number;memories:number}); setImportSource({envelope,passphrase:String(data.get("importPassphrase"))}); setState("idle");
     }catch{setState("error");}
+  }
+  async function importBackup(){
+    if(!importSource||confirmation!=="IMPORT")return;setState("working");
+    try{const response=await fetch("/api/backups/personal/import",{method:"POST",headers:{"Content-Type":"application/json",...csrfHeader()},body:JSON.stringify({...importSource,confirmation})});const value=await response.json();if(!response.ok)throw new Error("import failed");setImportResult(value);setState("idle");setImportSource(null);}
+    catch{setState("error");}
   }
   return <div className="settings-link-card backup-panel"><strong>{t.backupTitle}</strong><small>{t.backupDescription}</small>
     <form onSubmit={submit}><label>{t.backupPassphrase}<input name="passphrase" type="password" minLength={12} maxLength={200} autoComplete="new-password" aria-describedby="backup-passphrase-requirements" required /></label>
@@ -43,5 +51,7 @@ export function PersonalBackupPanel() {
       <label>{t.backupPassphrase}<input name="importPassphrase" type="password" minLength={12} maxLength={200} required /></label>
       <button disabled={state==="working"} type="submit">{t.backupPreview}</button></form>
     {preview&&<div className="backup-preview-result" role="status"><strong>{t.backupPreviewReady}</strong><span>{t.backupPreviewConversations}: {preview.conversations}</span><span>{t.backupPreviewMessages}: {preview.messages}</span><span>{t.backupPreviewMemories}: {preview.memories}</span></div>}
+    {importSource&&<div className="backup-import-confirm"><p>{t.backupImportWarning}</p><label>{t.backupImportConfirmation}<input value={confirmation} onChange={event=>setConfirmation(event.target.value)} autoComplete="off" /></label><button type="button" disabled={confirmation!=="IMPORT"||state==="working"} onClick={()=>void importBackup()}>{t.backupImport}</button></div>}
+    {importResult&&<div className="backup-import-result" role="status"><strong>{t.backupImportComplete}</strong><span>{t.backupImportedConversations}: {importResult.conversationsImported}</span><span>{t.backupSkippedConversations}: {importResult.conversationsSkipped}</span><span>{t.backupImportedMessages}: {importResult.messagesImported}</span><span>{t.backupImportedMemories}: {importResult.memoriesImported}</span><span>{t.backupSkippedMemories}: {importResult.memoriesSkipped}</span></div>}
   </div>;
 }
