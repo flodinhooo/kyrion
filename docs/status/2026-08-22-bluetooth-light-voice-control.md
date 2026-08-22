@@ -31,5 +31,11 @@ available.
 - All 110 AI tests passed, including Bluetooth room power, room brightness,
   exact-device power and a provider-agnostic future-light regression.
 - The complete Core test suite passed.
-- Physical Voice Satellite execution remains to be verified after restarting
-  the local AI and Core services with this change.
+- At 16:36 CEST the German room-power path switched the physical living-room
+  lights and returned `Erledigt`, but the owner rejected the observed order.
+  Device execution occurred before `Alles klar, ich kümmere mich darum`. The
+  required order remains: end of speech/VAD, processing response, device
+  execution, truthful final result.
+- Room brightness remains intentionally unverified until ambient light permits
+  a reliable visual judgement.
+- Exact-name power control remains to be physically verified independently.

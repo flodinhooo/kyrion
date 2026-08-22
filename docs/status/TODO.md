@@ -10,8 +10,13 @@ session. The current implementation status is documented in [README.md](README.m
 - [x] Include every approved `light` device in provider-neutral Voice room,
   global and exact-name power commands without a provider-specific Voice
   change; include room-scoped brightness when the device advertises it.
-- [ ] Physically verify `Schalte die Lampen im Wohnzimmer an/aus` and
-  `Schalte Lampe Rechts an/aus` through the Voice Satellite.
+- [ ] Correct and physically verify provider-neutral living-room power order:
+  end of speech/VAD, processing response, real device change, truthful final
+  success response. The 16:36 run executed before processing playback.
+- [ ] Physically verify `Schalte Lampe Rechts an/aus` through the Voice
+  Satellite and confirm that only the named lamp changes.
+- [ ] Physically verify room brightness after dark; ambient light at the 16:36
+  power acceptance was too bright for a trustworthy judgement.
 
 Canonical continuation:
 [Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md).
@@ -29,7 +34,8 @@ Latest physical checkpoint:
 - [x] Owner-review and register four German processing responses and four
   additional German greetings with checksum-pinned audio.
 - [ ] Physically verify the deployed audible sequence: processing response,
-  device change and final outcome response.
+  device change and final outcome response. The 2026-08-22 Bluetooth run was
+  rejected because execution preceded the processing response.
 - [ ] Record twenty consecutive physical action attempts covering multi-room,
   polarity, unavailable targets and partial success.
 - [ ] Add a typed partial-success Voice outcome and fixed/template response.
