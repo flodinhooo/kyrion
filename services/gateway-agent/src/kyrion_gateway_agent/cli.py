@@ -20,6 +20,7 @@ from kyrion_gateway_agent.client import (
     complete_command,
     enroll,
     heartbeat,
+    motion_event,
     next_command,
 )
 from kyrion_gateway_agent.config import DEFAULT_CONFIG_PATH, AgentConfig
@@ -103,17 +104,16 @@ def _forward_button_events(config: AgentConfig) -> None:
                     payload = json.loads(raw_payload)
                 except json.JSONDecodeError:
                     continue
-                action = payload.get("action") if isinstance(payload, dict) else None
-                if action not in {"single", "double", "long"}:
+                if not isinstance(payload, dict):
+                    continue
+                action = payload.get("action")
+                occupancy = payload.get("occupancy")
+                if action not in {"single", "double", "long"} and not isinstance(
+                    occupancy, bool
+                ):
                     continue
                 friendly_name = topic.removeprefix("zigbee2mqtt/")
-                health = collect_health()
-                devices = health.get("zigbee", {}).get("devices", [])
-                device = next(
-                    (item for item in devices if item.get("friendlyName") == friendly_name),
-                    None,
-                )
-                device_id = device.get("ieeeAddress") if isinstance(device, dict) else None
+                device_id = _resolve_zigbee_device_id(friendly_name)
                 if not isinstance(device_id, str):
                     LOGGER.warning(
                         "Ignoring button event from unknown Zigbee topic %s",
@@ -121,16 +121,38 @@ def _forward_button_events(config: AgentConfig) -> None:
                     )
                     continue
                 try:
-                    button_event(config, device_id, action)
-                    LOGGER.info("Forwarded Zigbee button event %s for %s", action, device_id)
+                    if action in {"single", "double", "long"}:
+                        button_event(config, device_id, action)
+                        LOGGER.info(
+                            "Forwarded Zigbee button event %s for %s", action, device_id
+                        )
+                    if isinstance(occupancy, bool):
+                        motion_event(config, device_id, occupancy)
+                        LOGGER.info(
+                            "Forwarded Zigbee motion event %s for %s",
+                            "detected" if occupancy else "clear",
+                            device_id,
+                        )
                 except CoreRequestError as error:
-                    LOGGER.warning("Button event forwarding failed: %s", error)
+                    LOGGER.warning("Zigbee event forwarding failed: %s", error)
         except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             LOGGER.warning("Zigbee button subscription failed: %s", error)
         finally:
             if process is not None and process.poll() is None:
                 process.terminate()
         time.sleep(2)
+
+
+def _resolve_zigbee_device_id(friendly_name: str) -> str | None:
+    if len(friendly_name) == 18 and friendly_name.startswith("0x"):
+        return friendly_name
+    health = collect_health()
+    devices = health.get("zigbee", {}).get("devices", [])
+    device = next(
+        (item for item in devices if item.get("friendlyName") == friendly_name),
+        None,
+    )
+    return device.get("ieeeAddress") if isinstance(device, dict) else None
 
 
 def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:

@@ -60,6 +60,16 @@ def button_event(config: AgentConfig, device_id: str, action: str) -> None:
     )
 
 
+def motion_event(config: AgentConfig, device_id: str, detected: bool) -> None:
+    _request(
+        f"{config.core_url}/v1/gateway-agent/zigbee/motion-events",
+        "POST",
+        {"deviceId": device_id, "detected": detected},
+        _auth(config),
+        expect_json=False,
+    )
+
+
 def next_command(config: AgentConfig) -> dict[str, Any] | None:
     value = _request(
         f"{config.core_url}/v1/gateway-agent/commands/next", "POST", {}, _auth(config)

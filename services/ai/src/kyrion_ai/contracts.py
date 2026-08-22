@@ -51,7 +51,7 @@ class RuntimeDevice(BaseModel):
 
     id: str = Field(min_length=1, max_length=128)
     provider: str = Field(min_length=1, max_length=60)
-    device_class: Literal["light"] = Field(alias="deviceClass")
+    device_class: Literal["light", "switch", "sensor", "other"] = Field(alias="deviceClass")
     display_name: str = Field(alias="displayName", min_length=1, max_length=160)
     room_name: str | None = Field(default=None, alias="roomName", max_length=120)
     capabilities: list[RuntimeDeviceCapability] = Field(max_length=50)

@@ -155,6 +155,35 @@ def test_proposes_polite_web_voice_room_power_command_with_spaced_punctuation() 
     assert proposal.arguments.on is False
 
 
+def test_non_light_catalog_entries_do_not_reject_a_light_command() -> None:
+    request = DeviceCommandProposalRequest.model_validate({
+        "message": "Mach die Lampen im Wohnzimmer an.",
+        "locale": "de",
+        "priorMessages": [],
+        "devices": [
+            {
+                "id": "button-1", "provider": "zigbee", "deviceClass": "other",
+                "displayName": "Wohnzimmer Taster", "roomName": "Wohnzimmer",
+                "capabilities": [{"id": "button.events"}], "availability": "online",
+                "observedAt": None,
+            },
+            {
+                "id": "light-1", "provider": "bluetooth", "deviceClass": "light",
+                "displayName": "Lampe links", "roomName": "Wohnzimmer",
+                "capabilities": [{"id": "power.set"}], "availability": "online",
+                "observedAt": None,
+            },
+        ],
+    })
+
+    proposal = propose_device_command(request)
+
+    assert proposal is not None
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Wohnzimmer"
+    assert proposal.arguments.on is True
+
+
 def test_proposes_brightness_for_bluetooth_lamps_in_a_room() -> None:
     bluetooth_lamps = DeviceCommandProposalRequest(
         message="Stelle die Lampen im Wohnzimmer auf 40 Prozent.",
