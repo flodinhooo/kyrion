@@ -35,9 +35,9 @@ class VoiceActionService(
         locale: String,
         message: String,
         priorMessages: List<ActionPriorMessage>,
+        deferExecution: Boolean = false,
         validateActive: () -> Unit = {},
         onValidated: () -> Unit = {},
-        deferExecution: Boolean = false,
     ): VoiceActionAttempt = when (val result = proposals.propose(ownerId, message.trim(), locale, priorMessages)) {
         is ProposalResult.Proposed -> {
             validateActive()

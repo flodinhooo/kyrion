@@ -32,7 +32,7 @@ class ActivityService(
             correlationId = correlationId,
             summaryCode = summaryCode,
             ownerId = ownerId ?: actorId?.takeIf { actorType == ActivityActorType.USER }
-                ?.let { runCatching(UUID::fromString).getOrNull() },
+                ?.let { value: String -> runCatching<UUID> { UUID.fromString(value) }.getOrNull() },
         ),
     )
 
