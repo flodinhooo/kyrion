@@ -84,14 +84,15 @@ export function isDeviceCommandStatus(value: unknown): value is DeviceCommandSta
 
 export type ButtonGesture = "single" | "double" | "long";
 export type ButtonAction = "toggle" | "turn_on" | "turn_off";
-export type ButtonBinding = { gesture: ButtonGesture; targetDeviceId: string; action: ButtonAction };
+export type ButtonBinding = { gesture: ButtonGesture; targetDeviceId: string | null; targetRoomId: string | null; action: ButtonAction };
 
 export function isButtonBindingList(value: unknown): value is ButtonBinding[] {
   return Array.isArray(value) && value.length <= 3 && value.every((item) => {
     if (!item || typeof item !== "object") return false;
     const binding = item as Partial<ButtonBinding>;
     return (binding.gesture === "single" || binding.gesture === "double" || binding.gesture === "long")
-      && typeof binding.targetDeviceId === "string"
+      && ((typeof binding.targetDeviceId === "string" && binding.targetRoomId === null)
+        || (binding.targetDeviceId === null && typeof binding.targetRoomId === "string"))
       && (binding.action === "toggle" || binding.action === "turn_on" || binding.action === "turn_off");
   });
 }

@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Cpu, LampDesk, Pencil, Plus, RadioTower, ScanLine, Trash2 } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useWorkspace } from "@/components/app-shell";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
@@ -98,12 +98,17 @@ export default function DevicesPage() {
     return () => { disposed = true; };
   }, [devices]);
 
-  function updateButtonBinding(buttonId: string, gesture: ButtonGesture, targetDeviceId: string, action?: ButtonAction) {
+  function updateButtonBinding(buttonId: string, gesture: ButtonGesture, targetValue: string, action?: ButtonAction) {
     setButtonBindings((current) => {
       const existing = current[buttonId] ?? [];
       const previous = existing.find((binding) => binding.gesture === gesture);
       const next = existing.filter((binding) => binding.gesture !== gesture);
-      if (targetDeviceId) next.push({ gesture, targetDeviceId, action: action ?? previous?.action ?? "toggle" });
+      if (targetValue) next.push({
+        gesture,
+        targetDeviceId: targetValue.startsWith("device:") ? targetValue.slice(7) : null,
+        targetRoomId: targetValue.startsWith("room:") ? targetValue.slice(5) : null,
+        action: action ?? previous?.action ?? "toggle",
+      });
       return { ...current, [buttonId]: next };
     });
   }
@@ -314,9 +319,10 @@ export default function DevicesPage() {
       <div className="room-heading">
         <h2>{group.name}</h2>
         <div className="room-heading-actions">
-          {group.items.length > 0 && (() => {
-            const roomIsOn = group.items.some((device) => device.state?.on === true || nanoleafStates[device.id]?.on === true);
-            return <label className="room-power-switch"><span>{roomCommandStates[group.id] ? t.commandPending : roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending || roomCommandStates[group.id]} onClick={() => void roomPower(group.id, group.items, !roomIsOn)}><i /></button></label>;
+          {group.items.some((device) => device.capabilities.some((capability) => capability.id === "power.set")) && (() => {
+            const controllableItems = group.items.filter((device) => device.capabilities.some((capability) => capability.id === "power.set"));
+            const roomIsOn = controllableItems.some((device) => device.state?.on === true || nanoleafStates[device.id]?.on === true);
+            return <label className="room-power-switch"><span>{roomCommandStates[group.id] ? t.commandPending : roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending || roomCommandStates[group.id]} onClick={() => void roomPower(group.id, controllableItems, !roomIsOn)}><i /></button></label>;
           })()}
           {group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={() => setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType })}>
           <Pencil aria-hidden="true" />
@@ -339,12 +345,13 @@ export default function DevicesPage() {
             illumination: null,
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
-          const controllable = device.capabilities.some((capability) => capability.id === "power.set");
+          const controllable = device.deviceClass === "light" && device.capabilities.some((capability) => capability.id === "power.set");
           const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
           const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
-          return <article key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
+          const DeviceIcon = device.deviceClass === "light" ? LampDesk : device.deviceClass === "sensor" ? ScanLine : device.deviceClass === "switch" ? RadioTower : Cpu;
+          return <article className={`device-card device-card-${device.deviceClass}${controllable ? " is-controllable" : ""}`} key={device.id} onClick={() => { if (controllable) setSelected(device); }}>
             <div>
-              <strong>{device.displayName}</strong>
+              <div className="device-card-title"><span><DeviceIcon aria-hidden="true" /></span><strong>{device.displayName}</strong></div>
               <small>{hardwareName}</small>
               <small>{device.provider === "zigbee" ? "Zigbee · kyrion-node" : device.provider === "bluetooth" ? "Bluetooth · kyrion-node" : "Lokales Netzwerk · Nanoleaf"}</small>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
@@ -369,11 +376,12 @@ export default function DevicesPage() {
                 const binding = (buttonBindings[device.id] ?? []).find((item) => item.gesture === gesture);
                 return <div className="button-binding-row" key={gesture}>
                   <span>{gesture === "single" ? t.buttonGestureSingle : gesture === "double" ? t.buttonGestureDouble : t.buttonGestureLong}</span>
-                  <select aria-label={`${gesture}: ${t.buttonTarget}`} value={binding?.targetDeviceId ?? ""} onChange={(event) => updateButtonBinding(device.id, gesture, event.target.value)}>
+                  <select aria-label={`${gesture}: ${t.buttonTarget}`} value={binding?.targetDeviceId ? `device:${binding.targetDeviceId}` : binding?.targetRoomId ? `room:${binding.targetRoomId}` : ""} onChange={(event) => updateButtonBinding(device.id, gesture, event.target.value)}>
                     <option value="">{t.buttonNotAssigned}</option>
-                    {powerTargets.map((target) => <option value={target.id} key={target.id}>{target.displayName}</option>)}
+                    <optgroup label={t.buttonTargetRooms}>{rooms.filter((room) => devices.some((candidate) => candidate.room?.id === room.id && candidate.capabilities.some((capability) => capability.id === "power.set"))).map((room) => <option value={`room:${room.id}`} key={room.id}>{room.name}</option>)}</optgroup>
+                    <optgroup label={t.buttonTargetDevices}>{powerTargets.map((target) => <option value={`device:${target.id}`} key={target.id}>{target.displayName}</option>)}</optgroup>
                   </select>
-                  <select aria-label={`${gesture}: ${t.buttonAction}`} disabled={!binding} value={binding?.action ?? "toggle"} onChange={(event) => updateButtonBinding(device.id, gesture, binding?.targetDeviceId ?? "", event.target.value as ButtonAction)}>
+                  <select aria-label={`${gesture}: ${t.buttonAction}`} disabled={!binding} value={binding?.action ?? "toggle"} onChange={(event) => updateButtonBinding(device.id, gesture, binding?.targetDeviceId ? `device:${binding.targetDeviceId}` : binding?.targetRoomId ? `room:${binding.targetRoomId}` : "", event.target.value as ButtonAction)}>
                     <option value="toggle">{t.buttonActionToggle}</option><option value="turn_on">{t.buttonActionOn}</option><option value="turn_off">{t.buttonActionOff}</option>
                   </select>
                 </div>;
