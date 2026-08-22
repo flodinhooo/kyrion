@@ -30,7 +30,7 @@ _GERMAN_POWER = re.compile(
 _GERMAN_POLITE_POWER = re.compile(
     r"^(?:(?:hey\s+)?velora[,\s]+)?kannst\s+du\s+(?:bitte\s+)?(?:die|das)\s+"
     r"(?P<kind>nanoleafs?|licht(?:er)?|lampen?)\s+(?:im|in)\s+(?P<room>.+?)\s+"
-    r"(?:bitte\s+)?(?P<state>an|ein|aus)schalten[.!?]*\s*$",
+    r"(?:bitte\s+)?(?P<state>an|ein|aus)schalten\s*[.!?]*\s*$",
     re.IGNORECASE,
 )
 _GERMAN_GLOBAL_LIGHT_POWER = re.compile(

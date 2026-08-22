@@ -129,6 +129,32 @@ def test_proposes_polite_web_chat_room_power_command() -> None:
     assert proposal.arguments.on is False
 
 
+def test_proposes_polite_web_voice_room_power_command_with_spaced_punctuation() -> None:
+    request = DeviceCommandProposalRequest.model_validate({
+        "message": "kannst du die lampen im flur bitte ausschalten ?",
+        "locale": "de",
+        "priorMessages": [],
+        "devices": [{
+            "id": "device-1",
+            "provider": "zigbee",
+            "deviceClass": "light",
+            "displayName": "Flurlampe",
+            "roomName": "Flur",
+            "capabilities": [{"id": "power.set"}],
+            "availability": "online",
+            "observedAt": None,
+        }],
+    })
+
+    proposal = propose_device_command(request)
+
+    assert proposal is not None
+    assert proposal.capability == "power.set"
+    assert proposal.selector.provider == "light"
+    assert proposal.selector.room_name == "Flur"
+    assert proposal.arguments.on is False
+
+
 def test_proposes_brightness_for_bluetooth_lamps_in_a_room() -> None:
     bluetooth_lamps = DeviceCommandProposalRequest(
         message="Stelle die Lampen im Wohnzimmer auf 40 Prozent.",
