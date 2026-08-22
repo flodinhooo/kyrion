@@ -38,6 +38,7 @@ export default function ActivityPage() {
 
   const summary = (event: ActivityEvent) => ({
     "activity.core.started": t.activityCoreStarted,
+    "activity.auth.sessionRevoked": t.activitySessionRevoked,
     "memory.enabled": t.activityMemoryEnabled,
     "memory.disabled": t.activityMemoryDisabled,
     "memory.proposed": t.activityMemoryProposed,

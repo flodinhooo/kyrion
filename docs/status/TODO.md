@@ -437,7 +437,12 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
   logging credentials or the attempted username. The current single-Core
   development deployment keeps this bounded state in memory; a future
   multi-instance deployment must move it to shared protected storage.
-- [ ] Add active-session listing and selective session revocation to the profile.
+- [x] Add owner-scoped active-session listing and selective revocation to the
+  profile. Core returns only session IDs and timestamps, marks the current
+  session, restricts revocation in SQL to the authenticated owner and records
+  successful revocations without exposing session-token hashes. Web keeps
+  credentials in the existing HTTP-only cookie boundary and protects the
+  revoke route with CSRF validation.
 - [ ] Define conversation and activity retention policies.
 - [ ] Define personal-memory retention expiry and archival policy.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
