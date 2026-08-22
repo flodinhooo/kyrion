@@ -18,6 +18,7 @@ class ActivityService(
         summaryCode: String,
         actorId: String? = null,
         correlationId: UUID = UUID.randomUUID(),
+        ownerId: UUID? = null,
     ): ActivityEvent = repository.append(
         ActivityEvent(
             id = UUID.randomUUID(),
@@ -30,8 +31,11 @@ class ActivityService(
             source = source,
             correlationId = correlationId,
             summaryCode = summaryCode,
+            ownerId = ownerId ?: actorId?.takeIf { actorType == ActivityActorType.USER }
+                ?.let { runCatching(UUID::fromString).getOrNull() },
         ),
     )
 
     fun recent(limit: Int): List<ActivityEvent> = repository.findRecent(limit)
+    fun recent(ownerId: UUID, limit: Int): List<ActivityEvent> = repository.findRecentForOwner(ownerId, limit)
 }

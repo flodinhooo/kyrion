@@ -141,6 +141,7 @@ class DeviceCommandService(
                 "device.command.proposed",
                 ownerId.toString(),
                 correlationId,
+                ownerId,
             )
         }
         val outcomes = targets.map { target ->
