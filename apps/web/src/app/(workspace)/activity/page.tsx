@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
-import { ActivityEvent, isActivityResponse } from "@/features/activity/contracts";
+import { ActivityEvent, ActivityIntegrityResponse, isActivityIntegrityResponse, isActivityResponse } from "@/features/activity/contracts";
 
 type LoadingState = "loading" | "ready" | "error";
 
@@ -12,15 +12,20 @@ export default function ActivityPage() {
   const { locale, t } = useWorkspace();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [state, setState] = useState<LoadingState>("loading");
+  const [integrity, setIntegrity] = useState<ActivityIntegrityResponse | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     async function loadActivity() {
       try {
-        const response = await fetch("/api/activity", { cache: "no-store", signal: controller.signal });
-        const body: unknown = await response.json();
-        if (!response.ok || !isActivityResponse(body)) throw new Error("Activity unavailable");
+        const [response, integrityResponse] = await Promise.all([
+          fetch("/api/activity", { cache: "no-store", signal: controller.signal }),
+          fetch("/api/activity/integrity", { cache: "no-store", signal: controller.signal }),
+        ]);
+        const body: unknown = await response.json(); const integrityBody: unknown = await integrityResponse.json();
+        if (!response.ok || !isActivityResponse(body) || !integrityResponse.ok || !isActivityIntegrityResponse(integrityBody)) throw new Error("Activity unavailable");
         setEvents(body.items);
+        setIntegrity(integrityBody);
         setState("ready");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -67,6 +72,12 @@ export default function ActivityPage() {
       </header>
 
       {state === "loading" && <div className="activity-loading">{t.activityLoading}</div>}
+
+      {state === "ready" && integrity && <div className={`activity-integrity ${integrity.owner.valid && integrity.system.valid ? "activity-integrity-valid" : "activity-integrity-invalid"}`} role="status">
+        <strong>{integrity.owner.valid && integrity.system.valid ? t.activityIntegrityValid : t.activityIntegrityInvalid}</strong>
+        <span>{t.activityIntegritySealed}: {integrity.owner.sealedEvents + integrity.system.sealedEvents}</span>
+        {(integrity.owner.legacyEvents + integrity.system.legacyEvents) > 0 && <span>{t.activityIntegrityLegacy}: {integrity.owner.legacyEvents + integrity.system.legacyEvents}</span>}
+      </div>}
 
       {state === "error" && <div className="activity-empty">
         <span className="activity-empty-icon"><Icons.activity /></span>

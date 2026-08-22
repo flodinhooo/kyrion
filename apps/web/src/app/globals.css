@@ -252,6 +252,10 @@ button { color: inherit; }
 .activity-principles { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-bottom: 28px; }
 .activity-principles span { padding: 6px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 10px; font-weight: 700; }
 .activity-loading { width: min(980px, 100%); margin: 0 auto; padding: 56px 24px; color: var(--text-muted); text-align: center; }
+.activity-integrity { width: min(980px, 100%); display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 auto 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; }
+.activity-integrity strong { margin-right: auto; }
+.activity-integrity-valid { background: color-mix(in srgb, #2f9e65 8%, var(--surface)); border-color: color-mix(in srgb, #2f9e65 30%, var(--border)); }
+.activity-integrity-invalid { background: color-mix(in srgb, var(--destructive) 8%, var(--surface)); border-color: color-mix(in srgb, var(--destructive) 35%, var(--border)); }
 .activity-list { width: min(980px, 100%); display: grid; gap: 12px; margin: 0 auto; padding: 0; list-style: none; }
 .activity-card { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 15px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
 .activity-marker { width: 10px; height: 10px; margin-top: 5px; border-radius: 999px; background: var(--text-muted); box-shadow: 0 0 0 5px var(--surface-muted); }
