@@ -73,7 +73,7 @@ async function readGatewayServices(token: string): Promise<SystemService[]> {
         displayName: child.id,
         host: node.hostname,
         port: null,
-        status: child.status === "not_configured" ? "unknown" : child.status,
+        status: child.status,
         detail: node.lastSeenAt,
         latencyMs: null,
         source: "gateway",

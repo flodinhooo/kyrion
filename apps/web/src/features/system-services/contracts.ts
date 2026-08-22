@@ -1,4 +1,4 @@
-export type SystemServiceStatus = "ready" | "unavailable" | "degraded" | "unknown";
+export type SystemServiceStatus = "ready" | "unavailable" | "degraded" | "unknown" | "not_configured";
 
 export type SystemService = {
   id: string;
@@ -16,7 +16,7 @@ export type SystemServicesStatus = {
   services: SystemService[];
 };
 
-const statuses = new Set<SystemServiceStatus>(["ready", "unavailable", "degraded", "unknown"]);
+const statuses = new Set<SystemServiceStatus>(["ready", "unavailable", "degraded", "unknown", "not_configured"]);
 const sources = new Set<SystemService["source"]>(["web", "probe", "gateway"]);
 
 export function isSystemServicesStatus(value: unknown): value is SystemServicesStatus {
