@@ -254,7 +254,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .param("id", UUID.randomUUID()).param("owner", ownerId).param("old", Timestamp.from(old)).update()
         activity.record(ActivityCategory.SECURITY, "recent.event", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
             "test", "recent.event", actorId = ownerId.toString(), ownerId = ownerId)
-        jdbc.sql("UPDATE activity_event SET occurred_at=:old WHERE owner_id=:owner AND event_type='recent.event'")
+        jdbc.sql("UPDATE activity_event SET occurred_at=:old WHERE owner_id=:owner")
             .param("old", Timestamp.from(old)).param("owner", ownerId).update()
 
         mockMvc.perform(put("/v1/retention").header("Authorization", "Bearer $token")
@@ -264,7 +264,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         mockMvc.perform(get("/v1/retention/preview").header("Authorization", "Bearer $token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversations.records").value(1))
-            .andExpect(jsonPath("$.activity.records").value(1))
+            .andExpect(jsonPath("$.activity.records").value(2))
             .andExpect(jsonPath("$.personalMemory.records").value(1))
         mockMvc.perform(post("/v1/retention/cleanup").header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"NO"}"""))
@@ -274,7 +274,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"DELETE"}"""))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversationsDeleted").value(1))
-            .andExpect(jsonPath("$.activityDeleted").value(1))
+            .andExpect(jsonPath("$.activityDeleted").value(2))
             .andExpect(jsonPath("$.personalMemoriesDeleted").value(1))
         assertThat(conversations.recent(ownerId, 10).map { it.title }).containsExactly("Current")
         assertThat(conversations.recent(secondOwner, 10).map { it.title }).containsExactly("Other owner expired")

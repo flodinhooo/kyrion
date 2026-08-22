@@ -11,6 +11,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -23,7 +24,7 @@ class ActivityIntegrity(
 
     fun eventHash(event: ActivityEvent, scope: String, previousHash: ByteArray?): ByteArray = authenticate(
         listOf(
-            "event-v1", scope, previousHash?.hex().orEmpty(), event.id.toString(), event.occurredAt.toString(),
+            "event-v1", scope, previousHash?.hex().orEmpty(), event.id.toString(), event.occurredAt.truncatedTo(ChronoUnit.MICROS).toString(),
             event.category.name, event.eventType, event.status.name, event.actorType.name, event.actorId.orEmpty(),
             event.source, event.correlationId.toString(), event.summaryCode, event.ownerId?.toString().orEmpty(),
         ).joinToString("\u001f"),
