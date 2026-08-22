@@ -5,6 +5,7 @@ import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { PasswordChangeForm } from "@/components/password-change-form";
 import { MemoryPanel } from "@/components/memory-panel";
+import { ActiveSessionsPanel } from "@/components/active-sessions-panel";
 
 export default function ProfilePage() {
   const { username, t } = useWorkspace();
@@ -27,10 +28,7 @@ export default function ProfilePage() {
             <span><strong>{t.profileSecurity}</strong><small>{t.profileSecurityDescription}</small></span>
             <PasswordChangeForm />
           </div>
-          <div className="settings-link-card profile-placeholder">
-            <Icons.clock />
-            <span><strong>{t.profileSessions}</strong><small>{t.profileSessionsPlaceholder}</small></span>
-          </div>
+          <ActiveSessionsPanel />
         </div>
 
         <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
