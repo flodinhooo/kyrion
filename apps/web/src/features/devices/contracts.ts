@@ -11,7 +11,7 @@ export type RuntimeDevice = {
   capabilities: Array<{ id: string }>;
   availability: DeviceAvailability;
   observedAt: string | null;
-  state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null } | null;
+  state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null; occupancy: boolean | null; battery: number | null; illuminance: number | null; action: string | null } | null;
 };
 
 export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
@@ -32,7 +32,11 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
       && (device.state.brightness === null || typeof device.state.brightness === "number")
       && (device.state.hue === null || typeof device.state.hue === "number")
       && (device.state.saturation === null || typeof device.state.saturation === "number")
-      && (device.state.colorTemperature === null || typeof device.state.colorTemperature === "number")));
+      && (device.state.colorTemperature === null || typeof device.state.colorTemperature === "number")
+      && (device.state.occupancy === null || typeof device.state.occupancy === "boolean")
+      && (device.state.battery === null || typeof device.state.battery === "number")
+      && (device.state.illuminance === null || typeof device.state.illuminance === "number")
+      && (device.state.action === null || typeof device.state.action === "string")));
 }
 
 export function isRuntimeDeviceList(value: unknown): value is RuntimeDevice[] {
