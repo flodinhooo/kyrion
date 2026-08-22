@@ -147,6 +147,33 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `HTTP session management lists active sessions and enforces owner scoped revocation`() {
+        val currentToken = setupToken()
+        val otherSession = authentication.login("flo", OLD_PASSWORD).session
+
+        mockMvc.perform(get("/v1/auth/sessions").header("Authorization", "Bearer $currentToken"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[?(@.current == true)].length()").value(1))
+            .andExpect(jsonPath("$[*].tokenHash").doesNotExist())
+
+        val secondOwnerId = insertAdditionalOwner("second")
+        val secondOwnerSession = authentication.login("second", OTHER_PASSWORD).session
+        mockMvc.perform(
+            delete("/v1/auth/sessions/${secondOwnerSession.session.id}")
+                .header("Authorization", "Bearer $currentToken"),
+        ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("AUTH_SESSION_NOT_FOUND"))
+        assertThat(authentication.authenticate(secondOwnerSession.rawToken)?.id).isEqualTo(secondOwnerId)
+
+        mockMvc.perform(
+            delete("/v1/auth/sessions/${otherSession.session.id}")
+                .header("Authorization", "Bearer $currentToken"),
+        ).andExpect(status().isNoContent)
+        assertThat(authentication.authenticate(otherSession.rawToken)).isNull()
+    }
+
+    @Test
     fun `HTTP conversation lifecycle supports save rename and confirmed deletion semantics`() {
         val token = setupToken()
         val conversationId = UUID.randomUUID()
