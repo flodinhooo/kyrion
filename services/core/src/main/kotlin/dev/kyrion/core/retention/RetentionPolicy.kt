@@ -112,7 +112,7 @@ class RetentionPolicyController(
                 actorId = ownerId.toString(), ownerId = ownerId,
             )
             RetentionCleanupResult(now, conversationsDeleted, activityDeleted, memoriesDeleted)
-        } ?: error("Retention cleanup transaction returned no result")
+        }
     }
 
     private fun preview(ownerId: UUID, policy: RetentionPolicy, now: Instant) = RetentionCleanupPreview(
