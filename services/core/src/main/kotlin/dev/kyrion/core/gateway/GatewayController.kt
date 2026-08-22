@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.UUID
 import dev.kyrion.core.automation.ZigbeeButtonBindingService
+import dev.kyrion.core.automation.ZigbeeMotionEventService
 
 data class CreateGatewayEnrollmentRequest(@field:NotBlank @field:Size(max = 120) val displayName: String)
 data class GatewayEnrollmentResponse(val id: UUID, val enrollmentToken: String, val expiresAt: java.time.Instant)
@@ -48,6 +49,10 @@ data class GatewayCommandResultRequest(val succeeded: Boolean, @field:Size(max =
 data class ZigbeeButtonEventRequest(
     @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
     @field:Pattern(regexp = "^(single|double|long)$") val action: String,
+)
+data class ZigbeeMotionEventRequest(
+    @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
+    val detected: Boolean,
 )
 data class AddZigbeeDeviceRequest(
     @field:Pattern(regexp = "^0x[0-9a-f]{16}$") val deviceId: String,
@@ -130,6 +135,7 @@ class GatewayAgentController(
     private val zigbeeDevices: ZigbeeDeviceSyncService,
     private val bluetoothDevices: BluetoothDeviceSyncService,
     private val buttonBindings: ZigbeeButtonBindingService,
+    private val motionEvents: ZigbeeMotionEventService,
 ) {
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
@@ -174,6 +180,14 @@ class GatewayAgentController(
         @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: ZigbeeButtonEventRequest) {
         if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
         buttonBindings.handle(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.action)
+    }
+
+    @PostMapping("/zigbee/motion-events")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun motionEvent(@RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
+        @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: ZigbeeMotionEventRequest) {
+        if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
+        motionEvents.record(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.detected)
     }
 }
 
