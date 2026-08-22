@@ -20,6 +20,8 @@ export type ActivityEvent = {
 };
 
 export type ActivityResponse = { items: ActivityEvent[] };
+export type ActivityIntegrityChain = { scope: string; valid: boolean; sealedEvents: number; legacyEvents: number; authorizedPruning: boolean; issues: string[] };
+export type ActivityIntegrityResponse = { owner: ActivityIntegrityChain; system: ActivityIntegrityChain };
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
@@ -40,4 +42,17 @@ export function isActivityResponse(value: unknown): value is ActivityResponse {
       && isString(event.correlationId)
       && isString(event.summaryCode);
   });
+}
+
+export function isActivityIntegrityResponse(value: unknown): value is ActivityIntegrityResponse {
+  if (!value || typeof value !== "object") return false;
+  const response = value as Partial<ActivityIntegrityResponse>;
+  const valid = (chain: unknown): chain is ActivityIntegrityChain => {
+    if (!chain || typeof chain !== "object") return false;
+    const item = chain as Partial<ActivityIntegrityChain>;
+    return typeof item.scope === "string" && typeof item.valid === "boolean"
+      && Number.isInteger(item.sealedEvents) && Number.isInteger(item.legacyEvents)
+      && typeof item.authorizedPruning === "boolean" && Array.isArray(item.issues) && item.issues.every(isString);
+  };
+  return valid(response.owner) && valid(response.system);
 }
