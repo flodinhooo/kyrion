@@ -50,6 +50,13 @@ Kyrion contract. The Windows firewall must still restrict port 8080 to the
 reserved Ethernet and Wi-Fi addresses of `kyrion-node`; the DNS name does not
 replace authentication or firewall policy.
 
+After Web is running, the authenticated `/settings/services` page provides a
+five-second overview of Web, Core, AI, Ollama and STT reachability plus the
+latest Core-confirmed gateway service heartbeat. It intentionally exposes only
+bounded status, host, port and latency metadata. Starting or restarting a
+service is not yet available there; lifecycle controls require a Core-owned,
+audited allowlist and must not become arbitrary browser process execution.
+
 ### 3. Start Ollama
 
 ```powershell
