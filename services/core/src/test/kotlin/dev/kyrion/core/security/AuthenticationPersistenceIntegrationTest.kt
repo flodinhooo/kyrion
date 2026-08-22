@@ -239,6 +239,32 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `HTTP personal backup exports encrypted owner data without credentials`() {
+        val token = setupToken()
+        val ownerId = authentication.authenticate(token)!!.id
+        val now = Instant.parse("2026-08-22T15:00:00Z")
+        conversations.replace(ownerId, Conversation(UUID.randomUUID(), "Backup conversation", now, now,
+            listOf(ConversationMessage(UUID.randomUUID(), "user", "private backup content", now))))
+
+        val result = mockMvc.perform(
+            post("/v1/backups/personal").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"passphrase":"a-strong-portable-passphrase"}"""),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.format").value("kyrion-personal-backup"))
+            .andExpect(jsonPath("$.formatVersion").value(1))
+            .andExpect(jsonPath("$.algorithm").value("AES-256-GCM"))
+            .andReturn().response.contentAsString
+
+        assertThat(result).doesNotContain("private backup content")
+        assertThat(result).doesNotContain("sessionToken")
+        mockMvc.perform(
+            post("/v1/backups/personal").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"passphrase":"too-short"}"""),
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
     fun `HTTP conversation lifecycle supports save rename and confirmed deletion semantics`() {
         val token = setupToken()
         val conversationId = UUID.randomUUID()
