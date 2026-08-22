@@ -1,5 +1,8 @@
 package dev.kyrion.core.activity
 
+import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.UnauthenticatedException
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.validation.annotation.Validated
@@ -22,5 +25,9 @@ class ActivityController(
         @Min(1)
         @Max(100)
         limit: Int,
-    ): ActivityResponse = ActivityResponse(activityService.recent(limit))
+        request: HttpServletRequest,
+    ): ActivityResponse = ActivityResponse(activityService.recent(request.ownerId(), limit))
+
+    private fun HttpServletRequest.ownerId() =
+        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? java.util.UUID ?: throw UnauthenticatedException()
 }

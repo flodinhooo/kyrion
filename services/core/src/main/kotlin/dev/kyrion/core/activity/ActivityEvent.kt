@@ -1,5 +1,6 @@
 package dev.kyrion.core.activity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.Instant
 import java.util.UUID
 
@@ -14,6 +15,7 @@ data class ActivityEvent(
     val source: String,
     val correlationId: UUID,
     val summaryCode: String,
+    @get:JsonIgnore val ownerId: UUID? = null,
 )
 
 enum class ActivityCategory {
