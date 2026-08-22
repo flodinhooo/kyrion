@@ -78,6 +78,26 @@ class LocalAuthenticationServiceTest {
             .isInstanceOf(InvalidCredentialsException::class.java)
         assertThat(service.login("flo", "a-secure-local-password").user.username).isEqualTo("flo")
     }
+
+    @Test
+    fun `lists only owner sessions and selectively revokes another session`() {
+        val current = service.setup("flo", "a-secure-local-password")
+        val other = service.login("flo", "a-secure-local-password")
+
+        val active = service.activeSessions(current.session.rawToken)
+
+        assertThat(active).hasSize(2)
+        assertThat(active.single { it.current }.id).isEqualTo(current.session.session.id)
+        assertThat(active).allMatch { it.id == current.session.session.id || it.id == other.session.session.id }
+
+        service.revokeSession(current.session.rawToken, other.session.session.id)
+        assertThat(service.authenticate(other.session.rawToken)).isNull()
+        assertThat(service.authenticate(current.session.rawToken)?.id).isEqualTo(current.user.id)
+        assertThatThrownBy { service.revokeSession(current.session.rawToken, current.session.session.id) }
+            .isInstanceOf(CurrentSessionRevocationException::class.java)
+        assertThatThrownBy { service.revokeSession(current.session.rawToken, UUID.randomUUID()) }
+            .isInstanceOf(AuthSessionNotFoundException::class.java)
+    }
 }
 
 private class MutableClock(private var current: Instant) : Clock() {
@@ -108,6 +128,16 @@ private class InMemoryAuthSessionRepositoryForAuthentication : AuthSessionReposi
     override fun revoke(tokenHash: String, revokedAt: Instant): Boolean {
         val value = values[tokenHash]?.takeIf { it.revokedAt == null } ?: return false
         values[tokenHash] = value.copy(revokedAt = revokedAt)
+        return true
+    }
+    override fun findActiveForUser(userId: UUID, at: Instant): List<AuthSession> =
+        values.values.filter { it.userId == userId && it.isActive(at) }
+            .sortedWith(compareByDescending<AuthSession> { it.lastSeenAt }.thenByDescending { it.createdAt })
+    override fun revokeForUser(userId: UUID, sessionId: UUID, revokedAt: Instant): Boolean {
+        val entry = values.entries.firstOrNull { (_, value) ->
+            value.id == sessionId && value.userId == userId && value.isActive(revokedAt)
+        } ?: return false
+        values[entry.key] = entry.value.copy(revokedAt = revokedAt)
         return true
     }
     override fun revokeAllForUser(userId: UUID, revokedAt: Instant): Int {

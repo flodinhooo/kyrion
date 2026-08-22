@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.UUID
 
 @Repository
 class JdbcAuthSessionRepository(
@@ -67,14 +68,39 @@ class JdbcAuthSessionRepository(
         .param("tokenHash", tokenHash)
         .update() == 1
 
-    override fun revokeAllForUser(userId: java.util.UUID, revokedAt: Instant): Int = jdbcClient.sql(
+    override fun findActiveForUser(userId: UUID, at: Instant): List<AuthSession> = jdbcClient.sql(
+        """
+        SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at, revoked_at
+        FROM auth_session
+        WHERE user_id = :userId AND revoked_at IS NULL AND expires_at > :at
+        ORDER BY last_seen_at DESC, created_at DESC
+        """.trimIndent(),
+    )
+        .param("userId", userId)
+        .param("at", Timestamp.from(at))
+        .query(::mapSession)
+        .list()
+
+    override fun revokeForUser(userId: UUID, sessionId: UUID, revokedAt: Instant): Boolean = jdbcClient.sql(
+        """
+        UPDATE auth_session
+        SET revoked_at = :revokedAt
+        WHERE id = :sessionId AND user_id = :userId AND revoked_at IS NULL AND expires_at > :revokedAt
+        """.trimIndent(),
+    )
+        .param("revokedAt", Timestamp.from(revokedAt))
+        .param("sessionId", sessionId)
+        .param("userId", userId)
+        .update() == 1
+
+    override fun revokeAllForUser(userId: UUID, revokedAt: Instant): Int = jdbcClient.sql(
         "UPDATE auth_session SET revoked_at = :revokedAt WHERE user_id = :userId AND revoked_at IS NULL",
     ).param("revokedAt", Timestamp.from(revokedAt)).param("userId", userId).update()
 
     @Suppress("UNUSED_PARAMETER")
     private fun mapSession(resultSet: ResultSet, rowNumber: Int): AuthSession = AuthSession(
-        id = resultSet.getObject("id", java.util.UUID::class.java),
-        userId = resultSet.getObject("user_id", java.util.UUID::class.java),
+        id = resultSet.getObject("id", UUID::class.java),
+        userId = resultSet.getObject("user_id", UUID::class.java),
         tokenHash = resultSet.getString("token_hash"),
         createdAt = resultSet.getTimestamp("created_at").toInstant(),
         lastSeenAt = resultSet.getTimestamp("last_seen_at").toInstant(),

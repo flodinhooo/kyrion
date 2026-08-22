@@ -10,6 +10,13 @@ import java.time.Clock
 import java.util.UUID
 
 data class AuthenticatedOwner(val user: UserAccount, val session: CreatedSession)
+data class ActiveSession(
+    val id: UUID,
+    val createdAt: java.time.Instant,
+    val lastSeenAt: java.time.Instant,
+    val expiresAt: java.time.Instant,
+    val current: Boolean,
+)
 
 @Service
 class LocalAuthenticationService(
@@ -49,8 +56,21 @@ class LocalAuthenticationService(
     }
 
     fun authenticate(rawToken: String): UserAccount? {
-        val session = sessions.authenticate(rawToken) ?: return null
-        return users.findById(session.userId)?.takeIf { it.enabled }
+        return authenticatedSession(rawToken)?.first
+    }
+
+    fun activeSessions(rawToken: String): List<ActiveSession> {
+        val (user, current) = authenticatedSession(rawToken) ?: throw UnauthenticatedException()
+        return sessions.activeForUser(user.id).map { session ->
+            ActiveSession(session.id, session.createdAt, session.lastSeenAt, session.expiresAt, session.id == current.id)
+        }
+    }
+
+    fun revokeSession(rawToken: String, sessionId: UUID) {
+        val (user, current) = authenticatedSession(rawToken) ?: throw UnauthenticatedException()
+        if (sessionId == current.id) throw CurrentSessionRevocationException()
+        if (!sessions.revokeForUser(user.id, sessionId)) throw AuthSessionNotFoundException()
+        record("auth.session.revoke", ActivityStatus.SUCCEEDED, "activity.auth.sessionRevoked", user.id)
     }
 
     fun logout(rawToken: String, actorId: UUID?): Boolean = sessions.revoke(rawToken).also { revoked ->
@@ -77,6 +97,12 @@ class LocalAuthenticationService(
 
     private fun normalizeUsername(value: String) = value.trim().lowercase()
 
+    private fun authenticatedSession(rawToken: String): Pair<UserAccount, AuthSession>? {
+        val session = sessions.authenticate(rawToken) ?: return null
+        val user = users.findById(session.userId)?.takeIf { it.enabled } ?: return null
+        return user to session
+    }
+
     private fun record(type: String, status: ActivityStatus, summary: String, actorId: UUID? = null) {
         activity.record(
             category = ActivityCategory.SECURITY,
@@ -94,3 +120,5 @@ class SetupAlreadyCompletedException : RuntimeException()
 class InvalidCredentialsException : RuntimeException()
 class InvalidCurrentPasswordException : RuntimeException()
 class PasswordUnchangedException : RuntimeException()
+class AuthSessionNotFoundException : RuntimeException()
+class CurrentSessionRevocationException : RuntimeException()
