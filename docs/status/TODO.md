@@ -646,6 +646,15 @@ integrations work end to end:
 
 ### Awaiting owner verification
 
+- [ ] Retest the SNZB-01P single-click living-room toggle twice against the
+  22:14 Core JAR and confirm alternating Bluetooth `on=true` / `on=false`
+  commands. Core now tracks the last successfully commanded state because the
+  OA20 devices report `on: null`.
+- [ ] Measure the confirmed long-press path from Zigbee event to Nanoleaf
+  completion and reduce only the measured source of latency.
+- [ ] Harden Voice failure audio so an unavailable dynamic TTS response cannot
+  abort the NDJSON turn with HTTP 500.
+
 - [x] Physically verify fresh authentication and Home quick-power actions
   against the existing Nanoleaf devices.
 - [ ] Repeat the German Velora text command after the unique `room`/`raum` alias

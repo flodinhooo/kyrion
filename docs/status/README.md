@@ -683,6 +683,12 @@ in browser local storage. Continue with one verified vertical slice at a time.
 
 ## How to resume
 
+The latest device-input, Web-card and operational rollout checkpoint is
+[Device events and control closeout — 2026-08-23](2026-08-23-device-events-and-control-closeout.md).
+It records the implemented SNZB-01P bindings, SNZB-03P motion history, unified
+light state cards, Bluetooth commanded-state persistence, rollout faults and
+the remaining physical reliability gates.
+
 In a new agent chat, use this prompt:
 
 > Read `AGENTS.md`, `README.md`, `docs/status/README.md`,
