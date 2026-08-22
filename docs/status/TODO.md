@@ -459,8 +459,11 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
   records an audit event. Automatic deletion remains inactive.
 - [ ] Define personal-memory archival separately from permanent retention
   cleanup, including legal holds and future household administration.
-- [ ] Add activity actor scoping and tamper evidence before making compliance
-  claims.
+- [x] Add owner/system activity scoping and tamper evidence. New events use
+  HMAC-SHA-256 chains with serialized heads; verification reports legacy rows,
+  detects changed content and supports signed anchors for authorised retention
+  prefixes. This is not presented as compliance certification or protection
+  after simultaneous database and integrity-key compromise.
 - [x] Add PostgreSQL backup and isolated restore verification. The operational
   scripts create a custom-format dump plus SHA-256 manifest outside the
   repository, restore into a random temporary database, validate Flyway history

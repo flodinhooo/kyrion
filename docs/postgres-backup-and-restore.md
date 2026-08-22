@@ -29,6 +29,11 @@ verification time and observed schema facts. Restore verification does not test
 application behaviour, credentials outside PostgreSQL, provider state or
 gateway/coordinator backups.
 
+The PostgreSQL dump does not contain `audit-integrity.key`. Back up that file
+separately using protected secret storage; never place it beside an unencrypted
+dump or commit it to the repository. Without the original key, restored audit
+events cannot be cryptographically verified.
+
 For an actual disaster recovery, stop Core, restore into a separately prepared
 database first, validate it, and only then change Core's database target. Do not
 restore over the active production database.
