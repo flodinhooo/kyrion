@@ -445,8 +445,12 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
   successful revocations without exposing session-token hashes. Web keeps
   credentials in the existing HTTP-only cookie boundary and protects the
   revoke route with CSRF validation.
-- [ ] Define conversation and activity retention policies.
-- [ ] Define personal-memory retention expiry and archival policy.
+- [x] Define owner-controlled conversation and activity retention policies with
+  safe `keep_forever` defaults. Flyway V18 persists typed policy intent; this
+  first slice performs no automatic deletion and reports enforcement as inactive.
+- [ ] Define personal-memory archival and implement reviewed retention
+  enforcement. Owner policy intent is persisted, but expiry, preview,
+  activation and cleanup remain deliberately inactive.
 - [ ] Add activity actor scoping and tamper evidence before making compliance
   claims.
 - [ ] Add backup and restore verification for PostgreSQL data.
