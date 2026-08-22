@@ -393,7 +393,9 @@ WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
 - [x] Add a local PostgreSQL development database after the first Core contracts
   are stable.
 - [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
-  the activity log before treating it as a compliance audit trail.
+  the activity log before treating it as a compliance audit trail. Explicit
+  owner scoping is implemented through Flyway V17 and ADR 0012; retention
+  enforcement and tamper evidence remain open.
 - [x] Add active conversation highlighting, editable titles, confirmed
   deletion, history states and visible persistence errors.
 - [x] Add owner-scoped PostgreSQL conversation and message persistence after the

@@ -34,6 +34,8 @@ Authenticated Core endpoints:
 - `GET /v1/auth/me`
 - `POST /v1/auth/logout`
 - `POST /v1/auth/password`
+- `GET /v1/auth/sessions`
+- `DELETE /v1/auth/sessions/{sessionId}`
 - `GET /v1/activity`
 - `GET /v1/devices`
 - `POST /v1/devices/observations/refresh`
@@ -76,9 +78,10 @@ deletable through the profile.
 
 ## Current limitations
 
-- Login throttling and temporary lockout are not implemented. Core remains
-  localhost-only; this must be addressed before remote exposure.
-- There is no password recovery or session-management screen.
+- Login throttling applies a temporary exponential backoff after five failed
+  attempts and returns `LOGIN_RATE_LIMITED` with `Retry-After`.
+- The profile lists owner-scoped active sessions and can selectively revoke
+  another session. There is no password-recovery flow.
 - Password change is implemented and rotates the current credential by
   revoking every existing owner session before returning a fresh session.
 - Conversation titles are derived from the first user sentence, shortened to a
@@ -89,6 +92,11 @@ deletable through the profile.
   contract but is no longer used by chat generation.
 - Confirmed-memory retrieval, memory conflicts/supersession and retention
   policies remain follow-up work.
+
+Activity events now carry ownership independently from actor identity. The
+authenticated activity feed returns owner events plus safe installation-level
+system events. This boundary is the prerequisite for future retention without
+cross-owner exposure or deletion.
 
 ## Automated verification
 
