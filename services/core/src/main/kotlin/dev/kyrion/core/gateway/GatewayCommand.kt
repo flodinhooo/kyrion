@@ -74,7 +74,7 @@ class GatewayCommandService(
         val id = UUID.randomUUID()
         repository.create(id, nodeId, ownerId, type, payload, clock.instant())
         activity.record(ActivityCategory.CAPABILITY, type, ActivityStatus.CONFIRMED, ActivityActorType.USER,
-            "kyrion-core", type, nodeId.toString(), id)
+            "kyrion-core", type, nodeId.toString(), id, ownerId)
         return id
     }
 
@@ -103,7 +103,7 @@ class GatewayCommandService(
         activity.record(ActivityCategory.CAPABILITY, "gateway.command.completed",
             if (succeeded) ActivityStatus.SUCCEEDED else ActivityStatus.FAILED,
             ActivityActorType.INTEGRATION, "kyrion-gateway", error ?: "gateway.command.completed",
-            node.ownerId.toString(), id)
+            node.ownerId.toString(), id, node.ownerId)
     }
 }
 

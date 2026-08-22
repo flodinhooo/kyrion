@@ -230,6 +230,7 @@ class GatewayService(
         activity.record(
             ActivityCategory.SECURITY, "gateway.registered", ActivityStatus.SUCCEEDED,
             ActivityActorType.INTEGRATION, "kyrion-gateway", "gateway.registered", node.id.toString(), enrollment.id,
+            enrollment.ownerId,
         )
         return RegisteredGateway(node, credential.rawToken)
     }
