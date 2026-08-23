@@ -59,5 +59,6 @@ export async function csrfIsValid(request: Request): Promise<boolean> {
 }
 
 export function secureCookie() {
+  if (process.env.KYRION_INSECURE_LAN_HTTP === "true") return false;
   return process.env.NODE_ENV === "production" || process.env.KYRION_HTTPS === "true";
 }

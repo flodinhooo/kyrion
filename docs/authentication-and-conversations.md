@@ -11,6 +11,10 @@ Core hashes passwords with Argon2id and stores only SHA-256 hashes of opaque
 once, from Core to the Next.js server. Next.js removes it from the response and
 sets `kyrion_session` as an `HttpOnly`, `SameSite=Strict` cookie. The cookie is
 marked `Secure` in production or when `KYRION_HTTPS=true`.
+For a deliberately trusted local development LAN only,
+`KYRION_INSECURE_LAN_HTTP=true` permits a production Web build to issue the
+same non-`Secure` host-only cookie used by the development server. This must
+remain disabled for internet-facing or otherwise untrusted networks.
 
 Next.js creates a separate random `kyrion_csrf` cookie. Authenticated mutating
 requests must echo this value in the `X-Kyrion-CSRF` header. Comparison is
