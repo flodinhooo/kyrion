@@ -48,15 +48,15 @@ export default function DevicesPage() {
       fetch("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
       fetch("/api/devices", { cache: "no-store" }),
     ]);
-    const roomValue: unknown = await roomResponse.json();
-    const connectionValue: unknown = await connectionResponse.json();
-    const deviceValue: unknown = await deviceResponse.json();
-    if (!roomResponse.ok || !connectionResponse.ok || !deviceResponse.ok
-      || !isRoomList(roomValue) || !isConnectionList(connectionValue)
-      || !isRuntimeDeviceList(deviceValue)) throw new Error();
-    setRooms(roomValue);
-    setConnections(connectionValue);
+    const roomValue: unknown = await roomResponse.json().catch(() => null);
+    const connectionValue: unknown = await connectionResponse.json().catch(() => null);
+    const deviceValue: unknown = await deviceResponse.json().catch(() => null);
+    if (!deviceResponse.ok || !isRuntimeDeviceList(deviceValue)) throw new Error();
+    setRooms(roomResponse.ok && isRoomList(roomValue) ? roomValue : []);
+    setConnections(connectionResponse.ok && isConnectionList(connectionValue) ? connectionValue : []);
     setDevices(deviceValue);
+    setError(!roomResponse.ok || !isRoomList(roomValue)
+      || !connectionResponse.ok || !isConnectionList(connectionValue));
   }, []);
 
   useEffect(() => {

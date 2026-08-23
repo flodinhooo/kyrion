@@ -76,6 +76,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = messages[locale];
   const activeConversationId = pathname.match(/^\/conversations\/([^/]+)$/)?.[1] ?? null;
 
@@ -296,14 +297,14 @@ export function AppShell({ children, username }: { children: ReactNode; username
     if (activeConversationId === id) router.replace("/");
   }
 
-  function sidebarContent() {
+  function sidebarContent(onNavigate?: () => void) {
     return (
       <>
         <div className="brand">
           <BrandAsset variant="wordmark" priority />
         </div>
 
-        <Link className="new-chat-button" href="/">
+        <Link className="new-chat-button" href="/" onClick={onNavigate}>
           <Icons.plus />
           <span>{t.newConversation}</span>
         </Link>
@@ -311,7 +312,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
         <nav aria-label={t.navigation}>
           <p className="section-label">{t.navigation}</p>
           {navigation.map(([key, Icon, href]) => (
-            <Link className={`nav-item ${pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "active" : ""}`} href={href} key={key}>
+            <Link className={`nav-item ${pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "active" : ""}`} href={href} key={key} onClick={onNavigate}>
               <Icon />
               <span>{t[key]}</span>
             </Link>
@@ -331,7 +332,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
             </form>
           ) : (
             <div className={`history-row ${activeConversationId === conversation.id ? "active" : ""}`} key={conversation.id}>
-              <Link className="history-item" href={`/conversations/${conversation.id}`}>
+              <Link className="history-item" href={`/conversations/${conversation.id}`} onClick={onNavigate}>
                 <span>{conversation.title}</span>
                 <small>{new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(new Date(conversation.updatedAt))}</small>
               </Link>
@@ -351,7 +352,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
         </div>
 
         <div className="sidebar-footer">
-          <Link className={`nav-item ${pathname === "/settings" ? "active" : ""}`} href="/settings"><Icons.settings /><span>{t.settings}</span></Link>
+          <Link className={`nav-item ${pathname === "/settings" ? "active" : ""}`} href="/settings" onClick={onNavigate}><Icons.settings /><span>{t.settings}</span></Link>
           <div className="connection" title={aiStatusText}>
             <span className={`status-dot status-${aiStatus.status}`} />
             <span>{aiStatusText}</span>
@@ -385,7 +386,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
 
         <main className="workspace">
           <header className="topbar">
-            <Sheet>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button className="icon-button mobile-menu" type="button" aria-label={t.menu}><Icons.menu /></button>
               </SheetTrigger>
@@ -394,7 +395,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
                 <SheetClose asChild>
                   <button className="icon-button mobile-sheet-close" type="button" aria-label={t.closeMenu}><Icons.close /></button>
                 </SheetClose>
-                {sidebarContent()}
+                {sidebarContent(() => setMobileMenuOpen(false))}
               </SheetContent>
             </Sheet>
             <div className="topbar-title" title={aiStatusText}>

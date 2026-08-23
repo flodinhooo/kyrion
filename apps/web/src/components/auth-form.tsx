@@ -30,7 +30,12 @@ export function AuthForm({ setup }: { setup: boolean }) {
   }
 
   return (
-    <form className="auth-form" onSubmit={submit}>
+    <form
+      action={`/api/auth/${setup ? "setup" : "login"}`}
+      className="auth-form"
+      method="post"
+      onSubmit={submit}
+    >
       <label>Benutzername<input name="username" autoComplete="username" minLength={3} maxLength={120} pattern="[A-Za-z0-9._-]+" required /></label>
       <label>Passwort<input name="password" type="password" autoComplete={setup ? "new-password" : "current-password"} minLength={12} maxLength={200} required /></label>
       {setup && <small>Mindestens 12 Zeichen. Das erste Konto wird lokaler Owner dieser Installation.</small>}
