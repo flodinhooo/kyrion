@@ -27,12 +27,12 @@ confirmation policy, persistence and audit logging. Edge processes must expose
 bounded, typed operations and must not provide unrestricted remote shell access
 to Core, the AI service or the browser.
 
-The first deployment keeps Kyrion Core on the development PC or a later server.
-Larger local AI models are not assumed to run on the gateway. The Pi may buffer
-bounded state and events during temporary Core or network unavailability. A
-future ability to continue a small set of local rules requires separately
-versioned policies, expiry, conflict handling and delayed audit delivery and is
-therefore not part of the initial gateway slice.
+The first radio deployment kept Kyrion Core on the development PC. ADR 0016 now
+moves PostgreSQL, Core and Web to separate always-on containers on the Pi so
+implemented deterministic device control remains available while the PC is
+off. Larger local AI models remain on the development PC and are optional. The
+gateway agent continues to use bounded Core-owned commands; colocation does not
+turn it into an independent authority or introduce offline policy replication.
 
 ## Radio adapters
 
@@ -119,11 +119,11 @@ Raspberry Pi gateway node
   `-- Velora voice satellite
 ```
 
-The first deployment boundary is now proven with Core on the development PC and
-an unprivileged native Python gateway agent on Debian 13 ARM64. The agent sends
-authenticated typed health heartbeats and has no sudo, Docker socket or general
-command surface. Core may eventually run on the Pi, but integrations must still obey
-the same logical trust boundary and must not bypass Core merely because
+The first deployment boundary was proven with Core on the development PC and an
+unprivileged native Python gateway agent on Debian 13 ARM64. The always-on
+deployment now colocates containerised Core, Web and PostgreSQL on the Pi while
+preserving that same logical boundary. The agent has no sudo, Docker socket or
+general command surface, and integrations must not bypass Core merely because
 processes share a host.
 
 ## Protocol-neutral model
