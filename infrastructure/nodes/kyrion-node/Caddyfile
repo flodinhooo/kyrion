@@ -1,0 +1,9 @@
+{
+  admin off
+}
+
+kyrion-node.local, 192.168.1.116 {
+  tls /etc/caddy/tls/server.crt /etc/caddy/tls/server.key
+  encode zstd gzip
+  reverse_proxy web:3000
+}
