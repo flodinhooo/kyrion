@@ -261,6 +261,8 @@ button { color: inherit; }
 .activity-marker { width: 10px; height: 10px; margin-top: 5px; border-radius: 999px; background: var(--text-muted); box-shadow: 0 0 0 5px var(--surface-muted); }
 .activity-marker-succeeded, .activity-marker-confirmed { background: var(--primary); box-shadow: 0 0 0 5px var(--primary-soft), 0 0 18px var(--glow); }
 .activity-marker-failed, .activity-marker-denied { background: #d95151; }
+.spotify-mark { background: #1ed760; color: #071d0f; font-weight: 800; }
+.spotify-login { max-width: 520px; }
 .activity-card-content { min-width: 0; }
 .activity-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .activity-summary { margin: 0; font-weight: 720; }
