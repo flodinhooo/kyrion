@@ -36,6 +36,9 @@ services:
       KYRION_CREDENTIAL_KEY_FILE: /var/lib/kyrion/secrets/credential.key
       KYRION_AUDIT_INTEGRITY_KEY_FILE: /var/lib/kyrion/secrets/audit-integrity.key
       KYRION_AI_BASE_URL: ${KYRION_AI_BASE_URL:-http://127.0.0.1:8000}
+      KYRION_SPOTIFY_CLIENT_ID: ${KYRION_SPOTIFY_CLIENT_ID:-}
+      KYRION_SPOTIFY_CLIENT_SECRET: ${KYRION_SPOTIFY_CLIENT_SECRET:-}
+      KYRION_SPOTIFY_REDIRECT_URI: ${KYRION_SPOTIFY_REDIRECT_URI:-}
     ports:
       # OTBR already owns loopback port 8080 on kyrion-node.
       - "127.0.0.1:18080:8080"

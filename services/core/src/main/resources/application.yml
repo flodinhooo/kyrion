@@ -28,3 +28,7 @@ kyrion:
     key-file: ${KYRION_CREDENTIAL_KEY_FILE:E:/Kyrion/Data/secrets/credential.key}
   audit:
     integrity-key-file: ${KYRION_AUDIT_INTEGRITY_KEY_FILE:E:/Kyrion/Data/secrets/audit-integrity.key}
+  spotify:
+    client-id: ${KYRION_SPOTIFY_CLIENT_ID:}
+    client-secret: ${KYRION_SPOTIFY_CLIENT_SECRET:}
+    redirect-uri: ${KYRION_SPOTIFY_REDIRECT_URI:}
