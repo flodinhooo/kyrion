@@ -725,3 +725,15 @@ user-needs analysis: trust foundation, daily usability, then differentiation.
   both themes.
 - [ ] Replace browser speech providers only after explicitly selecting suitable
   local STT and TTS runtimes.
+# Spotify Connect vertical slice
+
+- [x] Add Core-owned Spotify Authorization Code flow with encrypted tokens,
+  owner-bound state, minimal playback scopes and explicit error codes.
+- [x] Add the German/English Web integration overlay, connection status,
+  Connect-device list and typed playback transfer.
+- [ ] Register the exact `kyrion-node.local` HTTPS callback in a Spotify
+  development app and add its owner account to the development allowlist.
+- [ ] Install a reviewed, version-pinned ARM64 `librespot` receiver as the
+  unprivileged audio user and physically verify the Bluetooth sink.
+- [ ] Add typed pause, resume, skip, volume and search actions plus Voice
+  Satellite ducking through Core policy.

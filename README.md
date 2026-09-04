@@ -75,6 +75,8 @@ slices.
 - direct discovery, explicit approval and bounded Bluetooth control of a
   physically verified MELK-OA20 colour lamp through the same Core command path;
 - explicit `online`, `offline`, `degraded` and `unknown` availability.
+- a Core-owned Spotify OAuth and Connect-device selection slice, ready for
+  owner credentials and physical Raspberry Pi receiver validation;
 
 ### AI and voice
 
