@@ -8,7 +8,10 @@ export function csrfTokensMatch(cookieToken?: string, headerToken?: string | nul
 }
 
 export function sessionCookieOptions(expires: Date, secure: boolean) {
-  return { httpOnly: true, sameSite: "strict" as const, secure, path: "/", expires };
+  // OAuth returns through a cross-site top-level navigation. Lax makes the
+  // session available to that GET callback while unsafe cross-site requests
+  // remain excluded and mutations still require the separate CSRF token.
+  return { httpOnly: true, sameSite: "lax" as const, secure, path: "/", expires };
 }
 
 export function csrfCookieOptions(expires: Date, secure: boolean) {

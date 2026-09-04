@@ -13,7 +13,7 @@ describe("authentication boundary", () => {
   it("keeps the session credential inaccessible to browser scripts", () => {
     const expires = new Date("2026-08-10T20:00:00Z");
     expect(sessionCookieOptions(expires, false)).toEqual({
-      httpOnly: true, sameSite: "strict", secure: false, path: "/", expires,
+      httpOnly: true, sameSite: "lax", secure: false, path: "/", expires,
     });
     expect(sessionCookieOptions(expires, true).secure).toBe(true);
   });
