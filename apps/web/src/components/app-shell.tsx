@@ -90,6 +90,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
       [/^\/automations/, t.automations],
       [/^\/knowledge/, t.knowledge],
       [/^\/plugins\/nanoleaf/, t.nanoleafTitle],
+      [/^\/plugins\/spotify/, "Spotify"],
       [/^\/plugins/, t.plugins],
       [/^\/activity/, t.activity],
       [/^\/profile/, t.profile],
