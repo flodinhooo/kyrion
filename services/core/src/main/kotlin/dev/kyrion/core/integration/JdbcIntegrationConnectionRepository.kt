@@ -43,6 +43,14 @@ class JdbcIntegrationConnectionRepository(private val jdbc: JdbcClient) : Integr
         return if (updated == 1) find(ownerId, id) else null
     }
 
+    override fun updateCredential(ownerId: UUID, id: UUID, credential: ProtectedCredential, updatedAt: java.time.Instant): IntegrationConnection? {
+        val updated = jdbc.sql("""UPDATE integration_connection SET credential_ciphertext=:ciphertext,
+            credential_nonce=:nonce, credential_version=:version, updated_at=:updatedAt WHERE owner_id=:ownerId AND id=:id""")
+            .param("ciphertext", credential.ciphertext).param("nonce", credential.nonce).param("version", credential.version)
+            .param("updatedAt", Timestamp.from(updatedAt)).param("ownerId", ownerId).param("id", id).update()
+        return if (updated == 1) find(ownerId, id) else null
+    }
+
     override fun delete(ownerId: UUID, id: UUID): Boolean = jdbc.sql(
         "DELETE FROM integration_connection WHERE owner_id = :ownerId AND id = :id",
     ).param("ownerId", ownerId).param("id", id).update() == 1
