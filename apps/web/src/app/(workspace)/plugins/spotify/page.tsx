@@ -55,6 +55,6 @@ export default function SpotifyPage() {
       {devices.length === 0 && <p className="placeholder-copy">{t.spotifyNoDevices}</p>}
     </>}
     {error && <p className="auth-error" role="alert">{t.spotifyError}</p>}
-    <Dialog.Root open={loginOpen} onOpenChange={setLoginOpen}><Dialog.Portal><Dialog.Overlay className="confirm-dialog-overlay" /><Dialog.Content className="confirm-dialog spotify-login"><Dialog.Title>{t.spotifyLoginTitle}</Dialog.Title><Dialog.Description>{t.spotifyLoginDescription}</Dialog.Description><div className="confirm-dialog-actions"><Dialog.Close asChild><button>{t.cancel}</button></Dialog.Close><button disabled={pending} onClick={() => void connect()}>{t.spotifyContinue}</button></div></Dialog.Content></Dialog.Portal></Dialog.Root>
+    <Dialog.Root open={loginOpen} onOpenChange={setLoginOpen}><Dialog.Portal><Dialog.Overlay className="confirm-dialog-overlay" /><Dialog.Content className="confirm-dialog-content spotify-login"><Dialog.Title>{t.spotifyLoginTitle}</Dialog.Title><Dialog.Description>{t.spotifyLoginDescription}</Dialog.Description><div className="confirm-dialog-actions"><Dialog.Close asChild><button>{t.cancel}</button></Dialog.Close><button disabled={pending} onClick={() => void connect()}>{t.spotifyContinue}</button></div></Dialog.Content></Dialog.Portal></Dialog.Root>
   </section>;
 }
