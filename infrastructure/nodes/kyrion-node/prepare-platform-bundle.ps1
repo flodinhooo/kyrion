@@ -86,6 +86,9 @@ try {
         "KYRION_POSTGRES_USER=kyrion"
         "KYRION_POSTGRES_PASSWORD=$targetPassword"
         "KYRION_AI_BASE_URL=$AiBaseUrl"
+        "KYRION_SPOTIFY_CLIENT_ID=$($settings['KYRION_SPOTIFY_CLIENT_ID'])"
+        "KYRION_SPOTIFY_CLIENT_SECRET=$($settings['KYRION_SPOTIFY_CLIENT_SECRET'])"
+        "KYRION_SPOTIFY_REDIRECT_URI=$($settings['KYRION_SPOTIFY_REDIRECT_URI'])"
     ) | Set-Content -LiteralPath (Join-Path $bundle "platform.env") -Encoding utf8
 
     $hashes = Get-ChildItem -LiteralPath $bundle -File | Sort-Object Name | ForEach-Object {
