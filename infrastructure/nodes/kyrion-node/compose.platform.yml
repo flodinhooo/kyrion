@@ -72,6 +72,7 @@ services:
     environment:
       CORE_SERVICE_URL: http://core:8080
       AI_SERVICE_URL: ${KYRION_AI_BASE_URL:-http://127.0.0.1:8000}
+      KYRION_PUBLIC_URL: ${KYRION_PUBLIC_URL:-https://kyrion-node.local}
     ports:
       - "127.0.0.1:3000:3000"
     read_only: true
