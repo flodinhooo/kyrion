@@ -1,6 +1,5 @@
 package dev.kyrion.core.integration
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -55,7 +54,7 @@ class SpotifyIntegrationServiceTest {
 
     private fun service(repository: SpotifyConnections, gateway: FakeSpotifyGateway, clientId: String, redirectUri: String) =
         SpotifyIntegrationService(repository, CredentialCipher(temp.resolve("credential.key").toString()), gateway,
-            jacksonObjectMapper(), ActivityService(object : ActivityEventRepository {
+            ActivityService(object : ActivityEventRepository {
                 override fun append(event: ActivityEvent) = event
                 override fun findRecent(limit: Int) = emptyList<ActivityEvent>()
             }), clientId, if (clientId.isBlank()) "" else "client-secret", redirectUri,

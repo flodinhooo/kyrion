@@ -36,18 +36,36 @@ chown root:root "$ENV_FILE.tmp"
 chmod 0600 "$ENV_FILE.tmp"
 mv "$ENV_FILE.tmp" "$ENV_FILE"
 
-if ! docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-build core web caddy; then
+rollback() {
   docker image tag kyrion/core:spotify-rollback-$TIMESTAMP kyrion/core:pi-local
   docker image tag kyrion/web:spotify-rollback-$TIMESTAMP kyrion/web:pi-local
   docker-compose --env-file "$BACKUP_DIR/platform.env" -f "$BACKUP_DIR/compose.platform.yml" up -d --no-build core web caddy
   echo "Update failed and the previous images were restored." >&2
   exit 1
-fi
+}
+
+docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-build core || true
 
 attempt=0
-until curl --fail --silent http://127.0.0.1:18080/actuator/health >/dev/null && curl --fail --silent http://127.0.0.1:3000/ >/dev/null; do
+until curl --fail --silent http://127.0.0.1:18080/actuator/health >/dev/null; do
   attempt=$((attempt + 1))
-  [ "$attempt" -lt 30 ] || { echo "Updated services did not become healthy; inspect logs and use $BACKUP_DIR for rollback." >&2; exit 1; }
+  if [ "$attempt" -ge 30 ]; then
+    docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=200 core > "$BACKUP_DIR/failed-core.log" 2>&1 || true
+    echo "Updated Core did not become healthy. Logs: $BACKUP_DIR/failed-core.log" >&2
+    rollback
+  fi
+  sleep 5
+done
+
+docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-build web caddy || true
+attempt=0
+until curl --fail --silent http://127.0.0.1:3000/ >/dev/null; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 30 ]; then
+    docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=200 web caddy > "$BACKUP_DIR/failed-web.log" 2>&1 || true
+    echo "Updated Web did not become healthy. Logs: $BACKUP_DIR/failed-web.log" >&2
+    rollback
+  fi
   sleep 5
 done
 

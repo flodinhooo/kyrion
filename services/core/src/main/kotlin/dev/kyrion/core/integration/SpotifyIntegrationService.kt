@@ -1,6 +1,7 @@
 package dev.kyrion.core.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.*
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -23,13 +24,13 @@ class SpotifyIntegrationService(
     private val repository: IntegrationConnectionRepository,
     private val cipher: CredentialCipher,
     private val gateway: SpotifyGateway,
-    private val mapper: ObjectMapper,
     private val activity: ActivityService,
     @Value("\${kyrion.spotify.client-id:}") private val clientId: String,
     @Value("\${kyrion.spotify.client-secret:}") private val clientSecret: String,
     @Value("\${kyrion.spotify.redirect-uri:}") private val redirectUri: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+    private val mapper: ObjectMapper = jacksonObjectMapper()
     private val random = SecureRandom()
     private val pending = ConcurrentHashMap<String, PendingSpotifyAuthorization>()
 
