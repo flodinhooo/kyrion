@@ -20,6 +20,7 @@ function IconBase({ children, ...props }: IconProps) {
 }
 
 export const Icons = {
+  music: (props: IconProps) => <IconBase {...props}><path d="M9 18V5l12-2v13M9 9l12-2" /><ellipse cx="6" cy="18" rx="3" ry="3" /><ellipse cx="18" cy="16" rx="3" ry="3" /></IconBase>,
   chat: (props: IconProps) => (
     <IconBase {...props}><path d="M5 17.5 3.5 21l4.2-1.8A9 9 0 1 0 5 17.5Z" /><path d="M8 10h8M8 14h5" /></IconBase>
   ),
