@@ -4,6 +4,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icons } from "@/components/icons";
+import { SessionStatus } from "@/components/session-status";
 import {
   Sheet,
   SheetClose,
@@ -420,6 +421,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
               <button className="icon-button" type="button" aria-label={t.theme} onClick={toggleTheme}><Icons.sun /></button>
             </div>
           </header>
+          <SessionStatus />
           {children}
         </main>
       </div>
