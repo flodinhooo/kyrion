@@ -2,9 +2,11 @@
 
 import { DragEvent, FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Box, LampDesk, Plus } from "lucide-react";
+import { ArrowRight, Box, House, LampDesk, Plus } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useWorkspace } from "@/components/app-shell";
+import { SnapshotStatus } from "@/components/snapshot-status";
+import { HomeRoomFavorites } from "@/components/home-room-favorites";
 import { DeviceControlDialog } from "@/components/device-control-dialog";
 import { GatewayLightControlDialog } from "@/components/gateway-light-control-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
@@ -29,6 +31,9 @@ export default function HomePage() {
   const [draggedDeviceId, setDraggedDeviceId] = useState<string | null>(null);
   const [dropRoomId, setDropRoomId] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const [roomsResponse, devicesResponse, connectionsResponse] = await Promise.all([
@@ -43,6 +48,9 @@ export default function HomePage() {
     setRooms(roomValue);
     setDevices(deviceValue);
     setConnections(connectionValue);
+    setLoaded(true);
+    setUpdatedAt(new Date());
+    setError(false);
   }, []);
 
   useEffect(() => {
@@ -50,6 +58,13 @@ export default function HomePage() {
     const timeout = window.setTimeout(() => void load().catch(() => { if (!disposed) setError(true); }), 0);
     return () => { disposed = true; window.clearTimeout(timeout); };
   }, [load]);
+
+  async function refresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try { await load(); } catch { setError(true); }
+    finally { setRefreshing(false); }
+  }
 
   async function assignDevice(deviceId: string, roomId: string) {
     const previous = devices;
@@ -93,15 +108,30 @@ export default function HomePage() {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
   const selectedDevices = selectedRoom ? devices.filter((device) => device.room?.id === selectedRoom.id) : [];
   const unassigned = devices.filter((device) => !device.room);
+  const attention = devices.filter((device) => device.availability !== "online");
 
   return <section className="home-dashboard spatial-home">
     <header>
-      <div><p className="eyebrow">Kyrion Home</p><h1>{t.homeTitle}</h1><p>{t.homeDescription}</p></div>
+      <div><h1>{t.homeTitle}</h1><p>{t.homeDescription}</p></div>
       <div className="home-actions"><button type="button" onClick={() => setRoomEditor({ name: "", roomType: "other" })}><Plus aria-hidden="true" />{t.homeCreateRoom}</button><Link href="/devices"><Box aria-hidden="true" />{t.homeOpenDeviceControls}</Link><Link className="home-add-device" href="/devices/add"><Plus aria-hidden="true" />{t.addDevice}</Link></div>
     </header>
-    {error && <p className="auth-error">{t.homeError}</p>}
-    <p className="floor-plan-hint">{t.homeFloorPlanHint}</p>
-    <div className="home-plan" aria-label={t.homeTitle}>
+    <SnapshotStatus error={error} loaded={loaded} busy={refreshing} updatedAt={updatedAt} onReload={() => void refresh()} />
+    {loaded && <div className="home-summary" aria-label={t.homeTitle}>
+      <a href="#home-rooms"><span>{t.homeSummaryRooms}</span><strong>{rooms.length}</strong><House aria-hidden="true" /></a>
+      <Link href="/devices"><span>{t.homeSummaryDevices}</span><strong>{devices.length}</strong><Box aria-hidden="true" /></Link>
+      <Link href="/devices"><span>{t.homeSummaryOnline}</span><strong>{devices.filter((device) => device.availability === "online").length}<small> / {devices.length}</small></strong><LampDesk aria-hidden="true" /></Link>
+    </div>}
+    {loaded && <HomeRoomFavorites rooms={rooms} onOpen={setSelectedRoomId} />}
+    {loaded && !error && devices.length > 0 && <section className="home-attention" aria-labelledby="home-attention-title">
+      <div className="home-section-heading"><div><h2 id="home-attention-title">{t.homeAttention}</h2><p>{attention.length ? t.homeAttentionHint : t.homeAttentionEmpty}</p></div><Link href="/devices">{t.homeAttentionOpen}<ArrowRight aria-hidden="true" /></Link></div>
+      {attention.length > 0 && <ul>{attention.map((device) => <li key={device.id}><span><strong>{device.displayName}</strong><small>{device.room?.name ?? t.homeUnassigned}</small></span><span className={`device-status ${device.availability}`}>{device.availability === "offline" ? t.homeOffline : device.availability === "degraded" ? t.homeDegraded : t.homeUnknown}</span></li>)}</ul>}
+    </section>}
+    {loaded && rooms.length === 0 && <div className="home-empty">
+      <h2>{t.homeEmptyTitle}</h2><p>{t.homeEmptyDescription}</p>
+      <button type="button" onClick={() => setRoomEditor({ name: "", roomType: "other" })}><Plus aria-hidden="true" />{t.homeCreateRoom}</button>
+    </div>}
+    {rooms.length > 0 && <p className="floor-plan-hint">{t.homeFloorPlanHint}</p>}
+    <div id="home-rooms" className={`home-plan${rooms.length === 0 ? " is-empty" : ""}`} aria-label={t.homeTitle}>
       {rooms.map((room, index) => {
         const items = devices.filter((device) => device.room?.id === room.id);
         const isSelected = selectedRoomId === room.id;

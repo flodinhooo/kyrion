@@ -42,6 +42,7 @@ export default function ActivityPage() {
   });
 
   const summary = (event: ActivityEvent) => ({
+    YOUTUBE_EMBED_PREPARED: t.youtubeActivityPrepared,
     SPOTIFY_PLAYBACK_CONTROLLED: t.loungeActivityControlled,
     SPOTIFY_PLAYBACK_FAILED: t.loungeActivityFailed,
     "activity.core.started": t.activityCoreStarted,
@@ -67,7 +68,7 @@ export default function ActivityPage() {
     <section className="activity-stage">
       <header className="activity-header">
         <div>
-          <p className="eyebrow">Kyrion Core</p>
+
           <h1>{t.activityTitle}</h1>
           <p>{t.activityDescription}</p>
         </div>

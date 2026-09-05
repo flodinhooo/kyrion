@@ -8,7 +8,8 @@ import {
   isGatewayBluetoothDeviceList, isGatewayNodeList, isGatewayZigbeeDeviceList,
   type GatewayBluetoothDevice, type GatewayNode, type GatewayZigbeeDevice,
 } from "@/features/gateways/contracts";
-import { isDiscoveredNanoleafList, type DiscoveredNanoleaf } from "@/features/integrations/contracts";
+import { isNetworkDeviceList, type NetworkDevice } from "@/features/integrations/network-contracts";
+import { isConnection } from "@/features/integrations/contracts";
 
 export default function AddDevicePage() {
   const { t } = useWorkspace();
@@ -16,7 +17,9 @@ export default function AddDevicePage() {
   const [zigbeeCandidates, setZigbeeCandidates] = useState<GatewayZigbeeDevice[]>([]);
   const [bluetoothCandidates, setBluetoothCandidates] = useState<GatewayBluetoothDevice[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [networkDevices, setNetworkDevices] = useState<DiscoveredNanoleaf[] | null>(null);
+  const [networkDevices, setNetworkDevices] = useState<NetworkDevice[] | null>(null);
+  const [shellyError, setShellyError] = useState<string | null>(null);
+  const [selectedNetworkHost, setSelectedNetworkHost] = useState<string | null>(null);
   const [networkSearching, setNetworkSearching] = useState(false);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [deviceClasses, setDeviceClasses] = useState<Record<string, "light" | "switch" | "sensor" | "other">>({});
@@ -97,12 +100,31 @@ export default function AddDevicePage() {
 
   async function searchNetwork() {
     setNetworkSearching(true); setError(false);
+    setNetworkDevices(null); setShellyError(null); setSelectedNetworkHost(null);
     try {
-      const response = await fetch("/api/integrations/nanoleaf/discover", { cache: "no-store" });
+      const response = await fetch("/api/integrations/network/discover", { method: "POST", headers: csrfHeader(), cache: "no-store" });
       const value: unknown = await response.json();
-      if (!response.ok || !isDiscoveredNanoleafList(value)) throw new Error("invalid discovery");
+      if (!response.ok || !isNetworkDeviceList(value)) throw new Error("invalid discovery");
       setNetworkDevices(value);
     } catch { setError(true); } finally { setNetworkSearching(false); }
+  }
+
+  async function addShelly(host: string, fallbackName: string) {
+    setAddingDevice(host); setShellyError(null);
+    try {
+      const response = await fetch("/api/integrations/shelly/connections", {
+        method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ host, displayName: deviceNames[host] ?? fallbackName, confirmed: true }),
+      });
+      const value: unknown = await response.json();
+      if (!response.ok || !isConnection(value)) {
+        const code = value && typeof value === "object" && "code" in value ? value.code : null;
+        setShellyError(code === "SHELLY_AUTH_REQUIRED" ? t.shellyAuthRequired
+          : code === "SHELLY_UNSUPPORTED_DEVICE" ? t.shellyUnsupported : t.shellyUnavailable);
+        return;
+      }
+      setAddedDevices((current) => [...new Set([...current, host])]);
+    } catch { setShellyError(t.shellyUnavailable); } finally { setAddingDevice(null); }
   }
 
   async function addZigbeeDevice(deviceId: string, fallbackName: string) {
@@ -139,7 +161,7 @@ export default function AddDevicePage() {
 
   return <section className="plugins-stage add-device-stage">
     <Link className="back-link" href="/home">← {t.addDeviceBackHome}</Link>
-    <header className="plugins-header"><div><p className="eyebrow">Kyrion Discovery</p><h1>{t.addDeviceTitle}</h1><p>{t.addDeviceDescription}</p></div></header>
+    <header className="plugins-header"><div><h1>{t.addDeviceTitle}</h1><p>{t.addDeviceDescription}</p></div></header>
     {error && <p className="auth-error" role="alert">{t.addDeviceError}</p>}
     <h2>{t.addDeviceAvailableConnections}</h2>
     <div className="discovery-methods">
@@ -171,10 +193,19 @@ export default function AddDevicePage() {
       </article>
       <article className="pairing-card">
         <div className="discovery-heading"><div><small>mDNS · IPv4</small><h2>{t.addDeviceNetworkTitle}</h2></div><span className="device-status online">{t.addDeviceReady}</span></div>
-        <p>{t.addDeviceNetworkDescription}</p>
         <button disabled={networkSearching} onClick={() => void searchNetwork()}>{networkSearching ? `${t.addDeviceSearch} …` : t.addDeviceSearch}</button>
-        {networkDevices && <div className="discovery-results"><strong>{t.addDeviceFound}</strong>{networkDevices.length === 0 ? <p>{t.addDeviceNoneFound}</p> : networkDevices.map((device) => <div key={device.host}><span>{device.name}</span><code>{device.host}</code></div>)}</div>}
-        {networkDevices && networkDevices.length > 0 && <Link className="placeholder-action" href="/plugins/nanoleaf">{t.addDeviceNetworkContinue}</Link>}
+        {networkDevices && <div className="discovery-results"><strong>{t.addDeviceFound} · {networkDevices.length}</strong>{networkDevices.length === 0 ? <p>{t.addDeviceNoneFound}</p> : networkDevices.map((device) => <details className="discovery-candidate network-candidate" key={device.host} onToggle={(event) => { if (event.currentTarget.open) { setSelectedNetworkHost(device.host); setShellyError(null); } }}>
+          <summary><span>{device.name}</span><code>{device.host}</code></summary>
+          {device.provider === "nanoleaf" ? <Link className="placeholder-action" href="/plugins/nanoleaf">{t.addDeviceNetworkContinue}</Link>
+            : device.provider === "network" ? <p>{t.networkDeviceUnsupported}</p>
+            : addedDevices.includes(device.host) ? <p role="status">{t.addDeviceAdded}</p> : <>
+              <p>{t.shellyWakeHint}</p>
+              <label>{t.addDeviceName}<input maxLength={160} value={deviceNames[device.host] ?? device.name} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.host]: event.target.value }))} /></label>
+              <button disabled={addingDevice !== null} onClick={() => void addShelly(device.host, device.name)}>{addingDevice === device.host ? t.addDeviceAdding : t.shellyConnect}</button>
+              {shellyError && selectedNetworkHost === device.host && <p className="auth-error" role="alert">{shellyError}</p>}
+            </>}
+        </details>)}</div>}
+        {addedDevices.length > 0 && <Link className="placeholder-action" href="/devices">{t.shellyViewDevices}</Link>}
       </article>
     </div>
   </section>;
