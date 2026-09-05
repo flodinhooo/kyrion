@@ -195,8 +195,9 @@ export default function AddDevicePage() {
         <div className="discovery-heading"><div><small>mDNS · IPv4</small><h2>{t.addDeviceNetworkTitle}</h2></div><span className="device-status online">{t.addDeviceReady}</span></div>
         <button disabled={networkSearching} onClick={() => void searchNetwork()}>{networkSearching ? `${t.addDeviceSearch} …` : t.addDeviceSearch}</button>
         {networkDevices && <div className="discovery-results"><strong>{t.addDeviceFound} · {networkDevices.length}</strong>{networkDevices.length === 0 ? <p>{t.addDeviceNoneFound}</p> : networkDevices.map((device) => <details className="discovery-candidate network-candidate" key={device.host} onToggle={(event) => { if (event.currentTarget.open) { setSelectedNetworkHost(device.host); setShellyError(null); } }}>
-          <summary><span>{device.name}</span><code>{device.host}</code></summary>
-          {device.provider === "nanoleaf" ? <Link className="placeholder-action" href="/plugins/nanoleaf">{t.addDeviceNetworkContinue}</Link>
+          <summary><span>{device.name}{(device.connected || addedDevices.includes(device.host)) && <small className="network-connected">{t.networkDeviceConnected}</small>}</span><code>{device.host}</code></summary>
+          {(device.connected || addedDevices.includes(device.host)) ? <Link className="placeholder-action" href="/devices">{t.shellyViewDevices}</Link>
+            : device.provider === "nanoleaf" ? <Link className="placeholder-action" href="/plugins/nanoleaf">{t.addDeviceNetworkContinue}</Link>
             : device.provider === "network" ? <p>{t.networkDeviceUnsupported}</p>
             : addedDevices.includes(device.host) ? <p role="status">{t.addDeviceAdded}</p> : <>
               <p>{t.shellyWakeHint}</p>

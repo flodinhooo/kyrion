@@ -18,6 +18,7 @@ import {
   preferredBrowserVoice,
   type BrowserVoiceOption,
 } from "@/features/voice/browser-speech";
+import { readPreference, writePreference } from "@/lib/browser-preferences";
 import { Locale, messages } from "@/lib/messages";
 import { csrfHeader } from "@/features/auth/csrf";
 import { BrandAsset } from "@/components/brand-asset";
@@ -125,9 +126,9 @@ export function AppShell({ children, username }: { children: ReactNode; username
   }, [isChatPage]);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("kyrion-theme");
-    const savedLocale = localStorage.getItem("kyrion-locale");
-    const savedTextSize = localStorage.getItem("kyrion-text-size");
+    const savedTheme = readPreference("kyrion-theme");
+    const savedLocale = readPreference("kyrion-locale");
+    const savedTextSize = readPreference("kyrion-text-size");
     const preferredDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const nextTheme = savedTheme === "light" || savedTheme === "dark"
       ? savedTheme
@@ -154,13 +155,13 @@ export function AppShell({ children, username }: { children: ReactNode; username
       const voices = availableBrowserVoices();
       if (voices.length > 0) setSpeechVoices(voices);
     };
-    const savedRate = Number.parseFloat(localStorage.getItem("kyrion-speech-rate") ?? "");
+    const savedRate = Number.parseFloat(readPreference("kyrion-speech-rate") ?? "");
     if (Number.isFinite(savedRate) && savedRate >= 0.7 && savedRate <= 1.3) {
       queueMicrotask(() => setSpeechRateState(savedRate));
     }
     loadVoices();
-    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+    window.speechSynthesis?.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis?.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
   useEffect(() => {
@@ -168,7 +169,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
     const compatibleVoices = speechVoices.filter((voice) =>
       voice.lang.toLowerCase().startsWith(locale),
     );
-    const savedVoice = localStorage.getItem(`kyrion-voice-${locale}`);
+    const savedVoice = readPreference(`kyrion-voice-${locale}`);
     const nextVoice = compatibleVoices.find((voice) => voice.voiceURI === savedVoice)
       ?? preferredBrowserVoice(compatibleVoices, locale);
     queueMicrotask(() => setSelectedVoiceUri(nextVoice?.voiceURI ?? null));
@@ -184,7 +185,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
         const catalog: unknown = await response.json();
         if (!response.ok || !isModelCatalog(catalog)) throw new Error("Invalid model catalog");
 
-        const savedModel = localStorage.getItem("kyrion-model");
+        const savedModel = readPreference("kyrion-model");
         const nextModel = savedModel && catalog.models.some((model) => model.id === savedModel)
           ? savedModel
           : catalog.defaultModelId;
@@ -238,20 +239,20 @@ export function AppShell({ children, username }: { children: ReactNode; username
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     document.documentElement.dataset.theme = nextTheme;
-    localStorage.setItem("kyrion-theme", nextTheme);
+    writePreference("kyrion-theme", nextTheme);
   }
 
   function toggleLocale() {
     const nextLocale = locale === "de" ? "en" : "de";
     setLocale(nextLocale);
     document.documentElement.lang = nextLocale;
-    localStorage.setItem("kyrion-locale", nextLocale);
+    writePreference("kyrion-locale", nextLocale);
   }
 
   function selectModel(modelId: string) {
     if (!modelCatalog?.models.some((model) => model.id === modelId)) return;
     setSelectedModelId(modelId);
-    localStorage.setItem("kyrion-model", modelId);
+    writePreference("kyrion-model", modelId);
   }
 
   function selectVoice(voiceUri: string) {
@@ -259,19 +260,19 @@ export function AppShell({ children, username }: { children: ReactNode; username
       voice.voiceURI === voiceUri && voice.lang.toLowerCase().startsWith(locale)
     )) return;
     setSelectedVoiceUri(voiceUri);
-    localStorage.setItem(`kyrion-voice-${locale}`, voiceUri);
+    writePreference(`kyrion-voice-${locale}`, voiceUri);
   }
 
   function setSpeechRate(rate: number) {
     if (!Number.isFinite(rate) || rate < 0.7 || rate > 1.3) return;
     setSpeechRateState(rate);
-    localStorage.setItem("kyrion-speech-rate", String(rate));
+    writePreference("kyrion-speech-rate", String(rate));
   }
 
   function setTextSize(size: TextSize) {
     setTextSizeState(size);
     document.documentElement.dataset.textSize = size;
-    localStorage.setItem("kyrion-text-size", size);
+    writePreference("kyrion-text-size", size);
   }
 
   async function logout() {
