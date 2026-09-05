@@ -390,9 +390,10 @@ export function AppShell({ children, username }: { children: ReactNode; username
       t,
     }}>
       <div className="app-shell">
+        <a className="skip-navigation" href="#workspace-content">{t.skipNavigation}</a>
         <aside className="sidebar">{sidebarContent()}</aside>
 
-        <main className="workspace">
+        <main className="workspace" id="workspace-content" tabIndex={-1}>
           <header className="topbar">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
