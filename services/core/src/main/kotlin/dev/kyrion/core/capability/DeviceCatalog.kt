@@ -34,6 +34,9 @@ data class DeviceStateView(
     val illuminance: Double? = null,
     val action: String? = null,
     val illumination: String? = null,
+    val temperatureCelsius: Double? = null,
+    val relativeHumidity: Double? = null,
+    val measuredAt: Instant? = null,
 )
 
 enum class DeviceAvailability(@get:JsonValue val value: String) {
@@ -63,10 +66,12 @@ class DeviceCatalogService(
     private val observations: DeviceObservationRepository,
     private val clock: Clock = Clock.systemUTC(),
     private val gateways: GatewayService? = null,
+    private val shellyReadings: dev.kyrion.core.integration.ShellySensorRepository? = null,
 ) {
     fun devices(ownerId: UUID): List<DeviceCatalogItem> {
         val ownerRooms = rooms.all(ownerId).associateBy { it.id }
         val ownerObservations = observations.findAll(ownerId).associateBy { it.connectionId }
+        val sensorReadings = shellyReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
         val zigbeeDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.zigbee?.devices.orEmpty() }
             .associateBy { it.ieeeAddress }
         val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
@@ -89,7 +94,11 @@ class DeviceCatalogService(
                 capabilities = capabilities(connection, zigbee),
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,
-                state = zigbee?.let {
+                state = sensorReadings[connection.id]?.takeIf { connection.provider == "shelly" }?.let {
+                    DeviceStateView(null, null, null, null, null, battery = it.reading.battery,
+                        temperatureCelsius = it.reading.temperatureCelsius, relativeHumidity = it.reading.relativeHumidity,
+                        measuredAt = it.observedAt)
+                } ?: zigbee?.let {
                     DeviceStateView(it.on, it.brightness?.let { raw -> (raw * 100 / 254).coerceIn(0, 100) },
                         it.hue, it.saturation, it.colorTemperature, it.occupancy, it.battery, it.illuminance, it.action, it.illumination)
                 } ?: bluetooth?.let {
@@ -108,6 +117,7 @@ class DeviceCatalogService(
         NanoleafIntegrationService.PROVIDER -> NANOLEAF_CAPABILITIES.map(::DeviceCapabilityView)
         ZigbeeDeviceSyncService.PROVIDER -> zigbeeCapabilities(zigbee).map(::DeviceCapabilityView)
         BluetoothDeviceSyncService.PROVIDER -> BLUETOOTH_CAPABILITIES.map(::DeviceCapabilityView)
+        "shelly" -> listOf("temperature.read", "humidity.read", "battery.read").map(::DeviceCapabilityView)
         else -> emptyList()
     }
 

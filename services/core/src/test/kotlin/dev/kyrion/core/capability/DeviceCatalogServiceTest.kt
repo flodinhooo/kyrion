@@ -60,6 +60,33 @@ class DeviceCatalogServiceTest {
         assertEquals(stale.observedAt, staleCatalog.observedAt)
     }
 
+    @Test
+    fun `shelly retains timestamped measurements after availability expires`() {
+        val owner = UUID.randomUUID()
+        val now = Instant.parse("2026-09-05T12:00:00Z")
+        val measuredAt = now.minusSeconds(7200)
+        val sensor = connection(owner, "Bedroom sensor", null).copy(provider = "shelly",
+            deviceClass = dev.kyrion.core.integration.DeviceClass.SENSOR)
+        val readings = object : dev.kyrion.core.integration.ShellySensorRepository {
+            override fun all(ownerId: UUID) = if (ownerId == owner) listOf(
+                dev.kyrion.core.integration.StoredShellyReading(sensor.id, owner,
+                    dev.kyrion.core.integration.ShellySensorReading(21.5, 49.0, 80.0), measuredAt),
+            ) else emptyList()
+            override fun save(value: dev.kyrion.core.integration.StoredShellyReading) = error("unused")
+        }
+        val catalog = DeviceCatalogService(CatalogConnections(listOf(sensor)),
+            CatalogRooms(owner, Room(UUID.randomUUID(), "Bedroom", now, now)),
+            CatalogObservations(listOf(DeviceObservation(sensor.id, owner, DeviceAvailability.ONLINE, measuredAt))),
+            Clock.fixed(now, ZoneOffset.UTC), shellyReadings = readings)
+        val item = catalog.devices(owner).single()
+        assertEquals(DeviceAvailability.UNKNOWN, item.availability)
+        assertEquals(21.5, item.state?.temperatureCelsius)
+        assertEquals(49.0, item.state?.relativeHumidity)
+        assertEquals(measuredAt, item.state?.measuredAt)
+        assertEquals(listOf("temperature.read", "humidity.read", "battery.read"), item.capabilities.map { it.id })
+        assertEquals(emptyList<DeviceCatalogItem>(), catalog.devices(UUID.randomUUID()))
+    }
+
     private fun connection(ownerId: UUID, name: String, roomId: UUID?) = IntegrationConnection(
         UUID.randomUUID(), ownerId, "nanoleaf", name, "192.168.1.10",
         byteArrayOf(1), byteArrayOf(2), 1, Instant.now(), Instant.now(), roomId,
