@@ -185,6 +185,7 @@ try {
   });
   await check("blocked preference storage does not crash the platform", async () => {
     await page.addInitScript(() => {
+      Object.defineProperty(window, "speechSynthesis", { value: undefined, configurable: true });
       Storage.prototype.getItem = () => { throw new DOMException("blocked", "SecurityError"); };
       Storage.prototype.setItem = () => { throw new DOMException("blocked", "SecurityError"); };
     });

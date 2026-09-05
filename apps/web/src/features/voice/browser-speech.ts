@@ -49,7 +49,7 @@ export function createBrowserSpeechRecognition(): BrowserSpeechRecognition | nul
 }
 
 export function availableBrowserVoices(): BrowserVoiceOption[] {
-  return window.speechSynthesis.getVoices().map((voice) => ({
+  return (window.speechSynthesis?.getVoices() ?? []).map((voice) => ({
     default: voice.default,
     lang: voice.lang,
     localService: voice.localService,
