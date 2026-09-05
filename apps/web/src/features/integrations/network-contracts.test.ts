@@ -9,6 +9,8 @@ describe("local network discovery", () => {
       { provider: "shelly", name: "shellyhtg3", host: "192.168.1.3", port: 80 },
     ];
     expect(isNetworkDeviceList(devices)).toBe(true);
+    expect(isNetworkDeviceList([{ ...devices[0], connected: true }])).toBe(true);
+    expect(isNetworkDeviceList([{ ...devices[0], connected: "true" }])).toBe(false);
     expect(isNetworkDeviceList([{ provider: "network", name: "Printer", host: "192.168.1.4", port: 631 }])).toBe(true);
     expect(isNetworkDeviceList([{ provider: "network", name: "192.168.1.5", host: "192.168.1.5", port: 0 }])).toBe(true);
     expect(isNetworkDeviceList([{ ...devices[1], port: 65536 }])).toBe(false);

@@ -36,6 +36,7 @@ export async function authenticate(request: Request, path: string, successStatus
   try {
     const response = await fetch(`${CORE_SERVICE_URL}${path}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
     const value: unknown = await response.json();
     if (!response.ok) return Response.json(value, { status: response.status });
