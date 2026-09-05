@@ -13,11 +13,19 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
+import java.math.BigDecimal
 
 class SpotifyIntegrationServiceTest {
     @TempDir lateinit var temp: Path
     private val ownerId = UUID.randomUUID()
     private val events = mutableListOf<ActivityEvent>()
+
+    @Test
+    fun `HTTP command does not truncate fractional or overflowing volume`() {
+        assertThrows<SpotifyInvalidRequestException> { ControlSpotifyPlaybackRequest(SpotifyPlaybackAction.VOLUME, "device-1", BigDecimal("50.5")).command() }
+        assertThrows<SpotifyInvalidRequestException> { ControlSpotifyPlaybackRequest(SpotifyPlaybackAction.VOLUME, "device-1", BigDecimal("9999999999999")).command() }
+        assertEquals(50, ControlSpotifyPlaybackRequest(SpotifyPlaybackAction.VOLUME, "device-1", BigDecimal("50")).command().volumePercent)
+    }
 
     @Test
     fun `playback commands are owner scoped validated and audited`() {
