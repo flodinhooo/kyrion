@@ -9,9 +9,18 @@ is an action on the device and home pages instead of a separate navigation
 destination. Existing `/home`, `/devices/add` and `/plugins` URLs remain valid.
 
 The Integrations label describes the current internal provider catalog, not a
-public plugin marketplace. Catalog badges describe availability of the
-integration; they do not claim a live connection. Connection management remains
-inside each integration.
+public plugin marketplace. Each card reads its existing authenticated Core
+metadata independently: saved Nanoleaf connections, registered gateways, and
+Spotify configuration/account connection. Saved connections and registrations
+are labelled as setup, not as proof of live reachability. The gateway card
+explicitly directs users to gateway management for radio-service status.
+
+Cards expose loading, setup, configured/connected, missing server configuration
+and failed-query states with setup or management links. One failed query does
+not discard the other results. Reads time out after ten seconds and are aborted
+when leaving the page. A reload action retries the metadata queries without
+discovering devices, changing connections or starting playback. Connection
+management remains inside each integration.
 
 Shared workspace styles provide compact headings, consistent content widths,
 aligned integration actions, visible keyboard focus and responsive settings

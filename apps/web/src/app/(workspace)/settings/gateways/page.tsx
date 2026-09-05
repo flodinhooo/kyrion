@@ -94,7 +94,7 @@ export default function GatewaysPage() {
 
   return <section className="gateway-stage">
     <header className="gateway-header">
-      <div><p className="eyebrow">Kyrion Gateway</p><h1>{t.gatewayTitle}</h1><p>{t.gatewayDescription}</p></div>
+      <div><h1>{t.gatewayTitle}</h1><p>{t.gatewayDescription}</p></div>
       <button disabled={pending} onClick={() => void createEnrollment()}><Icons.plus />{pending ? t.gatewayCreating : t.gatewayCreateEnrollment}</button>
     </header>
     {error && <p className="auth-error">{t.gatewayError}</p>}

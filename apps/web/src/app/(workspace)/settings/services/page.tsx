@@ -41,7 +41,7 @@ export default function SystemServicesPage() {
 
   return <section className="gateway-stage system-services-stage">
     <header className="gateway-header">
-      <div><p className="eyebrow">Kyrion Runtime</p><h1>{t.systemServicesTitle}</h1><p>{t.systemServicesDescription}</p></div>
+      <div><h1>{t.systemServicesTitle}</h1><p>{t.systemServicesDescription}</p></div>
       <button onClick={() => void load()} disabled={loading}><Icons.activity />{t.systemServicesRefresh}</button>
     </header>
     {error && <p className="auth-error">{t.systemServicesError}</p>}
