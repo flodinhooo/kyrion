@@ -1,5 +1,24 @@
 export type SpotifyStatus = { configured: boolean; connected: boolean; accountName: string | null };
 export type SpotifyDevice = { id: string; name: string; type: string; active: boolean; restricted: boolean; volumePercent: number | null; supportsVolume: boolean };
+export type SpotifyPlaylist = { id: string; name: string; imageUrl: string | null; url: string };
+export type SpotifyPlaylists = { reauthorizationRequired: boolean; items: SpotifyPlaylist[] };
+
+export function isSpotifyPlaylists(value: unknown): value is SpotifyPlaylists {
+  if (!value || typeof value !== "object" || !("reauthorizationRequired" in value) || typeof value.reauthorizationRequired !== "boolean"
+    || !("items" in value) || !Array.isArray(value.items) || value.items.length > 6) return false;
+  return value.items.every((item: unknown) => {
+    if (!item || typeof item !== "object") return false;
+    return "id" in item && typeof item.id === "string" && /^[A-Za-z0-9]{22}$/.test(item.id)
+      && "name" in item && typeof item.name === "string" && "url" in item && item.url === `https://open.spotify.com/playlist/${item.id}`
+      && "imageUrl" in item && (item.imageUrl === null || ["i.scdn.co", "mosaic.scdn.co", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com"].some((host) => safeUrl(item.imageUrl, host)));
+  });
+}
+
+export function isSpotifyPlaylistCommand(value: unknown): value is { playlistId: string; deviceId: string } {
+  return !!value && typeof value === "object" && "playlistId" in value && typeof value.playlistId === "string"
+    && /^[A-Za-z0-9]{22}$/.test(value.playlistId) && "deviceId" in value && typeof value.deviceId === "string"
+    && value.deviceId.trim().length > 0 && value.deviceId.length <= 200;
+}
 
 export type SpotifyPlayback = {
   playing: boolean; title: string | null; artist: string | null; imageUrl: string | null;
@@ -7,7 +26,8 @@ export type SpotifyPlayback = {
 };
 export type SpotifyPlaybackCommand = {
   action: "RESUME" | "PAUSE" | "NEXT" | "PREVIOUS"; deviceId: string;
-} | { action: "VOLUME"; deviceId: string; volumePercent: number };
+} | { action: "VOLUME"; deviceId: string; volumePercent: number }
+  | { action: "SEEK"; deviceId: string; positionMs: number };
 
 function safeUrl(value: unknown, host: string): boolean {
   if (value === null) return true;
@@ -32,6 +52,9 @@ export function isSpotifyPlayback(value: unknown): value is SpotifyPlayback {
 export function isSpotifyPlaybackCommand(value: unknown): value is SpotifyPlaybackCommand {
   if (!value || typeof value !== "object" || !("deviceId" in value) || typeof value.deviceId !== "string"
     || !value.deviceId.trim() || value.deviceId.length > 200 || !("action" in value)) return false;
+  if (value.action === "SEEK") return !("volumePercent" in value) && "positionMs" in value && typeof value.positionMs === "number"
+    && Number.isInteger(value.positionMs) && value.positionMs >= 0 && value.positionMs <= 86400000;
+  if ("positionMs" in value) return false;
   if (value.action === "VOLUME") return "volumePercent" in value && typeof value.volumePercent === "number"
     && Number.isInteger(value.volumePercent) && value.volumePercent >= 0 && value.volumePercent <= 100;
   return ["RESUME", "PAUSE", "NEXT", "PREVIOUS"].some((action) => value.action === action) && !("volumePercent" in value);

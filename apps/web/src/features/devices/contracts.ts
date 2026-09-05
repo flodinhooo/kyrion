@@ -11,7 +11,7 @@ export type RuntimeDevice = {
   capabilities: Array<{ id: string }>;
   availability: DeviceAvailability;
   observedAt: string | null;
-  state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null; occupancy: boolean | null; battery: number | null; illuminance: number | null; action: string | null; illumination: "dim" | "bright" | null } | null;
+  state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null; occupancy: boolean | null; battery: number | null; illuminance: number | null; action: string | null; illumination: "dim" | "bright" | null; temperatureCelsius?: number | null; relativeHumidity?: number | null; measuredAt?: string | null } | null;
 };
 
 export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
@@ -37,7 +37,14 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
       && (device.state.battery === null || typeof device.state.battery === "number")
       && (device.state.illuminance === null || typeof device.state.illuminance === "number")
       && (device.state.action === null || typeof device.state.action === "string")
+      && optionalMeasurement(device.state.temperatureCelsius, -100, 150)
+      && optionalMeasurement(device.state.relativeHumidity, 0, 100)
+      && (device.state.measuredAt == null || (typeof device.state.measuredAt === "string" && Number.isFinite(Date.parse(device.state.measuredAt))))
       && (device.state.illumination === null || device.state.illumination === "dim" || device.state.illumination === "bright")));
+}
+
+function optionalMeasurement(value: unknown, min: number, max: number): boolean {
+  return value == null || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max);
 }
 
 export function isRuntimeDeviceList(value: unknown): value is RuntimeDevice[] {
