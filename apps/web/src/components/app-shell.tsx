@@ -44,13 +44,14 @@ type AiStatus = AiServiceStatus | { status: "checking" };
 export type TextSize = "standard" | "comfortable" | "large";
 
 const navigation = [
-  ["chat", Icons.chat, "/"],
-  ["home", Icons.home, "/home"],
+  ["home", Icons.home, "/"],
+  ["lounge", Icons.music, "/lounge"],
   ["devices", Icons.power, "/devices"],
   ["addDevice", Icons.plus, "/devices/add"],
   ["automations", Icons.spark, "/automations"],
   ["plugins", Icons.plugins, "/plugins"],
   ["activity", Icons.activity, "/activity"],
+  ["chat", Icons.chat, "/chat"],
 ] as const;
 
 export function useWorkspace() {
@@ -80,30 +81,36 @@ export function AppShell({ children, username }: { children: ReactNode; username
   const t = messages[locale];
   const activeConversationId = pathname.match(/^\/conversations\/([^/]+)$/)?.[1] ?? null;
 
+  const isChatPage = pathname === "/chat" || activeConversationId !== null;
+  const needsModels = isChatPage || pathname === "/settings/models";
+
+  const routeTitles: Array<[RegExp, string]> = [
+    [/^\/$/, t.home],
+    [/^\/chat$/, t.chat],
+    [/^\/conversations\//, t.chat],
+    [/^\/home/, t.home],
+    [/^\/lounge/, t.lounge],
+    [/^\/devices$/, t.devices],
+    [/^\/devices\/add/, t.addDevice],
+    [/^\/automations/, t.automations],
+    [/^\/knowledge/, t.knowledge],
+    [/^\/plugins\/nanoleaf/, t.nanoleafTitle],
+    [/^\/plugins\/spotify/, "Spotify"],
+    [/^\/plugins/, t.plugins],
+    [/^\/activity/, t.activity],
+    [/^\/profile/, t.profile],
+    [/^\/settings\/gateways/, t.gatewayTitle],
+    [/^\/settings\/models/, t.modelsTitle],
+    [/^\/settings\/voice/, t.voiceSettingsTitle],
+    [/^\/settings/, t.settings],
+  ];
+  const pageTitle = routeTitles.find(([pattern]) => pattern.test(pathname))?.[1] ?? "Kyrion";
   useEffect(() => {
-    const routeTitles: Array<[RegExp, string]> = [
-      [/^\/$/, t.chat],
-      [/^\/conversations\//, t.chat],
-      [/^\/home/, t.home],
-      [/^\/devices$/, t.devices],
-      [/^\/devices\/add/, t.addDevice],
-      [/^\/automations/, t.automations],
-      [/^\/knowledge/, t.knowledge],
-      [/^\/plugins\/nanoleaf/, t.nanoleafTitle],
-      [/^\/plugins\/spotify/, "Spotify"],
-      [/^\/plugins/, t.plugins],
-      [/^\/activity/, t.activity],
-      [/^\/profile/, t.profile],
-      [/^\/settings\/gateways/, t.gatewayTitle],
-      [/^\/settings\/models/, t.modelsTitle],
-      [/^\/settings\/voice/, t.voiceSettingsTitle],
-      [/^\/settings/, t.settings],
-    ];
-    const pageTitle = routeTitles.find(([pattern]) => pattern.test(pathname))?.[1] ?? "Kyrion";
     document.title = `${pageTitle} · Kyrion`;
-  }, [pathname, t]);
+  }, [pageTitle]);
 
   useEffect(() => {
+    if (!isChatPage) return;
     let disposed = false;
     async function loadConversations() {
       try {
@@ -116,7 +123,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
     void loadConversations();
     window.addEventListener("kyrion:conversations-updated", loadConversations);
     return () => { disposed = true; window.removeEventListener("kyrion:conversations-updated", loadConversations); };
-  }, []);
+  }, [isChatPage]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("kyrion-theme");
@@ -169,6 +176,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
   }, [locale, speechVoices]);
 
   useEffect(() => {
+    if (!needsModels) return;
     let isDisposed = false;
 
     async function loadModels() {
@@ -195,9 +203,10 @@ export function AppShell({ children, username }: { children: ReactNode; username
 
     void loadModels();
     return () => { isDisposed = true; };
-  }, []);
+  }, [needsModels]);
 
   useEffect(() => {
+    if (!isChatPage) return;
     let isDisposed = false;
 
     async function refreshAiStatus() {
@@ -220,7 +229,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
       isDisposed = true;
       window.clearInterval(refreshInterval);
     };
-  }, []);
+  }, [isChatPage]);
 
   const aiStatusText = aiStatus.status === "ready"
     ? `${t.aiServiceReady} · ${selectedModelId ?? aiStatus.model}`
@@ -295,7 +304,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
     if (!response.ok) { setHistoryStatus("error"); return; }
     setConversations((current) => current.filter((item) => item.id !== id));
     setDeleteConfirmationId(null);
-    if (activeConversationId === id) router.replace("/");
+    if (activeConversationId === id) router.replace("/chat");
   }
 
   function sidebarContent(onNavigate?: () => void) {
@@ -305,22 +314,23 @@ export function AppShell({ children, username }: { children: ReactNode; username
           <BrandAsset variant="wordmark" priority />
         </div>
 
-        <Link className="new-chat-button" href="/" onClick={onNavigate}>
-          <Icons.plus />
-          <span>{t.newConversation}</span>
-        </Link>
-
         <nav aria-label={t.navigation}>
           <p className="section-label">{t.navigation}</p>
-          {navigation.map(([key, Icon, href]) => (
-            <Link className={`nav-item ${pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "active" : ""}`} href={href} key={key} onClick={onNavigate}>
-              <Icon />
-              <span>{t[key]}</span>
-            </Link>
-          ))}
+          {navigation.map(([key, Icon, href]) => {
+            const active = key === "chat" ? isChatPage
+              : key === "home" ? pathname === "/" || pathname === "/home"
+              : pathname === href || (key !== "devices" && pathname.startsWith(`${href}/`));
+            return (
+              <Link aria-current={active ? "page" : undefined} className={`nav-item ${active ? "active" : ""}`} href={href} key={key} onClick={onNavigate}>
+                <Icon />
+                <span>{t[key]}</span>
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="recent-section">
+        {isChatPage && <div className="recent-section">
+          <Link className="new-chat-button" href="/chat" onClick={onNavigate}><Icons.plus /><span>{t.newConversation}</span></Link>
           <p className="section-label">{t.recent}</p>
           {historyStatus === "loading" && <p className="history-state">{t.historyLoading}</p>}
           {historyStatus === "error" && <p className="history-state error">{t.historyUnavailable}</p>}
@@ -350,14 +360,14 @@ export function AppShell({ children, username }: { children: ReactNode; username
               )}
             </div>
           ))}
-        </div>
+        </div>}
 
         <div className="sidebar-footer">
           <Link className={`nav-item ${pathname === "/settings" ? "active" : ""}`} href="/settings" onClick={onNavigate}><Icons.settings /><span>{t.settings}</span></Link>
-          <div className="connection" title={aiStatusText}>
+          {isChatPage && <div className="connection" title={aiStatusText}>
             <span className={`status-dot status-${aiStatus.status}`} />
             <span>{aiStatusText}</span>
-          </div>
+          </div>}
           <button className="logout-button" type="button" onClick={logout} title={username}>{t.logout}</button>
         </div>
       </>
@@ -399,10 +409,8 @@ export function AppShell({ children, username }: { children: ReactNode; username
                 {sidebarContent(() => setMobileMenuOpen(false))}
               </SheetContent>
             </Sheet>
-            <div className="topbar-title" title={aiStatusText}>
-              <span className={`status-dot status-${aiStatus.status}`} />
-              <span>Velora</span>
-              <small>{t.localPreview}</small>
+            <div className="topbar-title">
+              <span>{pageTitle}</span>
             </div>
             <div className="topbar-actions">
               <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile" aria-label={t.profile} title={username}>
