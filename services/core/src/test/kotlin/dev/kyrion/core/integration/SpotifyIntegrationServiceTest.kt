@@ -21,6 +21,41 @@ class SpotifyIntegrationServiceTest {
     private val events = mutableListOf<ActivityEvent>()
 
     @Test
+    fun `seek requires a valid current position and provider permission`() {
+        val gateway = FakeSpotifyGateway()
+        val service = service(SpotifyConnections(), gateway, "client-id", "https://kyrion-node.local/api/integrations/spotify/callback")
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        gateway.playbackState = SpotifyPlayback(true, "Track", null, null, null, 0, 100000, "device-1", emptyList())
+        service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.SEEK, "device-1", positionMs = 50000))
+        assertEquals(50000, gateway.command?.positionMs)
+        for (position in listOf(-1, 100000, 86400001)) {
+            assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.SEEK, "device-1", positionMs = position)) }
+        }
+        gateway.playbackState = gateway.playbackState.copy(disallowed = listOf("seeking"))
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.SEEK, "device-1", positionMs = 1000)) }
+    }
+
+    @Test
+    fun `old grants request reauthorization and new grants can start listed playlists`() {
+        val gateway = FakeSpotifyGateway()
+        val service = service(SpotifyConnections(), gateway, "client-id", "https://kyrion-node.local/api/integrations/spotify/callback")
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        assertTrue(service.playlists(ownerId).reauthorizationRequired)
+        assertThrows<SpotifyInvalidRequestException> { service.playPlaylist(ownerId, "1234567890123456789012", "device-1") }
+        gateway.scope = "playlist-read-private"
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        assertFalse(service.playlists(ownerId).reauthorizationRequired)
+        service.playPlaylist(ownerId, "1234567890123456789012", "device-1")
+        assertEquals("1234567890123456789012", gateway.playedPlaylist)
+        assertEquals(ActivityStatus.SUCCEEDED, events.last().status)
+        assertThrows<SpotifyInvalidRequestException> { service.playPlaylist(ownerId, "0000000000000000000000", "device-1") }
+        gateway.restricted = true
+        assertThrows<SpotifyInvalidRequestException> { service.playPlaylist(ownerId, "1234567890123456789012", "device-1") }
+        assertEquals(ActivityStatus.FAILED, events.last().status)
+        assertThrows<IntegrationNotFoundException> { service.playlists(UUID.randomUUID()) }
+    }
+
+    @Test
     fun `HTTP command does not truncate fractional or overflowing volume`() {
         assertThrows<SpotifyInvalidRequestException> { ControlSpotifyPlaybackRequest(SpotifyPlaybackAction.VOLUME, "device-1", BigDecimal("50.5")).command() }
         assertThrows<SpotifyInvalidRequestException> { ControlSpotifyPlaybackRequest(SpotifyPlaybackAction.VOLUME, "device-1", BigDecimal("9999999999999")).command() }
@@ -159,18 +194,23 @@ private class SpotifyConnections : IntegrationConnectionRepository {
 }
 
 private class FakeSpotifyGateway : SpotifyGateway {
+    var playbackState = SpotifyPlayback(false, null, null, null, null, 0, 0, null, emptyList())
+    var scope = "scope"
+    var playedPlaylist: String? = null
+    override fun playlists(accessToken: String) = listOf(SpotifyPlaylist("1234567890123456789012", "Playlist", null, "https://open.spotify.com/playlist/1234567890123456789012"))
+    override fun playPlaylist(accessToken: String, playlistId: String, deviceId: String) { playedPlaylist = playlistId }
     var command: SpotifyPlaybackCommand? = null
     var restricted = false
     var supportsVolume = true
     var failControl = false
     var exchangedCode: String? = null
     var exchangedRedirect: String? = null
-    override fun exchangeCode(code: String, redirectUri: String) = SpotifyTokens("access-secret", "refresh-secret", 3600, "scope").also { exchangedCode = code; exchangedRedirect = redirectUri }
+    override fun exchangeCode(code: String, redirectUri: String) = SpotifyTokens("access-secret", "refresh-secret", 3600, scope).also { exchangedCode = code; exchangedRedirect = redirectUri }
     override fun refresh(refreshToken: String) = SpotifyTokens("access-refreshed", refreshToken, 3600, "scope")
     override fun profile(accessToken: String) = SpotifyProfile("spotify-user", "Flo")
     override fun devices(accessToken: String) = listOf(SpotifyDevice("device-1", "Kyrion Wohnzimmer", "Speaker", false, restricted, 50, supportsVolume))
     override fun transfer(accessToken: String, deviceId: String, play: Boolean) = Unit
-    override fun playback(accessToken: String) = SpotifyPlayback(false, null, null, null, null, 0, 0, null, emptyList())
+    override fun playback(accessToken: String) = playbackState
     override fun control(accessToken: String, command: SpotifyPlaybackCommand) {
         if (failControl) throw SpotifyUnavailableException()
         this.command = command

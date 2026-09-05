@@ -12,12 +12,15 @@ import java.math.BigDecimal
 
 data class CompleteSpotifyAuthorizationRequest(@field:NotBlank @field:Size(max = 2048) val code: String, @field:NotBlank @field:Size(max = 256) val state: String)
 data class TransferSpotifyPlaybackRequest(@field:NotBlank @field:Size(max = 200) val deviceId: String, val play: Boolean = true)
+data class PlaySpotifyPlaylistRequest(val playlistId: String, val deviceId: String)
 data class ControlSpotifyPlaybackRequest(
     val action: SpotifyPlaybackAction,
     @field:NotBlank @field:Size(max = 200) val deviceId: String,
     val volumePercent: BigDecimal? = null,
+    val positionMs: BigDecimal? = null,
 ) {
-    fun command() = SpotifyPlaybackCommand(action, deviceId, try { volumePercent?.intValueExact() } catch (_: ArithmeticException) { throw SpotifyInvalidRequestException() })
+    fun command() = try { SpotifyPlaybackCommand(action, deviceId, volumePercent?.intValueExact(), positionMs?.intValueExact()) }
+        catch (_: ArithmeticException) { throw SpotifyInvalidRequestException() }
 }
 
 @RestController
@@ -27,6 +30,9 @@ class SpotifyIntegrationController(private val service: SpotifyIntegrationServic
     @PostMapping("/authorization") fun authorize(request: HttpServletRequest) = service.authorize(request.ownerId())
     @PostMapping("/authorization/complete") fun complete(@Valid @RequestBody body: CompleteSpotifyAuthorizationRequest, request: HttpServletRequest) = service.complete(request.ownerId(), body.code, body.state)
     @GetMapping("/devices") fun devices(request: HttpServletRequest) = service.devices(request.ownerId())
+    @GetMapping("/playlists") fun playlists(request: HttpServletRequest) = service.playlists(request.ownerId())
+    @PutMapping("/playback/playlist") @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun playPlaylist(@RequestBody body: PlaySpotifyPlaylistRequest, request: HttpServletRequest) = service.playPlaylist(request.ownerId(), body.playlistId, body.deviceId)
     @GetMapping("/playback") fun playback(request: HttpServletRequest) = service.playback(request.ownerId())
     @PutMapping("/playback") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun control(@Valid @RequestBody body: ControlSpotifyPlaybackRequest, request: HttpServletRequest) = service.control(request.ownerId(), body.command())

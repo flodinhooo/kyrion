@@ -16,8 +16,18 @@ data class SpotifyTokens(val accessToken: String, val refreshToken: String, val 
 data class SpotifyProfile(val id: String, val displayName: String)
 data class SpotifyDevice(val id: String, val name: String, val type: String, val active: Boolean, val restricted: Boolean, val volumePercent: Int?, val supportsVolume: Boolean)
 data class SpotifyPlayback(val playing: Boolean, val title: String?, val artist: String?, val imageUrl: String?, val trackUrl: String?, val progressMs: Int, val durationMs: Int, val deviceId: String?, val disallowed: List<String>)
-enum class SpotifyPlaybackAction { RESUME, PAUSE, NEXT, PREVIOUS, VOLUME }
-data class SpotifyPlaybackCommand(val action: SpotifyPlaybackAction, val deviceId: String, val volumePercent: Int? = null)
+enum class SpotifyPlaybackAction { RESUME, PAUSE, NEXT, PREVIOUS, VOLUME, SEEK }
+data class SpotifyPlaybackCommand(val action: SpotifyPlaybackAction, val deviceId: String, val volumePercent: Int? = null, val positionMs: Int? = null)
+data class SpotifyPlaylist(val id: String, val name: String, val imageUrl: String?, val url: String)
+
+internal fun spotifyApiResponse(mapper: ObjectMapper, status: Int, body: String, read: Boolean): com.fasterxml.jackson.databind.JsonNode {
+    if (status !in 200..299) throw SpotifyProviderException(status)
+    // Player commands may succeed with an empty 200 as well as the documented 204.
+    if (status == 204 || !read) return mapper.createObjectNode()
+    if (body.isBlank()) throw SpotifyInvalidResponseException()
+    return try { mapper.readTree(body) ?: throw SpotifyInvalidResponseException() }
+        catch (_: com.fasterxml.jackson.core.JsonProcessingException) { throw SpotifyInvalidResponseException() }
+}
 
 interface SpotifyGateway {
     fun exchangeCode(code: String, redirectUri: String): SpotifyTokens
@@ -27,6 +37,8 @@ interface SpotifyGateway {
     fun transfer(accessToken: String, deviceId: String, play: Boolean)
     fun playback(accessToken: String): SpotifyPlayback
     fun control(accessToken: String, command: SpotifyPlaybackCommand)
+    fun playlists(accessToken: String): List<SpotifyPlaylist>
+    fun playPlaylist(accessToken: String, playlistId: String, deviceId: String)
 }
 
 @Component
@@ -62,6 +74,22 @@ class SpotifyClient(
         api("/v1/me/player", "PUT", accessToken, mapper.writeValueAsString(mapOf("device_ids" to listOf(deviceId), "play" to play)))
     }
 
+    override fun playlists(accessToken: String): List<SpotifyPlaylist> = api("/v1/me/playlists?limit=6", "GET", accessToken)
+        .path("items").take(6).mapNotNull { item ->
+            val id = item.path("id").asText()
+            val name = item.path("name").asText()
+            if (!Regex("[A-Za-z0-9]{22}").matches(id) || name.isBlank()) return@mapNotNull null
+            val image = item.path("images").path(0).path("url").asText().takeIf { url ->
+                runCatching { URI(url).let { it.scheme == "https" && it.host in setOf("i.scdn.co", "mosaic.scdn.co", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com") && it.userInfo == null } }.getOrDefault(false)
+            }
+            SpotifyPlaylist(id, name, image, "https://open.spotify.com/playlist/$id")
+        }
+
+    override fun playPlaylist(accessToken: String, playlistId: String, deviceId: String) {
+        api("/v1/me/player/play?device_id=${encode(deviceId)}", "PUT", accessToken,
+            mapper.writeValueAsString(mapOf("context_uri" to "spotify:playlist:$playlistId")))
+    }
+
     override fun playback(accessToken: String): SpotifyPlayback {
         val root = api("/v1/me/player", "GET", accessToken)
         val item = root.path("item")
@@ -89,8 +117,13 @@ class SpotifyClient(
             SpotifyPlaybackAction.NEXT -> "next"
             SpotifyPlaybackAction.PREVIOUS -> "previous"
             SpotifyPlaybackAction.VOLUME -> "volume"
+            SpotifyPlaybackAction.SEEK -> "seek"
         }
-        val volume = if (command.action == SpotifyPlaybackAction.VOLUME) "&volume_percent=${command.volumePercent}" else ""
+        val volume = when (command.action) {
+            SpotifyPlaybackAction.VOLUME -> "&volume_percent=${command.volumePercent}"
+            SpotifyPlaybackAction.SEEK -> "&position_ms=${command.positionMs}"
+            else -> ""
+        }
         val method = if (command.action in setOf(SpotifyPlaybackAction.NEXT, SpotifyPlaybackAction.PREVIOUS)) "POST" else "PUT"
         api("/v1/me/player/$endpoint?device_id=${encode(command.deviceId)}$volume", method, accessToken)
     }
@@ -109,7 +142,7 @@ class SpotifyClient(
         if (response.statusCode() !in 200..299) throw SpotifyProviderException(response.statusCode())
         val root = mapper.readTree(response.body())
         return SpotifyTokens(root.path("access_token").asText().required(), root.path("refresh_token").asText(previousRefreshToken).required(),
-            root.path("expires_in").asLong(3600), root.path("scope").asText("user-read-playback-state user-modify-playback-state"))
+            root.path("expires_in").asLong(3600), root.path("scope").asText(""))
     }
 
     private fun api(path: String, method: String, token: String, body: String? = null): com.fasterxml.jackson.databind.JsonNode {
@@ -117,9 +150,7 @@ class SpotifyClient(
             .header("Authorization", "Bearer $token")
         if (body != null) builder.header("Content-Type", "application/json")
         val response = send(builder.method(method, body?.let(HttpRequest.BodyPublishers::ofString) ?: HttpRequest.BodyPublishers.noBody()).build())
-        if (response.statusCode() == 204) return mapper.createObjectNode()
-        if (response.statusCode() !in 200..299) throw SpotifyProviderException(response.statusCode())
-        return mapper.readTree(response.body())
+        return spotifyApiResponse(mapper, response.statusCode(), response.body(), method == "GET")
     }
 
     private fun send(request: HttpRequest) = try { client.send(request, HttpResponse.BodyHandlers.ofString()) }

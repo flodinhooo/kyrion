@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 data class SpotifyStatus(val configured: Boolean, val connected: Boolean, val accountName: String? = null)
 data class SpotifyAuthorization(val authorizationUrl: String)
+data class SpotifyPlaylists(val reauthorizationRequired: Boolean, val items: List<SpotifyPlaylist>)
 data class SpotifyCredential(val accessToken: String, val refreshToken: String, val expiresAtEpochSecond: Long, val scope: String, val accountName: String)
 private data class PendingSpotifyAuthorization(val ownerId: UUID, val expiresAt: Instant)
 
@@ -46,7 +47,7 @@ class SpotifyIntegrationService(
         val state = ByteArray(32).also(random::nextBytes).let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
         pending.entries.removeIf { it.value.expiresAt.isBefore(clock.instant()) }
         pending[state] = PendingSpotifyAuthorization(ownerId, clock.instant().plusSeconds(600))
-        val scopes = "user-read-playback-state user-modify-playback-state"
+        val scopes = "user-read-playback-state user-modify-playback-state playlist-read-private"
         val url = "https://accounts.spotify.com/authorize?response_type=code&client_id=${enc(clientId)}&scope=${enc(scopes)}&redirect_uri=${enc(redirectUri)}&state=${enc(state)}"
         return SpotifyAuthorization(url)
     }
@@ -71,16 +72,45 @@ class SpotifyIntegrationService(
 
     fun playback(ownerId: UUID): SpotifyPlayback = withAccessToken(ownerId, gateway::playback)
 
+    fun playlists(ownerId: UUID): SpotifyPlaylists {
+        val current = connection(ownerId) ?: throw IntegrationNotFoundException()
+        if ("playlist-read-private" !in credential(current).scope.split(' ')) return SpotifyPlaylists(true, emptyList())
+        return SpotifyPlaylists(false, withAccessToken(ownerId, gateway::playlists))
+    }
+
+    fun playPlaylist(ownerId: UUID, playlistId: String, deviceId: String) {
+        if (!Regex("[A-Za-z0-9]{22}").matches(playlistId) || deviceId.isBlank() || deviceId.length > 200) throw SpotifyInvalidRequestException()
+        val correlationId = UUID.randomUUID()
+        try {
+            if (playlists(ownerId).items.none { it.id == playlistId }) throw SpotifyInvalidRequestException()
+            withAccessToken(ownerId) { token ->
+                val device = gateway.devices(token).firstOrNull { it.id == deviceId } ?: throw SpotifyInvalidRequestException()
+                if (device.restricted) throw SpotifyInvalidRequestException()
+                gateway.playPlaylist(token, playlistId, deviceId)
+            }
+        } catch (error: RuntimeException) {
+            activity.record(ActivityCategory.CAPABILITY, "media.playlist.started", ActivityStatus.FAILED, ActivityActorType.USER, "spotify", "SPOTIFY_PLAYBACK_FAILED", ownerId.toString(), ownerId = ownerId, correlationId = correlationId)
+            throw error
+        }
+        activity.record(ActivityCategory.CAPABILITY, "media.playlist.started", ActivityStatus.SUCCEEDED, ActivityActorType.USER, "spotify", "SPOTIFY_PLAYBACK_CONTROLLED", ownerId.toString(), ownerId = ownerId, correlationId = correlationId)
+    }
+
     fun control(ownerId: UUID, command: SpotifyPlaybackCommand) {
         if (command.deviceId.isBlank() || command.deviceId.length > 200 ||
             (command.action == SpotifyPlaybackAction.VOLUME && command.volumePercent !in 0..100) ||
-            (command.action != SpotifyPlaybackAction.VOLUME && command.volumePercent != null)) throw SpotifyInvalidRequestException()
+            (command.action != SpotifyPlaybackAction.VOLUME && command.volumePercent != null) ||
+            (command.action == SpotifyPlaybackAction.SEEK && command.positionMs !in 0..86_400_000) ||
+            (command.action != SpotifyPlaybackAction.SEEK && command.positionMs != null)) throw SpotifyInvalidRequestException()
         val correlationId = UUID.randomUUID()
         try {
             withAccessToken(ownerId) { token ->
                 val device = gateway.devices(token).firstOrNull { it.id == command.deviceId }
                     ?: throw SpotifyInvalidRequestException()
                 if (device.restricted || (command.action == SpotifyPlaybackAction.VOLUME && !device.supportsVolume)) throw SpotifyInvalidRequestException()
+                if (command.action == SpotifyPlaybackAction.SEEK) {
+                    val state = gateway.playback(token)
+                    if (state.deviceId != command.deviceId || state.durationMs <= 0 || "seeking" in state.disallowed || command.positionMs!! >= state.durationMs) throw SpotifyInvalidRequestException()
+                }
                 gateway.control(token, command)
             }
         } catch (error: RuntimeException) {
@@ -107,7 +137,7 @@ class SpotifyIntegrationService(
         var credential = credential(connection)
         if (credential.expiresAtEpochSecond <= clock.instant().plusSeconds(30).epochSecond) {
             val refreshed = gateway.refresh(credential.refreshToken)
-            credential = credential.copy(accessToken = refreshed.accessToken, refreshToken = refreshed.refreshToken, expiresAtEpochSecond = clock.instant().plusSeconds(refreshed.expiresIn).epochSecond, scope = refreshed.scope)
+            credential = credential.copy(accessToken = refreshed.accessToken, refreshToken = refreshed.refreshToken, expiresAtEpochSecond = clock.instant().plusSeconds(refreshed.expiresIn).epochSecond, scope = refreshed.scope.ifBlank { credential.scope })
             repository.updateCredential(ownerId, connection.id, cipher.protect(mapper.writeValueAsString(credential), "$ownerId:${connection.id}:spotify"), clock.instant())
         }
         return action(credential.accessToken)
