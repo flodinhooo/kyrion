@@ -45,13 +45,12 @@ export type TextSize = "standard" | "comfortable" | "large";
 
 const navigation = [
   ["home", Icons.home, "/"],
+  ["chat", Icons.chat, "/chat"],
   ["lounge", Icons.music, "/lounge"],
   ["devices", Icons.power, "/devices"],
-  ["addDevice", Icons.plus, "/devices/add"],
   ["automations", Icons.spark, "/automations"],
   ["plugins", Icons.plugins, "/plugins"],
   ["activity", Icons.activity, "/activity"],
-  ["chat", Icons.chat, "/chat"],
 ] as const;
 
 export function useWorkspace() {
@@ -310,16 +309,16 @@ export function AppShell({ children, username }: { children: ReactNode; username
   function sidebarContent(onNavigate?: () => void) {
     return (
       <>
-        <div className="brand">
+        <Link className="brand" href="/" aria-label={t.home} onClick={onNavigate}>
           <BrandAsset variant="wordmark" priority />
-        </div>
+        </Link>
 
         <nav aria-label={t.navigation}>
           <p className="section-label">{t.navigation}</p>
           {navigation.map(([key, Icon, href]) => {
             const active = key === "chat" ? isChatPage
               : key === "home" ? pathname === "/" || pathname === "/home"
-              : pathname === href || (key !== "devices" && pathname.startsWith(`${href}/`));
+              : pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link aria-current={active ? "page" : undefined} className={`nav-item ${active ? "active" : ""}`} href={href} key={key} onClick={onNavigate}>
                 <Icon />
@@ -363,7 +362,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
         </div>}
 
         <div className="sidebar-footer">
-          <Link className={`nav-item ${pathname === "/settings" ? "active" : ""}`} href="/settings" onClick={onNavigate}><Icons.settings /><span>{t.settings}</span></Link>
+          <Link className={`nav-item ${pathname.startsWith("/settings") ? "active" : ""}`} href="/settings" onClick={onNavigate}><Icons.settings /><span>{t.settings}</span></Link>
           {isChatPage && <div className="connection" title={aiStatusText}>
             <span className={`status-dot status-${aiStatus.status}`} />
             <span>{aiStatusText}</span>
@@ -391,8 +390,6 @@ export function AppShell({ children, username }: { children: ReactNode; username
       t,
     }}>
       <div className="app-shell">
-        <div className="ambient ambient-one" />
-        <div className="ambient ambient-two" />
         <aside className="sidebar">{sidebarContent()}</aside>
 
         <main className="workspace">

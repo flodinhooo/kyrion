@@ -27,6 +27,7 @@
 .lounge-track > p:not(.eyebrow) { color: var(--text-muted); }
 .lounge-track a { display: inline-block; color: var(--primary); font-size: .85rem; margin-top: 14px; }
 .lounge-progress { margin-top: 26px; }
+.spotify-seek { display: block; width: 100%; height: 24px; accent-color: var(--primary); cursor: pointer; }
 .lounge-progress progress { width: 100%; height: 5px; display: block; border: 0; border-radius: 10px; overflow: hidden; accent-color: var(--primary); background: var(--surface-muted); }
 .lounge-progress progress::-webkit-progress-bar { background: var(--surface-muted); }
 .lounge-progress progress::-webkit-progress-value { background: var(--primary); }
@@ -58,6 +59,45 @@
 .lounge-stage button { cursor: pointer; }
 .lounge-stage button:disabled, .lounge-stage input:disabled, .lounge-stage select:disabled { opacity: .4; cursor: not-allowed; }
 .lounge-stage :focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.spotify-sync-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-muted); padding: 12px; margin-bottom: 20px; background: var(--primary-soft); border-radius: 12px; font-size: .85rem; }
+.spotify-sync-note button { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.spotify-playlists { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+.spotify-playlists-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.spotify-playlists-heading h3 { font-size: 1.1rem; }
+.spotify-playlists-heading p, .spotify-playlists > p, .spotify-playlists-connect p { font-size: .8rem; color: var(--text-muted); line-height: 1.6; }
+.spotify-playlists-heading button { display: grid; place-items: center; width: 40px; height: 40px; }
+.spotify-playlists-connect a { display: inline-block; margin-top: 10px; color: var(--primary); }
+.spotify-playlist-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.spotify-playlist-grid article { min-width: 0; padding: 14px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 14px; }
+.spotify-playlist-info { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-size: .9rem; overflow-wrap: anywhere; }
+.spotify-playlist-info img { width: 80px; height: 80px; object-fit: contain; }
+.spotify-playlist-grid article > button { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; min-height: 36px; color: var(--primary); font-size: .8rem; }
+@media (max-width: 600px) {
+  .spotify-playlist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spotify-sync-note { align-items: flex-start; flex-direction: column; }
+}
+.youtube-intro h2 { font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.035em; margin: 10px 0; }
+.youtube-intro > p:last-child { max-width: 620px; line-height: 1.6; color: var(--text-muted); }
+.youtube-form { display: grid; gap: 10px; margin: 28px 0; }
+.youtube-form label { font-size: .85rem; font-weight: 600; }
+.youtube-form > div { display: flex; gap: 10px; }
+.youtube-form input { flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--surface-solid); border-radius: 12px; padding: 12px; color: var(--text); }
+.youtube-form button, .youtube-player-actions button, .youtube-player-actions a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.youtube-note { font-size: .8rem; color: var(--text-muted); line-height: 1.65; }
+.youtube-note a { text-decoration: underline; }
+.youtube-discover { display: flex; align-items: center; gap: 18px; background: var(--primary-soft); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+.youtube-discover > span { display: grid; gap: 7px; flex: 1; }
+.youtube-discover span span { color: var(--text-muted); font-size: .85rem; line-height: 1.5; }
+.youtube-frame { width: 100%; aspect-ratio: 16 / 9; min-height: 200px; border: 0; background: #000; }
+.youtube-player-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 14px 0; font-size: .85rem; }
+.youtube-player-actions button { background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.youtube-output { display: flex; align-items: flex-start; gap: 8px; border-top: 1px solid var(--border); margin-top: 24px; padding-top: 18px; }
+.youtube-output svg { flex-shrink: 0; margin-top: 3px; }
+@media (max-width: 600px) {
+  .youtube-form > div { flex-direction: column; }
+  .youtube-form input, .youtube-form button { min-height: 46px; }
+  .youtube-discover { padding: 18px; gap: 12px; }
+}
 @media (max-width: 600px) {
   .lounge-header-icon { display: none; }
   .lounge-tabs { width: 100%; }
