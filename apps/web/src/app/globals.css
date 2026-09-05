@@ -187,6 +187,10 @@ button, textarea { font: inherit; }
 /* Keep navigation and dialog actions reachable on short and narrow screens. */
 .skip-navigation { position: fixed; z-index: 200; top: 12px; left: 12px; padding: 12px 18px; border: 2px solid var(--primary); border-radius: 10px; background: var(--surface-solid); color: var(--text); transform: translateY(calc(-100% - 24px)); }
 .skip-navigation:focus { transform: translateY(0); }
+.auth-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.auth-heading .language-button { min-width: 44px; min-height: 44px; }
+.auth-retry { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--primary); color: var(--primary-foreground); cursor: pointer; }
+.auth-stage :is(button, input):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .sidebar { overflow-y: auto; overscroll-behavior: contain; }
 .sidebar > :is(.brand, nav, .sidebar-footer), .mobile-sheet > :is(.brand, nav, .sidebar-footer) { flex-shrink: 0; }
 .connection { display: flex; align-items: center; gap: 8px; margin: 12px; color: var(--text-muted); font-size: 11px; }
@@ -1142,6 +1146,7 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .network-candidate[open] > summary::after { content: "−"; }
 .network-candidate > summary > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .network-candidate > summary > code { flex-shrink: 0; font-size: .75rem; }
+.network-connected { display: block; color: var(--primary); font-size: .75rem; font-weight: normal; }
 .network-candidate > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .catalog-reload { align-self: flex-start; flex-shrink: 0; min-height: 42px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-solid); color: var(--text); font-size: .85rem; }
 .catalog-reload:disabled { opacity: .65; }

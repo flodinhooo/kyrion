@@ -5,6 +5,8 @@ describe("Spotify contracts", () => {
   it("bounds playlist results and rejects unsafe playlist commands", () => {
     const playlist = { id: "1234567890123456789012", name: "Evening", imageUrl: null, url: "https://open.spotify.com/playlist/1234567890123456789012" };
     expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: [playlist] })).toBe(true);
+    expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: [{ ...playlist, imageUrl: "https://pickasso.spotifycdn.com/image/test" }] })).toBe(true);
+    expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: [{ ...playlist, imageUrl: "https://pickasso.spotifycdn.com.evil.test/image" }] })).toBe(false);
     expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: Array(7).fill(playlist) })).toBe(false);
     expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: [{ ...playlist, imageUrl: "https://evil.test/image" }] })).toBe(false);
     expect(isSpotifyPlaylists({ reauthorizationRequired: false, items: [{ ...playlist, url: "javascript:alert(1)" }] })).toBe(false);
