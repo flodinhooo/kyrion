@@ -25,6 +25,31 @@ dashboard. New development-mode apps support a bounded allowlist and require a
 Premium owner account. Refresh tokens currently expire after Spotify's
 documented six-month lifetime and then require owner reauthorization.
 
+## Local Windows development
+
+Register this additional redirect URI in the Spotify dashboard, keeping the
+existing Pi URI:
+
+```text
+http://127.0.0.1:3000/api/integrations/spotify/callback
+```
+
+Set `KYRION_SPOTIFY_REDIRECT_URI` to that URI for the local Core process and set
+`KYRION_PUBLIC_URL=http://localhost:3000` in `apps/web/.env.local`. Restart Core
+after changing its environment. The Web UI can continue to use
+`http://localhost:3000`, including login and Spotify connection.
+
+Spotify requires an explicit loopback IP for HTTP redirects and rejects
+`localhost`. The Web callback relays code/state or denial parameters from
+loopback to the configured localhost callback on the same port before reading
+the host-only session. This relay sets no cookies and uses no-store/no-referrer
+headers. Core still requires the initiating owner, validates single-use state,
+and exchanges the code using the original registered loopback URI. HTTP
+callbacks to non-loopback hosts remain unavailable. Production HTTPS callbacks
+continue through the existing path.
+
+See [Spotify redirect requirements](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri).
+
 ## Raspberry Pi player
 
 Update, 2026-09-05: the owner reports successful physical playback by selecting

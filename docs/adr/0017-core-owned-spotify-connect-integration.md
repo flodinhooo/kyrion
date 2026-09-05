@@ -11,7 +11,9 @@ target. Provider credentials must not enter Web, the AI service or the gateway
 agent. The Raspberry Pi already owns the local PipeWire and Bluetooth playback
 path used by the Voice Satellite.
 
-Spotify's Web API requires an exactly registered HTTPS redirect URI. Reading
+Spotify's Web API requires an exactly registered HTTPS redirect URI, with an
+HTTP exception for explicit loopback IP addresses. `localhost` itself is not
+accepted by Spotify. Reading
 Connect devices and transferring playback require the
 `user-read-playback-state` and `user-modify-playback-state` scopes. Player API
 control requires Spotify Premium. The proposed Raspberry Pi receiver,
@@ -46,3 +48,14 @@ Core restart during login requires the owner to restart the flow.
 The first slice transfers existing playback only. Search, playlists, pause,
 skip, volume, voice commands, ducking and automatic player lifecycle are
 follow-up work through the same Core-owned policy boundary.
+
+## Local development clarification (2026-09-05)
+
+Core permits HTTP callbacks only on `127.0.0.1` or `[::1]`; HTTPS remains
+required for other hosts. Web may relay an HTTP loopback callback to the
+explicitly configured `http://localhost` public origin on the same port,
+before checking the existing host-only session. This preserves normal localhost
+development without transferring session cookies between hosts. Only OAuth
+code, state and denial parameters are relayed to the fixed callback path.
+Core still validates the authenticated owner and its expiring, single-use state
+and exchanges the code with the original registered redirect URI.
