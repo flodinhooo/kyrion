@@ -61,7 +61,8 @@ class MdnsLocalNetworkDiscovery : LocalNetworkDiscovery {
             if (Thread.currentThread().isInterrupted) return null
             try {
                 Socket().use { it.connect(InetSocketAddress(host, port), 150) }
-                return DiscoveredNetworkDevice("network", host, host, port)
+                return (if (port == 80) NetworkDeviceIdentity.shelly(host) else null)
+                    ?: DiscoveredNetworkDevice("network", host, host, port)
             } catch (_: java.io.IOException) { /* Try the next common local service. */ }
         }
         return try {

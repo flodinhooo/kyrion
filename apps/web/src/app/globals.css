@@ -1130,6 +1130,13 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .snapshot-status svg { width: 16px; height: 16px; }
 @media (max-width: 600px) { .snapshot-status { flex-direction: column; align-items: stretch; gap: 12px; } .snapshot-status button { align-self: flex-start; } }
 
+.network-candidate > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; cursor: pointer; list-style: none; }
+.network-candidate > summary::-webkit-details-marker { display: none; }
+.network-candidate > summary::after { content: "+"; color: var(--text-muted); }
+.network-candidate[open] > summary::after { content: "−"; }
+.network-candidate > summary > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.network-candidate > summary > code { flex-shrink: 0; font-size: .75rem; }
+.network-candidate > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .catalog-reload { align-self: flex-start; flex-shrink: 0; min-height: 42px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-solid); color: var(--text); font-size: .85rem; }
 .catalog-reload:disabled { opacity: .65; }
 .catalog-status { margin: 0 0 12px; font-size: .85rem; color: var(--text-muted); }
