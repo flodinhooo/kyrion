@@ -6,11 +6,47 @@ Kyrion Web exposes an official internal Spotify integration page and a
 [Lounge player](lounge.md). The owner can
 start Spotify's Authorization Code flow, disconnect the account, load currently
 available Spotify Connect devices and transfer active playback to one device.
-Core requests only `user-read-playback-state` and
-`user-modify-playback-state`, encrypts access and refresh tokens with the
+Core requests `user-read-playback-state`, `user-modify-playback-state` and
+`playlist-read-private`, encrypts access and refresh tokens with the
 installation credential key and records connection, disconnection and transfer
 events. The Lounge adds current playback metadata, resume/pause, previous/next
-and supported device volume. Tokens are never returned to Web.
+and supported device volume. It also lists up to six owned/followed playlists
+and starts a listed playlist on the selected Connect device. Tokens are never
+returned to Web.
+
+Existing connections keep working for playback. To show private playlists,
+choose **Renew Spotify access** on `/plugins/spotify` and grant the additional
+read permission in Spotify. No disconnect is needed. The shelf is called
+**Your playlists**, because the API does not guarantee a recently-played order.
+Collaborative-only and other unreturned playlists are outside this first shelf.
+
+`GET /v1/integrations/spotify/playlists` returns `reauthorizationRequired` and
+at most six `items` with ID, name, safe cover URL and Spotify link.
+`PUT /v1/integrations/spotify/playback/playlist` accepts `playlistId` and
+`deviceId`. Core checks the owner's returned playlists and available,
+unrestricted devices, then records the command result without playlist names.
+
+## Playback refresh resilience
+
+A successful player command and refreshing the display are separate outcomes.
+Web waits briefly after a command and retries only state reads up to three
+times for transient failures or an unchanged track immediately after skipping.
+Commands are never automatically replayed. The last confirmed view is retained
+during retry. Persistent read failures show a status-refresh message, not a
+failed-command claim, and the periodic refresh can recover it automatically.
+Non-server HTTP read errors do not enter the immediate retry loop.
+
+The adapter accepts successful write responses without requiring a JSON body,
+including empty HTTP 200 responses. Empty HTTP 200 state reads remain errors;
+HTTP 204 represents no current playback.
+
+In a controlled browser reproduction, an accepted NEXT followed by one failed
+state read produced the old generic error and stale title. The updated path
+recovered the new title automatically while sending NEXT exactly once. The
+original live Spotify response status was not captured; this is reproduced
+client failure handling and defensive adapter coverage, not proof of a specific
+provider failure. Verified with 54 Web tests, 13 Spotify Core tests, TypeScript,
+ESLint, Web/Core builds and mocked browser playlist selection/playback.
 
 Configure Core with:
 
@@ -65,9 +101,18 @@ account connection and playback control.
 
 ## Deliberate follow-up
 
+The Web player interpolates elapsed playback time between provider snapshots
+and offers a seek slider. Core validates `SEEK` commands against the active
+device, track duration and Spotify's seeking restriction before calling the
+provider. `positionMs` must be an integer in the current track and no greater
+than 86,400,000 ms. Successful seek commands use the existing audit and status
+refresh path. Restart an older running Core when installing the playlist and
+seek endpoints; an existing Spotify grant may additionally require renewal for
+`playlist-read-private`.
+
 - verify receiver and Bluetooth audio recovery after a reboot;
 - verify that `Kyrion Pi` appears in Kyrion Web as well as in the phone app;
 - pause, resume, skip and volume are now implemented as bounded Core commands
   with a Web player in [Lounge](lounge.md); live Web-to-player validation remains;
-- add search and playlist selection through Core;
+- add search and broader playlist browsing through Core;
 - coordinate music ducking with Voice Satellite responses.

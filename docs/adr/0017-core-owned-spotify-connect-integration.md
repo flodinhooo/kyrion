@@ -49,6 +49,14 @@ The first slice transfers existing playback only. Search, playlists, pause,
 skip, volume, voice commands, ducking and automatic player lifecycle are
 follow-up work through the same Core-owned policy boundary.
 
+## Subsequent scope (2026-09-05)
+
+The Lounge player now supports pause/resume, skip and volume. A bounded shelf
+of six account playlists adds `playlist-read-private` to new authorizations;
+existing grants require explicit renewal through Spotify for this capability.
+Core validates playlist and device selection and audits execution. The shelf
+does not claim a recently-played ordering or retain listening history.
+
 ## Local development clarification (2026-09-05)
 
 Core permits HTTP callbacks only on `127.0.0.1` or `[::1]`; HTTPS remains

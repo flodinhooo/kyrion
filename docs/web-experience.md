@@ -63,6 +63,19 @@ preserves edits while the card remains mounted. Removal still opens the existing
 confirmation dialog. Full light controls open through an explicit keyboard-
 accessible button rather than a click handler on the entire article.
 
+## Snapshot feedback
+
+Home and Devices share a loading/error status panel with the time of the last
+fully successful snapshot read. This timestamp describes loading from Core,
+not the freshness of every device observation; per-device observation times
+remain visible separately. Partial or failed reads do not advance it.
+
+The retry action only reloads snapshot data. It does not repeat a failed write
+or command. Device discovery/observation refresh remains a separate action on
+Devices. Initial loading does not render empty room cards, and a successfully
+loaded empty device catalog provides an add-device action. Failed reads retain
+a visible warning when previously loaded data is still shown.
+
 ## Follow-up
 
 Synchronized favorites, a platform-wide issue overview and live home-state

@@ -65,6 +65,8 @@ slices.
 ### Devices and integrations
 
 - local Nanoleaf discovery, physical authorisation and encrypted credentials;
+- shared local network discovery and [Shelly H&T sensor onboarding](docs/shelly-integration.md)
+  with persistent, manually refreshed temperature and humidity readings (hardware verification pending);
 - Nanoleaf state, power, brightness, colour, temperature and stored scenes;
 - persistent rooms, device names and room assignments;
 - a provider-neutral device catalog and bounded command contracts;
@@ -78,6 +80,8 @@ slices.
 - Core-owned Spotify OAuth, Connect-device selection and a [Lounge player](docs/lounge.md)
   for playback control; phone-to-Pi playback is owner-verified, while the new
   Web controls still require live receiver validation;
+- YouTube video and playlist links in Lounge, including a YouTube Music link
+  entry, using the visible browser player and Core-owned link validation;
 
 ### AI and voice
 
