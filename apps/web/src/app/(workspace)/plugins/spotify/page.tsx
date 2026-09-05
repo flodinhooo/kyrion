@@ -51,7 +51,7 @@ export default function SpotifyPage() {
     <div className="privacy-note">{t.spotifyPrivacy}</div>
     <Link className="back-link" href="/lounge">{t.loungeOpenPlayer} →</Link>
     {!status ? <p>{t.spotifyLoading}</p> : !status.connected ? <article className="pairing-card"><h2>{t.spotifyConnectTitle}</h2><p>{status.configured ? t.spotifyConnectDescription : t.spotifyNotConfigured}</p><button disabled={!status.configured} onClick={() => setLoginOpen(true)}>{t.spotifyConnect}</button></article> : <>
-      <article className="pairing-card"><h2>{t.spotifyConnected}</h2><p>{status.accountName}</p><button className="danger" disabled={pending} onClick={() => void disconnect()}>{t.spotifyDisconnect}</button></article>
+      <article className="pairing-card"><h2>{t.spotifyConnected}</h2><p>{status.accountName}</p><button disabled={pending} onClick={() => setLoginOpen(true)}>{t.spotifyRenewAccess}</button><button className="danger" disabled={pending} onClick={() => void disconnect()}>{t.spotifyDisconnect}</button></article>
       <h2>{t.spotifyDevices}</h2><div className="connection-grid">{devices.map((device) => <article className={`connection-card ${device.active ? "is-on" : ""}`} key={device.id}><div className="connection-heading"><div><h3>{device.name}</h3><p>{device.type} · {device.volumePercent ?? "–"}%</p></div><span className={`device-status ${device.active ? "online" : "unknown"}`}>{device.active ? t.spotifyActive : t.spotifyAvailable}</span></div><button disabled={pending || device.restricted} onClick={() => void transfer(device.id)}>{t.spotifyPlayHere}</button></article>)}</div>
       {devices.length === 0 && <p className="placeholder-copy">{t.spotifyNoDevices}</p>}
     </>}
