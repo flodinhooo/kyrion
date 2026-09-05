@@ -1,0 +1,12 @@
+[Unit]
+Description=Kyrion Spotify Connect receiver
+After=network-online.target pipewire-pulse.service wireplumber.service
+Wants=network-online.target pipewire-pulse.service
+
+[Service]
+ExecStart=/usr/bin/librespot --name "Kyrion Pi" --backend pulseaudio --bitrate 320 --device-type speaker --enable-volume-normalisation --initial-volume 35 --cache /home/flodinho/.cache/kyrion-librespot --system-cache /home/flodinho/.local/state/kyrion-librespot
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
