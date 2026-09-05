@@ -35,6 +35,8 @@ const core = createServer(async (req, res) => {
   }
   if (url.pathname === "/v1/home/rooms") return send(rooms);
   if (url.pathname === "/v1/devices") return send(mode === "empty" ? [] : [device, { ...device, id: "44444444-4444-4444-8444-444444444444", displayName: "Offline sensor", deviceClass: "sensor", capabilities: [], availability: "offline", state: null }]);
+  if (url.pathname === "/v1/device-commands/async") return send({ commandId: "review-command", deviceId: device.id, status: "pending" }, 202);
+  if (url.pathname === "/v1/device-commands/review-command") return send({ id: "review-command", status: "succeeded", errorCode: null });
   if (url.pathname === "/v1/device-commands") return send({ capability: "light.power", roomName: room.name, requested: 1, succeeded: 1, failed: 0, outcomes: [{ deviceId: device.id, displayName: device.displayName, status: "succeeded" }], correlationId: "review-command" });
   if (url.pathname === "/v1/integrations/spotify") return send({ configured: true, connected: false, accountName: null });
   if (url.pathname === "/v1/integrations/spotify/playlists") return send({ reauthorizationRequired: false, items: [] });
@@ -75,14 +77,14 @@ try {
   page.on("request", (request) => { if (request.url().includes("/api/")) apiRequests.push(new URL(request.url()).pathname); });
   const check = async (name, action) => {
     try { await action(); results.push({ name, passed: true }); console.log(`PASS ${name}`); }
-    catch (error) { results.push({ name, passed: false, error: error.message }); console.log(`FAIL ${name}: ${error.message}`); await page.screenshot({ path: path.join(artifacts, `failure-${results.length}.png`) }).catch(() => {}); }
+    catch (error) { results.push({ name, passed: false, error: error.message }); console.log(`FAIL ${name}: ${error.message}`); await page.screenshot({ path: path.join(artifacts, `failure-${results.length}.png`) }).catch(() => {}); await writeFile(path.join(artifacts, `failure-${results.length}.html`), await page.content()); }
   };
-  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
+  for (const viewport of process.env.REVIEW_QUICK ? [] : [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
     await page.setViewportSize(viewport);
     for (const theme of ["light", "dark"]) {
       await page.goto(origin);
       await page.evaluate((theme) => { localStorage.setItem("kyrion-theme", theme); localStorage.setItem("kyrion-locale", "de"); }, theme);
-      for (const route of ["/", "/devices", "/plugins", "/lounge", "/settings", "/chat"]) {
+      for (const route of ["/", "/devices", "/devices/add", "/plugins", "/plugins/nanoleaf", "/plugins/spotify", "/lounge", "/activity", "/automations", "/knowledge", "/profile", "/settings", "/settings/gateways", "/settings/services", "/settings/voice", "/settings/models", "/chat"]) {
         await check(`${viewport.width}/${theme}${route}`, async () => {
           const requestStart = apiRequests.length;
           await page.goto(`${origin}${route}`);
@@ -90,7 +92,7 @@ try {
           await page.waitForTimeout(700);
           assert.equal(await page.locator("html").getAttribute("data-theme"), theme);
           assert.equal(await page.locator(".recent-section").count() > 0, route === "/chat");
-          if (route !== "/chat") assert(!apiRequests.slice(requestStart).some((path) => ["/api/models", "/api/status", "/api/conversations"].includes(path)), "non-chat page requested AI/history");
+          if (!["/chat", "/settings/models"].includes(route)) assert(!apiRequests.slice(requestStart).some((path) => ["/api/models", "/api/status", "/api/conversations"].includes(path)), "non-chat page requested AI/history");
           const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 || document.querySelector(".workspace").scrollWidth > document.querySelector(".workspace").clientWidth + 1);
           assert(!overflow, "horizontal page overflow");
           await page.screenshot({ path: path.join(artifacts, `${viewport.width}-${theme}-${route.replaceAll("/", "_") || "home"}.png`) });
@@ -99,6 +101,7 @@ try {
     }
   }
   await check("mobile navigation closes and returns focus", async () => {
+    await page.setViewportSize({ width: 320, height: 568 });
     await page.goto(origin); await page.locator(".mobile-menu").click();
     await page.locator(".mobile-sheet").waitFor();
     await page.keyboard.press("Escape");
@@ -117,7 +120,7 @@ try {
     await page.goto(`${origin}/devices`);
     await page.locator(".device-search-field input").fill("does-not-exist");
     await page.getByText("Keine passenden Geräte", { exact: true }).waitFor();
-    await page.getByRole("button", { name: "Filter zurücksetzen" }).click();
+    await page.getByRole("button", { name: "Filter zurücksetzen" }).first().click();
     await page.locator(".room-devices article").first().waitFor();
   });
   await check("Core failure preserves stale warning and recovers", async () => {
@@ -126,6 +129,31 @@ try {
     await page.locator(".snapshot-status [role=alert]").waitFor();
     mode = "ready"; await page.locator(".snapshot-status button").click();
     await page.locator(".snapshot-status [role=alert]").waitFor({ state: "hidden" });
+  });
+  await check("failed room write remains visible inside the dialog", async () => {
+    await page.goto(origin); await page.locator(".home-actions button").first().click();
+    await page.locator(".room-dialog input").fill("Interrupted room");
+    await page.route("**/api/home/rooms", (route) => route.request().method() === "POST" ? route.abort("failed") : route.continue());
+    await page.locator(".room-dialog button[type=submit]").click();
+    await page.locator(".room-dialog [role=alert]").waitFor();
+    assert(await page.locator(".room-dialog button[type=submit]").isEnabled());
+    await page.unroute("**/api/home/rooms"); await page.keyboard.press("Escape");
+  });
+  await check("device power succeeds and a lost response stays retryable", async () => {
+    await page.goto(`${origin}/devices`);
+    const card = page.locator(".room-devices article", { hasText: "Leselampe" });
+    const on = card.getByRole("button", { name: /Einschalten$/ });
+    await on.click(); await page.waitForTimeout(500);
+    assert(requests.includes("POST /v1/device-commands/async"));
+    assert(await on.isEnabled());
+    await page.route("**/api/device-commands/async", (route) => route.abort("failed"));
+    await on.click(); await page.waitForTimeout(300); assert(await on.isEnabled());
+    await page.unroute("**/api/device-commands/async");
+  });
+  await check("session expiry is visible on an already open page", async () => {
+    await page.goto(origin); mode = "expired";
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.locator(".session-status[role=alert]").waitFor();
   });
   await check("expired session redirects to localized login", async () => {
     mode = "expired"; await page.goto(`${origin}/devices`); await page.waitForURL("**/login");
@@ -146,6 +174,25 @@ try {
     await page.locator(".auth-retry").waitFor();
     mode = "expired"; await page.locator(".auth-retry").click();
     await page.locator(".auth-form").waitFor();
+  });
+  await check("English workspace and keyboard skip link", async () => {
+    mode = "ready"; await page.goto(origin);
+    await page.waitForFunction(() => document.documentElement.lang === "en");
+    await page.keyboard.press("Tab");
+    assert(await page.locator(".skip-navigation").evaluate((element) => element === document.activeElement));
+    await page.keyboard.press("Enter");
+    assert(await page.locator(".workspace").evaluate((element) => element === document.activeElement));
+  });
+  await check("blocked preference storage does not crash the platform", async () => {
+    await page.addInitScript(() => {
+      Storage.prototype.getItem = () => { throw new DOMException("blocked", "SecurityError"); };
+      Storage.prototype.setItem = () => { throw new DOMException("blocked", "SecurityError"); };
+    });
+    await page.goto(origin); await page.locator(".snapshot-status time").waitFor();
+    await page.locator(".topbar .language-button").click();
+    await page.locator(".home-favorites-picker summary").click();
+    await page.locator(".home-favorites-picker input").first().check();
+    await page.locator(".home-favorites [role=status]").waitFor();
   });
   await check("no unhandled browser exceptions", async () => assert.deepEqual(errors, []));
   await writeFile(path.join(artifacts, "results.json"), JSON.stringify({ results, unexpectedFixtureRequests: [...unexpected], errors }, null, 2));
