@@ -42,6 +42,8 @@ export default function ActivityPage() {
   });
 
   const summary = (event: ActivityEvent) => ({
+    SPOTIFY_PLAYBACK_CONTROLLED: t.loungeActivityControlled,
+    SPOTIFY_PLAYBACK_FAILED: t.loungeActivityFailed,
     "activity.core.started": t.activityCoreStarted,
     "activity.auth.sessionRevoked": t.activitySessionRevoked,
     "memory.enabled": t.activityMemoryEnabled,
