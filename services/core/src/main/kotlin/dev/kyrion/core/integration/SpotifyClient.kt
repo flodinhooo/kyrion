@@ -74,8 +74,19 @@ class SpotifyClient(
         api("/v1/me/player", "PUT", accessToken, mapper.writeValueAsString(mapOf("device_ids" to listOf(deviceId), "play" to play)))
     }
 
-    override fun playlists(accessToken: String): List<SpotifyPlaylist> = api("/v1/me/playlists?limit=6", "GET", accessToken)
-        .path("items").take(6).mapNotNull { item ->
+    override fun playlists(accessToken: String): List<SpotifyPlaylist> = recentSpotifyPlaylistIds(
+        api("/v1/me/player/recently-played?limit=50", "GET", accessToken),
+    ).mapNotNull { playlistId ->
+            val item = spotifyPlaylistMetadata(playlistId,
+                { api("/v1/playlists/$playlistId?fields=id,name,images", "GET", accessToken) },
+                {
+                    // Public Spotify preview, without account credentials or embedded HTML.
+                    val request = HttpRequest.newBuilder(URI("https://open.spotify.com/oembed?url=${encode("https://open.spotify.com/playlist/$playlistId")}"))
+                        .timeout(Duration.ofSeconds(5)).GET().build()
+                    val response = send(request)
+                    spotifyApiResponse(mapper, response.statusCode(), response.body(), true)
+                },
+            ) ?: return@mapNotNull null
             val id = item.path("id").asText()
             val name = item.path("name").asText()
             if (!Regex("[A-Za-z0-9]{22}").matches(id) || name.isBlank()) return@mapNotNull null

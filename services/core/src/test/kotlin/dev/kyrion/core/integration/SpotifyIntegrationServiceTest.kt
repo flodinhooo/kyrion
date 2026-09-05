@@ -44,6 +44,9 @@ class SpotifyIntegrationServiceTest {
         assertThrows<SpotifyInvalidRequestException> { service.playPlaylist(ownerId, "1234567890123456789012", "device-1") }
         gateway.scope = "playlist-read-private"
         service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        assertTrue(service.playlists(ownerId).reauthorizationRequired)
+        gateway.scope = "playlist-read-private user-read-recently-played"
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
         assertFalse(service.playlists(ownerId).reauthorizationRequired)
         service.playPlaylist(ownerId, "1234567890123456789012", "device-1")
         assertEquals("1234567890123456789012", gateway.playedPlaylist)

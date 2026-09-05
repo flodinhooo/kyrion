@@ -47,7 +47,7 @@ class SpotifyIntegrationService(
         val state = ByteArray(32).also(random::nextBytes).let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
         pending.entries.removeIf { it.value.expiresAt.isBefore(clock.instant()) }
         pending[state] = PendingSpotifyAuthorization(ownerId, clock.instant().plusSeconds(600))
-        val scopes = "user-read-playback-state user-modify-playback-state playlist-read-private"
+        val scopes = "user-read-playback-state user-modify-playback-state playlist-read-private user-read-recently-played"
         val url = "https://accounts.spotify.com/authorize?response_type=code&client_id=${enc(clientId)}&scope=${enc(scopes)}&redirect_uri=${enc(redirectUri)}&state=${enc(state)}"
         return SpotifyAuthorization(url)
     }
@@ -74,7 +74,7 @@ class SpotifyIntegrationService(
 
     fun playlists(ownerId: UUID): SpotifyPlaylists {
         val current = connection(ownerId) ?: throw IntegrationNotFoundException()
-        if ("playlist-read-private" !in credential(current).scope.split(' ')) return SpotifyPlaylists(true, emptyList())
+        if (!credential(current).scope.split(' ').containsAll(listOf("playlist-read-private", "user-read-recently-played"))) return SpotifyPlaylists(true, emptyList())
         return SpotifyPlaylists(false, withAccessToken(ownerId, gateway::playlists))
     }
 
