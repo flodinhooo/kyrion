@@ -32,7 +32,9 @@ class MdnsLocalNetworkDiscovery : LocalNetworkDiscovery {
     override fun discover(): List<DiscoveredNetworkDevice> {
         val interfaces = NetworkInterface.getNetworkInterfaces().toList()
             .filter { it.isUp && !it.isLoopback && !it.isVirtual && !it.isPointToPoint }
+            .filterNot { Regex("(?i)(hyper-v|vethernet|virtual|vmware|virtualbox|docker|veth|wsl)").containsMatchIn("${it.name} ${it.displayName}") }
             .flatMap { it.interfaceAddresses }.filter { it.address is Inet4Address && it.address.isSiteLocalAddress }
+            .sortedByDescending { it.networkPrefixLength }
         if (interfaces.isEmpty()) throw java.io.IOException("No local IPv4 interface")
         val found = ConcurrentHashMap<String, DiscoveredNetworkDevice>()
         fun accept(device: DiscoveredNetworkDevice) {
