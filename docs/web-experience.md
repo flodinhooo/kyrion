@@ -85,6 +85,18 @@ Devices. Initial loading does not render empty room cards, and a successfully
 loaded empty device catalog provides an add-device action. Failed reads retain
 a visible warning when previously loaded data is still shown.
 
+## Keyboard and small-screen navigation
+
+A localized skip link moves keyboard focus to the main workspace. The page
+header stays reachable while scrolling; long titles truncate without pushing
+navigation controls off-screen. Sidebar and mobile navigation can scroll on
+short screens, and the mobile close control has dedicated space above the brand.
+Mobile header controls have at least 44-pixel touch targets. Device and
+confirmation dialogs scroll within the dynamic viewport, with wrapping
+confirmation actions. Focus indicators also cover portalled navigation and
+dialogs, plus native disclosure summaries. Visual and assistive-technology
+verification remains a separate manual check.
+
 ## Follow-up
 
 Synchronized favorites, a platform-wide issue overview and live home-state

@@ -7,18 +7,31 @@ Kyrion Web exposes an official internal Spotify integration page and a
 start Spotify's Authorization Code flow, disconnect the account, load currently
 available Spotify Connect devices and transfer active playback to one device.
 Core requests `user-read-playback-state`, `user-modify-playback-state` and
-`playlist-read-private`, encrypts access and refresh tokens with the
+`playlist-read-private`, plus `user-read-recently-played`, encrypts access and refresh tokens with the
 installation credential key and records connection, disconnection and transfer
 events. The Lounge adds current playback metadata, resume/pause, previous/next
-and supported device volume. It also lists up to six owned/followed playlists
+and supported device volume. It also lists up to six recently played playlists
 and starts a listed playlist on the selected Connect device. Tokens are never
 returned to Web.
 
-Existing connections keep working for playback. To show private playlists,
-choose **Renew Spotify access** on `/plugins/spotify` and grant the additional
-read permission in Spotify. No disconnect is needed. The shelf is called
-**Your playlists**, because the API does not guarantee a recently-played order.
-Collaborative-only and other unreturned playlists are outside this first shelf.
+Existing connections keep working for playback. Choose **Renew Spotify access**
+on `/plugins/spotify` to grant listening-history access. No disconnect is needed.
+Core reads the latest 50 track plays, sorts by `played_at`, extracts distinct
+playlist contexts and resolves metadata for the latest six. Missing contexts,
+albums and invalid IDs are excluded. If playlist details return 403/404, Core
+tries Spotify's public oEmbed endpoint for the same validated playlist ID.
+Only title and an allowlisted cover URL are used, never returned HTML; account
+tokens are not sent to oEmbed. Playlists unavailable through both are omitted; the
+shelf may contain fewer than six entries and never fills gaps with library items.
+This is a bounded view of Spotify's available history, not a complete lifetime
+playlist history. Listening history is neither persisted nor logged.
+See [Spotify recently played](https://developer.spotify.com/documentation/web-api/reference/get-recently-played).
+
+A local read-only diagnosis confirmed 50 history entries, ten playlist contexts
+and one distinct playlist: the authenticated details endpoint returned 404,
+while Spotify oEmbed returned 200 with title and cover. This caused the previous
+empty shelf. The fallback addresses that observed response without inventing
+additional recently played playlists.
 
 `GET /v1/integrations/spotify/playlists` returns `reauthorizationRequired` and
 at most six `items` with ID, name, safe cover URL and Spotify link.
@@ -108,7 +121,7 @@ provider. `positionMs` must be an integer in the current track and no greater
 than 86,400,000 ms. Successful seek commands use the existing audit and status
 refresh path. Restart an older running Core when installing the playlist and
 seek endpoints; an existing Spotify grant may additionally require renewal for
-`playlist-read-private`.
+`playlist-read-private` and `user-read-recently-played`.
 
 - verify receiver and Bluetooth audio recovery after a reboot;
 - verify that `Kyrion Pi` appears in Kyrion Web as well as in the phone app;
