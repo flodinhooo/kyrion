@@ -10,7 +10,7 @@ export function isSpotifyPlaylists(value: unknown): value is SpotifyPlaylists {
     if (!item || typeof item !== "object") return false;
     return "id" in item && typeof item.id === "string" && /^[A-Za-z0-9]{22}$/.test(item.id)
       && "name" in item && typeof item.name === "string" && "url" in item && item.url === `https://open.spotify.com/playlist/${item.id}`
-      && "imageUrl" in item && (item.imageUrl === null || ["i.scdn.co", "mosaic.scdn.co", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com"].some((host) => safeUrl(item.imageUrl, host)));
+      && "imageUrl" in item && (item.imageUrl === null || ["i.scdn.co", "mosaic.scdn.co", "pickasso.spotifycdn.com", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com"].some((host) => safeUrl(item.imageUrl, host)));
   });
 }
 

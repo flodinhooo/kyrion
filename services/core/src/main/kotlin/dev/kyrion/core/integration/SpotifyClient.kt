@@ -91,7 +91,7 @@ class SpotifyClient(
             val name = item.path("name").asText()
             if (!Regex("[A-Za-z0-9]{22}").matches(id) || name.isBlank()) return@mapNotNull null
             val image = item.path("images").path(0).path("url").asText().takeIf { url ->
-                runCatching { URI(url).let { it.scheme == "https" && it.host in setOf("i.scdn.co", "mosaic.scdn.co", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com") && it.userInfo == null } }.getOrDefault(false)
+                runCatching { URI(url).let { it.scheme == "https" && it.host in setOf("i.scdn.co", "mosaic.scdn.co", "pickasso.spotifycdn.com", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com") && it.userInfo == null } }.getOrDefault(false)
             }
             SpotifyPlaylist(id, name, image, "https://open.spotify.com/playlist/$id")
         }
