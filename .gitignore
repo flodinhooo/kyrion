@@ -17,6 +17,9 @@ Thumbs.db
 # Node.js
 node_modules/
 .next/
+.next-review/
+.run/release-review/
+.run/browser-review/
 dist/
 coverage/
 .pnpm-store/

@@ -1,5 +1,11 @@
 .next
+.next-review
 node_modules
 coverage
 npm-debug.log*
 pnpm-debug.log*
+.env
+.env.*
+!.env.example
+*.log
+tests/browser/artifacts
