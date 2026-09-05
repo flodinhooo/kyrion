@@ -103,6 +103,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
     [/^\/settings\/gateways/, t.gatewayTitle],
     [/^\/settings\/models/, t.modelsTitle],
     [/^\/settings\/voice/, t.voiceSettingsTitle],
+    [/^\/settings\/services/, t.systemServicesTitle],
     [/^\/settings/, t.settings],
   ];
   const pageTitle = routeTitles.find(([pattern]) => pattern.test(pathname))?.[1] ?? "Kyrion";

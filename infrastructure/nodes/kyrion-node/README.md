@@ -33,7 +33,8 @@ The private key remains under `/etc/kyrion/platform/tls` on the Pi and is never
 exported. `enable-platform-https.sh` exports only the public server certificate
 to the invoking administrator's home directory. Each client trusts that one
 certificate before using `https://kyrion-node.local/`. Session cookies remain
-Secure, HttpOnly and SameSite Strict. The pinned certificate must be renewed
+Secure and HttpOnly with SameSite Lax for the Spotify OAuth callback; the
+separate CSRF cookie remains SameSite Strict. The pinned certificate must be renewed
 and redistributed before its documented 397-day validity ends.
 
 The first migration is deliberately split into preparation and a visible

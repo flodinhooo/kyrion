@@ -1,5 +1,6 @@
 .next
 .next-review
+next-env.d.ts
 node_modules
 coverage
 npm-debug.log*
