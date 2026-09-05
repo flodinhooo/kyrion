@@ -67,3 +67,11 @@ development without transferring session cookies between hosts. Only OAuth
 code, state and denial parameters are relayed to the fixed callback path.
 Core still validates the authenticated owner and its expiring, single-use state
 and exchanges the code with the original registered redirect URI.
+
+## Recent playlist selection (2026-09-05)
+
+The owner requested listening order instead of library order. The shelf now
+uses playlist contexts from the latest 50 track plays, sorted newest first and
+deduplicated to six IDs. The additional `user-read-recently-played` scope needs
+explicit Spotify consent. Core fetches metadata and retains no listening history.
+Missing contexts cannot be reconstructed; fewer than six entries are valid.

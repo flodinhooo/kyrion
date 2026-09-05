@@ -21,8 +21,9 @@ known display without locking out playback controls.
 Provider-reported action restrictions disable the corresponding controls.
 
 Resume uses the existing Spotify playback context. A shelf lists up to six
-account playlists and can start one on the selected device. Private playlist
-access requires renewing older Spotify grants. Search and full library browsing
+recently played playlists and can start one on the selected device. These are
+deduced from playlist contexts in the latest 50 track plays, newest first.
+Listening-history access requires renewing older Spotify grants. Search and full library browsing
 remain follow-up work. The player also links to Spotify for content selection. There is no browser
 audio runtime or cross-page mini-player in this slice.
 
