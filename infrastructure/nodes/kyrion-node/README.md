@@ -15,6 +15,11 @@ path alone does not change the running service.
 
 ## Always-on Kyrion platform
 
+For an existing installation, use the read-only `check-platform-update.ps1`
+preflight and the [September update handoff](../../../docs/status/2026-09-05-web-pre-image-review.md).
+The first-migration installer below must not be reused to update an existing
+database or replace the Pi's environment and keys.
+
 `compose.platform.yml` packages PostgreSQL, Kyrion Core and Kyrion Web as the
 always-on control plane described by ADR 0016. Core and Web run as unprivileged,
 capability-free containers with read-only root filesystems. PostgreSQL data and

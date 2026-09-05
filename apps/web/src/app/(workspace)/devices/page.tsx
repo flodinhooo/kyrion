@@ -154,13 +154,13 @@ export default function DevicesPage() {
   async function saveButtonBindings(buttonId: string) {
     setSavingBindings(buttonId); setError(false);
     try {
-    const response = await browserRequest(`/api/devices/${buttonId}/button-bindings`, {
-      method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ bindings: buttonBindings[buttonId] ?? [] }),
-    });
-    const value: unknown = await response.json().catch(() => null);
-    if (response.ok && isButtonBindingList(value)) setButtonBindings((current) => ({ ...current, [buttonId]: value }));
-    else setError(true);
+      const response = await browserRequest(`/api/devices/${buttonId}/button-bindings`, {
+        method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ bindings: buttonBindings[buttonId] ?? [] }),
+      });
+      const value: unknown = await response.json().catch(() => null);
+      if (response.ok && isButtonBindingList(value)) setButtonBindings((current) => ({ ...current, [buttonId]: value }));
+      else setError(true);
 
     } catch { setError(true); }
     finally { setSavingBindings(null); }
@@ -192,15 +192,15 @@ export default function DevicesPage() {
     setPending(true);
     setError(false);
     try {
-    const response = await browserRequest(roomEditor.mode === "create" ? "/api/home/rooms" : `/api/home/rooms/${roomEditor.room?.id}`, {
-      method: roomEditor.mode === "create" ? "POST" : "PATCH",
-      headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name, roomType: roomEditor.roomType }),
-    });
-    if (response.ok) {
-      setRoomEditor(null);
-      await load();
-    } else setError(true);
+      const response = await browserRequest(roomEditor.mode === "create" ? "/api/home/rooms" : `/api/home/rooms/${roomEditor.room?.id}`, {
+        method: roomEditor.mode === "create" ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ name, roomType: roomEditor.roomType }),
+      });
+      if (response.ok) {
+        setRoomEditor(null);
+        await load();
+      } else setError(true);
 
     } catch { setError(true); }
     finally { setPending(false); }
@@ -210,11 +210,11 @@ export default function DevicesPage() {
     if (!deleteRoom) return;
     setPending(true);
     try {
-    const response = await browserRequest(`/api/home/rooms/${deleteRoom.id}`, {
-      method: "DELETE",
-      headers: csrfHeader(),
-    });
-    if (response.ok) { setDeleteRoom(null); setRoomEditor(null); await load(); } else setError(true);
+      const response = await browserRequest(`/api/home/rooms/${deleteRoom.id}`, {
+        method: "DELETE",
+        headers: csrfHeader(),
+      });
+      if (response.ok) { setDeleteRoom(null); setRoomEditor(null); await load(); } else setError(true);
 
     } catch { setError(true); }
     finally { setPending(false); }
@@ -223,12 +223,12 @@ export default function DevicesPage() {
   async function assign(connectionId: string, roomId: string | null) {
     setPending(true);
     try {
-    const response = await browserRequest(`/api/home/connections/${connectionId}/room`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ roomId }),
-    });
-    if (response.ok) await load(); else setError(true);
+      const response = await browserRequest(`/api/home/connections/${connectionId}/room`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ roomId }),
+      });
+      if (response.ok) await load(); else setError(true);
 
     } catch { setError(true); }
     finally { setPending(false); }
@@ -239,16 +239,16 @@ export default function DevicesPage() {
     if (!name) return;
     setPending(true); setError(false);
     try {
-    const response = await browserRequest(`/api/home/connections/${device.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name, deviceClass: deviceClasses[device.id] ?? device.deviceClass }),
-    });
-    if (response.ok) {
-      setDeviceNames((current) => { const next = { ...current }; delete next[device.id]; return next; });
-      setDeviceClasses((current) => { const next = { ...current }; delete next[device.id]; return next; });
-      await load();
-    } else setError(true);
+      const response = await browserRequest(`/api/home/connections/${device.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ name, deviceClass: deviceClasses[device.id] ?? device.deviceClass }),
+      });
+      if (response.ok) {
+        setDeviceNames((current) => { const next = { ...current }; delete next[device.id]; return next; });
+        setDeviceClasses((current) => { const next = { ...current }; delete next[device.id]; return next; });
+        await load();
+      } else setError(true);
 
     } catch { setError(true); }
     finally { setPending(false); }
@@ -258,8 +258,8 @@ export default function DevicesPage() {
     if (!removeDevice) return;
     setPending(true); setError(false);
     try {
-    const response = await browserRequest(`/api/home/connections/${removeDevice.id}`, { method: "DELETE", headers: csrfHeader() });
-    if (response.ok) { setRemoveDevice(null); setSelected(null); await load(); } else setError(true);
+      const response = await browserRequest(`/api/home/connections/${removeDevice.id}`, { method: "DELETE", headers: csrfHeader() });
+      if (response.ok) { setRemoveDevice(null); setSelected(null); await load(); } else setError(true);
 
     } catch { setError(true); }
     finally { setPending(false); }

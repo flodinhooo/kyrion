@@ -196,7 +196,7 @@ try {
     await page.locator(".home-favorites [role=status]").waitFor();
   });
   await check("no unhandled browser exceptions", async () => assert.deepEqual(errors, []));
-  await writeFile(path.join(artifacts, "results.json"), JSON.stringify({ results, unexpectedFixtureRequests: [...unexpected], errors }, null, 2));
+  await writeFile(path.join(artifacts, process.env.REVIEW_QUICK ? "results-quick.json" : "results.json"), JSON.stringify({ results, unexpectedFixtureRequests: [...unexpected], errors }, null, 2));
   if (results.some((result) => !result.passed)) process.exitCode = 1;
 } finally {
   await browser?.close(); server.kill(); core.closeAllConnections(); core.close();

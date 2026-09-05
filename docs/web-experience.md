@@ -97,6 +97,20 @@ confirmation actions. Focus indicators also cover portalled navigation and
 dialogs, plus native disclosure summaries. Visual and assistive-technology
 verification remains a separate manual check.
 
+## Authentication and failure recovery
+
+The September review also localized sign-in/setup, added bounded authentication
+requests and distinguished Core unavailability (503) from expired sessions
+(401). An open workspace checks session validity on focus and once per minute;
+expiry offers a sign-in link without replaying pending actions. Failed room
+writes remain visible inside the dialog, and device-management requests restore
+their controls after network failures. Preferences and missing browser speech
+synthesis cannot prevent the main workspace from loading. Home and Devices
+bound requests without automatically retrying commands with unknown outcomes.
+
+See [the pre-image review](status/2026-09-05-web-pre-image-review.md) for
+verification and the boundary between local review and the later Pi update.
+
 ## Follow-up
 
 Synchronized favorites, a platform-wide issue overview and live home-state

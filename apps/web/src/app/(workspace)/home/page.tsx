@@ -95,14 +95,14 @@ export default function HomePage() {
     if (!roomEditor?.name.trim() || savingRoom) return;
     setSavingRoom(true); setError(false);
     try {
-    const response = await browserRequest("/api/home/rooms", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...csrfHeader() },
-      body: JSON.stringify({ name: roomEditor.name.trim(), roomType: roomEditor.roomType }),
-    });
-    if (!response.ok) { setError(true); return; }
-    setRoomEditor(null);
-    await load();
+      const response = await browserRequest("/api/home/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...csrfHeader() },
+        body: JSON.stringify({ name: roomEditor.name.trim(), roomType: roomEditor.roomType }),
+      });
+      if (!response.ok) { setError(true); return; }
+      setRoomEditor(null);
+      await load();
     } catch { setError(true); }
     finally { setSavingRoom(false); }
   }
