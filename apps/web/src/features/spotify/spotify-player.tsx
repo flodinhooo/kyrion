@@ -19,7 +19,7 @@ export function SpotifyPlayer() {
   const blocked = (action: string) => playback?.disallowed.includes(action) ?? false;
   return <div className="lounge-player" aria-busy={pending}>
     <div className="lounge-source-heading">
-      <span className="lounge-source-name"><span className="lounge-service-mark spotify-mark"><Music2 size={22} /></span>Spotify</span>
+      <span className="lounge-source-name"><Image src="/branding/spotify/icon-green.svg" alt="" width={38} height={36} style={{ objectFit: "contain" }} />Spotify</span>
       <span className="lounge-badge">{status?.connected ? t.loungeConnected : t.loungeConnectAccount}</span>
     </div>
     {error && <div className="lounge-error" role="alert"><p>{t.spotifyError}</p><button disabled={pending} onClick={() => void refresh()}><RefreshCw size={16} />{t.loungeRetry}</button></div>}

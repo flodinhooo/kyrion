@@ -11,5 +11,6 @@ foreach ($line in Get-Content 'infrastructure\.env') {
     }
 }
 $env:KYRION_CORE_ADDRESS = '0.0.0.0'
+$env:KYRION_SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/api/integrations/spotify/callback'
 Set-Location 'services\core'
 & .\gradlew.bat bootRun
