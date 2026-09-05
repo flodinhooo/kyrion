@@ -183,6 +183,12 @@ button, textarea { font: inherit; }
 .history-confirm button { min-height: 27px; padding: 0 7px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: 10px; font-weight: 700; }
 .history-confirm button.danger { border-color: color-mix(in srgb, var(--destructive) 45%, var(--border)); color: var(--destructive); }
 .sidebar-footer { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* Keep navigation and dialog actions reachable on short and narrow screens. */
+.skip-navigation { position: fixed; z-index: 200; top: 12px; left: 12px; padding: 12px 18px; border: 2px solid var(--primary); border-radius: 10px; background: var(--surface-solid); color: var(--text); transform: translateY(calc(-100% - 24px)); }
+.skip-navigation:focus { transform: translateY(0); }
+.sidebar { overflow-y: auto; overscroll-behavior: contain; }
+.sidebar > :is(.brand, nav, .sidebar-footer), .mobile-sheet > :is(.brand, nav, .sidebar-footer) { flex-shrink: 0; }
 .connection { display: flex; align-items: center; gap: 8px; margin: 12px; color: var(--text-muted); font-size: 11px; }
 .status-dot { width: 7px; height: 7px; flex: none; border-radius: 999px; transition: background .2s ease, box-shadow .2s ease; }
 .status-dot.status-ready { background: #4bd69a; box-shadow: 0 0 10px rgba(75, 214, 154, .7); }
@@ -1144,3 +1150,22 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .catalog-status-error, .catalog-status-server_configuration { color: var(--destructive); }
 .catalog-detail { display: block; margin: 0 0 12px; color: var(--text-muted); font-size: .8rem; line-height: 1.5; }
 @media (max-width: 760px) { .plugins-header { flex-direction: column; } }
+
+/* Portal content needs the same focus treatment as the application shell. */
+:is(.app-shell, .mobile-sheet, .device-dialog, .confirm-dialog-content) :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.topbar { position: sticky; top: 0; z-index: 20; gap: 12px; }
+.topbar-title { min-width: 0; flex: 1; }
+.topbar-title > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-actions { flex-shrink: 0; }
+.mobile-sheet { max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; padding-top: 64px !important; padding-bottom: max(20px, env(safe-area-inset-bottom)) !important; }
+.confirm-dialog-content, .device-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.confirm-dialog-actions { flex-wrap: wrap; }
+@media (max-width: 860px) {
+  .topbar .icon-button, .topbar .language-button, .topbar .profile-button, .mobile-sheet-close { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+}
+@media (max-width: 480px) {
+  .topbar { padding-inline: 12px; gap: 8px; }
+  .topbar-actions { gap: 6px; }
+  .confirm-dialog-content, .device-dialog { padding: 20px; }
+  .confirm-dialog-actions button { flex: 1; min-height: 44px; }
+}
