@@ -19,7 +19,7 @@ let rooms = [room];
 let mode = "ready";
 const requests = [];
 const unexpected = new Set();
-const device = { id: "22222222-2222-4222-8222-222222222222", provider: "zigbee", deviceClass: "light", displayName: "Leselampe", hardwareName: "Review light", room, capabilities: [{ id: "light.power" }], availability: "online", observedAt: date, state: { on: false, brightness: null, hue: null, saturation: null, colorTemperature: null, occupancy: null, battery: null, illuminance: null, action: null, illumination: null } };
+const device = { id: "22222222-2222-4222-8222-222222222222", provider: "zigbee", deviceClass: "light", displayName: "Leselampe", hardwareName: "Review light", room, capabilities: [{ id: "power.set" }], availability: "online", observedAt: date, state: { on: false, brightness: null, hue: null, saturation: null, colorTemperature: null, occupancy: null, battery: null, illuminance: null, action: null, illumination: null } };
 const core = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   requests.push(`${req.method} ${url.pathname}`);

@@ -1,5 +1,7 @@
 export const messages = {
   de: {
+    homeWriteFailed: "Die Anfrage wurde nicht bestätigt. Prüfe den aktuellen Zustand, bevor du sie erneut ausführst.",
+    sessionExpired: "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
     authSetupEyebrow: "Einmalige Einrichtung",
     authWelcome: "Willkommen zurück",
     authSetupTitle: "Dein lokales Kyrion",
@@ -691,6 +693,8 @@ export const messages = {
     memoryUsed: "Velora erhielt {count} passende bestätigte Erinnerung(en)",
   },
   en: {
+    homeWriteFailed: "The request was not confirmed. Check the current state before submitting it again.",
+    sessionExpired: "Your session has expired. Sign in again to continue.",
     authSetupEyebrow: "Initial setup",
     authWelcome: "Welcome back",
     authSetupTitle: "Your local Kyrion",

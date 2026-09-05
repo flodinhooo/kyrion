@@ -190,6 +190,8 @@ button, textarea { font: inherit; }
 .auth-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .auth-heading .language-button { min-width: 44px; min-height: 44px; }
 .auth-retry { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--primary); color: var(--primary-foreground); cursor: pointer; }
+.session-status { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px var(--page-padding); padding: 16px; border: 1px solid var(--destructive); border-radius: 12px; background: var(--surface-solid); }
+.session-status a { text-decoration: underline; font-weight: 650; }
 .auth-stage :is(button, input):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .sidebar { overflow-y: auto; overscroll-behavior: contain; }
 .sidebar > :is(.brand, nav, .sidebar-footer), .mobile-sheet > :is(.brand, nav, .sidebar-footer) { flex-shrink: 0; }
