@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-data class DiscoveredNetworkDevice(val provider: String, val name: String, val host: String, val port: Int)
+data class DiscoveredNetworkDevice(val provider: String, val name: String, val host: String, val port: Int, val connected: Boolean = false)
 
 fun privateNetworkIpv4(value: String): String {
     if (!value.matches(Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"))) throw IntegrationInvalidHostException()

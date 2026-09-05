@@ -5,6 +5,30 @@ import org.junit.jupiter.api.Test
 
 class NetworkDiscoveryTest {
     @Test
+    fun `connection badges belong only to the requesting owner and matching integration`() {
+        val owner = java.util.UUID.randomUUID()
+        val other = java.util.UUID.randomUUID()
+        val now = java.time.Instant.now()
+        fun connection(user: java.util.UUID, provider: String, host: String) = IntegrationConnection(
+            java.util.UUID.randomUUID(), user, provider, "Private name", host,
+            byteArrayOf(), byteArrayOf(), 1, now, now,
+        )
+        val devices = listOf(
+            DiscoveredNetworkDevice("nanoleaf", "Panels", "192.168.1.2", 16021),
+            DiscoveredNetworkDevice("shelly", "Sensor", "192.168.1.3", 80),
+            DiscoveredNetworkDevice("network", "Host", "192.168.1.4", 80),
+            DiscoveredNetworkDevice("shelly", "Other sensor", "192.168.1.2", 80),
+        )
+        val result = markConnectedNetworkDevices(owner, devices, listOf(
+            connection(owner, "nanoleaf", "192.168.1.2"),
+            connection(other, "shelly", "192.168.1.3"),
+            connection(owner, "shelly", "192.168.1.4"),
+        ))
+        assertEquals(listOf(true, false, true, false), result.map { it.connected })
+        assertEquals(devices.map { it.name }, result.map { it.name })
+    }
+
+    @Test
     fun `scan uses the actual local subnet excluding network and broadcast`() {
         assertEquals(listOf("192.168.1.5", "192.168.1.6"), NetworkDiscoveryRules.hosts("192.168.1.6", 30))
         val hosts = NetworkDiscoveryRules.hosts("192.168.2.30", 23)

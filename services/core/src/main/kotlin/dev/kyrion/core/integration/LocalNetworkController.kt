@@ -18,11 +18,16 @@ data class ConnectShellyRequest(
 
 @RestController
 @RequestMapping("/v1/integrations")
-class LocalNetworkController(private val discovery: LocalNetworkDiscovery, private val shelly: ShellyIntegrationService) {
+class LocalNetworkController(
+    private val discovery: LocalNetworkDiscovery,
+    private val shelly: ShellyIntegrationService,
+    private val connections: IntegrationConnectionRepository,
+) {
     @PostMapping("/network/discover")
     fun discover(request: HttpServletRequest): List<DiscoveredNetworkDevice> {
-        request.ownerId()
-        return try { discovery.discover() } catch (_: java.io.IOException) { throw ShellyException("NETWORK_DISCOVERY_UNAVAILABLE") }
+        val ownerId = request.ownerId()
+        val devices = try { discovery.discover() } catch (_: java.io.IOException) { throw ShellyException("NETWORK_DISCOVERY_UNAVAILABLE") }
+        return markConnectedNetworkDevices(ownerId, devices, connections.findAll(ownerId))
     }
 
     @PostMapping("/shelly/connections")
@@ -32,6 +37,13 @@ class LocalNetworkController(private val discovery: LocalNetworkDiscovery, priva
 
     private fun HttpServletRequest.ownerId() =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw IntegrationUnauthenticatedException()
+}
+
+internal fun markConnectedNetworkDevices(ownerId: UUID, devices: List<DiscoveredNetworkDevice>, connections: List<IntegrationConnection>): List<DiscoveredNetworkDevice> {
+    val owned = connections.filter { it.ownerId == ownerId && it.provider in setOf("nanoleaf", "shelly") }
+    return devices.map { device -> device.copy(connected = owned.any {
+        it.endpointHost == device.host && (device.provider == "network" || it.provider == device.provider)
+    }) }
 }
 
 @RestControllerAdvice
