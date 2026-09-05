@@ -15,6 +15,9 @@ import java.util.Base64
 data class SpotifyTokens(val accessToken: String, val refreshToken: String, val expiresIn: Long, val scope: String)
 data class SpotifyProfile(val id: String, val displayName: String)
 data class SpotifyDevice(val id: String, val name: String, val type: String, val active: Boolean, val restricted: Boolean, val volumePercent: Int?, val supportsVolume: Boolean)
+data class SpotifyPlayback(val playing: Boolean, val title: String?, val artist: String?, val imageUrl: String?, val trackUrl: String?, val progressMs: Int, val durationMs: Int, val deviceId: String?, val disallowed: List<String>)
+enum class SpotifyPlaybackAction { RESUME, PAUSE, NEXT, PREVIOUS, VOLUME }
+data class SpotifyPlaybackCommand(val action: SpotifyPlaybackAction, val deviceId: String, val volumePercent: Int? = null)
 
 interface SpotifyGateway {
     fun exchangeCode(code: String, redirectUri: String): SpotifyTokens
@@ -22,6 +25,8 @@ interface SpotifyGateway {
     fun profile(accessToken: String): SpotifyProfile
     fun devices(accessToken: String): List<SpotifyDevice>
     fun transfer(accessToken: String, deviceId: String, play: Boolean)
+    fun playback(accessToken: String): SpotifyPlayback
+    fun control(accessToken: String, command: SpotifyPlaybackCommand)
 }
 
 @Component
@@ -55,6 +60,39 @@ class SpotifyClient(
 
     override fun transfer(accessToken: String, deviceId: String, play: Boolean) {
         api("/v1/me/player", "PUT", accessToken, mapper.writeValueAsString(mapOf("device_ids" to listOf(deviceId), "play" to play)))
+    }
+
+    override fun playback(accessToken: String): SpotifyPlayback {
+        val root = api("/v1/me/player", "GET", accessToken)
+        val item = root.path("item")
+        val actions = root.path("actions")
+        // Spotify has returned restrictions both directly and nested under disallows.
+        val restrictions = actions.path("disallows").takeIf { it.isObject } ?: actions
+        fun safeUrl(value: String, host: String) = value.takeIf {
+            runCatching { URI(it).let { uri -> uri.scheme == "https" && uri.host == host && uri.userInfo == null } }.getOrDefault(false)
+        }
+        return SpotifyPlayback(
+            root.path("is_playing").asBoolean(), item.path("name").asText().takeIf(String::isNotBlank),
+            item.path("artists").map { it.path("name").asText() }.filter(String::isNotBlank).joinToString(", ").ifBlank { item.path("show").path("name").asText() }.takeIf(String::isNotBlank),
+            safeUrl((item.path("album").path("images").takeIf { it.isArray } ?: item.path("images")).path(0).path("url").asText(), "i.scdn.co"),
+            safeUrl(item.path("external_urls").path("spotify").asText(), "open.spotify.com"),
+            root.path("progress_ms").asInt().coerceAtLeast(0), item.path("duration_ms").asInt().coerceAtLeast(0),
+            root.path("device").path("id").asText().takeIf(String::isNotBlank),
+            restrictions.properties().filter { it.value.asBoolean() }.map { it.key },
+        )
+    }
+
+    override fun control(accessToken: String, command: SpotifyPlaybackCommand) {
+        val endpoint = when (command.action) {
+            SpotifyPlaybackAction.RESUME -> "play"
+            SpotifyPlaybackAction.PAUSE -> "pause"
+            SpotifyPlaybackAction.NEXT -> "next"
+            SpotifyPlaybackAction.PREVIOUS -> "previous"
+            SpotifyPlaybackAction.VOLUME -> "volume"
+        }
+        val volume = if (command.action == SpotifyPlaybackAction.VOLUME) "&volume_percent=${command.volumePercent}" else ""
+        val method = if (command.action in setOf(SpotifyPlaybackAction.NEXT, SpotifyPlaybackAction.PREVIOUS)) "POST" else "PUT"
+        api("/v1/me/player/$endpoint?device_id=${encode(command.deviceId)}$volume", method, accessToken)
     }
 
     private fun form(values: Map<String, String>): HttpResponse<String> {

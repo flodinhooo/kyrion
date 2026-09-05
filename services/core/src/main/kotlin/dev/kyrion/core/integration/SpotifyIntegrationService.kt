@@ -68,6 +68,27 @@ class SpotifyIntegrationService(
 
     fun devices(ownerId: UUID): List<SpotifyDevice> = withAccessToken(ownerId, gateway::devices)
 
+    fun playback(ownerId: UUID): SpotifyPlayback = withAccessToken(ownerId, gateway::playback)
+
+    fun control(ownerId: UUID, command: SpotifyPlaybackCommand) {
+        if (command.deviceId.isBlank() || command.deviceId.length > 200 ||
+            (command.action == SpotifyPlaybackAction.VOLUME && command.volumePercent !in 0..100) ||
+            (command.action != SpotifyPlaybackAction.VOLUME && command.volumePercent != null)) throw SpotifyInvalidRequestException()
+        val correlationId = UUID.randomUUID()
+        try {
+            withAccessToken(ownerId) { token ->
+                val device = gateway.devices(token).firstOrNull { it.id == command.deviceId }
+                    ?: throw SpotifyInvalidRequestException()
+                if (device.restricted || (command.action == SpotifyPlaybackAction.VOLUME && !device.supportsVolume)) throw SpotifyInvalidRequestException()
+                gateway.control(token, command)
+            }
+        } catch (error: RuntimeException) {
+            activity.record(ActivityCategory.CAPABILITY, "media.playback.${command.action.name.lowercase()}", ActivityStatus.FAILED, ActivityActorType.USER, "spotify", "SPOTIFY_PLAYBACK_FAILED", ownerId.toString(), ownerId = ownerId, correlationId = correlationId)
+            throw error
+        }
+        activity.record(ActivityCategory.CAPABILITY, "media.playback.${command.action.name.lowercase()}", ActivityStatus.SUCCEEDED, ActivityActorType.USER, "spotify", "SPOTIFY_PLAYBACK_CONTROLLED", ownerId.toString(), ownerId = ownerId, correlationId = correlationId)
+    }
+
     fun transfer(ownerId: UUID, deviceId: String, play: Boolean) {
         if (deviceId.isBlank() || deviceId.length > 200) throw SpotifyInvalidRequestException()
         withAccessToken(ownerId) { gateway.transfer(it, deviceId, play) }

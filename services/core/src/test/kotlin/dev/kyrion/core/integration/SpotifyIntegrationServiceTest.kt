@@ -17,6 +17,51 @@ import java.util.UUID
 class SpotifyIntegrationServiceTest {
     @TempDir lateinit var temp: Path
     private val ownerId = UUID.randomUUID()
+    private val events = mutableListOf<ActivityEvent>()
+
+    @Test
+    fun `playback commands are owner scoped validated and audited`() {
+        val gateway = FakeSpotifyGateway()
+        val service = service(SpotifyConnections(), gateway, "client-id", "https://kyrion-node.local/api/integrations/spotify/callback")
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        assertFalse(service.playback(ownerId).playing)
+        assertThrows<IntegrationNotFoundException> { service.control(UUID.randomUUID(), SpotifyPlaybackCommand(SpotifyPlaybackAction.RESUME, "device-1")) }
+        assertNull(gateway.command)
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.VOLUME, "device-1", 101)) }
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.VOLUME, "device-1")) }
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.PAUSE, "device-1", 50)) }
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.RESUME, "missing")) }
+        service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.VOLUME, "device-1", 25))
+        assertEquals(25, gateway.command?.volumePercent)
+        assertEquals("SPOTIFY_PLAYBACK_CONTROLLED", events.last().summaryCode)
+        assertEquals(ownerId, events.last().ownerId)
+        assertEquals(ActivityStatus.SUCCEEDED, events.last().status)
+    }
+
+    @Test
+    fun `restricted devices and unsupported volume never reach player control`() {
+        val gateway = FakeSpotifyGateway()
+        val service = service(SpotifyConnections(), gateway, "client-id", "https://kyrion-node.local/api/integrations/spotify/callback")
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        gateway.restricted = true
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.RESUME, "device-1")) }
+        gateway.restricted = false
+        gateway.supportsVolume = false
+        assertThrows<SpotifyInvalidRequestException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.VOLUME, "device-1", 30)) }
+        assertNull(gateway.command)
+        assertEquals(ActivityStatus.FAILED, events.last().status)
+    }
+
+    @Test
+    fun `provider failure is recorded without a success event`() {
+        val gateway = FakeSpotifyGateway()
+        val service = service(SpotifyConnections(), gateway, "client-id", "https://kyrion-node.local/api/integrations/spotify/callback")
+        service.complete(ownerId, "code", query(service.authorize(ownerId).authorizationUrl, "state"))
+        gateway.failControl = true
+        assertThrows<SpotifyUnavailableException> { service.control(ownerId, SpotifyPlaybackCommand(SpotifyPlaybackAction.NEXT, "device-1")) }
+        assertEquals("SPOTIFY_PLAYBACK_FAILED", events.last().summaryCode)
+        assertEquals(ActivityStatus.FAILED, events.last().status)
+    }
 
     @Test
     fun `oauth completion stores encrypted tokens and exposes devices without secrets`() {
@@ -55,7 +100,7 @@ class SpotifyIntegrationServiceTest {
     private fun service(repository: SpotifyConnections, gateway: FakeSpotifyGateway, clientId: String, redirectUri: String) =
         SpotifyIntegrationService(repository, CredentialCipher(temp.resolve("credential.key").toString()), gateway,
             ActivityService(object : ActivityEventRepository {
-                override fun append(event: ActivityEvent) = event
+                override fun append(event: ActivityEvent) = event.also(events::add)
                 override fun findRecent(limit: Int) = emptyList<ActivityEvent>()
             }), clientId, if (clientId.isBlank()) "" else "client-secret", redirectUri,
             Clock.fixed(Instant.parse("2026-09-04T08:00:00Z"), ZoneOffset.UTC))
@@ -79,10 +124,19 @@ private class SpotifyConnections : IntegrationConnectionRepository {
 }
 
 private class FakeSpotifyGateway : SpotifyGateway {
+    var command: SpotifyPlaybackCommand? = null
+    var restricted = false
+    var supportsVolume = true
+    var failControl = false
     var exchangedCode: String? = null
     override fun exchangeCode(code: String, redirectUri: String) = SpotifyTokens("access-secret", "refresh-secret", 3600, "scope").also { exchangedCode = code }
     override fun refresh(refreshToken: String) = SpotifyTokens("access-refreshed", refreshToken, 3600, "scope")
     override fun profile(accessToken: String) = SpotifyProfile("spotify-user", "Flo")
-    override fun devices(accessToken: String) = listOf(SpotifyDevice("device-1", "Kyrion Wohnzimmer", "Speaker", false, false, 50, true))
+    override fun devices(accessToken: String) = listOf(SpotifyDevice("device-1", "Kyrion Wohnzimmer", "Speaker", false, restricted, 50, supportsVolume))
     override fun transfer(accessToken: String, deviceId: String, play: Boolean) = Unit
+    override fun playback(accessToken: String) = SpotifyPlayback(false, null, null, null, null, 0, 0, null, emptyList())
+    override fun control(accessToken: String, command: SpotifyPlaybackCommand) {
+        if (failControl) throw SpotifyUnavailableException()
+        this.command = command
+    }
 }
