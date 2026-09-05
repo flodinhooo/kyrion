@@ -28,7 +28,7 @@ export function PlaceholderView({ view }: { view: PlaceholderViewName }) {
         <div className="feature-list">
           {featureKeys.map((key) => <div key={key}><span className="status-dot" />{t[key]}</div>)}
         </div>
-        <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
+        <Link className="placeholder-action" href="/devices"><Icons.power />{t.homeOpenDeviceControls}</Link>
       </div>
     </section>
   );
