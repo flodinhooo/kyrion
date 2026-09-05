@@ -52,3 +52,13 @@ and [resume API](https://developer.spotify.com/documentation/web-api/reference/s
 Provider acceptance of a command is followed by a fresh state read; it is not
 proof that physical speakers emitted audio. Live hardware validation remains
 separate from automated contract and service tests.
+
+## Verification (2026-09-05)
+
+- Web: TypeScript, ESLint, production build and 37 tests across 15 test files.
+- Core: seven Spotify service/boundary tests and the executable application build.
+- Headless Chrome against an isolated mock Core: desktop and 390px layouts,
+  pause/resume, output transfer preserving playback intent, volume, source
+  carousel, media tabs, provider errors, disconnected setup and runtime errors.
+- Real phone-to-Pi audio is owner-reported; the new Web-to-Pi control path has
+  not yet been physically validated or deployed as part of this change.
