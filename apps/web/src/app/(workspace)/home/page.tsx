@@ -1,5 +1,7 @@
 "use client";
 
+import { browserRequest } from "@/lib/browser-request";
+
 import { DragEvent, FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Box, House, LampDesk, Plus } from "lucide-react";
@@ -34,12 +36,13 @@ export default function HomePage() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [savingRoom, setSavingRoom] = useState(false);
 
   const load = useCallback(async () => {
     const [roomsResponse, devicesResponse, connectionsResponse] = await Promise.all([
-      fetch("/api/home/rooms", { cache: "no-store" }),
-      fetch("/api/devices", { cache: "no-store" }),
-      fetch("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
+      browserRequest("/api/home/rooms", { cache: "no-store" }),
+      browserRequest("/api/devices", { cache: "no-store" }),
+      browserRequest("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
     ]);
     const roomValue: unknown = await roomsResponse.json();
     const deviceValue: unknown = await devicesResponse.json();
@@ -71,7 +74,7 @@ export default function HomePage() {
     const room = rooms.find((item) => item.id === roomId);
     if (!room) return;
     setDevices((current) => current.map((device) => device.id === deviceId ? { ...device, room: { id: room.id, name: room.name, roomType: room.roomType } } : device));
-    const response = await fetch(`/api/home/connections/${deviceId}/room`, {
+    const response = await browserRequest(`/api/home/connections/${deviceId}/room`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ roomId }),
@@ -89,8 +92,10 @@ export default function HomePage() {
 
   async function createRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!roomEditor?.name.trim()) return;
-    const response = await fetch("/api/home/rooms", {
+    if (!roomEditor?.name.trim() || savingRoom) return;
+    setSavingRoom(true); setError(false);
+    try {
+    const response = await browserRequest("/api/home/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ name: roomEditor.name.trim(), roomType: roomEditor.roomType }),
@@ -98,6 +103,8 @@ export default function HomePage() {
     if (!response.ok) { setError(true); return; }
     setRoomEditor(null);
     await load();
+    } catch { setError(true); }
+    finally { setSavingRoom(false); }
   }
 
   function openDevice(device: RuntimeDevice) {
@@ -150,9 +157,10 @@ export default function HomePage() {
       <div className="room-dialog-device-list">{selectedDevices.length === 0 ? <p>{t.homeNoDevices}</p> : selectedDevices.map((device) => <button type="button" onClick={() => openDevice(device)} key={device.id}><LampDesk aria-hidden="true" /><span><strong>{device.displayName}</strong><small>{device.hardwareName}</small><small className={`device-status ${device.availability}`}>{device.availability === "online" ? t.homeOnline : device.availability === "offline" ? t.homeOffline : device.availability === "degraded" ? t.homeDegraded : t.homeUnknown}</small></span><span>{t.homeOpenControls}<ArrowRight aria-hidden="true" /></span></button>)}</div>
       <Dialog.Close asChild><button className="dialog-close">{t.homeClose}</button></Dialog.Close>
     </Dialog.Content></Dialog.Portal></Dialog.Root>
-    <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open) setRoomEditor(null); }}><Dialog.Portal><Dialog.Overlay className="confirm-dialog-overlay" /><Dialog.Content className="confirm-dialog-content room-dialog">
+    <Dialog.Root open={roomEditor !== null} onOpenChange={(open) => { if (!open && !savingRoom) setRoomEditor(null); }}><Dialog.Portal><Dialog.Overlay className="confirm-dialog-overlay" /><Dialog.Content className="confirm-dialog-content room-dialog">
       <Dialog.Title>{t.homeCreateRoom}</Dialog.Title><Dialog.Description>{t.homeCreateRoomDescription}</Dialog.Description>
-      {roomEditor && <form onSubmit={createRoom}><label>{t.homeRoomName}<input autoFocus required maxLength={120} value={roomEditor.name} onChange={(event) => setRoomEditor((current) => current ? { ...current, name: event.target.value } : current)} /></label><label>{t.homeRoomType}<select value={roomEditor.roomType} onChange={(event) => setRoomEditor((current) => current ? { ...current, roomType: event.target.value as RoomType } : current)}>{roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}</select></label><div className="room-dialog-actions"><button type="submit" disabled={!roomEditor.name.trim()}><Plus aria-hidden="true" />{t.homeCreateRoom}</button></div></form>}
+      {error && <p role="alert">{t.homeWriteFailed}</p>}
+      {roomEditor && <form onSubmit={createRoom}><label>{t.homeRoomName}<input autoFocus required maxLength={120} value={roomEditor.name} onChange={(event) => setRoomEditor((current) => current ? { ...current, name: event.target.value } : current)} /></label><label>{t.homeRoomType}<select value={roomEditor.roomType} onChange={(event) => setRoomEditor((current) => current ? { ...current, roomType: event.target.value as RoomType } : current)}>{roomTypes.map((type) => <option value={type} key={type}>{t.homeRoomTypes[type]}</option>)}</select></label><div className="room-dialog-actions"><Dialog.Close asChild><button type="button" disabled={savingRoom}>{t.cancel}</button></Dialog.Close><button type="submit" disabled={savingRoom || !roomEditor.name.trim()}><Plus aria-hidden="true" />{t.homeCreateRoom}</button></div></form>}
     </Dialog.Content></Dialog.Portal></Dialog.Root>
     <DeviceControlDialog connection={selectedDevice?.provider === "nanoleaf" ? connections.find((item) => item.id === selectedDevice.id) ?? null : null} open={selectedDevice?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelectedDevice(null); }} />
     <GatewayLightControlDialog device={selectedDevice?.provider === "zigbee" || selectedDevice?.provider === "bluetooth" ? selectedDevice : null} open={selectedDevice?.provider === "zigbee" || selectedDevice?.provider === "bluetooth"} onOpenChange={(open) => { if (!open) setSelectedDevice(null); }} onCommandSucceeded={load} />

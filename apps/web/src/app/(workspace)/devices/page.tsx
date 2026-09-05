@@ -1,5 +1,7 @@
 "use client";
 
+import { browserRequest } from "@/lib/browser-request";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Cpu, LampDesk, Pencil, Plus, RadioTower, ScanLine, Trash2 } from "lucide-react";
@@ -50,9 +52,9 @@ export default function DevicesPage() {
 
   const load = useCallback(async () => {
     const [roomResponse, connectionResponse, deviceResponse] = await Promise.all([
-      fetch("/api/home/rooms", { cache: "no-store" }),
-      fetch("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
-      fetch("/api/devices", { cache: "no-store" }),
+      browserRequest("/api/home/rooms", { cache: "no-store" }),
+      browserRequest("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
+      browserRequest("/api/devices", { cache: "no-store" }),
     ]);
     const roomValue: unknown = await roomResponse.json().catch(() => null);
     const connectionValue: unknown = await connectionResponse.json().catch(() => null);
@@ -88,7 +90,7 @@ export default function DevicesPage() {
   const refreshNanoleafStates = useCallback(async () => {
     const entries = await Promise.all(connections.slice(0, 20).map(async (connection) => {
       try {
-        const response = await fetch(`/api/integrations/nanoleaf/connections/${connection.id}/state`, { cache: "no-store" });
+        const response = await browserRequest(`/api/integrations/nanoleaf/connections/${connection.id}/state`, { cache: "no-store" });
         const value: unknown = await response.json();
         return response.ok && isNanoleafState(value) ? [connection.id, value] as const : null;
       } catch { return null; }
@@ -108,7 +110,7 @@ export default function DevicesPage() {
     if (buttons.length === 0) return;
     let disposed = false;
     void Promise.all(buttons.map(async (button) => {
-      const response = await fetch(`/api/devices/${button.id}/button-bindings`, { cache: "no-store" });
+      const response = await browserRequest(`/api/devices/${button.id}/button-bindings`, { cache: "no-store" });
       const value: unknown = await response.json().catch(() => null);
       return response.ok && isButtonBindingList(value) ? [button.id, value] as const : null;
     })).then((entries) => {
@@ -123,7 +125,7 @@ export default function DevicesPage() {
     let disposed = false;
     const refresh = async () => {
       const entries = await Promise.all(sensors.map(async (sensor) => {
-        const response = await fetch(`/api/devices/${sensor.id}/motion-events`, { cache: "no-store" });
+        const response = await browserRequest(`/api/devices/${sensor.id}/motion-events`, { cache: "no-store" });
         const value: unknown = await response.json().catch(() => null);
         return response.ok && isMotionEventList(value) ? [sensor.id, value] as const : null;
       }));
@@ -151,21 +153,24 @@ export default function DevicesPage() {
 
   async function saveButtonBindings(buttonId: string) {
     setSavingBindings(buttonId); setError(false);
-    const response = await fetch(`/api/devices/${buttonId}/button-bindings`, {
+    try {
+    const response = await browserRequest(`/api/devices/${buttonId}/button-bindings`, {
       method: "PUT", headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ bindings: buttonBindings[buttonId] ?? [] }),
     });
     const value: unknown = await response.json().catch(() => null);
     if (response.ok && isButtonBindingList(value)) setButtonBindings((current) => ({ ...current, [buttonId]: value }));
     else setError(true);
-    setSavingBindings(null);
+
+    } catch { setError(true); }
+    finally { setSavingBindings(null); }
   }
 
   async function refreshObservations() {
     setPending(true);
     setError(false);
     try {
-      const response = await fetch("/api/devices/observations/refresh", {
+      const response = await browserRequest("/api/devices/observations/refresh", {
         method: "POST",
         headers: csrfHeader(),
       });
@@ -186,7 +191,8 @@ export default function DevicesPage() {
     if (!name) return;
     setPending(true);
     setError(false);
-    const response = await fetch(roomEditor.mode === "create" ? "/api/home/rooms" : `/api/home/rooms/${roomEditor.room?.id}`, {
+    try {
+    const response = await browserRequest(roomEditor.mode === "create" ? "/api/home/rooms" : `/api/home/rooms/${roomEditor.room?.id}`, {
       method: roomEditor.mode === "create" ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ name, roomType: roomEditor.roomType }),
@@ -195,36 +201,45 @@ export default function DevicesPage() {
       setRoomEditor(null);
       await load();
     } else setError(true);
-    setPending(false);
+
+    } catch { setError(true); }
+    finally { setPending(false); }
   }
 
   async function removeRoom() {
     if (!deleteRoom) return;
     setPending(true);
-    const response = await fetch(`/api/home/rooms/${deleteRoom.id}`, {
+    try {
+    const response = await browserRequest(`/api/home/rooms/${deleteRoom.id}`, {
       method: "DELETE",
       headers: csrfHeader(),
     });
     if (response.ok) { setDeleteRoom(null); setRoomEditor(null); await load(); } else setError(true);
-    setPending(false);
+
+    } catch { setError(true); }
+    finally { setPending(false); }
   }
 
   async function assign(connectionId: string, roomId: string | null) {
     setPending(true);
-    const response = await fetch(`/api/home/connections/${connectionId}/room`, {
+    try {
+    const response = await browserRequest(`/api/home/connections/${connectionId}/room`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ roomId }),
     });
     if (response.ok) await load(); else setError(true);
-    setPending(false);
+
+    } catch { setError(true); }
+    finally { setPending(false); }
   }
 
   async function renameDevice(device: RuntimeDevice) {
     const name = deviceNames[device.id]?.trim();
     if (!name) return;
     setPending(true); setError(false);
-    const response = await fetch(`/api/home/connections/${device.id}`, {
+    try {
+    const response = await browserRequest(`/api/home/connections/${device.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({ name, deviceClass: deviceClasses[device.id] ?? device.deviceClass }),
@@ -234,22 +249,27 @@ export default function DevicesPage() {
       setDeviceClasses((current) => { const next = { ...current }; delete next[device.id]; return next; });
       await load();
     } else setError(true);
-    setPending(false);
+
+    } catch { setError(true); }
+    finally { setPending(false); }
   }
 
   async function removeZigbeeDevice() {
     if (!removeDevice) return;
     setPending(true); setError(false);
-    const response = await fetch(`/api/home/connections/${removeDevice.id}`, { method: "DELETE", headers: csrfHeader() });
+    try {
+    const response = await browserRequest(`/api/home/connections/${removeDevice.id}`, { method: "DELETE", headers: csrfHeader() });
     if (response.ok) { setRemoveDevice(null); setSelected(null); await load(); } else setError(true);
-    setPending(false);
+
+    } catch { setError(true); }
+    finally { setPending(false); }
   }
 
   async function quickPower(id: string, on: boolean) {
     const device = devices.find((item) => item.id === id);
     if (device?.provider === "zigbee" || device?.provider === "bluetooth") {
       setCommandStates((current) => ({ ...current, [id]: "pending" }));
-      const response = await fetch("/api/device-commands/async", {
+      const response = await browserRequest("/api/device-commands/async", {
         method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
         body: JSON.stringify({ capability: "power.set", selector: { provider: device.provider, deviceId: id }, arguments: { on } }),
       });
@@ -257,7 +277,7 @@ export default function DevicesPage() {
       if (!response.ok || !isAsyncDeviceCommand(value)) { setCommandStates((current) => ({ ...current, [id]: "failed" })); return; }
       for (let attempt = 0; attempt < 80; attempt += 1) {
         await new Promise((resolve) => window.setTimeout(resolve, 100));
-        const statusResponse = await fetch(`/api/device-commands/${value.commandId}`, { cache: "no-store" });
+        const statusResponse = await browserRequest(`/api/device-commands/${value.commandId}`, { cache: "no-store" });
         const statusValue: unknown = await statusResponse.json().catch(() => null);
         if (!statusResponse.ok || !isDeviceCommandStatus(statusValue) || statusValue.status === "failed") { setCommandStates((current) => ({ ...current, [id]: "failed" })); return; }
         if (statusValue.status === "succeeded") {
@@ -270,7 +290,7 @@ export default function DevicesPage() {
       return;
     }
     setPending(true);
-    const response = await fetch("/api/device-commands", {
+    const response = await browserRequest("/api/device-commands", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...csrfHeader() },
       body: JSON.stringify({
@@ -497,6 +517,7 @@ export default function DevicesPage() {
         <Dialog.Content className="confirm-dialog-content room-dialog">
           <Dialog.Title>{roomEditor?.mode === "create" ? t.homeCreateRoom : t.homeEditRoom}</Dialog.Title>
           <Dialog.Description>{roomEditor?.mode === "create" ? t.homeCreateRoomDescription : t.homeEditRoomDescription}</Dialog.Description>
+          {error && <p role="alert">{t.homeWriteFailed}</p>}
           {roomEditor && <form onSubmit={createRoom}>
             <label>{t.homeRoomName}
               <input autoFocus maxLength={120} required value={roomEditor.name} onChange={(event) => setRoomEditor((current) => current ? { ...current, name: event.target.value } : current)} />
@@ -518,7 +539,7 @@ export default function DevicesPage() {
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-    <ConfirmDialog open={deleteRoom !== null} onOpenChange={(open) => { if (!open) setDeleteRoom(null); }} title={t.homeDeleteRoom} description={t.homeDeleteRoomDescription} confirmLabel={t.homeDeleteRoom} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeRoom()} />
-    <ConfirmDialog open={removeDevice !== null} onOpenChange={(open) => { if (!open) setRemoveDevice(null); }} title={t.homeRemoveDevice} description={t.homeRemoveDeviceDescription} confirmLabel={t.homeRemoveDevice} cancelLabel={t.cancel} pending={pending} onConfirm={() => void removeZigbeeDevice()} />
+    <ConfirmDialog open={deleteRoom !== null} onOpenChange={(open) => { if (!open) setDeleteRoom(null); }} title={t.homeDeleteRoom} description={t.homeDeleteRoomDescription} confirmLabel={t.homeDeleteRoom} cancelLabel={t.cancel} pending={pending} error={error ? t.homeWriteFailed : undefined} onConfirm={() => void removeRoom()} />
+    <ConfirmDialog open={removeDevice !== null} onOpenChange={(open) => { if (!open) setRemoveDevice(null); }} title={t.homeRemoveDevice} description={t.homeRemoveDeviceDescription} confirmLabel={t.homeRemoveDevice} cancelLabel={t.cancel} pending={pending} error={error ? t.homeWriteFailed : undefined} onConfirm={() => void removeZigbeeDevice()} />
   </section>;
 }
