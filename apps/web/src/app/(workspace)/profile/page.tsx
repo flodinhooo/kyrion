@@ -41,7 +41,7 @@ export default function ProfilePage() {
           <MemoryPanel />
         </section>
 
-        <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
+        <Link className="placeholder-action" href="/">{t.home}</Link>
       </div>
     </section>
   );

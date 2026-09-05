@@ -97,7 +97,7 @@ export default function ActivityPage() {
           <span>{t.activityPrinciplePrivate}</span>
           <span>{t.activityPrincipleConfirmed}</span>
         </div>
-        <Link className="placeholder-action" href="/">{t.backToChat}</Link>
+        <Link className="placeholder-action" href="/">{t.home}</Link>
       </div>}
 
       {state === "ready" && events.length > 0 && <ol className="activity-list">

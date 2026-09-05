@@ -54,7 +54,7 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        <Link className="placeholder-action" href="/"><Icons.chat />{t.backToChat}</Link>
+        <Link className="placeholder-action" href="/">{t.home}</Link>
       </div>
     </section>
   );
