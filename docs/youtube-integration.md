@@ -16,6 +16,8 @@ availability, including private or generated mixes, is determined by YouTube.
 
 The Music card uses the same visible YouTube video player. It is not a native
 YouTube Music account integration, audio-only player or personal library.
+The visible card explicitly identifies this as a link player without an account
+connection and states that personal libraries and Premium accounts are not imported.
 Direct links open the original YouTube or YouTube Music destination when an
 embed is unavailable or the owner wants the full service experience.
 

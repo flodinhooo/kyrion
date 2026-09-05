@@ -75,3 +75,7 @@ uses playlist contexts from the latest 50 track plays, sorted newest first and
 deduplicated to six IDs. The additional `user-read-recently-played` scope needs
 explicit Spotify consent. Core fetches metadata and retains no listening history.
 Missing contexts cannot be reconstructed; fewer than six entries are valid.
+
+The owner subsequently prioritized multiple directly playable choices. The shelf
+therefore supplements recent entries with library playlists, deduplicated by ID
+and capped at six. Existing scopes and Core execution checks are retained.

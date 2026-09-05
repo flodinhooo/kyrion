@@ -10,7 +10,7 @@ Core requests `user-read-playback-state`, `user-modify-playback-state` and
 `playlist-read-private`, plus `user-read-recently-played`, encrypts access and refresh tokens with the
 installation credential key and records connection, disconnection and transfer
 events. The Lounge adds current playback metadata, resume/pause, previous/next
-and supported device volume. It also lists up to six recently played playlists
+and supported device volume. It also lists up to six playlists
 and starts a listed playlist on the selected Connect device. Tokens are never
 returned to Web.
 
@@ -22,7 +22,9 @@ albums and invalid IDs are excluded. If playlist details return 403/404, Core
 tries Spotify's public oEmbed endpoint for the same validated playlist ID.
 Only title and an allowlisted cover URL are used, never returned HTML; account
 tokens are not sent to oEmbed. Playlists unavailable through both are omitted; the
-shelf may contain fewer than six entries and never fills gaps with library items.
+shelf fills remaining slots from the first 50 library playlists, deduplicated by
+ID, up to six entries. Recent entries retain priority. The owner requested
+multiple directly playable choices rather than a strict history-only shelf.
 This is a bounded view of Spotify's available history, not a complete lifetime
 playlist history. Listening history is neither persisted nor logged.
 See [Spotify recently played](https://developer.spotify.com/documentation/web-api/reference/get-recently-played).
@@ -32,6 +34,12 @@ and one distinct playlist: the authenticated details endpoint returned 404,
 while Spotify oEmbed returned 200 with title and cover. This caused the previous
 empty shelf. The fallback addresses that observed response without inventing
 additional recently played playlists.
+
+The corrected client was then verified read-only against the existing account:
+one playlist with a non-empty name and cover. Spotify's `pickasso.spotifycdn.com`
+cover host is explicitly allowed in Core and Web; lookalike hosts remain denied.
+No playback commands were issued during diagnosis. Targeted Core tests cover
+404 fallback, missing previews, malformed data and propagation of rate limits.
 
 `GET /v1/integrations/spotify/playlists` returns `reauthorizationRequired` and
 at most six `items` with ID, name, safe cover URL and Spotify link.

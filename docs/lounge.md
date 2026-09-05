@@ -93,3 +93,7 @@ explicit loading, invalid-link feedback, video/music destinations, no autoplay,
 frame removal on source/tab changes, closing, and desktop/390px layouts.
 This does not verify real YouTube media availability, Premium behaviour or a
 deployment to the running installation.
+
+The playlist shelf now fills unused slots with library playlists, up to six
+unique choices. Recently played entries come first. Every entry uses the same
+validated playback command for the selected output device.

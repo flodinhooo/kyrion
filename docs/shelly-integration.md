@@ -18,6 +18,12 @@ and supported connection actions are collapsed initially. Unintegrated devices
 are visible with an explanation when expanded. There is no provider-specific
 manual-address form or permanent setup text on this screen.
 
+Discovery results include an owner-scoped `connected` flag for matching stored
+Nanoleaf/Shelly endpoints. Web labels those results Already connected and links
+to Devices instead of offering pairing again. Another owner's connection never
+affects this flag. Matching currently uses the saved IP and provider, so DHCP
+reconciliation remains a separate limitation.
+
 Discovery uses active, non-loopback, non-virtual, non-point-to-point interfaces.
 The active sweep covers actual subnet prefixes from /20 through /30, with up to
 4096 candidate addresses, 64 workers and a 15-second shared deadline; multicast
