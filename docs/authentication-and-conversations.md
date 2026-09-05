@@ -72,7 +72,7 @@ The browser submits exactly one new user message. Core appends it, creates an
 explicit `started` turn and supplies the owner-scoped, token-bounded context.
 Next.js persists server-observed assistant output before forwarding completion.
 Completed, visibly stopped and failed turns are recorded distinctly. The
-sidebar reads the current owner's recent conversations, and
+chat sidebar reads the current owner's recent conversations, and
 `/conversations/{id}` restores a saved transcript.
 
 Flyway V6 adds opt-in personal memory as a separate owner-scoped store. Explicit
@@ -116,3 +116,13 @@ The Web test suite covers strict CSRF token comparison, explicit German and
 English memory-request recognition and the security policy for session and
 CSRF cookies. Run the suites with `gradlew.bat test` in
 `services/core` and `pnpm test` in `apps/web`.
+
+## Web navigation
+
+The authenticated root (`/`) opens the existing home and room controls; `/home`
+remains available for existing links. Chat starts at `/chat`, and saved
+transcripts retain `/conversations/{id}`. Recent conversations and the new-chat
+action appear only on these chat routes. Conversation history, model discovery
+and AI health polling are not requested by ordinary workspace pages; model
+settings load their catalog when opened. The shared header names the current
+page instead of presenting an AI identity or preview badge globally.
