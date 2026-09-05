@@ -74,7 +74,15 @@ class SpotifyClient(
         api("/v1/me/player", "PUT", accessToken, mapper.writeValueAsString(mapOf("device_ids" to listOf(deviceId), "play" to play)))
     }
 
-    override fun playlists(accessToken: String): List<SpotifyPlaylist> = recentSpotifyPlaylistIds(
+    override fun playlists(accessToken: String): List<SpotifyPlaylist> {
+        val recent = recentPlaylists(accessToken)
+        if (recent.size >= 6) return recent
+        val items = api("/v1/me/playlists?limit=50", "GET", accessToken).path("items")
+        if (!items.isArray) throw SpotifyInvalidResponseException()
+        return spotifyPlaylistSelection(recent, items.take(50).mapNotNull(::playlist))
+    }
+
+    private fun recentPlaylists(accessToken: String): List<SpotifyPlaylist> = recentSpotifyPlaylistIds(
         api("/v1/me/player/recently-played?limit=50", "GET", accessToken),
     ).mapNotNull { playlistId ->
             val item = spotifyPlaylistMetadata(playlistId,
@@ -87,13 +95,17 @@ class SpotifyClient(
                     spotifyApiResponse(mapper, response.statusCode(), response.body(), true)
                 },
             ) ?: return@mapNotNull null
+            playlist(item)
+        }
+
+    private fun playlist(item: com.fasterxml.jackson.databind.JsonNode): SpotifyPlaylist? {
             val id = item.path("id").asText()
             val name = item.path("name").asText()
-            if (!Regex("[A-Za-z0-9]{22}").matches(id) || name.isBlank()) return@mapNotNull null
+            if (!Regex("[A-Za-z0-9]{22}").matches(id) || name.isBlank()) return null
             val image = item.path("images").path(0).path("url").asText().takeIf { url ->
                 runCatching { URI(url).let { it.scheme == "https" && it.host in setOf("i.scdn.co", "mosaic.scdn.co", "pickasso.spotifycdn.com", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com") && it.userInfo == null } }.getOrDefault(false)
             }
-            SpotifyPlaylist(id, name, image, "https://open.spotify.com/playlist/$id")
+            return SpotifyPlaylist(id, name, image, "https://open.spotify.com/playlist/$id")
         }
 
     override fun playPlaylist(accessToken: String, playlistId: String, deviceId: String) {

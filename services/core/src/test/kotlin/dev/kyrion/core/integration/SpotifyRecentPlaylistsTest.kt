@@ -8,6 +8,14 @@ import org.junit.jupiter.api.assertThrows
 class SpotifyRecentPlaylistsTest {
     private val mapper = ObjectMapper()
     @Test
+    fun `fills recent playlists from the library without duplicates and caps at six`() {
+        fun playlist(id: Int) = SpotifyPlaylist(id.toString(), "Playlist $id", null, "https://open.spotify.com/playlist/$id")
+        val library = (1..10).map(::playlist)
+        assertEquals(listOf(3, 2, 1, 4, 5, 6).map(::playlist), spotifyPlaylistSelection(listOf(playlist(3), playlist(2)), library))
+        assertEquals(library.take(6), spotifyPlaylistSelection(emptyList(), library))
+        assertEquals(listOf(playlist(1)), spotifyPlaylistSelection(listOf(playlist(1)), emptyList()))
+    }
+    @Test
     fun `missing API metadata falls back to public title and cover without embedding HTML`() {
         val id = "1234567890123456789012"
         val value = spotifyPlaylistMetadata(id, { throw SpotifyProviderException(404) }, {

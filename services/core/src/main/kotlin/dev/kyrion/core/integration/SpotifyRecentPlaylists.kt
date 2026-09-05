@@ -3,6 +3,9 @@ package dev.kyrion.core.integration
 import com.fasterxml.jackson.databind.JsonNode
 import java.time.Instant
 
+internal fun spotifyPlaylistSelection(recent: List<SpotifyPlaylist>, library: List<SpotifyPlaylist>): List<SpotifyPlaylist> =
+    (recent + library).distinctBy { it.id }.take(6)
+
 internal fun spotifyPlaylistMetadata(id: String, details: () -> JsonNode, preview: () -> JsonNode): JsonNode? {
     require(Regex("[A-Za-z0-9]{22}").matches(id))
     try { return details() }
