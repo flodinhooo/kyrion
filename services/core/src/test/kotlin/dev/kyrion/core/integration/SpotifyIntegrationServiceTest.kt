@@ -105,6 +105,33 @@ class SpotifyIntegrationServiceTest {
         assertThrows<SpotifyNotConfiguredException> { service.authorize(ownerId) }
     }
 
+    @Test
+    fun `loopback HTTP callbacks preserve registered redirect and owner validation`() {
+        for (host in listOf("127.0.0.1", "[::1]")) {
+            val redirect = "http://$host:3000/api/integrations/spotify/callback"
+            val gateway = FakeSpotifyGateway()
+            val service = service(SpotifyConnections(), gateway, "client-id", redirect)
+            val authorization = service.authorize(ownerId)
+            assertEquals(redirect, query(authorization.authorizationUrl, "redirect_uri"))
+            val state = query(authorization.authorizationUrl, "state")
+            assertThrows<SpotifyInvalidStateException> { service.complete(UUID.randomUUID(), "code", state) }
+            service.complete(ownerId, "code", state)
+            assertEquals(redirect, gateway.exchangedRedirect)
+            assertThrows<SpotifyInvalidStateException> { service.complete(ownerId, "code", state) }
+        }
+    }
+
+    @Test
+    fun `redirect configuration rejects remote HTTP localhost and malformed URLs`() {
+        for (redirect in listOf("http://kyrion-node.local/callback", "http://localhost:3000/callback", "https://localhost/callback",
+            "http://127.0.0.1.evil.example/callback", "http://127.0.0.1@evil.example/callback", "https://user@example.com/callback",
+            "https:///callback", "https://example.com/callback#fragment", "not a URL")) {
+            val service = service(SpotifyConnections(), FakeSpotifyGateway(), "client-id", redirect)
+            assertFalse(service.status(ownerId).configured, redirect)
+            assertThrows<SpotifyNotConfiguredException> { service.authorize(ownerId) }
+        }
+    }
+
     private fun service(repository: SpotifyConnections, gateway: FakeSpotifyGateway, clientId: String, redirectUri: String) =
         SpotifyIntegrationService(repository, CredentialCipher(temp.resolve("credential.key").toString()), gateway,
             ActivityService(object : ActivityEventRepository {
@@ -137,7 +164,8 @@ private class FakeSpotifyGateway : SpotifyGateway {
     var supportsVolume = true
     var failControl = false
     var exchangedCode: String? = null
-    override fun exchangeCode(code: String, redirectUri: String) = SpotifyTokens("access-secret", "refresh-secret", 3600, "scope").also { exchangedCode = code }
+    var exchangedRedirect: String? = null
+    override fun exchangeCode(code: String, redirectUri: String) = SpotifyTokens("access-secret", "refresh-secret", 3600, "scope").also { exchangedCode = code; exchangedRedirect = redirectUri }
     override fun refresh(refreshToken: String) = SpotifyTokens("access-refreshed", refreshToken, 3600, "scope")
     override fun profile(accessToken: String) = SpotifyProfile("spotify-user", "Flo")
     override fun devices(accessToken: String) = listOf(SpotifyDevice("device-1", "Kyrion Wohnzimmer", "Speaker", false, restricted, 50, supportsVolume))

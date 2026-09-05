@@ -6,6 +6,7 @@ import dev.kyrion.core.activity.*
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.net.URLEncoder
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 import java.time.Clock
@@ -114,7 +115,12 @@ class SpotifyIntegrationService(
 
     private fun connection(ownerId: UUID) = repository.findAll(ownerId).firstOrNull { it.provider == "spotify" }
     private fun credential(connection: IntegrationConnection) = mapper.readValue(cipher.reveal(connection), SpotifyCredential::class.java)
-    private fun configured() = clientId.isNotBlank() && clientSecret.isNotBlank() && redirectUri.startsWith("https://")
+    private fun configured(): Boolean {
+        if (clientId.isBlank() || clientSecret.isBlank()) return false
+        val uri = runCatching { URI(redirectUri) }.getOrNull() ?: return false
+        if (uri.host.isNullOrBlank() || uri.userInfo != null || uri.fragment != null || uri.host.equals("localhost", ignoreCase = true)) return false
+        return uri.scheme == "https" || (uri.scheme == "http" && uri.host in setOf("127.0.0.1", "[::1]"))
+    }
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
 }
 
