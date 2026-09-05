@@ -57,6 +57,11 @@ class RoomController(
     fun removeDevice(@PathVariable id: UUID, request: HttpServletRequest) {
         val ownerId = request.ownerId()
         val connection = connections.find(ownerId, id) ?: throw RoomNotFoundException()
+        if (connection.provider == "shelly") {
+            if (!connections.delete(ownerId, id)) throw RoomNotFoundException()
+            record(ownerId, "home.device.removed", "device.removed", id)
+            return
+        }
         if (connection.provider != ZigbeeDeviceSyncService.PROVIDER) throw RoomAssignmentException()
         val node = gateways.all(ownerId).singleOrNull { view ->
             view.health?.zigbee?.devices?.any { it.ieeeAddress == connection.endpointHost } == true
