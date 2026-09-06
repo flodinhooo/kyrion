@@ -4,7 +4,34 @@
 
 Kyrion Core is the authentication authority. A fresh installation exposes a
 one-time owner setup status and setup command. Once the first account exists,
-setup is permanently closed and there is no public registration endpoint.
+setup is permanently closed. Additional accounts register with an invitation
+issued by the original owner; see [ADR 0019](adr/0019-shared-installation-registration.md).
+
+The Web registration page is available at `/signup`. On fresh installations,
+`/login` redirects there. It uses the existing Core owner-setup command for the
+first account, then the invitation registration command for additional users.
+German and English labels, password confirmation and a sign-in link are provided.
+Authenticated visitors are redirected home. Core availability failures offer a retry.
+
+The owner creates a code under Profile > Security > Invite a friend. The code
+is random, valid for 24 hours and usable once. Core stores only its SHA-256 hash;
+redemption and account/session creation are transactional. Duplicate usernames
+do not consume the invitation. The profile displays the code only in memory;
+it is not placed in URLs or browser storage. Invitees cannot issue invitations.
+
+Every invited account can control and manage the same devices, rooms,
+integrations, gateways and satellite enrollment, with the existing Core command
+validation and confirmations. This is an explicit shared-control policy before
+RBAC. The server derives the resource scope from the invitation relationship;
+browser input cannot select a workspace. Audit events retain the real user as
+actor separately from the resource owner. Shared action idempotency includes the
+actor to prevent another user's request from reusing a prior result.
+
+Passwords, sessions, conversations, personal memory, personal backups and
+retention settings remain account-scoped. Existing resource data is not moved
+or copied, and existing audit seals are not rewritten. Account revocation and
+granular roles remain follow-up work. Both Core and Web must be updated; Core
+applies Flyway V27 on startup.
 
 Core hashes passwords with Argon2id and stores only SHA-256 hashes of opaque
 256-bit session tokens. The raw token crosses the trusted localhost boundary
@@ -32,10 +59,12 @@ Public Core endpoints:
 - `GET /v1/auth/setup/status`
 - `POST /v1/auth/setup`
 - `POST /v1/auth/login`
+- `POST /v1/auth/register` (requires a valid invitation code)
 
 Authenticated Core endpoints:
 
 - `GET /v1/auth/me`
+- `POST /v1/auth/invitations` (original owner only)
 - `POST /v1/auth/logout`
 - `POST /v1/auth/password`
 - `GET /v1/auth/sessions`
@@ -116,6 +145,11 @@ The Web test suite covers strict CSRF token comparison, explicit German and
 English memory-request recognition and the security policy for session and
 CSRF cookies. Run the suites with `gradlew.bat test` in
 `services/core` and `pnpm test` in `apps/web`.
+
+Registration coverage includes duplicate names, expiry, concurrent single-use
+redemption, anonymous and invitee enrollment denial, shared room writes and
+device commands with a mocked Nanoleaf adapter, real actor attribution and
+continued personal conversation/session isolation. No test commands real hardware.
 
 ## Web navigation
 

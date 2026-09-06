@@ -99,6 +99,13 @@ verification remains a separate manual check.
 
 ## Authentication and failure recovery
 
+The `/signup` page supports first-owner setup and invitation-based registration
+for additional accounts. The original owner creates a one-use, 24-hour code in
+Profile > Security. Invited users have the same shared device, room and
+integration controls, with separate credentials and personal data. Signup and
+the invitation panel explain this access in German and English. RBAC remains
+planned; invited accounts cannot issue further invitations.
+
 The September review also localized sign-in/setup, added bounded authentication
 requests and distinguished Core unavailability (503) from expired sessions
 (401). An open workspace checks session validity on focus and once per minute;

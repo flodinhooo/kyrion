@@ -55,6 +55,7 @@ slices.
 ### Platform and security
 
 - local owner setup and authentication;
+- owner-issued invitations for additional accounts with shared device control;
 - Argon2id password hashing and opaque, hashed session credentials;
 - owner-scoped PostgreSQL persistence;
 - conversation history and deterministic context compaction;
