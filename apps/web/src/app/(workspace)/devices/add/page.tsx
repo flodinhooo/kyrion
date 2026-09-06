@@ -10,9 +10,11 @@ import {
 } from "@/features/gateways/contracts";
 import { isNetworkDeviceList, type NetworkDevice } from "@/features/integrations/network-contracts";
 import { isConnection } from "@/features/integrations/contracts";
+import { diagnosticsMessages } from "@/features/system-services/messages";
 
 export default function AddDevicePage() {
-  const { t } = useWorkspace();
+  const { t, locale } = useWorkspace();
+  const d = diagnosticsMessages[locale] ?? diagnosticsMessages.en;
   const [nodes, setNodes] = useState<GatewayNode[]>([]);
   const [zigbeeCandidates, setZigbeeCandidates] = useState<GatewayZigbeeDevice[]>([]);
   const [bluetoothCandidates, setBluetoothCandidates] = useState<GatewayBluetoothDevice[]>([]);
@@ -194,6 +196,7 @@ export default function AddDevicePage() {
       <article className="pairing-card">
         <div className="discovery-heading"><div><small>mDNS · IPv4</small><h2>{t.addDeviceNetworkTitle}</h2></div><span className="device-status online">{t.addDeviceReady}</span></div>
         <button disabled={networkSearching} onClick={() => void searchNetwork()}>{networkSearching ? `${t.addDeviceSearch} …` : t.addDeviceSearch}</button>
+        <p>{d.shellyPath}</p><Link className="placeholder-action" href="/settings/services">{d.haOpen}</Link>
         {networkDevices && <div className="discovery-results"><strong>{t.addDeviceFound} · {networkDevices.length}</strong>{networkDevices.length === 0 ? <p>{t.addDeviceNoneFound}</p> : networkDevices.map((device) => <details className="discovery-candidate network-candidate" key={device.host} onToggle={(event) => { if (event.currentTarget.open) { setSelectedNetworkHost(device.host); setShellyError(null); } }}>
           <summary><span>{device.name}{(device.connected || addedDevices.includes(device.host)) && <small className="network-connected">{t.networkDeviceConnected}</small>}</span><code>{device.host}</code></summary>
           {(device.connected || addedDevices.includes(device.host)) ? <Link className="placeholder-action" href="/devices">{t.shellyViewDevices}</Link>

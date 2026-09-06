@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { ActivityEvent, ActivityIntegrityResponse, isActivityIntegrityResponse, isActivityResponse } from "@/features/activity/contracts";
+import { ActionInspector } from "@/features/activity/action-inspector";
+import { timelineMessages } from "@/features/activity/timeline-messages";
 
 type LoadingState = "loading" | "ready" | "error";
 
 export default function ActivityPage() {
   const { locale, t } = useWorkspace();
+  const timeline = timelineMessages[locale] ?? timelineMessages.en;
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [state, setState] = useState<LoadingState>("loading");
   const [integrity, setIntegrity] = useState<ActivityIntegrityResponse | null>(null);
@@ -54,7 +57,8 @@ export default function ActivityPage() {
     "memory.updated": t.activityMemoryUpdated,
     "memory.deleted": t.activityMemoryDeleted,
     "memory.replaced": t.activityMemoryReplaced,
-  })[event.summaryCode] ?? event.eventType;
+  })[event.summaryCode] ?? timeline.reasons[event.summaryCode as keyof typeof timeline.reasons]
+    ?? timeline.stages[event.eventType as keyof typeof timeline.stages] ?? event.eventType;
 
   const statusLabel = (status: ActivityEvent["status"]) => ({
     PROPOSED: t.activityStatusProposed,
@@ -115,6 +119,7 @@ export default function ActivityPage() {
             </div>
             <time dateTime={event.occurredAt}>{dateFormatter.format(new Date(event.occurredAt))}</time>
             <code title={t.activityCorrelationId}>{event.correlationId}</code>
+            <ActionInspector correlationId={event.correlationId} />
           </div>
         </li>)}
       </ol>}

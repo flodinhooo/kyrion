@@ -13,6 +13,7 @@ import { GatewayLightControlDialog } from "@/components/gateway-light-control-di
 import { SnapshotStatus } from "@/components/snapshot-status";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { csrfHeader } from "@/features/auth/csrf";
+import { diagnosticsMessages } from "@/features/system-services/messages";
 import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isMotionEventList, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type MotionEvent, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
@@ -437,6 +438,8 @@ export default function DevicesPage() {
             <div>
               <div className="device-card-title"><span><DeviceIcon aria-hidden="true" /></span><strong>{device.displayName}</strong></div>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
+              {device.capabilities.every((capability) => capability.id.endsWith(".read")) && <small>{(diagnosticsMessages[locale] ?? diagnosticsMessages.en).readOnly}</small>}
+              {device.diagnosticReason && <small>{(diagnosticsMessages[locale] ?? diagnosticsMessages.en)[device.diagnosticReason]}</small>}
               {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
             </div>
             {device.capabilities.some((capability) => capability.id === "occupancy.read") && <aside className="motion-log" aria-label={t.motionHistory}>
@@ -452,6 +455,7 @@ export default function DevicesPage() {
               <span><small>{t.homeCurrentColor}</small><strong className="lamp-color-value"><i className={`color-swatch${currentColor ? "" : " unknown"}`} style={currentColor ? { backgroundColor: currentColor } : undefined} />{currentColor ?? t.homeUnknown}</strong></span>
             </div>}
             {hasLiveState && liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
+              {liveState.on != null && <span>{t.homeCurrentState}: <strong>{liveState.on ? t.zigbeeOn : t.zigbeeOff}</strong></span>}
               {liveState.temperatureCelsius != null && <span>{t.sensorTemperature}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.temperatureCelsius)} °C</strong></span>}
               {liveState.relativeHumidity != null && <span>{t.sensorHumidity}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.relativeHumidity)}%</strong></span>}
               {liveState.measuredAt && <small>{t.sensorMeasuredAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(liveState.measuredAt))}</small>}

@@ -281,6 +281,20 @@ button, textarea { font: inherit; }
 .spotify-mark { background: #1ed760; color: #071d0f; font-weight: 800; }
 .spotify-login { max-width: 520px; }
 .activity-card-content { min-width: 0; }
+.action-inspector { margin-top: 14px; }
+.action-inspector summary { color: var(--primary); cursor: pointer; font-weight: 600; padding: 8px 0; }
+.action-inspector section { padding-top: 8px; }
+.action-inspector section > p { color: var(--text-muted); font-size: .85rem; margin: 8px 0; }
+.action-timeline { list-style: none; margin: 18px 0 0; padding: 0; }
+.action-timeline-step { border-left: 2px solid var(--border-strong); padding: 8px 16px 18px; overflow-wrap: anywhere; }
+.action-timeline-step time { margin: 0 0 5px; }
+.action-timeline-step strong { display: block; font-size: .95rem; }
+.action-timeline-step p { margin: 5px 0; font-size: .9rem; }
+.action-timeline-step small { color: var(--text-muted); }
+.system-service-card button { margin-top: 12px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--primary); cursor: pointer; }
+.system-service-card button:disabled { opacity: .55; cursor: default; }
+.system-service-card > p { font-size: .85rem; margin-top: 10px; }
+.system-service-card > div > p { font-size: .85rem; color: var(--text-muted); margin-top: 12px; }
 .activity-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .activity-summary { margin: 0; font-weight: 720; }
 .activity-source { margin: 5px 0 0; color: var(--text-muted); font-size: 11px; text-transform: capitalize; }
