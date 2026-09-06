@@ -6,6 +6,7 @@ import { Icons } from "@/components/icons";
 import { PasswordChangeForm } from "@/components/password-change-form";
 import { MemoryPanel } from "@/components/memory-panel";
 import { ActiveSessionsPanel } from "@/components/active-sessions-panel";
+import { InvitationPanel } from "@/components/invitation-panel";
 import { RetentionPolicyPanel } from "@/components/retention-policy-panel";
 import { PersonalBackupPanel } from "@/components/personal-backup-panel";
 
@@ -33,6 +34,7 @@ export default function ProfilePage() {
           <div className="profile-two-column">
             <div className="settings-link-card profile-security-panel"><span><strong>{t.changePassword}</strong><small>{t.profileSecurityDescription}</small></span><PasswordChangeForm /></div>
             <ActiveSessionsPanel />
+            <InvitationPanel />
           </div>
         </section>
 

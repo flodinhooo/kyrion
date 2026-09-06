@@ -5,7 +5,7 @@ export const SESSION_COOKIE = "kyrion_session";
 export const CSRF_COOKIE = "kyrion_csrf";
 export const CORE_SERVICE_URL = process.env.CORE_SERVICE_URL ?? "http://127.0.0.1:8080";
 
-export type AuthUser = { id: string; username: string };
+export type AuthUser = { id: string; username: string; canInvite?: boolean };
 type UserLookup = { user: AuthUser | null; unavailable: boolean };
 
 export async function sessionToken(): Promise<string | null> {
@@ -30,7 +30,7 @@ async function lookupUser(): Promise<UserLookup> {
     if (!value || typeof value !== "object") return { user: null, unavailable: true };
     const user = value as Partial<AuthUser>;
     return typeof user.id === "string" && typeof user.username === "string"
-      ? { user: { id: user.id, username: user.username }, unavailable: false }
+      ? { user: { id: user.id, username: user.username, ...(typeof user.canInvite === "boolean" ? { canInvite: user.canInvite } : {}) }, unavailable: false }
       : { user: null, unavailable: true };
   } catch {
     return { user: null, unavailable: true };
