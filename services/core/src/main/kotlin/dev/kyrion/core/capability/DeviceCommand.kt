@@ -12,7 +12,7 @@ import dev.kyrion.core.gateway.GatewayCommandService
 import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import dev.kyrion.core.gateway.BluetoothDeviceSyncService
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -306,8 +306,7 @@ class DeviceCommandController(private val commands: DeviceCommandService) {
     @GetMapping("/{id}")
     fun status(@PathVariable id: UUID, request: HttpServletRequest) = commands.status(request.ownerId(), id)
 
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw DeviceCommandUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 
 class DeviceTargetNotFoundException : RuntimeException()

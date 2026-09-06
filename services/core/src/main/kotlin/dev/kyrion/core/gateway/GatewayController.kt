@@ -1,6 +1,6 @@
 package dev.kyrion.core.gateway
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -123,8 +123,7 @@ class GatewayOwnerController(
         return GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.color", mapOf("deviceId" to body.deviceId, "hue" to hue, "saturation" to saturation)))
     }
 
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw GatewayUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 
 @RestController

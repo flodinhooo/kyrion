@@ -8,7 +8,7 @@ import dev.kyrion.core.integration.NanoleafIntegrationService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import dev.kyrion.core.gateway.BluetoothDeviceSyncService
 import dev.kyrion.core.gateway.GatewayService
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.GetMapping
@@ -177,6 +177,5 @@ class DeviceCatalogController(
         return catalog.devices(ownerId)
     }
 
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw DeviceCommandUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
