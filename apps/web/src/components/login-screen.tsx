@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AuthForm } from "@/components/auth-form";
 import { BrandAsset } from "@/components/brand-asset";
 import { messages, type Locale } from "@/lib/messages";
 import { readPreference, writePreference } from "@/lib/browser-preferences";
 
-export function LoginScreen({ setupRequired }: { setupRequired: boolean | null }) {
+export function LoginScreen({ setupRequired, registration = false }: { setupRequired: boolean | null; registration?: boolean }) {
   const [locale, setLocale] = useState<Locale>("de");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -29,12 +30,14 @@ export function LoginScreen({ setupRequired }: { setupRequired: boolean | null }
           setLocale(next); document.documentElement.lang = next; writePreference("kyrion-locale", next);
         }}>{locale.toUpperCase()}</button>
       </div>
-      <p className="eyebrow">{setupRequired ? t.authSetupEyebrow : t.authWelcome}</p>
-      <h1>{setupRequired ? t.authSetupTitle : t.authLoginTitle}</h1>
-      <p role={setupRequired === null ? "alert" : undefined}>{setupRequired === null ? t.authCoreUnavailable : setupRequired ? t.authSetupDescription : t.authLoginDescription}</p>
+      <p className="eyebrow">{setupRequired ? t.authSetupEyebrow : registration ? t.authJoinEyebrow : t.authWelcome}</p>
+      <h1>{registration ? t.authSignupTitle : setupRequired ? t.authSetupTitle : t.authLoginTitle}</h1>
+      <p role={setupRequired === null ? "alert" : undefined}>{setupRequired === null ? t.authCoreUnavailable : registration && !setupRequired ? t.authRegistrationDescription : setupRequired ? t.authSetupDescription : t.authLoginDescription}</p>
       {setupRequired === null
         ? <button className="auth-retry" type="button" disabled={pending} onClick={() => startTransition(() => router.refresh())}>{pending ? t.authPending : t.authRetry}</button>
-        : <AuthForm setup={setupRequired} locale={locale} />}
+        : <AuthForm setup={setupRequired} registration={registration} locale={locale} />}
+      {registration && <p className="auth-footer"><Link href="/login">{t.authBackToLogin}</Link></p>}
+      {!registration && setupRequired === false && <p className="auth-footer"><Link href="/signup">{t.authSignupTitle}</Link></p>}
     </section>
   </main>;
 }

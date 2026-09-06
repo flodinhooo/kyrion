@@ -27,6 +27,7 @@ import { isConversationList, type ConversationSummary } from "@/features/convers
 
 type WorkspaceContextValue = {
   username: string;
+  canInvite: boolean;
   locale: Locale;
   modelCatalog: ModelCatalog | null;
   selectedModelId: string | null;
@@ -61,7 +62,7 @@ export function useWorkspace() {
   return context;
 }
 
-export function AppShell({ children, username }: { children: ReactNode; username: string }) {
+export function AppShell({ children, username, canInvite = false }: { children: ReactNode; username: string; canInvite?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [locale, setLocale] = useState<Locale>("de");
@@ -379,6 +380,7 @@ export function AppShell({ children, username }: { children: ReactNode; username
   return (
     <WorkspaceContext.Provider value={{
       username,
+      canInvite,
       locale,
       modelCatalog,
       selectedModelId,

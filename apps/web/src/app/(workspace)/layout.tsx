@@ -5,5 +5,5 @@ import { redirect } from "next/navigation";
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   if (!user) redirect("/login");
-  return <AppShell username={user.username}>{children}</AppShell>;
+  return <AppShell username={user.username} canInvite={user.canInvite}>{children}</AppShell>;
 }
