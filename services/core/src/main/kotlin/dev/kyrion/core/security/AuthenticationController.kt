@@ -28,11 +28,17 @@ data class CredentialsRequest(
     @field:Size(min = 12, max = 200) val password: String,
 )
 data class SetupStatusResponse(val setupRequired: Boolean)
+data class RegistrationRequest(
+    @field:NotBlank @field:Size(min = 3, max = 120)
+    @field:Pattern(regexp = "^[A-Za-z0-9._-]+$") val username: String,
+    @field:Size(min = 12, max = 200) val password: String,
+    @field:Pattern(regexp = "^[A-Za-z0-9_-]{43}$") val invitationCode: String,
+)
 data class ChangePasswordRequest(
     @field:Size(min = 12, max = 200) val currentPassword: String,
     @field:Size(min = 12, max = 200) val newPassword: String,
 )
-data class UserResponse(val id: UUID, val username: String)
+data class UserResponse(val id: UUID, val username: String, val canInvite: Boolean)
 data class SessionResponse(val user: UserResponse, val sessionToken: String, val expiresAt: Instant)
 data class ErrorResponse(val code: String)
 
@@ -47,10 +53,17 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: CredentialsRequest) = authentication.login(body.username, body.password).response()
 
+    @PostMapping("/invitations") @ResponseStatus(HttpStatus.CREATED)
+    fun invite(request: HttpServletRequest) = authentication.createInvitation(request.bearerToken())
+
+    @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
+    fun register(@Valid @RequestBody body: RegistrationRequest) =
+        authentication.register(body.username, body.password, body.invitationCode).response()
+
     @GetMapping("/me")
     fun me(request: HttpServletRequest): UserResponse {
         val user = authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException()
-        return UserResponse(user.id, user.username)
+        return UserResponse(user.id, user.username, user.resourceOwnerId == user.id)
     }
 
     @PostMapping("/logout") @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -73,7 +86,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     }
 
     private fun AuthenticatedOwner.response() = SessionResponse(
-        UserResponse(user.id, user.username), session.rawToken, session.session.expiresAt,
+        UserResponse(user.id, user.username, user.resourceOwnerId == user.id), session.rawToken, session.session.expiresAt,
     )
 }
 
@@ -87,6 +100,18 @@ class UnauthenticatedException : RuntimeException()
 
 @RestControllerAdvice
 class AuthenticationErrorHandler {
+    @ExceptionHandler(InvitationForbiddenException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun invitationForbidden() = ErrorResponse("INVITATION_FORBIDDEN")
+
+    @ExceptionHandler(UsernameTakenException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun usernameTaken() = ErrorResponse("USERNAME_TAKEN")
+
+    @ExceptionHandler(InvalidInvitationException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun invalidInvitation() = ErrorResponse("INVITATION_INVALID")
+
     @ExceptionHandler(SetupAlreadyCompletedException::class)
     @ResponseStatus(HttpStatus.CONFLICT)
     fun setupComplete() = ErrorResponse("SETUP_ALREADY_COMPLETED")

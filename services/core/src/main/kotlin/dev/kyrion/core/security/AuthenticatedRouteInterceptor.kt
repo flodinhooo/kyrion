@@ -18,6 +18,7 @@ class AuthenticatedRouteInterceptor(
         val user = token?.let(authentication::authenticate)
         if (user != null) {
             request.setAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE, user.id)
+            request.setAttribute(WORKSPACE_OWNER_ID_ATTRIBUTE, user.resourceOwnerId)
             return true
         }
         response.status = HttpServletResponse.SC_UNAUTHORIZED
@@ -28,6 +29,7 @@ class AuthenticatedRouteInterceptor(
 }
 
 const val AUTHENTICATED_USER_ID_ATTRIBUTE = "kyrion.authenticatedUserId"
+const val WORKSPACE_OWNER_ID_ATTRIBUTE = "kyrion.workspaceOwnerId"
 
 @Configuration
 class AuthenticatedRouteConfiguration(

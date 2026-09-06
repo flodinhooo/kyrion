@@ -35,6 +35,12 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 import java.nio.file.Files
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
+import dev.kyrion.core.integration.NanoleafGateway
+import dev.kyrion.core.integration.NanoleafDeviceState
+import dev.kyrion.core.integration.NanoleafIntegrationService
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -51,12 +57,102 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val catalog: dev.kyrion.core.capability.DeviceCatalogService,
     private val rooms: dev.kyrion.core.home.RoomRepository,
     private val transactions: org.springframework.transaction.support.TransactionTemplate,
+    private val nanoleaf: NanoleafIntegrationService,
 ) {
+    @MockitoBean
+    lateinit var nanoleafGateway: NanoleafGateway
+
     @BeforeEach
     fun cleanDatabase() {
         jdbc.sql(
             "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
+    }
+
+    @Test
+    fun `invited friend controls owner devices while keeping identity and personal data separate`() {
+        val owner = authentication.setup("flo", OLD_PASSWORD)
+        val invitationResult = mockMvc.perform(post("/v1/auth/invitations")
+            .header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isCreated).andReturn()
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        val code = mapper.readTree(invitationResult.response.contentAsString).path("code").asText()
+        assertThat(jdbc.sql("SELECT token_hash FROM registration_invitation").query(String::class.java).single())
+            .isEqualTo(SessionTokenService().hash(code)).isNotEqualTo(code)
+        val registration = mockMvc.perform(post("/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"username":"Friend","password":"$OTHER_PASSWORD","invitationCode":"$code"}"""))
+            .andExpect(status().isCreated).andExpect(jsonPath("$.user.canInvite").value(false)).andReturn()
+        val token = mapper.readTree(registration.response.contentAsString).path("sessionToken").asText()
+        val friend = authentication.authenticate(token)!!
+        assertThat(friend.id).isNotEqualTo(owner.user.id)
+        assertThat(friend.resourceOwnerId).isEqualTo(owner.user.id)
+        mockMvc.perform(get("/v1/auth/me").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.id").value(friend.id.toString()))
+        mockMvc.perform(post("/v1/auth/invitations").header("Authorization", "Bearer $token"))
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(post("/v1/home/rooms").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"name":"Shared room","roomType":"other"}"""))
+            .andExpect(status().isCreated)
+        assertThat(rooms.all(owner.user.id).single().name).isEqualTo("Shared room")
+        assertThat(rooms.all(friend.id)).isEmpty()
+        val roomEvent = activity.recent(owner.user.id, 100).single { it.eventType == "home.room.created" }
+        assertThat(roomEvent.actorId).isEqualTo(friend.id.toString())
+        assertThat(roomEvent.ownerId).isEqualTo(owner.user.id)
+
+        val host = "192.168.1.41"
+        `when`(nanoleafGateway.pair(host)).thenReturn("test-provider-token")
+        `when`(nanoleafGateway.state(host, "test-provider-token"))
+            .thenReturn(NanoleafDeviceState("Shared lamp", null, null, true, 50))
+        val device = nanoleaf.pair(owner.user.id, host, "Shared lamp")
+        mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$[0].id").value(device.id.toString()))
+        mockMvc.perform(post("/v1/device-commands").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""{"capability":"power.set","selector":{"provider":"nanoleaf","deviceId":"${device.id}"},"arguments":{"on":true}}"""))
+            .andExpect(status().isOk).andExpect(jsonPath("$.succeeded").value(1))
+        verify(nanoleafGateway).setPower(host, "test-provider-token", true)
+        assertThat(activity.recent(owner.user.id, 100).filter { it.eventType == "integration.nanoleaf.power" })
+            .allMatch { it.actorId == friend.id.toString() && it.ownerId == owner.user.id }
+
+        val now = Instant.now()
+        val conversation = Conversation(UUID.randomUUID(), "Private", now, now, emptyList())
+        conversations.replace(owner.user.id, conversation)
+        mockMvc.perform(get("/v1/conversations/${conversation.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(delete("/v1/auth/sessions/${owner.session.session.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(post("/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"username":"another","password":"$OTHER_PASSWORD","invitationCode":"$code"}"""))
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("INVITATION_INVALID"))
+        mockMvc.perform(get("/v1/devices")).andExpect(status().isUnauthorized)
+        assertThat(authentication.authenticate(owner.session.rawToken)).isNotNull()
+    }
+
+    @Test
+    fun `registration rejects duplicates expired invitations and concurrent redemption atomically`() {
+        val owner = authentication.setup("flo", OLD_PASSWORD)
+        val invitation = authentication.createInvitation(owner.session.rawToken)
+        assertThatThrownBy { authentication.register("FLO", OTHER_PASSWORD, invitation.code) }
+            .isInstanceOf(UsernameTakenException::class.java)
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val results = executor.invokeAll((1..2).map { number -> java.util.concurrent.Callable {
+                runCatching { authentication.register("friend$number", OTHER_PASSWORD, invitation.code) }
+            } }).map { it.get() }
+            assertThat(results.count { it.isSuccess }).isEqualTo(1)
+            assertThat(results.single { it.isFailure }.exceptionOrNull()).isInstanceOf(InvalidInvitationException::class.java)
+        } finally { executor.shutdownNow() }
+        val expired = authentication.createInvitation(owner.session.rawToken)
+        jdbc.sql("UPDATE registration_invitation SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE token_hash=:hash")
+            .param("hash", SessionTokenService().hash(expired.code)).update()
+        assertThatThrownBy { authentication.register("expired", OTHER_PASSWORD, expired.code) }
+            .isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(jdbc.sql("SELECT count(*) FROM user_account").query(Int::class.java).single()).isEqualTo(2)
+        mockMvc.perform(post("/v1/auth/invitations")).andExpect(status().isUnauthorized)
+        mockMvc.perform(post("/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"username":"bad name","password":"short","invitationCode":"invalid"}"""))
+            .andExpect(status().isBadRequest)
     }
 
     @Test
@@ -659,6 +755,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
             registry.add("kyrion.audit.integrity-key-file") { auditKeyPath }
+            registry.add("kyrion.credentials.key-file") { "$auditKeyPath.credentials" }
         }
     }
 }
