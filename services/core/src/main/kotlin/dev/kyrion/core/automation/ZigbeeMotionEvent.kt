@@ -3,7 +3,7 @@ package dev.kyrion.core.automation
 import dev.kyrion.core.capability.DeviceCatalogService
 import dev.kyrion.core.gateway.GatewayNode
 import dev.kyrion.core.integration.IntegrationConnectionRepository
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -75,6 +75,5 @@ class ZigbeeMotionEventController(private val service: ZigbeeMotionEventService)
     fun recent(@PathVariable sensorId: UUID, request: HttpServletRequest) =
         service.recent(request.ownerId(), sensorId)
 
-    private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID
-        ?: throw ZigbeeButtonBindingInvalidException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }

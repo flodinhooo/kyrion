@@ -1,7 +1,7 @@
 package dev.kyrion.core.integration
 
 import dev.kyrion.core.activity.*
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -68,7 +68,7 @@ class YouTubeIntegrationService(private val activity: ActivityService) {
 class YouTubeIntegrationController(private val service: YouTubeIntegrationService) {
     @PostMapping("/embed")
     fun prepare(@Valid @RequestBody body: PrepareYouTubeRequest, request: HttpServletRequest): YouTubeEmbed {
-        val ownerId = request.getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw IntegrationUnauthenticatedException()
+        val ownerId = request.workspaceOwnerId()
         return service.prepare(ownerId, body)
     }
 }

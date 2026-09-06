@@ -11,7 +11,7 @@ import dev.kyrion.core.capability.DeviceCommandService
 import dev.kyrion.core.capability.CommandedPowerStateStore
 import dev.kyrion.core.gateway.GatewayNode
 import dev.kyrion.core.integration.IntegrationConnectionRepository
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -160,8 +160,7 @@ class ZigbeeButtonBindingController(private val service: ZigbeeButtonBindingServ
     @PutMapping fun replace(@PathVariable buttonId: UUID, @Valid @RequestBody body: ReplaceZigbeeButtonBindingsRequest,
         request: HttpServletRequest) = service.replace(request.ownerId(), buttonId, body.bindings)
 
-    private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID
-        ?: throw ZigbeeButtonBindingInvalidException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 
 class ZigbeeButtonBindingInvalidException : RuntimeException()
