@@ -1,6 +1,17 @@
 # Kyrion Development Status
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
+
+## Latest feature closeout - 2026-09-07
+
+The [invited-user closeout](2026-09-07-invited-users-closeout.md) records
+registration with owner-issued, single-use invitations and shared device
+control using individual accounts. Personal data remains account-scoped;
+granular RBAC is deferred. Automated checks are recorded separately from the
+pending rollout, browser review and physical device acceptance.
+
+This supplements the consolidation checkpoint below without replacing its
+existing HA and Velora acceptance backlog.
 
 ## Current consolidation checkpoint - 2026-09-06
 

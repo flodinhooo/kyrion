@@ -1,6 +1,23 @@
 # Kyrion Development TODO
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
+
+## Invited-user handoff - 2026-09-07
+
+See the [session closeout](2026-09-07-invited-users-closeout.md) for scope and
+verification evidence.
+
+- [x] Implement owner-issued, single-use invitations and bilingual `/signup`.
+- [x] Share device/room/integration control while preserving individual identity,
+  private conversations, sessions and personal memory.
+- [x] Verify invitation redemption, shared commands and audit attribution with
+  automated tests and a mocked device adapter.
+- [ ] Update/restart Core and Web together and confirm Flyway V27 application.
+- [ ] Review owner invitation and friend registration in separate browsers.
+- [ ] Verify a real device command and its actual user attribution in Activity.
+- [ ] Define RBAC and account/invitation revocation in a later dedicated slice.
+
+This feature does not change the consolidation acceptance tasks below.
 
 ## Current consolidation checkpoint - 2026-09-06
 
