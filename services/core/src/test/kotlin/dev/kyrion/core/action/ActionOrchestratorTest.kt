@@ -30,7 +30,8 @@ class ActionOrchestratorTest {
         assertEquals("action.succeeded", outcome.code)
         assertEquals(context.correlationId, outcome.correlationId)
         assertEquals(1, handler.executions)
-        assertEquals(listOf(ActivityStatus.PROPOSED, ActivityStatus.SUCCEEDED), events.map { it.status })
+        assertEquals(listOf("action.proposed", "action.capability", "action.policy.accepted", "action.completed"), events.map { it.eventType })
+        assertTrue(events.all { it.ownerId == context.ownerId && it.source == context.channel.value })
         assertTrue(events.all { it.correlationId == context.correlationId })
         assertTrue(events.none { it.summaryCode.contains("secret", ignoreCase = true) })
     }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 data class ActivityResponse(val items: List<ActivityEvent>)
+data class ActionTimelineResponse(val items: List<ActivityEvent>, val truncated: Boolean, val outcome: dev.kyrion.core.action.ActionOutcome? = null)
 data class ActivityIntegrityResponse(val owner: ActivityIntegrityChainReport, val system: ActivityIntegrityChainReport)
 
 @Validated
@@ -20,6 +21,7 @@ data class ActivityIntegrityResponse(val owner: ActivityIntegrityChainReport, va
 class ActivityController(
     private val activityService: ActivityService,
     private val integrityVerifier: ActivityIntegrityVerifier,
+    private val executions: dev.kyrion.core.action.ActionExecutionRepository? = null,
 ) {
     @GetMapping
     fun recent(
@@ -34,6 +36,12 @@ class ActivityController(
     fun integrity(request: HttpServletRequest): ActivityIntegrityResponse {
         val ownerId = request.ownerId()
         return ActivityIntegrityResponse(integrityVerifier.verify(ownerId.toString()), integrityVerifier.verify(SYSTEM_SCOPE))
+    }
+
+    @GetMapping("/timeline/{correlationId}")
+    fun timeline(@org.springframework.web.bind.annotation.PathVariable correlationId: java.util.UUID, request: HttpServletRequest): ActionTimelineResponse {
+        val events = activityService.timeline(request.ownerId(), correlationId)
+        return ActionTimelineResponse(events.take(1000), events.size > 1000, executions?.outcome(request.ownerId(), correlationId))
     }
 
     private fun HttpServletRequest.ownerId() =

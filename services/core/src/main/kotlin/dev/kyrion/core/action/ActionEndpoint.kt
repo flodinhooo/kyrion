@@ -52,6 +52,7 @@ data class ActionExecutionRecord(
 )
 
 interface ActionExecutionRepository {
+    fun outcome(ownerId: UUID, correlationId: UUID): ActionOutcome? = null
     fun claim(ownerId: UUID, idempotencyKey: UUID, correlationId: UUID, requestHash: String, now: Instant): Boolean
     fun find(ownerId: UUID, idempotencyKey: UUID): ActionExecutionRecord?
     fun complete(ownerId: UUID, idempotencyKey: UUID, outcomeJson: String, now: Instant): Boolean
@@ -59,6 +60,11 @@ interface ActionExecutionRepository {
 
 @Repository
 class JdbcActionExecutionRepository(private val jdbc: JdbcClient) : ActionExecutionRepository {
+    override fun outcome(ownerId: UUID, correlationId: UUID): ActionOutcome? = jdbc.sql(
+        "SELECT outcome FROM action_execution WHERE owner_id=:owner AND correlation_id=:correlation AND outcome IS NOT NULL ORDER BY created_at LIMIT 1",
+    ).param("owner", ownerId).param("correlation", correlationId).query(String::class.java).optional().orElse(null)
+        ?.let { jacksonObjectMapper().readValue(it, ActionOutcome::class.java) }
+
     override fun claim(ownerId: UUID, idempotencyKey: UUID, correlationId: UUID, requestHash: String, now: Instant) =
         jdbc.sql("""INSERT INTO action_execution(id,owner_id,idempotency_key,correlation_id,request_hash,status,created_at)
             VALUES (:id,:ownerId,:key,:correlationId,:requestHash,'pending',:now)
@@ -130,6 +136,7 @@ class WebActionIntentService(
     private val proposals: DeviceProposalProvider,
     private val actions: WebActionService,
     private val renderer: ActionResultRenderer,
+    private val activity: dev.kyrion.core.activity.ActivityService? = null,
 ) {
     fun execute(ownerId: UUID, request: WebActionIntentRequest): WebActionAttempt = when (
         val result = proposals.propose(ownerId, request.message.trim(), request.locale, request.priorMessages)
@@ -144,6 +151,12 @@ class WebActionIntentService(
             "unavailable", "proposal.unavailable",
             if (request.locale == "de") "Ich konnte die Aktion gerade nicht sicher prüfen." else "I couldn't safely evaluate that action right now.",
         )
+    }.also { attempt ->
+        if (attempt.kind in setOf("rejected", "unavailable")) {
+            activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "action.rejected",
+                dev.kyrion.core.activity.ActivityStatus.DENIED, ActivityActorType.USER, "web", attempt.code ?: "proposal.invalid",
+                ownerId.toString(), UUID.randomUUID(), ownerId)
+        }
     }
 }
 

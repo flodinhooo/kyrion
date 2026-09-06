@@ -50,6 +50,10 @@ class ActionOrchestrator(
 
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
         record(context, "action.proposed", ActivityStatus.PROPOSED, "action.proposed")
+        if (proposal is DeviceActionProposal && proposal.capability in setOf(
+                DeviceCommandService.POWER_SET, DeviceCommandService.BRIGHTNESS_SET, DeviceCommandService.COLOR_SET)) {
+            record(context, "action.capability", ActivityStatus.PROPOSED, proposal.capability)
+        }
         val handler = handlers.singleOrNull { it.supports(proposal) } ?: return rejected(
             context,
             "action.unsupported",
@@ -75,7 +79,7 @@ class ActionOrchestrator(
                     context.correlationId,
                 )
             }
-            ActionDecisionType.ALLOWED -> Unit
+            ActionDecisionType.ALLOWED -> record(context, "action.policy.accepted", ActivityStatus.CONFIRMED, decision.policyClass.value)
         }
 
         val outcome = try {
@@ -108,7 +112,7 @@ class ActionOrchestrator(
             type,
             status,
             context.actorType,
-            "kyrion-core",
+            context.channel.value,
             code,
             context.actorId,
             context.correlationId,
@@ -121,6 +125,7 @@ class ActionOrchestrator(
 class DeviceActionHandler(
     private val catalog: DeviceCatalogService,
     private val commands: DeviceCommandService,
+    private val activity: ActivityService? = null,
 ) : ActionHandler<DeviceActionProposal> {
     override fun supports(proposal: ActionProposal) = proposal is DeviceActionProposal
 
@@ -138,6 +143,10 @@ class DeviceActionHandler(
         if (targets.size != requestedIds.size) throw DeviceTargetNotFoundException()
         if (targets.any { target -> target.capabilities.none { it.id == proposal.capability } }) {
             throw DeviceCapabilityUnsupportedException()
+        }
+        targets.forEach { target ->
+            activity?.record(ActivityCategory.CAPABILITY, "action.target.resolved", ActivityStatus.CONFIRMED,
+                context.actorType, context.channel.value, target.id.toString(), context.actorId, context.correlationId, context.ownerId)
         }
         val results = targets.map { target ->
             commands.execute(
