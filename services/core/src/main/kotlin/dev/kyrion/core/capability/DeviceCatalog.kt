@@ -57,6 +57,7 @@ data class DeviceCatalogItem(
     val availability: DeviceAvailability,
     val observedAt: Instant?,
     val state: DeviceStateView?,
+    val diagnosticReason: String? = null,
 )
 
 @Service
@@ -67,11 +68,13 @@ class DeviceCatalogService(
     private val clock: Clock = Clock.systemUTC(),
     private val gateways: GatewayService? = null,
     private val shellyReadings: dev.kyrion.core.integration.ShellySensorRepository? = null,
+    private val importedReadings: dev.kyrion.core.integration.ImportedDeviceRepository? = null,
 ) {
     fun devices(ownerId: UUID): List<DeviceCatalogItem> {
         val ownerRooms = rooms.all(ownerId).associateBy { it.id }
         val ownerObservations = observations.findAll(ownerId).associateBy { it.connectionId }
         val sensorReadings = shellyReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
+        val imported = importedReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
         val zigbeeDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.zigbee?.devices.orEmpty() }
             .associateBy { it.ieeeAddress }
         val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
@@ -87,14 +90,22 @@ class DeviceCatalogService(
                 provider = connection.provider,
                 deviceClass = connection.deviceClass.value,
                 displayName = connection.displayName,
-                hardwareName = zigbee?.let { listOf(it.vendor, it.description).filter(String::isNotBlank).joinToString(" ") }
+                hardwareName = imported[connection.id]?.hardwareName ?: zigbee?.let { listOf(it.vendor, it.description).filter(String::isNotBlank).joinToString(" ") }
                     ?: bluetooth?.let { "${it.name} ${it.model}" }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,
                 room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name, it.roomType) },
-                capabilities = capabilities(connection, zigbee),
+                capabilities = imported[connection.id]?.capabilities?.map(::DeviceCapabilityView) ?: capabilities(connection, zigbee),
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,
-                state = sensorReadings[connection.id]?.takeIf { connection.provider == "shelly" }?.let {
+                diagnosticReason = when {
+                    observation == null -> "no_observation"
+                    !isFresh(observation.observedAt) -> "stale_observation"
+                    currentAvailability == DeviceAvailability.OFFLINE -> "device.offline"
+                    currentAvailability == DeviceAvailability.DEGRADED -> "provider.degraded"
+                    currentAvailability == DeviceAvailability.UNKNOWN -> "no_observation"
+                    else -> null
+                },
+                state = imported[connection.id]?.state ?: sensorReadings[connection.id]?.takeIf { connection.provider == "shelly" }?.let {
                     DeviceStateView(null, null, null, null, null, battery = it.reading.battery,
                         temperatureCelsius = it.reading.temperatureCelsius, relativeHumidity = it.reading.relativeHumidity,
                         measuredAt = it.observedAt)

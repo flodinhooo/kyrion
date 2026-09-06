@@ -26,6 +26,25 @@ class DeviceCommandServiceTest {
     @TempDir lateinit var temp: Path
 
     @Test
+    fun `generic Nanoleaf colour command executes with shared correlation and rejects invalid numeric input`() {
+        val owner = UUID.randomUUID()
+        val events = mutableListOf<ActivityEvent>()
+        val activity = ActivityService(FakeActivityRepository(events))
+        val connections = FakeConnections()
+        val gateway = FakeGateway()
+        val nanoleaf = NanoleafIntegrationService(connections, gateway, CredentialCipher(temp.resolve("credential.key").toString()), activity)
+        val device = nanoleaf.pair(owner, "192.168.1.41", "Panels").id
+        val commands = DeviceCommandService(FakeRooms(owner, Room(UUID.randomUUID(), "Room", Instant.now(), Instant.now())), connections, nanoleaf, activity, CommandObservations())
+        val correlation = UUID.randomUUID()
+        val request = ExecuteDeviceCommandRequest(DeviceCommandService.COLOR_SET, DeviceTargetSelector(provider = "nanoleaf", deviceId = device), DeviceCommandArguments(hue = 120, saturation = 50))
+        assertEquals(1, commands.execute(owner, request, correlation).succeeded)
+        assertEquals(listOf(120 to 50), gateway.colors)
+        assertTrue(events.any { it.correlationId == correlation && it.eventType == "action.device.confirmed" })
+        assertThrows(DeviceCommandInvalidException::class.java) { commands.execute(owner, request.copy(arguments = DeviceCommandArguments(hue = 999, saturation = 50))) }
+        assertEquals(1, gateway.colors.size)
+    }
+
+    @Test
     fun `brightness command resolves every owner Nanoleaf in the requested room`() {
         val owner = UUID.randomUUID()
         val bedroom = Room(UUID.randomUUID(), "Schlafzimmer", Instant.now(), Instant.now())
@@ -62,7 +81,7 @@ class DeviceCommandServiceTest {
         assertEquals(2, observations.values.count { it.availability == DeviceAvailability.ONLINE })
         val commandEvents = events.filter { it.correlationId == result.correlationId }
         assertTrue(commandEvents.any { it.status == ActivityStatus.PROPOSED && it.source == "velora" })
-        assertEquals(2, commandEvents.count { it.status == ActivityStatus.SUCCEEDED })
+        assertEquals(2, commandEvents.count { it.eventType == "action.device.confirmed" })
     }
 
     @Test
@@ -162,12 +181,13 @@ private class FakeConnections : IntegrationConnectionRepository {
 
 private class FakeGateway : NanoleafGateway {
     val brightnessValues = mutableListOf<Int>()
+    val colors = mutableListOf<Pair<Int, Int>>()
     override fun pair(host: String) = "token-$host"
     override fun state(host: String, token: String) = NanoleafDeviceState("Panels", "NL", host, true, 20)
     override fun setPower(host: String, token: String, on: Boolean) = Unit
     override fun setBrightness(host: String, token: String, brightness: Int) { brightnessValues += brightness }
     override fun scenes(host: String, token: String) = NanoleafScenes(null, emptyList())
     override fun selectScene(host: String, token: String, name: String) = Unit
-    override fun setColor(host: String, token: String, hue: Int, saturation: Int) = Unit
+    override fun setColor(host: String, token: String, hue: Int, saturation: Int) { colors += hue to saturation }
     override fun setColorTemperature(host: String, token: String, kelvin: Int) = Unit
 }

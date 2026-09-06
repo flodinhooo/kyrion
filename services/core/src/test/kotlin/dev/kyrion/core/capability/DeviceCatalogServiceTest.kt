@@ -14,6 +14,33 @@ import java.util.UUID
 
 class DeviceCatalogServiceTest {
     @Test
+    fun `cross provider catalog keeps read only observations and never invents missing Zigbee capabilities`() {
+        val owner = UUID.randomUUID()
+        val now = Instant.now()
+        val devices = listOf("nanoleaf", "zigbee", "bluetooth", "shelly", "home_assistant").map { provider ->
+            connection(owner, provider, null).copy(provider = provider)
+        }
+        val ha = devices.last()
+        val readings = object : dev.kyrion.core.integration.ImportedDeviceRepository {
+            override fun all(ownerId: UUID) = if (ownerId == owner) listOf(dev.kyrion.core.integration.ImportedDeviceState(
+                ha.id, "Sensor", DeviceStateView(null, null, null, null, null, temperatureCelsius = 20.0, measuredAt = now), listOf("temperature.read"))) else emptyList()
+            override fun save(ownerId: UUID, state: dev.kyrion.core.integration.ImportedDeviceState) = error("unused")
+        }
+        val catalog = DeviceCatalogService(CatalogConnections(devices), CatalogRooms(owner, Room(UUID.randomUUID(), "Room", now, now)),
+            CatalogObservations(devices.map { DeviceObservation(it.id, owner, DeviceAvailability.DEGRADED, now.minusSeconds(61)) }),
+            Clock.fixed(now, ZoneOffset.UTC), importedReadings = readings)
+        val items = catalog.devices(owner).associateBy { it.provider }
+        assertEquals(5, items.size)
+        assertEquals(listOf("temperature.read"), items.getValue("home_assistant").capabilities.map { it.id })
+        assertEquals(emptyList<DeviceCapabilityView>(), items.getValue("zigbee").capabilities)
+        org.junit.jupiter.api.Assertions.assertTrue(items.getValue("nanoleaf").capabilities.any { it.id == "power.set" })
+        org.junit.jupiter.api.Assertions.assertTrue(items.getValue("bluetooth").capabilities.any { it.id == "power.set" })
+        org.junit.jupiter.api.Assertions.assertTrue(items.getValue("shelly").capabilities.all { it.id.endsWith(".read") })
+        org.junit.jupiter.api.Assertions.assertTrue(items.values.all { it.availability == DeviceAvailability.UNKNOWN && it.diagnosticReason == "stale_observation" })
+        assertEquals(emptyList<DeviceCatalogItem>(), catalog.devices(UUID.randomUUID()))
+    }
+
+    @Test
     fun `catalog exposes only owner metadata rooms and stable capabilities`() {
         val owner = UUID.randomUUID()
         val otherOwner = UUID.randomUUID()
