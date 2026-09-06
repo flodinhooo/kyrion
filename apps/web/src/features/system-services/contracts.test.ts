@@ -7,7 +7,7 @@ describe("system service status contract", () => {
       observedAt: "2026-08-22T19:30:00.000Z",
       services: [{
         id: "core", displayName: "Kyrion Core", host: "127.0.0.1", port: 8080,
-        status: "ready", detail: null, latencyMs: 12, source: "probe",
+        status: "healthy", detail: null, latencyMs: 12, source: "probe",
       }],
     })).toBe(true);
   });

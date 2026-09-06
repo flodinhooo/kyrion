@@ -11,6 +11,7 @@ export type RuntimeDevice = {
   capabilities: Array<{ id: string }>;
   availability: DeviceAvailability;
   observedAt: string | null;
+  diagnosticReason?: "no_observation" | "stale_observation" | "device.offline" | "provider.degraded" | null;
   state: { on: boolean | null; brightness: number | null; hue: number | null; saturation: number | null; colorTemperature: number | null; occupancy: boolean | null; battery: number | null; illuminance: number | null; action: string | null; illumination: "dim" | "bright" | null; temperatureCelsius?: number | null; relativeHumidity?: number | null; measuredAt?: string | null } | null;
 };
 
@@ -28,6 +29,7 @@ export function isRuntimeDevice(value: unknown): value is RuntimeDevice {
     && (device.availability === "online" || device.availability === "offline"
       || device.availability === "degraded" || device.availability === "unknown")
     && (device.observedAt === null || typeof device.observedAt === "string")
+    && (device.diagnosticReason == null || ["no_observation", "stale_observation", "device.offline", "provider.degraded"].includes(device.diagnosticReason))
     && (device.state === null || (!!device.state && (device.state.on === null || typeof device.state.on === "boolean")
       && (device.state.brightness === null || typeof device.state.brightness === "number")
       && (device.state.hue === null || typeof device.state.hue === "number")
