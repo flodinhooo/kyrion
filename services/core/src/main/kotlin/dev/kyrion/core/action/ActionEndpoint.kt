@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.ActivityActorType
 import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -99,6 +100,7 @@ class ActionExecutionService(
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
         val requestHash = sha256(mapper.writeValueAsBytes(mapOf(
             "channel" to context.channel.value,
+            "actorId" to context.actorId,
             "locale" to context.locale.language,
             "sessionId" to context.sessionId,
             "conversationId" to context.conversationId,
@@ -121,9 +123,9 @@ class ActionExecutionService(
 
 @Service
 class WebActionService(private val executions: ActionExecutionService) {
-    fun execute(ownerId: UUID, request: WebActionRequest): ActionOutcome = executions.execute(
+    fun execute(ownerId: UUID, request: WebActionRequest, actorId: UUID = ownerId): ActionOutcome = executions.execute(
         ActionContext(
-            ownerId, ActivityActorType.USER, ownerId.toString(), InteractionChannel.WEB,
+            ownerId, ActivityActorType.USER, actorId.toString(), InteractionChannel.WEB,
             Locale.forLanguageTag(request.locale), UUID.randomUUID(), request.idempotencyKey,
             conversationId = request.conversationId,
         ),
@@ -138,12 +140,12 @@ class WebActionIntentService(
     private val renderer: ActionResultRenderer,
     private val activity: dev.kyrion.core.activity.ActivityService? = null,
 ) {
-    fun execute(ownerId: UUID, request: WebActionIntentRequest): WebActionAttempt = when (
+    fun execute(ownerId: UUID, request: WebActionIntentRequest, actorId: UUID = ownerId): WebActionAttempt = when (
         val result = proposals.propose(ownerId, request.message.trim(), request.locale, request.priorMessages)
     ) {
         is ProposalResult.Proposed -> actions.execute(ownerId, WebActionRequest(
                 request.idempotencyKey, request.locale, result.proposal, request.conversationId,
-            )).let { WebActionAttempt("action", it.code, renderer.render(it, result.proposal, request.locale), it) }
+            ), actorId).let { WebActionAttempt("action", it.code, renderer.render(it, result.proposal, request.locale), it) }
         ProposalResult.None -> WebActionAttempt("none")
         ProposalResult.Ambiguous -> WebActionAttempt("rejected", "target.ambiguous", renderer.rejection("target.ambiguous", request.locale))
         ProposalResult.Invalid -> WebActionAttempt("rejected", "proposal.invalid", renderer.rejection("proposal.invalid", request.locale))
@@ -155,7 +157,7 @@ class WebActionIntentService(
         if (attempt.kind in setOf("rejected", "unavailable")) {
             activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "action.rejected",
                 dev.kyrion.core.activity.ActivityStatus.DENIED, ActivityActorType.USER, "web", attempt.code ?: "proposal.invalid",
-                ownerId.toString(), UUID.randomUUID(), ownerId)
+                actorId.toString(), UUID.randomUUID(), ownerId)
         }
     }
 }
@@ -192,13 +194,13 @@ class ActionResultRenderer {
 class ActionController(private val actions: WebActionService, private val intents: WebActionIntentService) {
     @PostMapping
     fun execute(@Valid @RequestBody body: WebActionRequest, request: HttpServletRequest) =
-        actions.execute(request.ownerId(), body)
+        actions.execute(request.workspaceOwnerId(), body, request.actorId())
 
     @PostMapping("/interpret")
     fun interpret(@Valid @RequestBody body: WebActionIntentRequest, request: HttpServletRequest) =
-        intents.execute(request.ownerId(), body)
+        intents.execute(request.workspaceOwnerId(), body, request.actorId())
 
-    private fun HttpServletRequest.ownerId() =
+    private fun HttpServletRequest.actorId() =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw ActionUnauthenticatedException()
 }
 

@@ -8,6 +8,7 @@ import java.util.UUID
 class ActivityService(
     private val repository: ActivityEventRepository,
     private val clock: Clock = Clock.systemUTC(),
+    private val actors: ActivityActorSource = ActivityActorSource { null },
 ) {
     fun record(
         category: ActivityCategory,
@@ -27,7 +28,7 @@ class ActivityService(
             eventType = eventType,
             status = status,
             actorType = actorType,
-            actorId = actorId,
+            actorId = if (actorType == ActivityActorType.USER) actors.currentActorId() ?: actorId else actorId,
             source = source,
             correlationId = correlationId,
             summaryCode = summaryCode,

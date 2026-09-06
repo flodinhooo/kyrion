@@ -1,6 +1,6 @@
 package dev.kyrion.core.activity
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import dev.kyrion.core.security.UnauthenticatedException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.constraints.Max
@@ -44,6 +44,5 @@ class ActivityController(
         return ActionTimelineResponse(events.take(1000), events.size > 1000, executions?.outcome(request.ownerId(), correlationId))
     }
 
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? java.util.UUID ?: throw UnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
