@@ -1,6 +1,19 @@
 # Kyrion Development Status
 
-Last updated: 2026-08-21
+Last updated: 2026-09-06
+
+## Current consolidation checkpoint - 2026-09-06
+
+The [platform consolidation report](2026-09-06-platform-consolidation.md) is the
+current handoff. It supersedes conflicting priorities in the historical sections
+below. HA scope is device/basic-state import into existing owner rooms only;
+control, services, profiles, events and migrations are deferred. Shelly native
+code is experimental; the selected sensor path is through HA.
+
+Implemented, automated coverage, physical evidence, experiments and plans remain
+separate. No new physical HA or Voice verification is claimed by this checkpoint.
+The dated sections below preserve earlier evidence and are not the current work order.
+
 
 ## Latest Voice checkpoint — 2026-08-21
 

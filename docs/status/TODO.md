@@ -1,6 +1,30 @@
 # Kyrion Development TODO
 
-Last updated: 2026-08-22
+Last updated: 2026-09-06
+
+## Current consolidation checkpoint - 2026-09-06
+
+The [platform consolidation report](2026-09-06-platform-consolidation.md) is the
+current handoff. It supersedes conflicting priorities in the historical sections
+below. HA scope is device/basic-state import into existing owner rooms only;
+control, services, profiles, events and migrations are deferred. Shelly native
+code is experimental; the selected sensor path is through HA.
+
+- [x] Add bounded read-only HA import with stable identity and existing-room mapping.
+- [x] Consolidate existing System services diagnostics and stale gateway handling.
+- [x] Add the owner-scoped Activity execution inspector and correlated action stages.
+- [x] Preserve experiments while separating local private/generated artifacts.
+- [ ] Physically verify HA/Shelly import, room mapping, repeated sync and offline transitions.
+- [ ] Physically verify generic Nanoleaf colour execution and gateway failure diagnosis.
+- [ ] Start the dedicated Velora acceptance phase after reviewing this report; validate
+  processing audio, device execution, final response order and twenty repeated actions.
+
+## Historical worklists and wider backlog
+
+Unchecked entries below are not authorization to expand this consolidation.
+Existing Core orchestration and exact target resolution are implemented; broader
+household roles, integration profiles and restore orchestration remain planned.
+
 
 This file contains the immediate continuation point for the next development
 session. The current implementation status is documented in [README.md](README.md).

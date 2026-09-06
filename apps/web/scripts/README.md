@@ -36,6 +36,12 @@ a fixture return explicit 503 responses, exercising those pages' error states;
 they are listed in `unexpectedFixtureRequests` in the report. This is not
 physical-device, Spotify-account or screen-reader acceptance.
 
+The consolidation checks additionally exercise the explicit HA sync button,
+PostgreSQL/unknown dependency cards, the full correlated action failure timeline,
+and the expanded inspector at 320 pixels in German and English. These also run
+in quick mode. Their screenshots use the `consolidation-` prefix. HA responses,
+inventory and action outcomes are fixtures, not hardware verification.
+
 `REVIEW_QUICK=1` runs only the interaction/failure checks after a targeted fix
 and writes `results-quick.json`, preserving the full `results.json` report.
 Screenshots are viewport captures; review long pages by scrolling the live app.

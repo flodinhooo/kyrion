@@ -1,6 +1,18 @@
 # Local network discovery and Shelly H&T
 
-## Implemented scope
+## Current product boundary - 2026-09-06
+
+Shelly does not currently work as a fully verified direct native Kyrion integration.
+For this phase, Shelly and sensor information is imported through the bounded
+[Home Assistant device/state path](home-assistant-import.md). This does not mean
+Home Assistant control, automations or a full ecosystem integration exists.
+
+The native local RPC implementation below is retained as experimental code with
+automated tests, not physical acceptance. Its UI remains explicitly experimental;
+existing imported readings are not deleted. No native Shelly expansion is planned
+in this consolidation.
+
+## Existing network discovery and experimental native scope
 
 The Add Device screen searches for local devices independently of manufacturer using
 `POST /v1/integrations/network/discover`. Discovery is owner-authenticated and

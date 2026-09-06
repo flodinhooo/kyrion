@@ -17,7 +17,7 @@ media, knowledge and AI without giving an AI model direct authority over the
 user's systems.
 
 The project is currently a working development prototype, not a finished
-consumer product. Its implemented vertical slices run on real local hardware;
+consumer product. Several existing vertical slices have real local hardware evidence;
 planned capabilities are documented separately and are not presented as
 complete.
 
@@ -49,7 +49,7 @@ Read the [project vision](docs/vision.md), [principles](docs/principles.md) and
 
 ## What works today
 
-The current local development installation includes the following implemented
+The current repository includes the following implemented
 slices.
 
 ### Platform and security
@@ -65,8 +65,11 @@ slices.
 ### Devices and integrations
 
 - local Nanoleaf discovery, physical authorisation and encrypted credentials;
-- shared local network discovery and [Shelly H&T sensor onboarding](docs/shelly-integration.md)
-  with persistent, manually refreshed temperature and humidity readings (hardware verification pending);
+- shared local network discovery;
+- [Home Assistant device and basic state import](docs/home-assistant-import.md),
+  including Shelly/sensor data and mapping into existing rooms (awaiting physical verification);
+- retained [experimental direct Shelly H&T code](docs/shelly-integration.md),
+  which is not a fully working, physically verified native integration;
 - Nanoleaf state, power, brightness, colour, temperature and stored scenes;
 - persistent rooms, device names and room assignments;
 - a provider-neutral device catalog and bounded command contracts;
@@ -94,28 +97,21 @@ slices.
 - provider-neutral Fixed, Template and Dynamic voice-response plans;
 - checksum-pinned reviewed-audio support and an owner-scoped template cache.
 
-The Voice Satellite can already complete ordinary local batch conversations.
-The next MVP milestone connects it to the same Core-owned action path used by
-Web and returns spoken success only after a real adapter result.
+The shared Core Action Orchestrator is implemented for Web and Voice. Physical
+Voice evidence and remaining acceptance items are recorded separately; software
+coverage does not establish repeatable acoustic or device acceptance.
 
 ## Current focus
 
-Development is deliberately focused on a small, useful Voice MVP rather than
-continued general TTS experimentation:
+The pre-Velora consolidation covers the bounded HA import, existing System
+services diagnostics, provider-neutral device contracts, the Activity execution
+inspector and repository hygiene. No HA control or new product domain is added.
 
-1. produce the first reviewed Velora fixed-response assets using local recording
-   and offline voice conversion;
-2. move command orchestration out of the Next.js chat route into Kyrion Core;
-3. add minimal room categories for natural and deterministic target resolution;
-4. prove one German Nanoleaf power command through the physical Voice Satellite;
-5. repeat the path at least twenty times and test timeout, offline, ambiguity
-   and stale-session failures;
-6. expand through the same contracts to Zigbee, Thread/Matter and local Wi-Fi
-   devices.
-
-The detailed sequence is captured in the
-[Voice and Action MVP plan](docs/status/2026-08-12-voice-action-mvp-plan.md) and
-its [dated TODO checkpoint](docs/status/2026-08-12-voice-action-mvp-todo.md).
+Read the [consolidation report](docs/status/2026-09-06-platform-consolidation.md)
+and [current TODO](docs/status/TODO.md). The next dedicated Velora phase starts
+with the existing processing/audio/device-result order and repeatability
+acceptance, using the inspector to distinguish Core decisions from audio issues.
+It does not implicitly reopen TTS provider discovery.
 
 ## Architecture
 
@@ -147,7 +143,7 @@ Component ownership is intentional:
 - **Voice Satellite** owns local wake detection, bounded capture and playback.
   It cannot execute device actions directly.
 - **Adapters** translate Kyrion capabilities into provider-specific APIs.
-  Home Assistant may later be one optional adapter; it is not the platform
+  Home Assistant is an optional read-only device import; it is not the platform
   core.
 
 See [Architecture](docs/architecture.md) and the accepted
@@ -190,9 +186,10 @@ storage boundaries must be reviewed separately.
 
 ## Development status and evidence
 
-Kyrion distinguishes four states explicitly:
+Kyrion distinguishes five states explicitly:
 
-- **implemented**: present in the repository with proportionate tests;
+- **implemented**: present in the repository;
+- **automatically tested**: exercised by the reported automated checks;
 - **physically verified**: exercised against the documented local hardware;
 - **experimental**: isolated code or benchmarks that are not active product
   paths;
@@ -224,21 +221,11 @@ private recordings or generated training data.
 
 ## Roadmap direction
 
-Near-term work focuses on trustworthy orchestration and real hardware:
-
-- shared Core Action Orchestrator for Web, Voice and later clients;
-- typed policy and confirmation classes;
-- natural room resolution using visible names and room categories;
-- Voice-confirmed Nanoleaf and Zigbee actions;
-- Home Assistant Connect ZBT-2, Thread/Matter and local Wi-Fi validation;
-- gateway recovery, backup and restore verification.
-
-Later domains may include calendar, email, local file search, Spotify, YouTube,
-playback routing and automations. These will use domain-specific typed actions
-above the same Core authority rather than being added as unrestricted AI tools.
-
-The Web experience will also be reconsidered as a personal local platform
-rather than remaining centred on a generic chat interface.
+The immediate handoff is the bounded consolidation described above, followed by
+an explicitly scoped Velora phase. Wider integration profiles, backup/restore
+orchestration, Matter/Thread, remote access, mobile and public plugins remain
+future roadmap items. Spotify and YouTube already have bounded Lounge slices;
+they are not new work for this consolidation.
 
 ## Contributing
 

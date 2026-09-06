@@ -6,6 +6,18 @@ the trustworthy orchestration layer first, then daily usability, followed by
 energy and operational differentiation. Integration breadth must not outrun
 permissions, diagnosis, audit and recovery.
 
+## Current delivery boundary - 2026-09-06
+
+The [consolidation checkpoint](status/2026-09-06-platform-consolidation.md) precedes
+the dedicated Velora phase. The HA implementation currently imports devices and
+basic states read-only, mapping areas only to existing exact-name owner rooms.
+All deeper HA profiles, control, services, automation migration and restore
+orchestration below are future scope, not prerequisites for this import.
+
+Core orchestration, policy classes, owner-scoped audit, exact device/room target
+resolution, gateway enrollment and the bounded Web/Voice paths already exist.
+Household roles and broader permission/backup policies remain open.
+
 ## Milestone 0 — Foundation
 
 Goal: establish Kyrion's identity, structure and architectural boundaries.
@@ -38,15 +50,15 @@ Goal: make Core the provider-neutral trust and operations layer.
 
 - [ ] Stabilise device identity, state, availability, capability, event,
   command and result contracts
-- [ ] Implement a Core-owned Device Manager and target resolution
+- [x] Implement shared Core-owned device/room target resolution
 - [ ] Model households, members and initial owner/member/guest roles
-- [ ] Define routine, confirmation-required, high-risk and forbidden action
-  policy classes
+- [x] Define initial read, routine, confirmation-required, restricted and forbidden
+  action policy classes
 - [ ] Define Observe, Control and Manage integration profiles backed by granular
   Core permissions and scoped to approved households, rooms and devices
 - [ ] Record proposed, rejected, confirmation-required and executed actions
   with actor, source and correlation ID
-- [ ] Define integration health and diagnostic reason contracts
+- [x] Consolidate bounded system and device diagnostic reason contracts
 - [ ] Separate discovered candidates from explicitly approved devices
 - [ ] Define a versioned internal adapter contract before a public plugin API
 - [ ] Add cross-owner, ambiguity, malformed-output and adapter-failure tests
@@ -88,7 +100,7 @@ Goal: operate the ordered Raspberry Pi as a secure edge node while Core remains
 on the development PC or a later server.
 
 - [x] Select and order the Raspberry Pi 5 and dedicated Zigbee/Thread hardware
-- [ ] Define authenticated gateway registration, identity, heartbeat and health
+- [x] Implement authenticated gateway registration, identity, heartbeat and health
 - [ ] Define stable adapter identity without fixed USB device-path assumptions
 - [ ] Buffer bounded state and events during temporary network interruption
 - [ ] Validate Raspberry Pi, Zigbee, Thread, Bluetooth and USB voice hardware
@@ -114,8 +126,7 @@ Goal: make a heterogeneous home simple for every authorised household member.
 - [ ] Show Observe, Control and Manage access plus granular scopes and backup
   coverage during integration onboarding
 - [ ] Build an automation editor using capabilities rather than protocols
-- [ ] Add a human-readable execution timeline and “Why did this not run?”
-  explanations
+- [x] Add an owner-scoped execution timeline with recorded failure reasons
 - [ ] Add explicit ambiguity clarification in text and voice conversations
 - [ ] Complete responsive German and English UX in both themes
 - [ ] Add safe remote access after throttling, session controls and audit exist
@@ -128,7 +139,8 @@ slices rather than claiming success from pairing alone.
 - [ ] Zigbee lamps, button and motion events through the dedicated coordinator
 - [ ] Matter-over-Thread contact events through OTBR and the dedicated adapter
 - [ ] Bluetooth discovery and bounded device access through the gateway
-- [ ] Shelly and myStrom Wi-Fi state and capabilities
+- [ ] Physically verify Shelly sensor import through Home Assistant; native Shelly
+  and myStrom capability acceptance remain separate future work
 - [ ] Voice satellite capture, playback, health and Core-confirmed actions
 - [ ] Restart, temporary-network-loss and unavailable-device recovery tests
 

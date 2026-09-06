@@ -32,9 +32,10 @@ device model, household identity, permissions, policies, command decisions,
 diagnostics, persistence and audit. Adapters supply connectivity and translate
 external ecosystems into that model.
 
-Home Assistant is an important optional adapter for integration breadth. Its
-onboarding offers Observe, Control and Manage profiles backed by granular
-Core-owned permissions. Home Assistant entity identifiers and service calls
+Home Assistant currently supplies a bounded read-only device/state import; see
+[the import contract](home-assistant-import.md) and [ADR 0018](adr/0018-read-only-home-assistant-import.md).
+Future onboarding may offer Observe, Control and Manage profiles backed by granular
+Core-owned permissions. These profiles and the restore sequence below are planned. Home Assistant entity identifiers and service calls
 never become Kyrion's public domain contract, and no arbitrary service call may
 bypass Core policy even under Manage access. Native integrations remain
 appropriate when they
@@ -120,7 +121,7 @@ a central core service, optional AI capabilities and external integrations.
 └───────────────┘ └─────────────────┘
 ```
 
-## Initial prototype architecture
+## Historical initial prototype architecture (superseded)
 
 The first Kyrion prototype intentionally uses a smaller architecture.
 
@@ -232,7 +233,7 @@ application.
 
 ## Core service
 
-Planned technology:
+Implemented technology:
 
 - Kotlin
 - Spring Boot
@@ -255,7 +256,7 @@ Primary responsibilities:
 The core service becomes the authoritative source for platform state and
 business rules.
 
-### When should the core service be introduced?
+### Historical rationale for introducing Core (now implemented)
 
 A dedicated core service becomes justified when Kyrion requires one or more of
 the following:
@@ -275,7 +276,7 @@ Until then, the first prototype may use server-side Next.js functionality.
 
 ## AI service
 
-Planned technology:
+Implemented technology:
 
 - Python
 - FastAPI
@@ -378,6 +379,8 @@ must not discard those choices. Provider observations such as availability,
 power, brightness and colour remain timestamped observations rather than being
 confused with owner configuration. Re-discovery reconciles the stable record;
 it must not silently create duplicates or overwrite owner-managed metadata.
+The explicitly invoked HA sync is the documented exception: it replaces imported
+names and room mappings with HA metadata, without creating Kyrion rooms.
 
 Web and mobile clients read this same Core inventory for Home. New adapters may
 translate provider identities and capabilities, but they may not bypass this
@@ -787,3 +790,10 @@ The following topics remain intentionally undecided:
 
 These decisions should be documented through Architecture Decision Records when
 they become relevant.
+
+## Consolidated diagnostics
+
+See [Platform diagnostics](platform-diagnostics.md) for the implemented service
+status, catalog diagnostic reasons and owner-scoped Action Inspector. These reuse
+existing observations and signed audit persistence. They do not imply physical
+verification or introduce another execution authority.

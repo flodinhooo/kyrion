@@ -2,7 +2,8 @@
 
 Snapshot: 2026-08-12, repository baseline `3a80ba1`.
 
-Use this as the single starting context for a new development chat. It
+Historical snapshot: read [the current consolidation handoff](2026-09-06-platform-consolidation.md)
+and [current TODO](TODO.md) first. It
 distinguishes implemented, physically verified, experimental and planned work.
 It does not replace `AGENTS.md`, ADRs or the linked evidence reports.
 
