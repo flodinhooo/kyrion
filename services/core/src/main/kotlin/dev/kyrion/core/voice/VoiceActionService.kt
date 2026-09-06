@@ -25,6 +25,7 @@ class VoiceActionService(
     private val proposals: DeviceProposalProvider,
     private val executions: ActionExecutionService,
     private val renderer: ActionResultRenderer,
+    private val activity: dev.kyrion.core.activity.ActivityService? = null,
 ) {
     fun interpret(
         ownerId: UUID,
@@ -40,9 +41,9 @@ class VoiceActionService(
         onValidated: () -> Unit = {},
     ): VoiceActionAttempt = when (val result = proposals.propose(ownerId, message.trim(), locale, priorMessages)) {
         is ProposalResult.Proposed -> {
-            validateActive()
+            validateSession(ownerId, satelliteId, turnId, validateActive)
             onValidated()
-            validateActive()
+            validateSession(ownerId, satelliteId, turnId, validateActive)
             val context = ActionContext(
                 ownerId = ownerId,
                 actorType = ActivityActorType.INTEGRATION,
@@ -60,14 +61,28 @@ class VoiceActionService(
         ProposalResult.None -> VoiceActionAttempt.NotAction
         ProposalResult.Ambiguous -> VoiceActionAttempt.Respond(
             DynamicDialogueOutcome(renderer.rejection("target.ambiguous", locale)),
-        )
+        ).also { recordRejection(ownerId, satelliteId, turnId, "target.ambiguous") }
         ProposalResult.Invalid -> VoiceActionAttempt.Respond(
             DynamicDialogueOutcome(renderer.rejection("proposal.invalid", locale)),
-        )
+        ).also { recordRejection(ownerId, satelliteId, turnId, "proposal.invalid") }
         ProposalResult.Unavailable -> VoiceActionAttempt.Respond(DynamicDialogueOutcome(
             if (locale == "de") "Ich konnte die Aktion gerade nicht sicher prüfen."
             else "I couldn't safely evaluate that action right now.",
-        ))
+        )).also { recordRejection(ownerId, satelliteId, turnId, "proposal.unavailable") }
+    }
+
+    private fun recordRejection(ownerId: UUID, satelliteId: UUID, correlationId: UUID, code: String) {
+        activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "action.rejected",
+            dev.kyrion.core.activity.ActivityStatus.DENIED, ActivityActorType.INTEGRATION, "voice", code,
+            satelliteId.toString(), correlationId, ownerId)
+    }
+
+    private fun validateSession(ownerId: UUID, satelliteId: UUID, correlationId: UUID, validate: () -> Unit) {
+        try { validate() } catch (exception: VoiceSessionInactiveException) {
+            recordRejection(ownerId, satelliteId, correlationId, "session.stale"); throw exception
+        } catch (exception: VoiceSessionNotFoundException) {
+            recordRejection(ownerId, satelliteId, correlationId, "session.stale"); throw exception
+        }
     }
 
     fun execute(context: ActionContext, proposal: DeviceActionProposal): VoiceActionAttempt.Respond {

@@ -47,12 +47,116 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val memories: PersonalMemoryRepository,
     private val mockMvc: MockMvc,
     private val activity: ActivityService,
+    private val haReconciler: dev.kyrion.core.integration.HomeAssistantReconciler,
+    private val catalog: dev.kyrion.core.capability.DeviceCatalogService,
+    private val rooms: dev.kyrion.core.home.RoomRepository,
+    private val transactions: org.springframework.transaction.support.TransactionTemplate,
 ) {
     @BeforeEach
     fun cleanDatabase() {
         jdbc.sql(
             "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
+    }
+
+    @Test
+    fun `HA sync records success and safe failure diagnostics without replacing prior inventory`() {
+        val login = authentication.setup("flo", OLD_PASSWORD)
+        val owner = login.user.id
+        var failure: String? = null
+        val gateway = object : dev.kyrion.core.integration.HomeAssistantGateway {
+            override fun snapshot(ownerId: UUID): List<dev.kyrion.core.integration.HomeAssistantDevice> {
+                failure?.let { throw dev.kyrion.core.integration.HomeAssistantException(it) }
+                return emptyList()
+            }
+        }
+        val service = dev.kyrion.core.integration.HomeAssistantImportService(
+            dev.kyrion.core.integration.HomeAssistantConfiguration("http://192.168.1.20:8123", "test-token", owner.toString()),
+            gateway, haReconciler, jdbc, transactions, activity)
+        assertThat(service.status(owner).reason).isEqualTo("no_observation")
+        val result = service.sync(owner)
+        assertThat(result.reason).isNull()
+        val success = service.status(owner)
+        assertThat(success.status).isEqualTo("healthy")
+        assertThat(success.lastSuccessAt).isNotNull()
+        assertThat(success.correlationId).isEqualTo(result.correlationId)
+        for (code in listOf("authentication_failed", "dependency_unreachable", "invalid_response")) {
+            failure = code
+            assertThat(service.sync(owner).reason).isEqualTo(code)
+            val failed = service.status(owner)
+            assertThat(failed.reason).isEqualTo(code)
+            assertThat(failed.lastSuccessAt).isEqualTo(success.lastSuccessAt)
+        }
+        assertThat(service.status(UUID.randomUUID()).reason).isEqualTo("configuration_missing")
+        jdbc.sql("UPDATE home_assistant_sync SET attempted_at=attempted_at - INTERVAL '2 minutes' WHERE owner_id=:owner")
+            .param("owner", owner).update()
+        assertThat(service.status(owner).reason).isEqualTo("stale_observation")
+        assertThat(service.status(owner).lastError).isEqualTo("invalid_response")
+        mockMvc.perform(get("/v1/integrations/platform-diagnostics/database").header("Authorization", "Bearer ${login.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.status").value("healthy"))
+    }
+
+    @Test
+    fun `HA device import persists identity room state and owner boundaries through HTTP catalog`() {
+        val login = authentication.setup("flo", OLD_PASSWORD)
+        val owner = login.user.id
+        val now = Instant.now()
+        val room = rooms.create(owner, dev.kyrion.core.home.Room(UUID.randomUUID(), "Wohnzimmer", now, now))
+        val externalId = "a".repeat(32)
+        val sensor = dev.kyrion.core.integration.HomeAssistantDevice(externalId, "Shelly H&T", " wohnZIMMER ", "Shelly H&T Gen3",
+            dev.kyrion.core.integration.DeviceClass.SENSOR, dev.kyrion.core.capability.DeviceAvailability.ONLINE,
+            dev.kyrion.core.capability.DeviceStateView(null, null, null, null, null, temperatureCelsius = 22.0, relativeHumidity = 45.0, measuredAt = now),
+            listOf("temperature.read", "humidity.read"))
+        haReconciler.reconcile(owner, listOf(sensor))
+        val imported = catalog.devices(owner).single()
+        assertThat(imported.room?.id).isEqualTo(room.id)
+        assertThat(imported.state?.temperatureCelsius).isEqualTo(22.0)
+        haReconciler.reconcile(owner, listOf(sensor.copy(name = "Renamed", area = "Wohnzimmer OG",
+            availability = dev.kyrion.core.capability.DeviceAvailability.OFFLINE,
+            state = sensor.state.copy(temperatureCelsius = null, relativeHumidity = null))))
+        val updated = catalog.devices(owner).single()
+        assertThat(updated.id).isEqualTo(imported.id)
+        assertThat(updated.displayName).isEqualTo("Renamed")
+        assertThat(updated.room).isNull()
+        assertThat(updated.availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.OFFLINE)
+        assertThat(rooms.all(owner)).hasSize(1)
+        val another = insertAdditionalOwner("another")
+        assertThat(catalog.devices(another)).isEmpty()
+        mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer ${login.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$[0].provider").value("home_assistant"))
+            .andExpect(jsonPath("$[0].endpointHost").doesNotExist()).andExpect(jsonPath("$[0].externalId").doesNotExist())
+        mockMvc.perform(post("/v1/device-commands").header("Authorization", "Bearer ${login.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"capability":"power.set","selector":{"provider":"home_assistant","deviceId":"${imported.id}"},"arguments":{"on":true}}"""))
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("DEVICE_CAPABILITY_UNSUPPORTED"))
+        mockMvc.perform(post("/v1/integrations/home-assistant/sync")).andExpect(status().isUnauthorized)
+        haReconciler.reconcile(owner, emptyList())
+        assertThat(catalog.devices(owner).single().availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.UNKNOWN)
+    }
+
+    @Test
+    fun `timeline queries complete owner scoped history and sanitize legacy provider payloads`() {
+        val login = authentication.setup("flo", OLD_PASSWORD)
+        val other = insertAdditionalOwner("another")
+        val correlation = UUID.randomUUID()
+        val target = UUID.randomUUID()
+        jdbc.sql("""INSERT INTO action_execution(id,owner_id,idempotency_key,correlation_id,request_hash,status,outcome,created_at,completed_at)
+            VALUES(:id,:owner,:key,:correlation,:hash,'completed',CAST(:outcome AS jsonb),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")
+            .param("id", UUID.randomUUID()).param("owner", login.user.id).param("key", UUID.randomUUID())
+            .param("correlation", correlation).param("hash", "a".repeat(64))
+            .param("outcome", """{"status":"succeeded","code":"action.succeeded","correlationId":"$correlation","capability":"power.set","requested":1,"succeeded":1,"failed":0,"targets":[{"targetId":"$target","displayName":"Room lamp","status":"succeeded"}]}""").update()
+        activity.record(ActivityCategory.CAPABILITY, "action.proposed", ActivityStatus.PROPOSED, ActivityActorType.USER,
+            "web", "action.proposed", login.user.id.toString(), correlation, login.user.id)
+        activity.record(ActivityCategory.CAPABILITY, "action.completed", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+            "web", "action.succeeded", login.user.id.toString(), correlation, login.user.id)
+        activity.record(ActivityCategory.CAPABILITY, "gateway.command.completed", ActivityStatus.FAILED, ActivityActorType.INTEGRATION,
+            "kyrion-gateway", "private-provider-payload", other.toString(), correlation, other)
+        mockMvc.perform(get("/v1/activity/timeline/$correlation").header("Authorization", "Bearer ${login.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.items[0].eventType").value("action.proposed"))
+            .andExpect(jsonPath("$.items[1].eventType").value("action.completed"))
+            .andExpect(jsonPath("$.truncated").value(false))
+            .andExpect(jsonPath("$.outcome.targets[0].displayName").value("Room lamp"))
+        mockMvc.perform(get("/v1/activity/timeline/$correlation")).andExpect(status().isUnauthorized)
     }
 
     @Test
