@@ -37,7 +37,7 @@ class JdbcRoomRepository(private val jdbc: JdbcClient) : RoomRepository {
     override fun assignConnection(ownerId: UUID, connectionId: UUID, roomId: UUID?): Boolean = jdbc.sql(
         """UPDATE integration_connection SET room_id = :roomId, updated_at = CURRENT_TIMESTAMP
            WHERE owner_id = :ownerId AND id = :connectionId
-             AND (:roomId IS NULL OR EXISTS (SELECT 1 FROM owner_room WHERE id = :roomId AND owner_id = :ownerId))""",
+             AND (CAST(:roomId AS UUID) IS NULL OR EXISTS (SELECT 1 FROM owner_room WHERE id = :roomId AND owner_id = :ownerId))""",
     ).param("roomId", roomId).param("ownerId", ownerId).param("connectionId", connectionId).update() == 1
 
     private fun mapRoom(rs: java.sql.ResultSet) = Room(rs.getObject("id", UUID::class.java), rs.getString("name"), rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(), RoomType.entries.single { it.value == rs.getString("room_type") })

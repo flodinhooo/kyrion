@@ -82,6 +82,11 @@ class JdbcActivityEventRepository(
         .query(::mapEvent)
         .list()
 
+    override fun findByCorrelation(ownerId: java.util.UUID, correlationId: java.util.UUID): List<ActivityEvent> = jdbcClient.sql(
+        """SELECT * FROM activity_event WHERE owner_id=:owner AND correlation_id=:correlation
+            ORDER BY integrity_sequence NULLS FIRST, occurred_at, id LIMIT 1001""",
+    ).param("owner", ownerId).param("correlation", correlationId).query(::mapEvent).list()
+
     @Suppress("UNUSED_PARAMETER")
     private fun mapEvent(resultSet: ResultSet, rowNumber: Int): ActivityEvent {
         return ActivityEvent(

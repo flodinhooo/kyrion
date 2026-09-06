@@ -41,4 +41,5 @@ data class IntegrationConnectionView(
     val deviceClass: String,
 )
 
-fun IntegrationConnection.view() = IntegrationConnectionView(id, provider, displayName, endpointHost, createdAt, roomId, deviceClass.value)
+fun IntegrationConnection.view() = IntegrationConnectionView(id, provider, displayName,
+    if (provider == HOME_ASSISTANT_PROVIDER) "" else endpointHost, createdAt, roomId, deviceClass.value)
