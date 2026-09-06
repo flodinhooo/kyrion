@@ -39,6 +39,9 @@ services:
       KYRION_SPOTIFY_CLIENT_ID: ${KYRION_SPOTIFY_CLIENT_ID:-}
       KYRION_SPOTIFY_CLIENT_SECRET: ${KYRION_SPOTIFY_CLIENT_SECRET:-}
       KYRION_SPOTIFY_REDIRECT_URI: ${KYRION_SPOTIFY_REDIRECT_URI:-}
+      KYRION_HA_URL: ${KYRION_HA_URL:-}
+      KYRION_HA_TOKEN: ${KYRION_HA_TOKEN:-}
+      KYRION_HA_OWNER_ID: ${KYRION_HA_OWNER_ID:-}
     ports:
       # OTBR already owns loopback port 8080 on kyrion-node.
       - "127.0.0.1:18080:8080"
@@ -95,6 +98,8 @@ services:
 
   caddy:
     image: kyrion/caddy:2.10.2
+    extra_hosts:
+      - "kyrion-node.local:127.0.0.1"
     restart: unless-stopped
     depends_on:
       web:
@@ -116,7 +121,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-check-certificate --quiet --tries=1 --spider https://127.0.0.1/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-check-certificate --quiet --tries=1 --spider https://kyrion-node.local/login || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 8

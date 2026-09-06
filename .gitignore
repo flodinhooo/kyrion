@@ -49,3 +49,35 @@ venv/
 # Local Kyrion data
 data/
 secrets/
+
+# New local runtime outputs; reviewed scripts and historical evidence stay tracked.
+.run/private-evidence/
+.run/**/*.wav
+.run/*.json
+!.run/short_tts_corpus.json
+.run/*.ndjson
+.run/*.tar
+.run/*headers*.txt
+/.t
+/=0.116,
+*.safetensors
+*.gguf
+*.onnx
+*.pt
+*.pth
+models/
+checkpoints/
+voice-training/
+recordings/
+benchmark-output/
+benchmark-outputs/
+/voice-benchmark/**/*.wav
+/voice-benchmark/**/*.json
+/voice-streaming-spike/**/*.wav
+/voice-streaming-spike/**/*.json
+/voice-streaming-spike-warm/**/*.wav
+/voice-streaming-spike-warm/**/*.json
+/voice-streaming-boundary-optimization/**/*.wav
+/voice-streaming-boundary-optimization/**/*.json
+playwright-report/
+test-results/

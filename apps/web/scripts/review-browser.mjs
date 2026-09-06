@@ -14,6 +14,13 @@ const { chromium } = require(process.env.REVIEW_PLAYWRIGHT_PATH || "playwright-c
 const artifacts = path.resolve(webDir, process.env.REVIEW_ARTIFACTS || "../../.run/release-review/browser");
 await mkdir(artifacts, { recursive: true });
 const date = "2026-09-05T10:00:00Z";
+const correlation = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const timeline = [
+  { id: "event-1", occurredAt: date, eventType: "action.proposed", summaryCode: "action.proposed", status: "PROPOSED" },
+  { id: "event-2", occurredAt: "2026-09-05T10:00:00.200Z", eventType: "action.policy.accepted", summaryCode: "routine", status: "CONFIRMED" },
+  { id: "event-3", occurredAt: "2026-09-05T10:00:00.600Z", eventType: "action.adapter.failed", summaryCode: "adapter.timeout", status: "FAILED" },
+  { id: "event-4", occurredAt: "2026-09-05T10:00:00.684Z", eventType: "action.completed", summaryCode: "action.failed", status: "FAILED" },
+].map((event) => ({ ...event, category: "CAPABILITY", actorType: "USER", actorId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", source: "web", correlationId: correlation }));
 const room = { id: "11111111-1111-4111-8111-111111111111", name: "Wohnzimmer", roomType: "living_room", createdAt: date, updatedAt: date };
 let rooms = [room];
 let mode = "ready";
@@ -43,7 +50,16 @@ const core = createServer(async (req, res) => {
   if (url.pathname === "/v1/integrations/spotify/playback") return send({ playing: false, title: null, artist: null, imageUrl: null, trackUrl: null, progressMs: 0, durationMs: 0, deviceId: null, disallowed: [] });
   if (["/v1/integrations/nanoleaf/connections", "/v1/gateways", "/v1/integrations/spotify/devices"].includes(url.pathname)) return send([]);
   if (url.pathname === "/v1/conversations") return send({ items: [{ id: "review-conversation", title: "Review conversation", createdAt: date, updatedAt: date }] });
-  if (url.pathname === "/v1/activity") return send({ items: [] });
+  if (url.pathname === "/actuator/health") return send({ status: "UP" });
+  if (url.pathname === "/v1/integrations/home-assistant") return send({ configured: true, status: "unknown", lastAttemptAt: date, lastSuccessAt: date, reason: "stale_observation", correlationId: correlation });
+  if (url.pathname === "/v1/integrations/home-assistant/sync") return send({ imported: 1, correlationId: correlation, reason: null });
+  if (url.pathname === "/v1/integrations/platform-diagnostics/database") return send({ status: "healthy", observedAt: date, reason: null });
+  if (url.pathname === "/v1/activity") return send({ items: [timeline.at(-1)] });
+  if (url.pathname === `/v1/activity/timeline/${correlation}`) return send({ items: timeline, truncated: false });
+  if (url.pathname === "/v1/activity/integrity") {
+    const chain = { scope: "review", valid: true, sealedEvents: 4, legacyEvents: 0, authorizedPruning: false, issues: [] };
+    return send({ owner: chain, system: { ...chain, scope: "system", sealedEvents: 0 } });
+  }
   unexpected.add(`${req.method} ${url.pathname}`);
   send({ code: "REVIEW_FIXTURE_UNSUPPORTED" }, 503);
 });
@@ -53,7 +69,7 @@ const port = Number(process.env.REVIEW_WEB_PORT || 3107);
 const origin = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
   cwd: webDir, windowsHide: true,
-  env: { ...process.env, KYRION_BUILD_DIRECTORY: ".next-review", CORE_SERVICE_URL: `http://127.0.0.1:${corePort}`, AI_SERVICE_URL: "http://127.0.0.1:1", KYRION_PUBLIC_URL: origin, KYRION_INSECURE_LAN_HTTP: "true" },
+  env: { ...process.env, KYRION_BUILD_DIRECTORY: ".next-review", CORE_SERVICE_URL: `http://127.0.0.1:${corePort}`, AI_SERVICE_URL: "http://127.0.0.1:1", OLLAMA_SERVICE_URL: "http://127.0.0.1:1", STT_SERVICE_URL: "http://127.0.0.1:1", KYRION_PUBLIC_URL: origin, KYRION_INSECURE_LAN_HTTP: "true" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let serverOutput = "";
@@ -79,6 +95,35 @@ try {
     try { await action(); results.push({ name, passed: true }); console.log(`PASS ${name}`); }
     catch (error) { results.push({ name, passed: false, error: error.message }); console.log(`FAIL ${name}: ${error.message}`); await page.screenshot({ path: path.join(artifacts, `failure-${results.length}.png`) }).catch(() => {}); await writeFile(path.join(artifacts, `failure-${results.length}.html`), await page.content()); }
   };
+  await check("consolidated diagnostics expose HA sync and unknown dependencies", async () => {
+    await page.goto(`${origin}/settings/services`);
+    await page.getByRole("button", { name: /Geräte importieren|Import \/ sync devices/ }).click();
+    await page.getByRole("status").filter({ hasText: /Importierte Geräte: 1|Imported devices: 1/ }).waitFor();
+    assert(await page.getByText("PostgreSQL", { exact: true }).isVisible());
+    assert(await page.getByText("Spotify Receiver", { exact: true }).isVisible());
+    await page.screenshot({ path: path.join(artifacts, "consolidation-services.png"), fullPage: true });
+  });
+  await check("action inspector loads the full correlated failure timeline", async () => {
+    await page.goto(`${origin}/activity`);
+    await page.getByText(/Ablauf ansehen|Inspect execution/, { exact: true }).first().click();
+    await page.getByText(/Dauer: 684 ms|Duration: 684 ms/, { exact: true }).waitFor();
+    assert(await page.getByText(/Zeitüberschreitung|Timed out/, { exact: true }).isVisible());
+    await page.screenshot({ path: path.join(artifacts, "consolidation-timeline.png"), fullPage: true });
+  });
+  for (const language of ["de", "en"]) {
+    await check(`open action inspector is readable at 320px in ${language}`, async () => {
+      await page.evaluate((language) => localStorage.setItem("kyrion-locale", language), language);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await page.goto(`${origin}/activity`);
+      await page.getByText(/Ablauf ansehen|Inspect execution/, { exact: true }).first().click();
+      await page.getByText(language === "de" ? "Dauer: 684 ms" : "Duration: 684 ms", { exact: true }).waitFor();
+      assert(await page.locator(".action-timeline-step").first().evaluate((element) => element.getBoundingClientRect().width > 160));
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({ path: path.join(artifacts, `consolidation-timeline-${language}-320.png`), fullPage: true });
+    });
+  }
+  await page.evaluate(() => localStorage.setItem("kyrion-locale", "de"));
+  await page.setViewportSize({ width: 1440, height: 1000 });
   for (const viewport of process.env.REVIEW_QUICK ? [] : [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
     await page.setViewportSize(viewport);
     for (const theme of ["light", "dark"]) {

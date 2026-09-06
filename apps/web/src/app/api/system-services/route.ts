@@ -1,6 +1,8 @@
 import { isGatewayNodeList } from "@/features/gateways/contracts";
 import type { SystemService, SystemServicesStatus } from "@/features/system-services/contracts";
 import { CORE_SERVICE_URL, requireApiSession } from "@/lib/server-auth";
+import { gatewayDiagnostic, probeDiagnostic } from "@/features/system-services/diagnostics";
+import { diagnosticReasons } from "@/features/system-services/contracts";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 const OLLAMA_SERVICE_URL = process.env.OLLAMA_SERVICE_URL ?? "http://127.0.0.1:11434";
@@ -20,29 +22,54 @@ export async function GET() {
   const auth = await requireApiSession();
   if (auth instanceof Response) return auth;
 
-  const local = await Promise.all(probes.map(probe));
-  const gatewayServices = await readGatewayServices(auth.token);
+  const [local, gatewayServices, imported, database] = await Promise.all([
+    Promise.all(probes.map(probe)), readGatewayServices(auth.token),
+    coreDiagnostic(auth.token, "home-assistant", "Home Assistant", "/v1/integrations/home-assistant"),
+    coreDiagnostic(auth.token, "postgresql", "PostgreSQL", "/v1/integrations/platform-diagnostics/database"),
+  ]);
   const status: SystemServicesStatus = {
     observedAt: new Date().toISOString(),
     services: [
-      { id: "web", displayName: "Kyrion Web", host: "localhost", port: 3000, status: "ready", detail: null, latencyMs: null, source: "web" },
+      { id: "web", displayName: "Kyrion Web", host: "", port: null, status: "healthy", detail: new Date().toISOString(), latencyMs: null, source: "web" },
       ...local,
       ...gatewayServices,
+      imported, database,
+      ...missingGatewayObservations(gatewayServices),
     ],
   };
   return Response.json(status, { headers: { "Cache-Control": "no-store" } });
 }
 
+function missingGatewayObservations(services: SystemService[]): SystemService[] {
+  return [
+    { id: "gateway", name: "Gateway Agent", present: services.some((service) => service.source === "gateway") },
+    { id: "voice", name: "Voice Satellite", present: services.some((service) => service.id.endsWith(":voice")) },
+    { id: "zigbee", name: "Zigbee2MQTT", present: services.some((service) => service.id.endsWith(":zigbee")) },
+    { id: "spotify-receiver", name: "Spotify Receiver", present: services.some((service) => service.id.endsWith(":spotify-receiver") || service.id.endsWith(":spotify")) },
+  ].filter((item) => !item.present).map((item) => ({ id: item.id, displayName: item.name, host: "", port: null,
+    status: "unknown", reason: "no_observation", detail: null, latencyMs: null, source: "gateway" }));
+}
+
 async function probe(item: Probe): Promise<SystemService> {
-  const parsed = new URL(item.url);
+  let parsed: URL;
+  try {
+    parsed = new URL(item.url);
+    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Invalid protocol");
+  } catch {
+    return { id: item.id, displayName: item.displayName, host: "", port: null, status: "unknown",
+      detail: null, latencyMs: null, source: "probe", reason: "configuration_invalid" };
+  }
   const started = performance.now();
   try {
     const response = await fetch(`${item.url}${item.healthPath}`, {
       cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    return service(item, parsed, response.ok ? "ready" : "degraded", Math.round(performance.now() - started));
+    const diagnostic = probeDiagnostic(item.id, response.status, await response.json().catch(() => null));
+    const observedAt = new Date().toISOString();
+    return { ...service(item, parsed, diagnostic.status, Math.round(performance.now() - started)), ...diagnostic,
+      detail: observedAt, lastSuccessAt: diagnostic.status === "healthy" ? observedAt : null };
   } catch {
-    return service(item, parsed, "unavailable", null);
+    return { ...service(item, parsed, "offline", null), reason: "dependency_unreachable" };
   }
 }
 
@@ -55,15 +82,16 @@ function service(item: Probe, url: URL, status: SystemService["status"], latency
 }
 
 async function readGatewayServices(token: string): Promise<SystemService[]> {
+  const failed: SystemService = { id: "gateway", displayName: "Gateway Agent", host: "", port: null,
+    status: "unknown", reason: "dependency_unreachable", detail: null, latencyMs: null, source: "gateway" };
   try {
     const response = await fetch(`${CORE_SERVICE_URL}/v1/gateways`, {
       headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     const value: unknown = await response.json().catch(() => null);
-    if (!response.ok || !isGatewayNodeList(value)) return [];
+    if (!response.ok || !isGatewayNodeList(value)) return [{ ...failed, reason: response.status === 401 || response.status === 403 ? "authentication_failed" : "invalid_response" }];
     return value.flatMap((node) => {
-      const nodeStatus: SystemService["status"] = node.availability === "online" ? "ready"
-        : node.availability === "offline" ? "unavailable" : node.availability;
+      const nodeStatus: SystemService["status"] = node.availability === "online" ? "healthy" : node.availability;
       const gateway: SystemService = {
         id: `gateway:${node.id}`, displayName: node.displayName, host: node.hostname, port: null,
         status: nodeStatus, detail: node.lastSeenAt, latencyMs: null, source: "gateway",
@@ -73,7 +101,7 @@ async function readGatewayServices(token: string): Promise<SystemService[]> {
         displayName: child.id,
         host: node.hostname,
         port: null,
-        status: child.status,
+        ...gatewayDiagnostic(node.availability, child.status),
         detail: node.lastSeenAt,
         latencyMs: null,
         source: "gateway",
@@ -81,6 +109,22 @@ async function readGatewayServices(token: string): Promise<SystemService[]> {
       return [gateway, ...children];
     });
   } catch {
-    return [];
+    return [failed];
   }
+}
+
+async function coreDiagnostic(token: string, id: string, displayName: string, path: string): Promise<SystemService> {
+  const base: SystemService = { id, displayName, host: "", port: null, status: "unknown", detail: null, latencyMs: null, source: "core", reason: "no_observation" };
+  try {
+    const response = await fetch(`${CORE_SERVICE_URL}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const value: unknown = await response.json();
+    if (!response.ok || !value || typeof value !== "object" || !("status" in value) ||
+      !["healthy", "offline", "degraded", "unknown"].includes(String(value.status))) return { ...base, reason: "invalid_response" };
+    const reason = "reason" in value ? diagnosticReasons.find((reason) => reason === value.reason) ?? null : null;
+    const date = (key: string): string | null => key in value && typeof Reflect.get(value, key) === "string" && Number.isFinite(Date.parse(Reflect.get(value, key))) ? Reflect.get(value, key) : null;
+    return { ...base, status: value.status as SystemService["status"], reason,
+      lastError: "lastError" in value ? diagnosticReasons.find((reason) => reason === value.lastError) ?? null : null,
+      detail: date("lastAttemptAt") ?? date("observedAt"), lastSuccessAt: date("lastSuccessAt"),
+      correlationId: "correlationId" in value && typeof value.correlationId === "string" ? value.correlationId : null };
+  } catch { return { ...base, reason: "dependency_unreachable" }; }
 }
