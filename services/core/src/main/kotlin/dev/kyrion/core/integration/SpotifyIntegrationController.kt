@@ -1,6 +1,6 @@
 package dev.kyrion.core.integration
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -39,7 +39,7 @@ class SpotifyIntegrationController(private val service: SpotifyIntegrationServic
     @PutMapping("/playback/device") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun transfer(@Valid @RequestBody body: TransferSpotifyPlaybackRequest, request: HttpServletRequest) = service.transfer(request.ownerId(), body.deviceId, body.play)
     @DeleteMapping @ResponseStatus(HttpStatus.NO_CONTENT) fun disconnect(request: HttpServletRequest) = service.disconnect(request.ownerId())
-    private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw IntegrationUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 
 @RestControllerAdvice

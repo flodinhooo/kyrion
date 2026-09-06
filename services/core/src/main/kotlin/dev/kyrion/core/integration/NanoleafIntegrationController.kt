@@ -1,6 +1,6 @@
 package dev.kyrion.core.integration
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -61,8 +61,7 @@ class NanoleafIntegrationController(
     @DeleteMapping("/connections/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun remove(@PathVariable id: UUID, request: HttpServletRequest) = service.remove(request.ownerId(), id)
 
-    private fun HttpServletRequest.ownerId(): UUID =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw IntegrationUnauthenticatedException()
+    private fun HttpServletRequest.ownerId(): UUID = workspaceOwnerId()
 }
 
 class IntegrationUnauthenticatedException : RuntimeException()

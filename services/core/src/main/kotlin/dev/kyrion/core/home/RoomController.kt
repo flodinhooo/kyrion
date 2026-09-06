@@ -1,7 +1,7 @@
 package dev.kyrion.core.home
 
 import dev.kyrion.core.activity.*
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -73,7 +73,7 @@ class RoomController(
         record(ownerId, "home.device.removed", "device.removed", id)
     }
     private fun record(ownerId: UUID, type: String, summary: String, correlationId: UUID) = activity.record(ActivityCategory.INTEGRATION, type, ActivityStatus.SUCCEEDED, ActivityActorType.USER, "kyrion-core", summary, ownerId.toString(), correlationId)
-    private fun HttpServletRequest.ownerId() = getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw RoomUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 class RoomNotFoundException : RuntimeException()
 class RoomConflictException : RuntimeException()
