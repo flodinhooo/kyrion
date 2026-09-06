@@ -1,6 +1,6 @@
 package dev.kyrion.core.voice
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import dev.kyrion.core.gateway.GatewayService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -51,8 +51,7 @@ class VoiceSatelliteOwnerController(private val service: VoiceSatelliteService) 
         @Valid @RequestBody body: CreateVoiceEnrollmentRequest,
         request: HttpServletRequest,
     ): VoiceEnrollmentResponse {
-        val ownerId = request.getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID
-            ?: throw VoiceSatelliteUnauthenticatedException()
+        val ownerId = request.workspaceOwnerId()
         val created = service.createEnrollment(ownerId, body.displayName.trim())
         return VoiceEnrollmentResponse(created.id, created.token, created.expiresAt)
     }

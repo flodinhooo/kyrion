@@ -10,4 +10,7 @@ data class UserAccount(
     val enabled: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+    val workspaceOwnerId: UUID? = null,
+) {
+    val resourceOwnerId: UUID get() = workspaceOwnerId ?: id
+}
