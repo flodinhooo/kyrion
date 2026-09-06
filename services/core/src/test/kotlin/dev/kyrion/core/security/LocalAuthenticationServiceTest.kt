@@ -26,6 +26,43 @@ class LocalAuthenticationServiceTest {
     )
 
     @Test
+    fun `invited account shares resources but cannot invite or revoke owner sessions`() {
+        val owner = service.setup("flo", "a-secure-local-password")
+        val invitation = service.createInvitation(owner.session.rawToken)
+        val friend = service.register(" Friend ", "friends-secure-password", invitation.code)
+        assertThat(friend.user.id).isNotEqualTo(owner.user.id)
+        assertThat(friend.user.resourceOwnerId).isEqualTo(owner.user.id)
+        assertThat(service.login("FRIEND", "friends-secure-password").user.id).isEqualTo(friend.user.id)
+        assertThatThrownBy { service.createInvitation(friend.session.rawToken) }.isInstanceOf(InvitationForbiddenException::class.java)
+        assertThatThrownBy { service.revokeSession(friend.session.rawToken, owner.session.session.id) }
+            .isInstanceOf(AuthSessionNotFoundException::class.java)
+        assertThatThrownBy { service.register("another", "friends-secure-password", invitation.code) }
+            .isInstanceOf(InvalidInvitationException::class.java)
+        service.changePassword(friend.session.rawToken, "friends-secure-password", "friends-new-password")
+        assertThat(service.authenticate(owner.session.rawToken)?.id).isEqualTo(owner.user.id)
+    }
+
+    @Test
+    fun `expired invitations and anonymous invitation requests are rejected`() {
+        val owner = service.setup("flo", "a-secure-local-password")
+        assertThatThrownBy { service.createInvitation("invalid-token") }.isInstanceOf(UnauthenticatedException::class.java)
+        val invitation = service.createInvitation(owner.session.rawToken)
+        clock.advance(Duration.ofHours(24))
+        assertThatThrownBy { service.register("friend", "friends-secure-password", invitation.code) }
+            .isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(users.findByUsername("friend")).isNull()
+    }
+
+    @Test
+    fun `duplicate username does not consume the invitation`() {
+        val owner = service.setup("flo", "a-secure-local-password")
+        val invitation = service.createInvitation(owner.session.rawToken)
+        assertThatThrownBy { service.register("FLO", "friends-secure-password", invitation.code) }
+            .isInstanceOf(UsernameTakenException::class.java)
+        assertThat(service.register("friend", "friends-secure-password", invitation.code).user.resourceOwnerId).isEqualTo(owner.user.id)
+    }
+
+    @Test
     fun `creates exactly one owner and immediately authenticates it`() {
         val owner = service.setup(" Flo ", "a-secure-local-password")
 
@@ -108,14 +145,22 @@ private class MutableClock(private var current: Instant) : Clock() {
 }
 
 private class InMemoryUserAccountRepository : UserAccountRepository {
-    private var account: UserAccount? = null
-    override fun exists() = account != null
-    override fun createOwner(account: UserAccount): UserAccount? = if (this.account == null) account.also { this.account = it } else null
-    override fun findByUsername(username: String) = account?.takeIf { it.username == username }
-    override fun findById(id: UUID) = account?.takeIf { it.id == id }
+    private val accounts = mutableMapOf<UUID, UserAccount>()
+    private val invitations = mutableMapOf<String, RegistrationInvitation>()
+    override fun exists() = accounts.isNotEmpty()
+    override fun createOwner(account: UserAccount): UserAccount? = if (!exists()) account.also { accounts[it.id] = it } else null
+    override fun createInvitation(invitation: RegistrationInvitation) { invitations[invitation.tokenHash] = invitation }
+    override fun register(account: UserAccount, invitationHash: String, now: Instant): UserAccount? {
+        val invitation = invitations[invitationHash]?.takeIf { it.expiresAt.isAfter(now) } ?: return null
+        if (findByUsername(account.username) != null) throw UsernameTakenException()
+        invitations.remove(invitationHash)
+        return account.copy(workspaceOwnerId = invitation.workspaceOwnerId).also { accounts[it.id] = it }
+    }
+    override fun findByUsername(username: String) = accounts.values.find { it.username == username }
+    override fun findById(id: UUID) = accounts[id]
     override fun updatePassword(id: UUID, passwordHash: String, updatedAt: Instant): Boolean {
-        val current = account?.takeIf { it.id == id } ?: return false
-        account = current.copy(passwordHash = passwordHash, updatedAt = updatedAt)
+        val current = accounts[id] ?: return false
+        accounts[id] = current.copy(passwordHash = passwordHash, updatedAt = updatedAt)
         return true
     }
 }

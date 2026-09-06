@@ -1,6 +1,6 @@
 package dev.kyrion.core.integration
 
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -35,8 +35,7 @@ class LocalNetworkController(
     fun connect(@Valid @RequestBody body: ConnectShellyRequest, request: HttpServletRequest) =
         shelly.connect(request.ownerId(), body.host, body.displayName, body.confirmed)
 
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw IntegrationUnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }
 
 internal fun markConnectedNetworkDevices(ownerId: UUID, devices: List<DiscoveredNetworkDevice>, connections: List<IntegrationConnection>): List<DiscoveredNetworkDevice> {

@@ -4,7 +4,7 @@ import dev.kyrion.core.activity.*
 import dev.kyrion.core.capability.*
 import dev.kyrion.core.home.Room
 import dev.kyrion.core.home.RoomRepository
-import dev.kyrion.core.security.AUTHENTICATED_USER_ID_ATTRIBUTE
+import dev.kyrion.core.security.workspaceOwnerId
 import dev.kyrion.core.security.UnauthenticatedException
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -206,8 +206,7 @@ class HomeAssistantController(private val service: HomeAssistantImportService) {
     fun status(request: HttpServletRequest) = service.status(request.ownerId())
     @PostMapping("/sync")
     fun sync(request: HttpServletRequest) = service.sync(request.ownerId())
-    private fun HttpServletRequest.ownerId() =
-        getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw UnauthenticatedException()
+    private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 
     @ExceptionHandler(HomeAssistantException::class)
     fun error(exception: HomeAssistantException) =

@@ -26,8 +26,30 @@ class LocalAuthenticationService(
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
     private val loginAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
+    private val invitationTokens: SessionTokenService = SessionTokenService(),
 ) {
     fun setupRequired() = !users.exists()
+
+    @Transactional
+    fun createInvitation(rawToken: String): CreatedInvitation {
+        val inviter = authenticate(rawToken) ?: throw UnauthenticatedException()
+        if (inviter.resourceOwnerId != inviter.id) throw InvitationForbiddenException()
+        val token = invitationTokens.create()
+        val expiresAt = clock.instant().plus(java.time.Duration.ofHours(24))
+        users.createInvitation(RegistrationInvitation(token.tokenHash, inviter.id, inviter.resourceOwnerId, expiresAt))
+        record("auth.invitation.created", ActivityStatus.SUCCEEDED, "activity.auth.invitationCreated", inviter.id)
+        return CreatedInvitation(token.rawToken, expiresAt)
+    }
+
+    @Transactional
+    fun register(username: String, password: String, invitationCode: String): AuthenticatedOwner {
+        val normalized = normalizeUsername(username)
+        val now = clock.instant()
+        val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
+        val created = users.register(account, invitationTokens.hash(invitationCode), now) ?: throw InvalidInvitationException()
+        record("auth.user.registered", ActivityStatus.SUCCEEDED, "activity.auth.userRegistered", created.id)
+        return AuthenticatedOwner(created, sessions.create(created.id))
+    }
 
     fun setup(username: String, password: String): AuthenticatedOwner {
         val normalized = normalizeUsername(username)
@@ -117,6 +139,9 @@ class LocalAuthenticationService(
 }
 
 class SetupAlreadyCompletedException : RuntimeException()
+class UsernameTakenException : RuntimeException()
+class InvalidInvitationException : RuntimeException()
+class InvitationForbiddenException : RuntimeException()
 class InvalidCredentialsException : RuntimeException()
 class InvalidCurrentPasswordException : RuntimeException()
 class PasswordUnchangedException : RuntimeException()
