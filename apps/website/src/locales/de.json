@@ -1,4 +1,262 @@
 {
-  "title": "Kyrion",
-  "comingSoon": "Die öffentliche Website folgt bald."
+  "meta": {
+    "title": "Kyrion — Lokale Plattform für ein intelligentes Zuhause",
+    "description": "Kyrion ist eine lokale Plattform für intelligente Haussteuerung, Automatisierung und vernetzte Geräte. Derzeit in Entwicklung."
+  },
+  "nav": {
+    "home": "Kyrion Startseite",
+    "product": "Produkt",
+    "about": "Über Kyrion",
+    "development": "Entwicklung",
+    "docs": "Docs",
+    "github": "GitHub",
+    "menu": "Navigation öffnen",
+    "close": "Navigation schliessen",
+    "label": "Hauptnavigation",
+    "skip": "Zum Inhalt springen",
+    "language": "Language: English",
+    "theme": "Darstellung",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  },
+  "status": {
+    "available": "Implementiert",
+    "experimental": "Experimentell",
+    "development": "In Entwicklung",
+    "planned": "Geplant"
+  },
+  "common": {
+    "brand": "Kyrion",
+    "core": "Kyrion Core",
+    "explore": "Kyrion entdecken",
+    "viewDevelopment": "Entwicklung ansehen",
+    "follow": "Entwicklung verfolgen",
+    "readDocs": "Dokumentation erkunden",
+    "learnMore": "Plattform entdecken",
+    "inDevelopment": "Derzeit in Entwicklung",
+    "backHome": "Zur Startseite",
+    "notFound": "Diese Seite ist nicht hier.",
+    "notFoundDescription": "Entdecke die Plattform oder kehre zur Kyrion-Startseite zurück.",
+    "github": "Auf GitHub ansehen",
+    "footer": "Dein Zuhause. Deine Infrastruktur.",
+    "footerNote": "Eine unabhängige Plattform in aktiver Entwicklung. Noch nicht allgemein verfügbar.",
+    "footerLinks": "Entdecken",
+    "footerPrinciple": "Lokal gedacht. Vom Menschen gesteuert.",
+    "copyright": "© 2026 Kyrion"
+  },
+  "home": {
+    "eyebrow": "LOKALE PLATTFORM FÜR EIN INTELLIGENTES ZUHAUSE",
+    "title": "Dein Zuhause.",
+    "titleAccent": "Eine intelligente Plattform.",
+    "description": "Verbinde deine Geräte, bring dein Zuhause zusammen und behalte die Kontrolle. Auf deiner Infrastruktur. Mit Intelligenz nach deinen Regeln.",
+    "heroNote": "Ein funktionierender Prototyp. Ein durchdachtes Fundament. Schritt für Schritt.",
+    "diagramLabel": "Das Kyrion-Ökosystem",
+    "diagramTop": "GERÄTE & INTEGRATIONEN",
+    "diagramCore": "EIN VERTRAUENSWÜRDIGER CORE",
+    "diagramBottom": ["Web", "Sprache", "Automationen", "Intelligenz"],
+    "diagramCaption": "Die Vision des Ökosystems. Core prüft Aktionen über alle Oberflächen; Sprache wird weiterentwickelt und Automationen sind geplant.",
+    "diagramDevices": ["Licht", "Sensoren", "Dienste"],
+    "diagramCenter": "Verbindung. Kontrolle. Klarheit.",
+    "principles": [
+      "Lokal konzipiert",
+      "Intelligenz ist optional",
+      "Dein Zuhause bleibt deins"
+    ],
+    "featuresEyebrow": "EIN ZUHAUSE, DAS ZUSAMMENARBEITET",
+    "featuresTitle": "Weniger Insellösungen.\nMehr Verbindung.",
+    "featuresDescription": "Eine gemeinsame Ebene über deinen vorhandenen Geräten und Diensten. Ein Fundament für die tägliche Steuerung, das wachsen kann.",
+    "ecosystemEyebrow": "DURCH EINEN CORE VERBUNDEN",
+    "ecosystemTitle": "Viele Systeme.\nEin gemeinsamer Ort.",
+    "ecosystemDescription": "Integrationen verbinden Geräte. Core verwaltet die Regeln. Web, Sprache und optionale Intelligenz bieten unterschiedliche Zugänge – über denselben kontrollierten Aktionspfad.",
+    "ecosystemLink": "Die Architektur verstehen",
+    "veloraEyebrow": "DAS IST VELORA",
+    "veloraTitle": "Intelligenz mit klaren Grenzen.",
+    "veloraDescription": "Eine wachsende Interaktionsebene für dein Zuhause. Lokaler Chat und begrenzte Vorschläge zur Gerätesteuerung existieren bereits. Zuverlässige, natürliche Sprachinteraktion ist der nächste Schritt.",
+    "veloraRule": "Intelligenz schlägt vor. Core entscheidet.",
+    "developmentEyebrow": "TRANSPARENT, SCHRITT FÜR SCHRITT",
+    "developmentTitle": "Echter Fortschritt.\nEin klarer Entwicklungsstand.",
+    "developmentDescription": "Kyrion ist ein funktionierender Entwicklungsprototyp auf dem Weg zu einer privaten Alpha. Zentrale Steuerungspfade existieren; breitere Nutzbarkeit, Sprachzuverlässigkeit und neue Funktionen brauchen weitere Prüfung.",
+    "developmentNote": "Kein öffentliches Erscheinungsdatum. Noch nicht allgemein verfügbar. Funktionen und Architektur können sich ändern."
+  },
+  "features": [
+    {
+      "title": "Lokale Architektur",
+      "description": "Zentrale Steuerung und Daten bleiben nach Möglichkeit auf deiner Infrastruktur. Externe Dienste sind optional und sichtbar."
+    },
+    {
+      "title": "Gemeinsame Gerätesteuerung",
+      "description": "Räume, Licht und Gerätezustände an einem Ort. Funktionierende Steuerungspfade für Nanoleaf, Zigbee und begrenzte Bluetooth-Funktionen."
+    },
+    {
+      "title": "Privatsphäre & Eigentum",
+      "description": "Core verwaltet Berechtigungen und prüft Aktionen. Persönliche Daten werden nie zur uneingeschränkten Befehlsquelle."
+    },
+    {
+      "title": "Erweiterbare Integrationen",
+      "description": "Stabile Fähigkeiten verbinden verschiedene Systeme. Home Assistant wird nur lesend importiert; ein öffentliches Plugin-System ist geplant."
+    },
+    {
+      "title": "Ein Zuhause zum Teilen",
+      "description": "Einladungen durch den Eigentümer ermöglichen bereits gemeinsame Gerätesteuerung. Feinere Haushaltsrollen folgen später."
+    },
+    {
+      "title": "Klarheit bei Veränderungen",
+      "description": "Geräteverfügbarkeit, Dienstzustand und ein Aktionsinspektor zeigen, was passiert ist – und warum."
+    }
+  ],
+  "product": {
+    "eyebrow": "DIE KYRION-PLATTFORM",
+    "title": "Ein verbundenes Zuhause.\nVom Core aus gedacht.",
+    "description": "Haussteuerung, vernetzte Dienste und optionale Intelligenz auf einem Fundament. Was der Prototyp heute implementiert – und was noch vor uns liegt.",
+    "availableTitle": "Im Prototyp implementiert",
+    "availableNote": "„Implementiert“ bezeichnet Funktionen im Entwicklungsprototyp, keine allgemeine Veröffentlichung. Die Hardware-Abdeckung ist begrenzt; einzelne Pfade benötigen noch physische Prüfung.",
+    "futureTitle": "Die nächsten Schritte",
+    "futureNote": "Diese Bereiche sind experimentell oder geplant. Sie sind keine Zusage für Umfang oder Zeitpunkt einer Veröffentlichung."
+  },
+  "capabilities": [
+    {
+      "title": "Haussteuerung",
+      "description": "Räume, Beleuchtung und Gerätezustände über einen gemeinsamen Katalog verwalten. Nanoleaf, Philips Hue über Zigbee und ein begrenzter Bluetooth-Lichtpfad sind implementiert.",
+      "status": "available"
+    },
+    {
+      "title": "Verbundene Ökosysteme",
+      "description": "Native Steuerungspfade und ein begrenzter, nur lesender Home-Assistant-Import für Geräte und Zustände. Die physische Prüfung des HA-Imports steht noch aus.",
+      "status": "available"
+    },
+    {
+      "title": "Lokale Intelligenz",
+      "description": "Lokaler Streaming-Chat und begrenzte Befehlsvorschläge auf Deutsch und Englisch. Core prüft Berechtigungen und Ziele vor jeder Ausführung.",
+      "status": "available"
+    },
+    {
+      "title": "Gemeinsame Installationen",
+      "description": "Eigentümer können weitere Konten zur gemeinsamen Gerätesteuerung einladen. Fein abgestufte Haushaltsrollen sind noch nicht implementiert.",
+      "status": "available"
+    },
+    {
+      "title": "Diagnose & Aktivität",
+      "description": "Dienstzustand, explizite Geräteverfügbarkeit und zugeordnete Aktionsverläufe. Entscheidungen und Ergebnisse nachvollziehen statt raten.",
+      "status": "available"
+    },
+    {
+      "title": "Lokale Infrastruktur",
+      "description": "Core, lokale Speicherung und ein begrenztes Raspberry-Pi-Gateway bilden das aktuelle Fundament. Cloud-Anbieter sind optionale Ergänzungen.",
+      "status": "available"
+    },
+    {
+      "title": "Velora & Sprache",
+      "description": "Aktivierungswort, Transkription und mehrstufige Sprachpfade existieren. Wiederholbare Ende-zu-Ende-Sprach- und Audioprüfungen bleiben in Entwicklung.",
+      "status": "experimental"
+    },
+    {
+      "title": "Automationen",
+      "description": "Künftige zeit- und ereignisgesteuerte Abläufe durch Core-Regeln. Ein allgemeiner Automationseditor und eine Ausführungsplattform sind noch nicht verfügbar.",
+      "status": "planned"
+    },
+    {
+      "title": "Weitere Integrationen",
+      "description": "Versionierte Plugin-Verträge, erweiterte Home-Assistant-Fähigkeiten und weitere Gerätewelten. Ein öffentlicher Marktplatz ist nicht implementiert.",
+      "status": "planned"
+    }
+  ],
+  "about": {
+    "eyebrow": "ÜBER KYRION",
+    "title": "Dein Zuhause sollte\nnach deinen Regeln funktionieren.",
+    "description": "Kyrion ist eine lokale Plattform für ein intelligentes Zuhause. Sie bringt fragmentierte Geräte und Dienste in ein verständliches System.",
+    "introTitle": "Eine intelligente Ebene.\nKeine weitere Insellösung.",
+    "intro": "Ein vernetztes Zuhause kann sich trotzdem unverbunden anfühlen. Licht, Sensoren und Dienste bringen jeweils eigene Apps, Konten und Regeln mit. Kyrion soll sie zusammenbringen, ohne die Kontrolle über die eigene Infrastruktur aufzugeben.",
+    "paragraph": "Das Ziel ist eine gemeinsame Steuerungsebene über spezialisierten Systemen. Integrationen schaffen Verbindung. Core verwaltet Befugnisse. Menschen wählen die Art der Interaktion.",
+    "principles": [
+      {
+        "title": "Bewusst lokal",
+        "description": "Informationen nach Möglichkeit nah am Zuhause verarbeiten und speichern. Wesentliche Funktionen sollen ohne KI oder ständige Cloud-Verbindung nutzbar bleiben."
+      },
+      {
+        "title": "Eigentum heisst Kontrolle",
+        "description": "Externe Anbieter bleiben optional und transparent. Berechtigungen, Datenziele und folgenreiche Aktionen müssen verständlich sein."
+      },
+      {
+        "title": "Nützlich vor beeindruckend",
+        "description": "Kleine, vollständige Fähigkeiten an realen Systemen beweisen. Funktionierender Code, automatisierte Tests und physische Prüfung sind unterschiedliche Nachweise."
+      }
+    ],
+    "visionTitle": "Ein Fundament für die Zukunft.",
+    "vision": "Mit der Zeit soll Kyrion mehr Bereiche des Zuhauses verbinden: Geräte, Medien, Energiesysteme und persönliche Dienste. Die Richtung ist ambitioniert; jede Ergänzung muss durch nützliches, kontrollierbares Verhalten überzeugen.",
+    "origin": "Der erste Nutzer ist der Entwickler selbst. Reale lokale Infrastruktur und tägliche Nutzung prägen den Prototyp. Eine breitere Validierung steht noch bevor."
+  },
+  "development": {
+    "eyebrow": "ENTWICKLUNG",
+    "title": "Eine Plattform im Aufbau.\nEine Richtung mit Substanz.",
+    "description": "Kyrion ist ein funktionierender Prototyp auf dem Weg zur privaten Alpha-Validierung. Es ist kein fertiges Endkundenprodukt und noch nicht allgemein verfügbar.",
+    "checkpoint": "AKTUELLER STAND",
+    "checkpointTitle": "Das Fundament stärken.\nDann Interaktion natürlich machen.",
+    "checkpointDescription": "Die jüngste Arbeit konsolidiert den lesenden Home-Assistant-Import, die Dienstdiagnose und den Aktionsinspektor. Die nächste Velora-Phase konzentriert sich auf wiederholbare Verarbeitung, Audio und bestätigte Geräteergebnisse.",
+    "areasTitle": "Wo die Plattform steht",
+    "legendTitle": "Was die Status bedeuten",
+    "legend": [
+      "Im Prototyp implementiert. Keine allgemein verfügbare Veröffentlichung.",
+      "Eine isolierte oder begrenzte Implementierung mit weiterem Prüfbedarf.",
+      "Aktive Arbeit, deren Abnahmekriterien noch nicht erfüllt sind.",
+      "Künftige Richtung. Umfang und Lieferung sind nicht zugesagt."
+    ],
+    "roadmapTitle": "Der Weg nach vorn",
+    "roadmapDescription": "An Ergebnissen orientiert, ohne erfundene Termine.",
+    "roadmap": [
+      {
+        "title": "Den Alltag validieren",
+        "description": "Zuverlässige Sprachrückmeldung, nachvollziehbare Ergebnisse und wiederholbares Verhalten auf lokaler Hardware.",
+        "status": "development"
+      },
+      {
+        "title": "Das Zuhause besser koordinieren",
+        "description": "Automationen, feinere Haushaltsberechtigungen und weitere Integrationsfähigkeiten.",
+        "status": "planned"
+      },
+      {
+        "title": "Mit Bedacht öffnen",
+        "description": "Öffentliche Dokumentation, breitere Validierung und Erweiterungsverträge vor einem öffentlichen Marktplatz.",
+        "status": "planned"
+      }
+    ],
+    "disclaimer": "Funktionen, Umfang und Architektur können sich während der Erprobung ändern. Veröffentlichungstermine, öffentliche Alpha-Zugänge oder kommerzielle Verfügbarkeit sind nicht angekündigt.",
+    "source": "Entwicklungsnotizen im Repository lesen"
+  },
+  "docs": {
+    "eyebrow": "DOKUMENTATION",
+    "title": "Ein Ort, um Kyrion zu verstehen.",
+    "description": "Die öffentliche Dokumentation entsteht. Hier finden künftig Konzepte, Einrichtungsanleitungen und Integrationsreferenzen ihren Platz.",
+    "sidebar": "Dokumentationsnavigation",
+    "version": "Vorschau · Ohne Version",
+    "search": "Dokumentation durchsuchen",
+    "searchNote": "Die Suche folgt, sobald öffentliche Artikel veröffentlicht werden.",
+    "sections": [
+      "Überblick",
+      "Erste Schritte",
+      "Grundkonzepte",
+      "Integrationen",
+      "Referenz"
+    ],
+    "articleTitle": "Dokumentation, von Grund auf.",
+    "articleDescription": "Die öffentliche Dokumentation ist noch nicht veröffentlicht. Das Repository enthält die aktuellen technischen Dokumente, Entscheidungen und Entwicklungsnachweise.",
+    "cards": [
+      {
+        "title": "Erste Schritte",
+        "description": "Künftige Anleitungen für eine unterstützte lokale Einrichtung und den Einstieg."
+      },
+      {
+        "title": "Grundkonzepte",
+        "description": "Die Grenzen zwischen Geräten, Core, Integrationen und Intelligenz."
+      },
+      {
+        "title": "Integrationsreferenz",
+        "description": "Unterstützte Fähigkeiten, Berechtigungsgrenzen und Prüfstatus."
+      }
+    ],
+    "codeTitle": "Wo was liegt",
+    "code": "apps/website    → öffentliche Website\napps/web        → lokale Oberfläche\nservices/core   → Plattformautorität",
+    "note": "Dies ist ein Layout-Fundament, keine Installationsanleitung. Suche, versionierte Artikel und die vollständige Referenz folgen mit der öffentlichen Dokumentation.",
+    "repoLink": "Repository-Dokumentation lesen"
+  }
 }

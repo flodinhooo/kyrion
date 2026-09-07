@@ -1,17 +1,141 @@
-* {
-  box-sizing: border-box;
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #101e2d;
+  --muted: #f5f7fa;
+  --muted-foreground: #536174;
+  --card: #ffffff;
+  --border: #dce2ea;
+  --primary: #101e2d;
+  --primary-foreground: #f7f8fa;
+  --accent: #5840c4;
+  --ring: #6c43f5;
+  --core-gradient: linear-gradient(135deg, #8b4dff, #6c43f5 45%, #168bff);
 }
 
-body {
-  margin: 0;
-  background: #fff;
-  color: #171717;
-  font-family: Arial, Helvetica, sans-serif;
-  line-height: 1.5;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0b1421;
+  --foreground: #f7f8fa;
+  --muted: #101d2e;
+  --muted-foreground: #a3b2c5;
+  --card: #0e1929;
+  --border: #263447;
+  --primary: #f7f8fa;
+  --primary-foreground: #101e2d;
+  --accent: #b6acff;
+  --ring: #a593ff;
 }
 
-main {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 4rem 1.5rem;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  button,
+  select,
+  summary {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 5px;
+  }
+  ::selection {
+    background: #6c43f5;
+    color: #fff;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 7rem;
+  }
+}
+
+/* Global brand effects; component layout stays in Tailwind utilities. */
+.core-grid {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 72%);
+}
+.core-halo {
+  background: radial-gradient(ellipse, #684bff18, transparent 68%);
+}
+.core-line {
+  background: var(--core-gradient);
+}
+.brand-dark {
+  display: none;
+}
+[data-theme="dark"] .brand-light {
+  display: none;
+}
+[data-theme="dark"] .brand-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --background: #0b1421;
+    --foreground: #f7f8fa;
+    --muted: #101d2e;
+    --muted-foreground: #a3b2c5;
+    --card: #0e1929;
+    --border: #263447;
+    --primary: #f7f8fa;
+    --primary-foreground: #101e2d;
+    --accent: #b6acff;
+    --ring: #a593ff;
+  }
+  :root:not([data-theme]) .brand-light {
+    display: none;
+  }
+  :root:not([data-theme]) .brand-dark {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

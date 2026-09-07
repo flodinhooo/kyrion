@@ -1,4 +1,262 @@
 {
-  "title": "Kyrion",
-  "comingSoon": "Public website coming soon."
+  "meta": {
+    "title": "Kyrion — Local-first intelligent home platform",
+    "description": "Kyrion is a local-first platform for intelligent home control, automation and connected devices. Currently in development."
+  },
+  "nav": {
+    "home": "Kyrion home",
+    "product": "Product",
+    "about": "About Kyrion",
+    "development": "Development",
+    "docs": "Docs",
+    "github": "GitHub",
+    "menu": "Open navigation",
+    "close": "Close navigation",
+    "label": "Main navigation",
+    "skip": "Skip to content",
+    "language": "Sprache: Deutsch",
+    "theme": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "status": {
+    "available": "Available",
+    "experimental": "Experimental",
+    "development": "In development",
+    "planned": "Planned"
+  },
+  "common": {
+    "brand": "Kyrion",
+    "core": "Kyrion Core",
+    "explore": "Explore Kyrion",
+    "viewDevelopment": "View development",
+    "follow": "Follow the development",
+    "readDocs": "Explore the docs",
+    "learnMore": "Explore the platform",
+    "inDevelopment": "Currently in development",
+    "backHome": "Back to home",
+    "notFound": "This page isn't here.",
+    "notFoundDescription": "Explore the platform or return to the Kyrion homepage.",
+    "github": "View on GitHub",
+    "footer": "Your home. Your infrastructure.",
+    "footerNote": "An independent platform in active development. Not yet generally available.",
+    "footerLinks": "Explore",
+    "footerPrinciple": "Local first. Human controlled.",
+    "copyright": "© 2026 Kyrion"
+  },
+  "home": {
+    "eyebrow": "LOCAL-FIRST INTELLIGENT HOME PLATFORM",
+    "title": "Your home.",
+    "titleAccent": "One intelligent platform.",
+    "description": "Connect your devices, bring your home together, and stay in control. Built around your infrastructure. With intelligence on your terms.",
+    "heroNote": "A working prototype. A considered foundation. Built step by step.",
+    "diagramLabel": "The Kyrion ecosystem",
+    "diagramTop": "DEVICES & INTEGRATIONS",
+    "diagramCore": "ONE TRUSTED CORE",
+    "diagramBottom": ["Web", "Voice", "Automations", "Intelligence"],
+    "diagramCaption": "An ecosystem vision. Core validates actions across every interface; voice is evolving and automations are planned.",
+    "diagramDevices": ["Lighting", "Sensors", "Services"],
+    "diagramCenter": "Connection. Control. Clarity.",
+    "principles": [
+      "Local by design",
+      "Intelligence is optional",
+      "Your home stays yours"
+    ],
+    "featuresEyebrow": "A HOME THAT WORKS TOGETHER",
+    "featuresTitle": "Less fragmentation.\nMore connection.",
+    "featuresDescription": "One coherent layer above the devices and services you already use. A foundation for everyday control, with room to grow.",
+    "ecosystemEyebrow": "CONNECTED THROUGH ONE CORE",
+    "ecosystemTitle": "Many systems.\nOne place to bring them together.",
+    "ecosystemDescription": "Integrations connect the devices. Core holds the rules. Web, voice and optional intelligence give you different ways to interact—with the same controlled action path.",
+    "ecosystemLink": "Understand the architecture",
+    "veloraEyebrow": "MEET VELORA",
+    "veloraTitle": "Intelligence with boundaries.",
+    "veloraDescription": "An evolving interaction layer for your home. Local chat and bounded device-command proposals exist today. Reliable, natural voice interaction is the next step.",
+    "veloraRule": "Intelligence proposes. Core decides.",
+    "developmentEyebrow": "BUILT IN THE OPEN, STEP BY STEP",
+    "developmentTitle": "Real progress.\nA clear development boundary.",
+    "developmentDescription": "Kyrion is a working development prototype moving toward a private alpha. Core control paths exist; wider usability, voice reliability and new capabilities still need validation.",
+    "developmentNote": "No public release date. No general availability. Features and architecture may change."
+  },
+  "features": [
+    {
+      "title": "Local-first architecture",
+      "description": "Core control and data stay on your infrastructure wherever practical. External services are optional and visible."
+    },
+    {
+      "title": "Unified device control",
+      "description": "Rooms, lights and device state in one place. Working Nanoleaf, Zigbee and bounded Bluetooth control paths."
+    },
+    {
+      "title": "Privacy & ownership",
+      "description": "Core owns permissions and validates actions. Your personal data is never an unrestricted instruction source."
+    },
+    {
+      "title": "Extensible integrations",
+      "description": "Stable capabilities connect different ecosystems. Home Assistant import is read-only; a public plugin system is planned."
+    },
+    {
+      "title": "A home you can share",
+      "description": "Owner-issued invitations enable shared device control today. Richer household roles remain future work."
+    },
+    {
+      "title": "Clarity when things change",
+      "description": "Device availability, service health and an action inspector help explain what happened—and why."
+    }
+  ],
+  "product": {
+    "eyebrow": "THE KYRION PLATFORM",
+    "title": "A coherent home.\nFrom the core outward.",
+    "description": "Home control, connected services and optional intelligence on one foundation. Explore what the prototype implements today and what remains ahead.",
+    "availableTitle": "Implemented in the prototype",
+    "availableNote": "“Available” means implemented in the development prototype, not released for general use. Hardware coverage is bounded; individual paths may still need physical validation.",
+    "futureTitle": "What comes next",
+    "futureNote": "These areas are experimental or planned. They are not a promise of release scope or timing."
+  },
+  "capabilities": [
+    {
+      "title": "Home control",
+      "description": "Manage rooms, lighting and device state through a common catalog. Nanoleaf, Philips Hue via Zigbee and a bounded Bluetooth light path have working implementations.",
+      "status": "available"
+    },
+    {
+      "title": "Connected ecosystems",
+      "description": "Native control paths plus a bounded, read-only Home Assistant device/state import. The HA import still awaits physical verification.",
+      "status": "available"
+    },
+    {
+      "title": "Local intelligence",
+      "description": "Local streaming chat and bounded German/English command proposals. Core validates permissions and targets before any action is executed.",
+      "status": "available"
+    },
+    {
+      "title": "Shared installations",
+      "description": "Owners can invite additional accounts to shared device control. Granular owner/member/guest household roles are not implemented yet.",
+      "status": "available"
+    },
+    {
+      "title": "Diagnostics & activity",
+      "description": "Service health, explicit device availability and correlated action history. Inspect decisions and execution outcomes without guessing.",
+      "status": "available"
+    },
+    {
+      "title": "Local infrastructure",
+      "description": "Core, local persistence and a bounded Raspberry Pi gateway form the current foundation. Cloud providers are optional capabilities.",
+      "status": "available"
+    },
+    {
+      "title": "Velora & voice",
+      "description": "Wake-word detection, transcription and multi-turn voice paths exist. Repeatable end-to-end voice and audio acceptance remain in development.",
+      "status": "experimental"
+    },
+    {
+      "title": "Automations",
+      "description": "Future scheduled and event-driven workflows through Core policy. A general automation builder and execution platform are not available.",
+      "status": "planned"
+    },
+    {
+      "title": "Broader integrations",
+      "description": "Versioned plugin contracts, richer Home Assistant capabilities and more device ecosystems. A public marketplace is not implemented.",
+      "status": "planned"
+    }
+  ],
+  "about": {
+    "eyebrow": "ABOUT KYRION",
+    "title": "Your home should work\non your terms.",
+    "description": "Kyrion is a local-first intelligent home platform, built to bring fragmented devices and services into one understandable system.",
+    "introTitle": "One intelligent layer.\nNot another isolated ecosystem.",
+    "intro": "A connected home can still feel disconnected. Lights, sensors and services each bring their own app, account and rules. Kyrion exists to make those systems work together without giving up control over the infrastructure underneath.",
+    "paragraph": "The goal is a coherent orchestration layer above specialised systems. Integrations provide connectivity. Core manages authority. People choose how to interact.",
+    "principles": [
+      {
+        "title": "Local first, by intention",
+        "description": "Process and store information close to the home wherever practical. Essential functions should remain usable without AI or an always-on cloud connection."
+      },
+      {
+        "title": "Ownership that means control",
+        "description": "Keep external providers optional and transparent. Make permissions, data destinations and consequential actions understandable."
+      },
+      {
+        "title": "Useful before impressive",
+        "description": "Prove small, complete capabilities on real systems. Treat working code, automated tests and physical verification as different forms of evidence."
+      }
+    ],
+    "visionTitle": "A foundation for the long term.",
+    "vision": "Over time, Kyrion aims to connect more of the home: devices, media, energy systems and personal services. The direction is ambitious; each addition must earn its place through useful, controllable behaviour.",
+    "origin": "The first user is its creator. The prototype is shaped by real local infrastructure and daily use, with broader validation still ahead."
+  },
+  "development": {
+    "eyebrow": "DEVELOPMENT",
+    "title": "A platform in progress.\nA direction with purpose.",
+    "description": "Kyrion is a working prototype moving toward private-alpha validation. It is not a finished consumer product and is not generally available.",
+    "checkpoint": "CURRENT CHECKPOINT",
+    "checkpointTitle": "Strengthen the foundation.\nThen make interaction feel natural.",
+    "checkpointDescription": "Recent work consolidates read-only Home Assistant import, service diagnostics and the action inspector. The next dedicated Velora phase focuses on repeatable processing, audio and confirmed device results.",
+    "areasTitle": "Where the platform stands",
+    "legendTitle": "Reading the status",
+    "legend": [
+      "Implemented in the prototype. Not a general-availability release.",
+      "An isolated or bounded implementation still requiring validation.",
+      "Active work that has not met its acceptance boundary.",
+      "Future direction. Scope and delivery are not committed."
+    ],
+    "roadmapTitle": "The road ahead",
+    "roadmapDescription": "Outcome-oriented direction, without invented deadlines.",
+    "roadmap": [
+      {
+        "title": "Validate the everyday experience",
+        "description": "Reliable voice feedback, observable outcomes and repeatable behaviour on local hardware.",
+        "status": "development"
+      },
+      {
+        "title": "Build deeper home coordination",
+        "description": "Automations, richer household permissions and further integration capabilities.",
+        "status": "planned"
+      },
+      {
+        "title": "Open up carefully",
+        "description": "Public documentation, broader validation and extension contracts before a public marketplace.",
+        "status": "planned"
+      }
+    ],
+    "disclaimer": "Features, scope and architecture may change as the platform is tested. No release dates, public alpha access or commercial availability are announced.",
+    "source": "Read the repository development notes"
+  },
+  "docs": {
+    "eyebrow": "DOCUMENTATION",
+    "title": "A place to understand Kyrion.",
+    "description": "Public documentation is taking shape. This will become the home for concepts, setup guides and integration references.",
+    "sidebar": "Documentation navigation",
+    "version": "Preview · Unversioned",
+    "search": "Search documentation",
+    "searchNote": "Search will be available when public articles are published.",
+    "sections": [
+      "Overview",
+      "Getting started",
+      "Core concepts",
+      "Integrations",
+      "Reference"
+    ],
+    "articleTitle": "Documentation, from the foundation up.",
+    "articleDescription": "The public documentation is not published yet. The repository contains the current technical documents, decisions and development evidence.",
+    "cards": [
+      {
+        "title": "Getting started",
+        "description": "Future guides for a supported local setup and first steps."
+      },
+      {
+        "title": "Core concepts",
+        "description": "The boundaries between devices, Core, integrations and intelligence."
+      },
+      {
+        "title": "Integration reference",
+        "description": "Supported capabilities, permission boundaries and verification status."
+      }
+    ],
+    "codeTitle": "Where things live",
+    "code": "apps/website    → public website\napps/web        → local interface\nservices/core   → platform authority",
+    "note": "This is a layout foundation, not an installation guide. Search, versioned articles and the full reference will arrive with public documentation.",
+    "repoLink": "Read the repository docs"
+  }
 }

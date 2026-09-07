@@ -156,7 +156,7 @@ See [Architecture](docs/architecture.md) and the accepted
 kyrion/
 |-- apps/
 |   |-- web/                 Next.js and React Web application
-|   |-- website/             standalone public website scaffold for kyrion.ch
+|   |-- website/             independent public website for kyrion.ch
 |   `-- mobile/              planned Expo application
 |-- services/
 |   |-- core/                Kotlin/Spring Boot authority
@@ -212,7 +212,7 @@ considered production dependencies.
 
 ## Running the project
 
-The independent [public website scaffold](apps/website/README.md) runs with
+The independent [public website](apps/website/README.md) runs with
 `pnpm install` and `pnpm --filter website dev` from the repository root at
 `http://localhost:3001`. It does not require the local platform services.
 The root pnpm workspace covers this new application; `apps/web` retains its
