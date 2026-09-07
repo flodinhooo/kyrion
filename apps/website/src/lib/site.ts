@@ -19,15 +19,15 @@ export const siteUrl = "https://kyrion.ch";
 
 export function href(locale: Locale, page: Page = "home") {
   return (
-    `${locale === "de" ? "/de" : ""}${page === "home" ? "" : `/${page}`}` || "/"
+    `${locale === "en" ? "/en" : ""}${page === "home" ? "" : `/${page}`}` || "/"
   );
 }
 
 export function resolveRoute(
   path: string[] = [],
 ): { locale: Locale; page: Page } | null {
-  const locale = path[0] === "de" ? "de" : "en";
-  const parts = locale === "de" ? path.slice(1) : path;
+  const locale = path[0] === "en" ? "en" : "de";
+  const parts = locale === "en" ? path.slice(1) : path;
   const page = parts[0] ?? "home";
   if (parts.length > 1 || (parts.length === 1 && page === "home")) return null;
   const knownPage = pages.find((candidate) => candidate === page);
