@@ -184,6 +184,14 @@ configuration.
 
 ## Applications
 
+### Public website
+
+`apps/website` is a standalone Next.js, React and TypeScript App Router
+scaffold for the future public website at kyrion.ch. It currently serves only
+a static English/German placeholder and has no authentication, backend APIs,
+database access or Core integration. It is separate from `apps/web` and does
+not yet share branding or UI components. See its [startup guide](../apps/website/README.md).
+
 ### Web application
 
 Planned technology:
