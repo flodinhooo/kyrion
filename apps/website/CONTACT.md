@@ -2,7 +2,7 @@
 
 ## Architecture
 
-`/contact` and `/de/contact` use the public site's normal metadata, layout,
+`/contact` (German) and `/en/contact` (English) use the public site's normal metadata, layout,
 themes and locale resources. `POST /api/contact` is a Node.js Route Handler on
 Vercel. It awaits SMTP acceptance before reporting success. No inquiry database,
 Core connection, authentication, attachments or visitor autoresponder is added.

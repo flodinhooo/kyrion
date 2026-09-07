@@ -18,7 +18,7 @@ async function fillRequired(page: Page) {
 test("contact validates required fields and invalid email inline", async ({
   page,
 }) => {
-  await page.goto("/contact");
+  await page.goto("/en/contact");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(
     page.getByText("Please complete this required field."),
@@ -56,7 +56,7 @@ test("optional testing fields and successful submission prevent duplicate sends"
     await gate;
     await route.fulfill({ json: { ok: true, code: "CONTACT_SENT" } });
   });
-  await page.goto("/contact");
+  await page.goto("/en/contact");
   await expect(
     page.getByLabel("Country (optional)", { exact: true }),
   ).toHaveCount(0);
@@ -101,7 +101,7 @@ test("delivery and network failures retain all entries", async ({ page }) => {
       json: { ok: false, code: "CONTACT_DELIVERY_FAILED" },
     }),
   );
-  await page.goto("/contact");
+  await page.goto("/en/contact");
   await fillRequired(page);
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   await expect(page.locator("form").getByRole("alert")).toContainText(
@@ -133,7 +133,7 @@ test("contact works in both themes and German at narrow widths", async ({
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/de/contact");
+    await page.goto("/contact");
     await page
       .getByLabel("Kontaktgrund *", { exact: true })
       .selectOption("testing");
