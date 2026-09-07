@@ -5,7 +5,7 @@ test("all public pages and translations render with metadata and no runtime erro
 }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  for (const prefix of ["", "/de"]) {
+  for (const prefix of ["", "/en"]) {
     for (const route of [
       "",
       "/product",
@@ -20,7 +20,7 @@ test("all public pages and translations render with metadata and no runtime erro
       await expect(page.locator("h1")).toHaveCount(1);
       await expect(page.locator("html")).toHaveAttribute(
         "lang",
-        prefix ? "de" : "en",
+        prefix ? "en" : "de",
       );
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
@@ -50,28 +50,31 @@ test("theme follows the system, persists overrides and uses matching brand asset
   page,
 }, testInfo) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/");
+  await page.goto("/en");
   const html = page.locator("html");
-  const appearance = page.getByRole("combobox", { name: "Appearance" });
   await expect(html).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("header .brand-dark")).toBeVisible();
   await expect(page.locator("header .brand-light")).toBeHidden();
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(html).toHaveAttribute("data-theme", "light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(html).toHaveAttribute("data-theme", "dark");
   await page.screenshot({
     path: testInfo.outputPath("home-dark.png"),
     fullPage: true,
   });
-  await appearance.selectOption("light");
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(html).toHaveAttribute("data-theme", "light");
   await page.reload();
   await expect(html).toHaveAttribute("data-theme", "light");
   await expect(page.locator("header .brand-light")).toBeVisible();
-  await appearance.selectOption("dark");
+  const toggle = page.getByRole("button", { name: "Switch to dark mode" });
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(html).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(html).toHaveAttribute("data-theme", "dark");
-  await appearance.selectOption("system");
   await page.emulateMedia({ colorScheme: "light" });
-  await expect(html).toHaveAttribute("data-theme", "light");
-  await page.emulateMedia({ colorScheme: "dark" });
   await expect(html).toHaveAttribute("data-theme", "dark");
 });
 
@@ -79,7 +82,7 @@ test("mobile navigation is keyboard accessible and closes on escape and navigati
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/en");
   const menu = page.getByRole("button", { name: "Open navigation" });
   await menu.focus();
   await page.keyboard.press("Enter");
@@ -99,7 +102,7 @@ test("mobile navigation is keyboard accessible and closes on escape and navigati
   await expect(panel).toBeHidden();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await panel.getByRole("link", { name: "Sprache: Deutsch" }).click();
-  await expect(page).toHaveURL(/\/de\/product$/);
+  await expect(page).toHaveURL("http://127.0.0.1:3101/product");
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 });
 
@@ -116,12 +119,12 @@ test("small screens, reduced motion and generated assets remain usable", async (
     "/development",
     "/docs",
     "/contact",
-    "/de",
-    "/de/product",
-    "/de/about",
-    "/de/development",
-    "/de/docs",
-    "/de/contact",
+    "/en",
+    "/en/product",
+    "/en/about",
+    "/en/development",
+    "/en/docs",
+    "/en/contact",
   ]) {
     await page.goto(route);
     expect(
@@ -146,4 +149,41 @@ test("small screens, reduced motion and generated assets remain usable", async (
     expect(response.status()).toBe(200);
     expect((await response.body()).length).toBeGreaterThan(100);
   }
+});
+
+test("German is canonical, legacy URLs redirect and language links retain the page", async ({
+  page,
+  request,
+}) => {
+  for (const suffix of [
+    "",
+    "/product",
+    "/about",
+    "/development",
+    "/docs",
+    "/contact",
+  ]) {
+    const response = await request.get(`/de${suffix}`, { maxRedirects: 0 });
+    expect(response.status()).toBe(308);
+    expect(response.headers().location).toBe(suffix || "/");
+  }
+  await page.goto("/product");
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.locator('link[hreflang="x-default"]')).toHaveAttribute(
+    "href",
+    "https://kyrion.ch/product",
+  );
+  const english = page.locator('header a[hreflang="en"]').first();
+  await expect(english).toContainText("EN");
+  await expect(english.locator("svg")).toBeVisible();
+  await english.click();
+  await expect(page).toHaveURL("http://127.0.0.1:3101/en/product");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  const german = page.locator('header a[hreflang="de"]').first();
+  await expect(german).toContainText("DE");
+  await german.click();
+  await expect(page).toHaveURL("http://127.0.0.1:3101/product");
+  const sitemap = await request.get("/sitemap.xml");
+  expect(await sitemap.text()).toContain("https://kyrion.ch/en/product");
+  expect(await sitemap.text()).not.toContain("https://kyrion.ch/de/");
 });

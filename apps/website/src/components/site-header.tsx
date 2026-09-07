@@ -11,6 +11,7 @@ import {
   type Page,
 } from "@/lib/site";
 import { Logo } from "./logo";
+import { LanguageFlag } from "./language-flag";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
 
@@ -83,8 +84,10 @@ export function SiteHeader({
             href={href(locale === "en" ? "de" : "en", page)}
             hrefLang={locale === "en" ? "de" : "en"}
             aria-label={t.language}
-            className="hidden min-h-11 items-center px-2 text-xs text-muted-foreground sm:flex"
+            title={t.language}
+            className="flex min-h-11 items-center gap-2 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
           >
+            <LanguageFlag locale={locale === "en" ? "de" : "en"} />
             {locale === "en" ? "DE" : "EN"}
           </Link>
           <ThemeToggle labels={t} />
@@ -125,9 +128,11 @@ export function SiteHeader({
           </a>
           <Link
             href={href(locale === "en" ? "de" : "en", page)}
+            hrefLang={locale === "en" ? "de" : "en"}
             onClick={() => setOpen(false)}
-            className="flex min-h-11 items-center px-3 text-sm"
+            className="flex min-h-11 items-center gap-2 px-3 text-sm"
           >
+            <LanguageFlag locale={locale === "en" ? "de" : "en"} />
             {t.language}
           </Link>
         </nav>
