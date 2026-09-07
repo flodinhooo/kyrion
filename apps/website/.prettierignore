@@ -1,0 +1,7 @@
+.next
+node_modules
+next-env.d.ts
+public/branding
+playwright-report
+test-results
+*.tsbuildinfo
