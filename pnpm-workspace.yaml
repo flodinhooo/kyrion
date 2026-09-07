@@ -1,0 +1,7 @@
+packages:
+  - apps/website
+
+# apps/web retains its existing independent pnpm workspace and lockfile.
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
