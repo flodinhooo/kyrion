@@ -96,7 +96,9 @@
     "theme": "Appearance",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "switchLight": "Switch to light mode",
+    "switchDark": "Switch to dark mode"
   },
   "status": {
     "available": "Available",

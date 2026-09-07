@@ -96,7 +96,9 @@
     "theme": "Darstellung",
     "light": "Hell",
     "dark": "Dunkel",
-    "system": "System"
+    "system": "System",
+    "switchLight": "Zum hellen Modus wechseln",
+    "switchDark": "Zum dunklen Modus wechseln"
   },
   "status": {
     "available": "Implementiert",
