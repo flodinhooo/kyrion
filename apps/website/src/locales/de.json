@@ -1,9 +1,87 @@
 {
+  "contact": {
+    "eyebrow": "KONTAKT MIT KYRION",
+    "title": "Kommen wir ins Gespräch.",
+    "description": "Fragen, Feedback oder Interesse daran, Kyrion zu testen? Nimm während der Entwicklung Kontakt mit dem Projekt auf.",
+    "formTitle": "Nachricht senden",
+    "formHint": "Felder mit * sind Pflichtfelder. Alle anderen Angaben sind freiwillig.",
+    "required": "*",
+    "optional": "(optional)",
+    "fields": {
+      "name": "Name",
+      "email": "E-Mail",
+      "company": "Firma / Organisation",
+      "subject": "Betreff",
+      "reason": "Kontaktgrund",
+      "message": "Nachricht",
+      "country": "Land",
+      "experience": "Smart-Home-Erfahrung",
+      "ecosystems": "Vorhandenes Smart-Home-Ökosystem"
+    },
+    "reasons": {
+      "general": "Allgemeine Anfrage",
+      "testing": "Interesse an privater Alpha / Beta",
+      "technical": "Technische Frage",
+      "feedback": "Feedback",
+      "partnership": "Partnerschaft / Geschäftliches",
+      "other": "Sonstiges"
+    },
+    "experiences": {
+      "beginner": "Ich steige gerade ein",
+      "intermediate": "Etwas praktische Erfahrung",
+      "advanced": "Fortgeschritten / eigene Infrastruktur"
+    },
+    "ecosystems": {
+      "homeAssistant": "Home Assistant",
+      "philipsHue": "Philips Hue",
+      "nanoleaf": "Nanoleaf",
+      "aqara": "Aqara",
+      "matterThread": "Matter / Thread",
+      "zigbee": "Zigbee",
+      "other": "Sonstiges",
+      "none": "Keines"
+    },
+    "selectReason": "Grund auswählen",
+    "selectOptional": "Keine Angabe",
+    "testingTitle": "Ein wenig über dein Setup",
+    "testingHint": "Diese Angaben sind freiwillig. Sie helfen uns, das Interesse an künftigen Tests besser zu verstehen.",
+    "messageHint": "Bis zu 5’000 Zeichen.",
+    "honeypotLabel": "Dieses Feld leer lassen",
+    "privacyAcknowledgement": "Ich stimme zu, dass meine Angaben zur Beantwortung meiner Anfrage verwendet werden dürfen.",
+    "privacyNote": "Deine Anfrage wird per E-Mail gesendet. Bitte keine Passwörter oder sensiblen persönlichen Angaben eintragen.",
+    "send": "Nachricht senden",
+    "sending": "Wird gesendet…",
+    "successTitle": "Danke für deine Nachricht.",
+    "successMessage": "Deine Nachricht wurde übermittelt. Wir verwenden die angegebene E-Mail-Adresse, um zu antworten.",
+    "testingNote": "Eine Interessensbekundung garantiert keinen Zugang zur privaten Alpha oder Beta. Umfang und Verfügbarkeit künftiger Tests sind noch in Entwicklung.",
+    "asideTitle": "Kyrion ist derzeit in Entwicklung.",
+    "asideDescription": "Nutze dieses Formular für Fragen, Feedback, Partnerschaften oder Interesse an künftigen Tests. Deine Perspektive hilft bei den nächsten Schritten.",
+    "testingAsideTitle": "Möchtest du Kyrion ausprobieren?",
+    "javascriptNote": "Bitte aktiviere JavaScript, um dieses Kontaktformular zu verwenden.",
+    "validation": {
+      "required": "Bitte fülle dieses Pflichtfeld aus.",
+      "invalid": "Bitte gültigen Text ohne Steuerzeichen oder unerwartete Zeilenumbrüche eingeben.",
+      "tooLong": "Diese Angabe überschreitet die maximale Länge. Bitte kürze sie.",
+      "email": "Bitte eine gültige E-Mail-Adresse eingeben, zum Beispiel name@example.com.",
+      "selection": "Bitte eine gültige Option auswählen. „Keines“ lässt sich nicht mit anderen Ökosystemen kombinieren.",
+      "privacy": "Bitte bestätige vor dem Senden, wie deine Angaben verwendet werden dürfen."
+    },
+    "errors": {
+      "CONTACT_INVALID": "Bitte prüfe die markierten Felder vor dem Senden.",
+      "CONTACT_REJECTED": "Diese Anfrage wurde nicht angenommen. Prüfe das Formular und sende es von dieser Website aus.",
+      "CONTACT_REQUEST_INVALID": "Die Anfrage konnte nicht gelesen werden. Deine Angaben bleiben erhalten; bitte versuche es erneut.",
+      "CONTACT_TOO_LARGE": "Deine Anfrage ist zu lang. Bitte kürze die Nachricht und versuche es erneut.",
+      "CONTACT_UNAVAILABLE": "Der Kontaktservice ist vorübergehend nicht verfügbar. Deine Angaben bleiben erhalten. Bitte versuche es später erneut.",
+      "CONTACT_DELIVERY_FAILED": "Die Zustellung konnte nicht bestätigt werden. Deine Angaben bleiben erhalten. Bitte warte einen Moment vor einem erneuten Versuch.",
+      "CONTACT_RATE_LIMITED": "Zu viele Anfragen. Bitte warte vor einem erneuten Versuch. Deine Angaben bleiben erhalten."
+    }
+  },
   "meta": {
     "title": "Kyrion — Lokale Plattform für ein intelligentes Zuhause",
     "description": "Kyrion ist eine lokale Plattform für intelligente Haussteuerung, Automatisierung und vernetzte Geräte. Derzeit in Entwicklung."
   },
   "nav": {
+    "contact": "Kontakt",
     "home": "Kyrion Startseite",
     "product": "Produkt",
     "about": "Über Kyrion",

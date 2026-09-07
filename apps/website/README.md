@@ -11,6 +11,7 @@ analytics, private installation data or a dependency on `apps/web`.
 - `/about`: purpose, ownership and local-first principles;
 - `/development`: status definitions, current focus and outcome-oriented direction;
 - `/docs`: documentation layout preview, with repository documentation links.
+- `/contact`: public inquiries and optional interest in future testing.
 
 Every page has a German equivalent under `/de`. English is the default and
 fallback. A statically generated, allowlisted catch-all route shares the page
@@ -52,7 +53,7 @@ pnpm --filter website start
 Next.js generates `next-env.d.ts` during development, type generation and builds.
 Dependencies, `.next` output and TypeScript build metadata are ignored by Git.
 `pnpm --filter website format` applies Prettier. Playwright starts the production
-server itself on port 3101, leaving development port 3001 alone. Tests cover ten localized pages,
+server itself on port 3101, leaving development port 3001 alone. Tests cover localized pages,
 metadata, 404s, system/explicit themes, persistence, keyboard/mobile navigation,
 small-screen overflow, reduced motion and generated assets.
 
@@ -100,8 +101,11 @@ The informational site is indexable; a preview host should set its own noindex
 policy before deployment. GitHub links use the repository's configured remote,
 `https://github.com/flodinhooo/kyrion`; confirm public access before launch.
 
-Public docs, search, version selection, signup/contact handling and deployment
-are intentionally not implemented. No alpha access or release dates are
+The website is deployed on Vercel at kyrion.ch. The contact form adds a bounded
+server-side SMTP channel, separate from Kyrion Core. Configure the seven contact
+variables and complete the live checks in [contact operations](CONTACT.md).
+No real delivery is attempted by tests. Full public docs, search, version
+selection and signup handling are intentionally not implemented. No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no
 software reuse or commercial-availability promise.
 

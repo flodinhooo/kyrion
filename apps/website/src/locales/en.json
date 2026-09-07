@@ -1,9 +1,87 @@
 {
+  "contact": {
+    "eyebrow": "CONTACT KYRION",
+    "title": "Let’s start a conversation.",
+    "description": "Questions, feedback or interest in testing Kyrion? Get in touch with the project while it is in development.",
+    "formTitle": "Send a message",
+    "formHint": "Fields marked * are required. Everything else is optional.",
+    "required": "*",
+    "optional": "(optional)",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "company": "Company / organization",
+      "subject": "Subject",
+      "reason": "Contact reason",
+      "message": "Message",
+      "country": "Country",
+      "experience": "Smart-home experience",
+      "ecosystems": "Existing smart-home ecosystem"
+    },
+    "reasons": {
+      "general": "General inquiry",
+      "testing": "Private Alpha / Beta interest",
+      "technical": "Technical question",
+      "feedback": "Feedback",
+      "partnership": "Partnership / business",
+      "other": "Other"
+    },
+    "experiences": {
+      "beginner": "Just getting started",
+      "intermediate": "Some hands-on experience",
+      "advanced": "Advanced / building my own setup"
+    },
+    "ecosystems": {
+      "homeAssistant": "Home Assistant",
+      "philipsHue": "Philips Hue",
+      "nanoleaf": "Nanoleaf",
+      "aqara": "Aqara",
+      "matterThread": "Matter / Thread",
+      "zigbee": "Zigbee",
+      "other": "Other",
+      "none": "None"
+    },
+    "selectReason": "Choose a reason",
+    "selectOptional": "Prefer not to specify",
+    "testingTitle": "A little about your setup",
+    "testingHint": "These details are optional. They help us understand interest in future testing.",
+    "messageHint": "Up to 5,000 characters.",
+    "honeypotLabel": "Leave this field empty",
+    "privacyAcknowledgement": "I agree that my information may be used to respond to my inquiry.",
+    "privacyNote": "Your inquiry is sent by email. Please do not include passwords or sensitive personal details.",
+    "send": "Send message",
+    "sending": "Sending…",
+    "successTitle": "Thank you for getting in touch.",
+    "successMessage": "Your message has been submitted. We’ll use the email address you provided to respond.",
+    "testingNote": "Expressing interest does not guarantee Private Alpha or Beta access. Testing scope and availability are still being developed.",
+    "asideTitle": "Kyrion is currently in development.",
+    "asideDescription": "Use this form for questions, feedback, partnerships or interest in future testing. Your perspective helps shape the next steps.",
+    "testingAsideTitle": "Interested in trying Kyrion?",
+    "javascriptNote": "Please enable JavaScript to use this contact form.",
+    "validation": {
+      "required": "Please complete this required field.",
+      "invalid": "Please enter valid text without control characters or unexpected line breaks.",
+      "tooLong": "This entry exceeds the maximum length. Please shorten it.",
+      "email": "Enter a valid email address, such as name@example.com.",
+      "selection": "Please choose a valid option. “None” cannot be combined with other ecosystems.",
+      "privacy": "Please acknowledge how your information may be used before sending."
+    },
+    "errors": {
+      "CONTACT_INVALID": "Please check the highlighted fields before sending.",
+      "CONTACT_REJECTED": "We couldn’t accept this submission. Check the form and submit it from this website.",
+      "CONTACT_REQUEST_INVALID": "The submission could not be read. Your entries are still here; please try again.",
+      "CONTACT_TOO_LARGE": "Your submission is too long. Please shorten the message and try again.",
+      "CONTACT_UNAVAILABLE": "The contact service is temporarily unavailable. Your entries are still here. Please try again later.",
+      "CONTACT_DELIVERY_FAILED": "We couldn’t confirm delivery. Your entries are still here. Please wait a moment before trying again.",
+      "CONTACT_RATE_LIMITED": "Too many submissions. Please wait before trying again. Your entries are still here."
+    }
+  },
   "meta": {
     "title": "Kyrion — Local-first intelligent home platform",
     "description": "Kyrion is a local-first platform for intelligent home control, automation and connected devices. Currently in development."
   },
   "nav": {
+    "contact": "Contact",
     "home": "Kyrion home",
     "product": "Product",
     "about": "About Kyrion",

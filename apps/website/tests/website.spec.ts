@@ -6,7 +6,14 @@ test("all public pages and translations render with metadata and no runtime erro
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   for (const prefix of ["", "/de"]) {
-    for (const route of ["", "/product", "/about", "/development", "/docs"]) {
+    for (const route of [
+      "",
+      "/product",
+      "/about",
+      "/development",
+      "/docs",
+      "/contact",
+    ]) {
       const path = `${prefix}${route}` || "/";
       const response = await page.goto(path);
       expect(response?.status()).toBe(200);
@@ -108,11 +115,13 @@ test("small screens, reduced motion and generated assets remain usable", async (
     "/about",
     "/development",
     "/docs",
+    "/contact",
     "/de",
     "/de/product",
     "/de/about",
     "/de/development",
     "/de/docs",
+    "/de/contact",
   ]) {
     await page.goto(route);
     expect(

@@ -188,8 +188,8 @@ configuration.
 
 `apps/website` is the standalone Next.js, React and TypeScript App Router public
 website for kyrion.ch. It statically renders English/German landing, product,
-about, development and documentation-preview pages. It has no authentication,
-backend integrations, database access or Core dependency. Its public content
+about, development, documentation-preview and contact pages. It has no authentication,
+database access or Core dependency. Its public content
 distinguishes implemented prototype capabilities from experimental/planned work.
 
 The website uses Tailwind CSS, a local shadcn/ui Button and its own theme tokens.
@@ -197,8 +197,16 @@ Approved assets remain in root `branding/`; a preparation script produces ignore
 deployment copies and PNG exports. The local application in `apps/web` remains
 independent, with no shared application UI code or theme state. See the
 [website guide](../apps/website/README.md) for the asset pipeline, metadata,
-theme handling and validation commands. Full public documentation and deployment
-remain future work.
+theme handling and validation commands. The public site is deployed on Vercel at
+kyrion.ch; full public documentation remains future work.
+
+The contact page submits to a bounded Node.js `POST /api/contact` handler owned
+by the public website. It validates inquiries and awaits SMTP submission to a
+configured mailbox. This public correspondence channel is independent of local
+installation accounts, data and Core execution policy. See
+[ADR 0020](adr/0020-public-website-contact-mail.md) and the
+[contact operations guide](../apps/website/CONTACT.md) for configuration,
+privacy boundaries, validation and the outstanding distributed abuse protection.
 
 ### Web application
 
