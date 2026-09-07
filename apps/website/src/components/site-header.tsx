@@ -32,19 +32,19 @@ export function SiteHeader({
     media.addEventListener("change", close);
     return () => media.removeEventListener("change", close);
   }, []);
-  const links = (["product", "about", "development", "docs"] as const).map(
-    (item) => (
-      <Link
-        key={item}
-        href={href(locale, item)}
-        aria-current={page === item ? "page" : undefined}
-        onClick={() => setOpen(false)}
-        className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
-      >
-        {t[item]}
-      </Link>
-    ),
-  );
+  const links = (
+    ["product", "about", "development", "docs", "contact"] as const
+  ).map((item) => (
+    <Link
+      key={item}
+      href={href(locale, item)}
+      aria-current={page === item ? "page" : undefined}
+      onClick={() => setOpen(false)}
+      className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
+    >
+      {t[item]}
+    </Link>
+  ));
   return (
     <header
       className="sticky top-0 z-50 border-b border-border bg-background/95"

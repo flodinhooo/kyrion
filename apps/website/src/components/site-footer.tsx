@@ -22,17 +22,17 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dictionary }) {
             aria-label={t.common.footerLinks}
             className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm"
           >
-            {(["product", "about", "development", "docs"] as const).map(
-              (page) => (
-                <Link
-                  className="flex min-h-11 items-center text-muted-foreground hover:text-foreground"
-                  key={page}
-                  href={href(locale, page)}
-                >
-                  {t.nav[page]}
-                </Link>
-              ),
-            )}
+            {(
+              ["product", "about", "development", "docs", "contact"] as const
+            ).map((page) => (
+              <Link
+                className="flex min-h-11 items-center text-muted-foreground hover:text-foreground"
+                key={page}
+                href={href(locale, page)}
+              >
+                {t.nav[page]}
+              </Link>
+            ))}
             <a
               href={github}
               className="flex min-h-11 items-center gap-2 text-muted-foreground hover:text-foreground"

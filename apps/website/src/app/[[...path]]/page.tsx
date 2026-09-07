@@ -13,6 +13,7 @@ import { ProductPage } from "@/components/pages/product";
 import { AboutPage } from "@/components/pages/about";
 import { DevelopmentPage } from "@/components/pages/development";
 import { DocsPage } from "@/components/pages/docs";
+import { ContactPage } from "@/components/pages/contact";
 
 type Props = { params: Promise<{ path?: string[] }> };
 
@@ -76,6 +77,7 @@ const components = {
   about: AboutPage,
   development: DevelopmentPage,
   docs: DocsPage,
+  contact: ContactPage,
 };
 
 export default async function PublicPage({ params }: Props) {
