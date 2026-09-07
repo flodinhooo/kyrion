@@ -13,8 +13,9 @@ analytics, private installation data or a dependency on `apps/web`.
 - `/docs`: documentation layout preview, with repository documentation links.
 - `/contact`: public inquiries and optional interest in future testing.
 
-Every page has a German equivalent under `/de`. English is the default and
-fallback. A statically generated, allowlisted catch-all route shares the page
+German is the default language, with no URL prefix. Every page has an English
+equivalent under `/en`. Old `/de` URLs permanently redirect to the unprefixed
+German page. English remains the locale-resource type/fallback reference. A statically generated, allowlisted catch-all route shares the page
 implementations and resolves the correct HTML language and metadata on the
 server. Unknown paths return 404. Content lives in `src/locales/{en,de}.json`.
 The header language link retains the current page.
@@ -90,7 +91,9 @@ social design. Root brand files and `apps/web` remain unchanged.
 
 `next-themes` applies the saved/system theme before hydration using `data-theme`.
 The site uses its own `kyrion-website-theme` localStorage key, follows system
-changes, and offers a labeled native select. A CSS system fallback supports
+changes, until the visitor chooses an explicit theme. A labeled sun/moon button switches
+directly between light and dark and persists that choice. The language link
+shows a flag and DE/EN for its destination language, retaining the current page. A CSS system fallback supports
 visits without JavaScript. If a CSP is added, allow the theme initialization
 script through an appropriate nonce/hash to retain flash prevention.
 
