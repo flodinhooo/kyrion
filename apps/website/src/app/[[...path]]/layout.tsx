@@ -23,7 +23,7 @@ export default async function RootLayout({
   params: Promise<{ path?: string[] }>;
 }) {
   const route = resolveRoute((await params).path) ?? {
-    locale: "en",
+    locale: "de",
     page: "home",
   };
   const t = dictionaries[route.locale];
