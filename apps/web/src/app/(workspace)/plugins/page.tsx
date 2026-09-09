@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Icons } from "@/components/icons";
 import { useWorkspace } from "@/components/app-shell";
 import { loadIntegrationCatalog, loadingCatalog, type CatalogStatus, type IntegrationDefinition } from "@/features/integrations/catalog";
@@ -39,6 +40,13 @@ export default function PluginsPage() {
     configured: t.catalogConfigured, connected: t.pluginConnected,
     server_configuration: t.catalogServerConfiguration,
   };
+  const integrationLogo: Record<string, string> = {
+    Nanoleaf: "/branding/nanoleaf.svg",
+    Zigbee: "/branding/zigbee.svg",
+    Jellyfin: "/branding/jellyfin.svg",
+    Spotify: "/branding/spotify/icon.svg",
+    Google: "/branding/google.svg",
+  };
   const cards: IntegrationDefinition[] = [
     { id: "nanoleaf", name: "Nanoleaf", description: t.pluginNanoleafDescription, kind: "local", authType: "local", capabilities: [{ id: "devices.control", label: t.integrationCapabilityDeviceControl, enabled: true }], href: "/plugins/nanoleaf", live: true },
     { id: "zigbee", name: "Zigbee", description: t.pluginZigbeeDescription, kind: "local", authType: "local", capabilities: [{ id: "devices.discovery", label: t.integrationCapabilityDiscovery, enabled: true }], href: "/settings/gateways", live: true },
@@ -56,7 +64,7 @@ export default function PluginsPage() {
       const ready = connection?.status === "CONNECTED" || (card.live && entry && (entry.status === "configured" || entry.status === "connected"));
       const status = provider?.availability === "PLANNED" ? t.integrationPlanned : connection ? statusLabels[connection.status.toLowerCase() as CatalogStatus] ?? t.pluginConnected : !card.live ? t.integrationPlanned : entry ? statusLabels[entry.status] : t.integrationPlanned;
       return <article className="plugin-card" key={card.id}>
-        <div className="plugin-card-top"><div className="plugin-mark"><Icons.plugins /></div><span className={`integration-kind integration-kind-${card.kind}`}>{card.kind === "local" ? t.integrationLocal : t.integrationCloud}</span></div>
+        <div className="plugin-card-top"><div className="plugin-mark">{integrationLogo[card.name] ? <Image src={integrationLogo[card.name]} alt="" width={24} height={24} /> : <Icons.plugins />}</div><span className={`integration-kind integration-kind-${card.kind}`}>{card.kind === "local" ? t.integrationLocal : t.integrationCloud}</span></div>
         <h3>{provider?.name ?? card.name}</h3><p>{provider?.description ?? card.description}</p>
         <div className={`catalog-status ${!card.live ? "catalog-status-planned" : entry ? `catalog-status-${entry.status}` : ""}`} role="status">{status}</div>
         <div className="integration-capabilities"><span>{t.integrationCapabilities}</span>{(provider?.capabilities ?? card.capabilities).map((capability) => <span className={`capability-pill ${("enabled" in capability ? capability.enabled : connection?.enabledCapabilities.includes(capability.id)) ? "enabled" : ""}`} key={capability.id}>{("enabled" in capability ? capability.enabled : connection?.enabledCapabilities.includes(capability.id)) ? "✓" : "○"} {"label" in capability ? capability.label : capability.name}</span>)}</div>

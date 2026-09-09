@@ -180,7 +180,7 @@
     "worksEnvironment": {
       "title": "Your home",
       "description": "Lighting, sensors, media, energy and more – through the right integrations.",
-      "items": ["Lighting", "Sensors", "Media", "Energy"]
+      "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
     },
     "worksCloud": {
       "title": "Cloud when you need it.",

@@ -9,6 +9,7 @@ import {
   Radio,
   UserRound,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/lib/site";
 import { Logo } from "./logo";
@@ -17,6 +18,11 @@ export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   const destinationIcons = [Lightbulb, Radio, AudioLines, BatteryCharging];
+  const integrationLogos: Record<string, string> = {
+    Zigbee: "/branding/integrations/zigbee.svg",
+    Spotify: "/branding/integrations/spotify.svg",
+    "Home Assistant": "/branding/integrations/homeassistant.svg",
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -111,7 +117,17 @@ export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
                   const Icon = destinationIcons[index];
                   return (
                     <span key={item}>
-                      <Icon aria-hidden="true" />
+                      {integrationLogos[item] ? (
+                        <Image
+                          src={integrationLogos[item]}
+                          alt=""
+                          width={16}
+                          height={16}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Icon aria-hidden="true" />
+                      )}
                       {item}
                     </span>
                   );
