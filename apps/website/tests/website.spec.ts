@@ -78,6 +78,66 @@ test("theme follows the system, persists overrides and uses matching brand asset
   await expect(html).toHaveAttribute("data-theme", "dark");
 });
 
+test("Velora voice preview follows the page language and stops on language change", async ({
+  page,
+  request,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, "play", {
+      configurable: true,
+      value: function () {
+        Object.defineProperty(this, "paused", {
+          configurable: true,
+          value: false,
+        });
+        this.dispatchEvent(new Event("play"));
+        return Promise.resolve();
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, "pause", {
+      configurable: true,
+      value: function () {
+        Object.defineProperty(this, "paused", {
+          configurable: true,
+          value: true,
+        });
+        this.dispatchEvent(new Event("pause"));
+      },
+    });
+  });
+  await page.goto("/");
+  for (const asset of [
+    "/audio/velora-intro-de.mp3",
+    "/audio/velora-intro-en.mp3",
+  ]) {
+    const response = await request.get(asset);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("audio/mpeg");
+    expect((await response.body()).length).toBeGreaterThan(10_000);
+  }
+  const audio = page.locator("audio");
+  await expect(audio).toHaveAttribute("src", "/audio/velora-intro-de.mp3");
+  const control = page.getByRole("button", { name: "Velora kennenlernen" });
+  await expect(control).toBeVisible();
+  await control.press("Enter");
+  await expect(
+    page.getByRole("button", { name: "Velora spricht" }),
+  ).toBeVisible();
+  await page.locator("audio").evaluate((element) => {
+    element.dispatchEvent(new Event("ended"));
+  });
+  await expect(
+    page.getByRole("button", { name: "Velora kennenlernen" }),
+  ).toBeVisible();
+  await page.locator('header a[hreflang="en"]').first().click();
+  await expect(page).toHaveURL("http://127.0.0.1:3101/en");
+  await expect(page.locator("audio")).toHaveAttribute(
+    "src",
+    "/audio/velora-intro-en.mp3",
+  );
+  await expect(page.getByRole("button", { name: "Meet Velora" })).toBeVisible();
+});
+
 test("mobile navigation is keyboard accessible and closes on escape and navigation", async ({
   page,
 }, testInfo) => {

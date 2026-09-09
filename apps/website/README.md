@@ -107,6 +107,12 @@ policy before deployment. GitHub links use the repository's configured remote,
 The website is deployed on Vercel at kyrion.ch. The contact form adds a bounded
 server-side SMTP channel, separate from Kyrion Core. Configure the seven contact
 variables and complete the live checks in [contact operations](CONTACT.md).
+The Velora voice preview on the home page uses the optional static assets
+`public/audio/velora-intro-de.mp3` and `public/audio/velora-intro-en.mp3`.
+`VeloraVoicePreview` selects the asset from the active page locale, starts only
+after an explicit click or keyboard activation, and fails softly when an asset
+is missing. The audio is intentionally not included in the repository until
+reviewed DE/EN recordings are available.
 No real delivery is attempted by tests. Full public docs, search, version
 selection and signup handling are intentionally not implemented. No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no

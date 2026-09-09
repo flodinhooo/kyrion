@@ -1,0 +1,135 @@
+"use client";
+
+import { Pause, Play, Volume2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { Locale } from "@/lib/site";
+
+type VeloraVoicePreviewProps = {
+  locale: Locale;
+  label: string;
+  speakingLabel: string;
+  voiceNote: string;
+  unavailableLabel: string;
+};
+
+const activeAudio = { element: null as HTMLAudioElement | null };
+const barHeights = [18, 31, 24, 47, 66, 38, 74, 52, 30, 62, 42, 22];
+
+export function VeloraVoicePreview({
+  locale,
+  label,
+  speakingLabel,
+  voiceNote,
+  unavailableLabel,
+}: VeloraVoicePreviewProps) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [state, setState] = useState<"idle" | "playing" | "error">("idle");
+  const source = `/audio/velora-intro-${locale}.mp3`;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setState("idle");
+    if (activeAudio.element === audio) activeAudio.element = null;
+  }, [locale]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onPlay = () => setState("playing");
+    const onPause = () => setState("idle");
+    const onEnded = () => {
+      audio.currentTime = 0;
+      setState("idle");
+      if (activeAudio.element === audio) activeAudio.element = null;
+    };
+    const onError = () => {
+      setState("error");
+      if (activeAudio.element === audio) activeAudio.element = null;
+    };
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
+    return () => {
+      audio.pause();
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
+      if (activeAudio.element === audio) activeAudio.element = null;
+    };
+  }, []);
+
+  async function toggle() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused) {
+      audio.pause();
+      audio.currentTime = 0;
+      return;
+    }
+    if (activeAudio.element && activeAudio.element !== audio) {
+      activeAudio.element.pause();
+      activeAudio.element.currentTime = 0;
+    }
+    activeAudio.element = audio;
+    setState("idle");
+    try {
+      await audio.play();
+    } catch {
+      if (activeAudio.element === audio) activeAudio.element = null;
+      setState("error");
+    }
+  }
+
+  const isPlaying = state === "playing";
+  return (
+    <div className="mt-8">
+      <audio ref={audioRef} preload="none" src={source} />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={isPlaying ? speakingLabel : label}
+        className="group/voice flex min-h-20 w-full max-w-md touch-manipulation flex-col items-start gap-4 rounded-xl border border-border bg-background/45 px-5 py-4 text-left transition-colors hover:border-accent/50 focus-visible:border-accent"
+      >
+        <span
+          className={`flex h-12 w-full items-center justify-center gap-2 rounded-lg transition-[filter,opacity] group-hover/voice:brightness-110 ${isPlaying ? "velora-wave-playing" : ""}`}
+          aria-hidden="true"
+        >
+          {barHeights.map((height, index) => (
+            <span
+              key={index}
+              className="velora-wave-bar core-line w-1 rounded-full opacity-60"
+              style={{
+                height: `${height}%`,
+                animationDelay: `${index * 75}ms`,
+              }}
+            />
+          ))}
+        </span>
+        <span className="flex w-full items-center justify-between gap-4">
+          <span className="flex items-center gap-2.5 text-sm font-medium">
+            {isPlaying ? (
+              <Pause className="size-4 text-accent" aria-hidden="true" />
+            ) : (
+              <Play className="size-4 text-accent" aria-hidden="true" />
+            )}
+            {isPlaying ? speakingLabel : label}
+          </span>
+          <span className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+            <Volume2 className="size-3.5" aria-hidden="true" />
+            {voiceNote}
+          </span>
+        </span>
+      </button>
+      {state === "error" && (
+        <p className="mt-2 font-mono text-[10px] leading-5 text-muted-foreground">
+          {unavailableLabel}
+        </p>
+      )}
+    </div>
+  );
+}
