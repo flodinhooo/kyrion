@@ -127,9 +127,9 @@
   },
   "home": {
     "eyebrow": "LOCAL-FIRST INTELLIGENT HOME PLATFORM",
-    "title": "Your home.",
-    "titleAccent": "One intelligent platform.",
-    "description": "Connect your devices, bring your home together, and stay in control. Built around your infrastructure. With intelligence on your terms.",
+    "title": "Your home. Your services.",
+    "titleAccent": "One platform that connects them.",
+    "description": "Kyrion connects your devices, automations and digital services – local, private and under your control.",
     "heroNote": "A working prototype. A considered foundation. Built step by step.",
     "diagramLabel": "The Kyrion ecosystem",
     "diagramTop": "DEVICES & INTEGRATIONS",
@@ -143,6 +143,98 @@
       "Intelligence is optional",
       "Your home stays yours"
     ],
+    "connectionEyebrow": "LESS SWITCHING, MORE DOING",
+    "connectionTitle": "Your home is full of useful pieces. Kyrion connects them.",
+    "connectionDescription": "Lights, music, rooms and digital services do not have to stay in separate apps. Kyrion creates one understandable layer for the things you already use.",
+    "connectionCards": [
+      {
+        "title": "Your home",
+        "description": "Understand and control rooms, lights and device state in one place."
+      },
+      {
+        "title": "Your services",
+        "description": "Optional connections to music, calendars and other services – when you want them."
+      },
+      {
+        "title": "Your everyday",
+        "description": "Fewer app switches, clearer state and a platform that can grow with you."
+      }
+    ],
+    "localCloudEyebrow": "LOCAL FIRST. CLOUD WHEN YOU WANT IT.",
+    "localCloudTitle": "You decide what stays in your system and what you connect.",
+    "localCloudDescription": "Kyrion itself does not depend on cloud accounts. Devices, rooms, central settings and local functions stay in your own system wherever practical.",
+    "localCard": {
+      "label": "YOUR SYSTEM",
+      "title": "The foundation stays local",
+      "description": "Kyrion is built for local processing and storage. A traditional server or NAS is not required – a suitable local computer is enough for the relevant use case."
+    },
+    "cloudCard": {
+      "label": "OPTIONAL CONNECTION",
+      "title": "Services are added when you need them",
+      "description": "Connect Spotify, Google or YouTube through an explicitly enabled integration. You decide which connection exists and can remove it again."
+    },
+    "permissionsEyebrow": "CONNECTIONS WITH CLEAR BOUNDARIES",
+    "permissionsTitle": "An account extends Kyrion. It does not take over your home.",
+    "permissionsDescription": "Future plugins are intended to connect services through separate, understandable permissions. You only grant access to what you actually want to use.",
+    "permissionsNote": "Permissions stay visible and revocable",
+    "pluginMock": {
+      "account": "Connected as user@example.com",
+      "connected": "Connected",
+      "manage": "Manage permissions",
+      "disconnect": "Disconnect",
+      "note": "Concept illustration – Google sign-in is not available yet.",
+      "scopes": [
+        { "name": "Calendar", "access": "Read · Manage", "allowed": true },
+        { "name": "Gmail", "access": "No access", "allowed": false },
+        { "name": "YouTube", "access": "Connected", "allowed": true }
+      ]
+    },
+    "integrationsEyebrow": "FOR THE THINGS YOU ALREADY USE",
+    "integrationsTitle": "Built to connect systems.",
+    "integrationsDescription": "Kyrion is meant to connect your home, not replace it. The platform brings together devices and services from different providers through focused integrations. Status shows what exists in the prototype and what comes next.",
+    "integrations": [
+      {
+        "title": "Standards",
+        "items": [
+          { "name": "Zigbee", "status": "available" },
+          { "name": "Bluetooth", "status": "available" },
+          { "name": "Matter / Thread", "status": "planned" }
+        ]
+      },
+      {
+        "title": "Device ecosystems",
+        "items": [
+          { "name": "Nanoleaf", "status": "available" },
+          { "name": "Philips Hue", "status": "available" },
+          { "name": "Aqara / myStrom", "status": "planned" }
+        ]
+      },
+      {
+        "title": "Services",
+        "items": [
+          { "name": "Spotify", "status": "available" },
+          { "name": "Home Assistant", "status": "available" },
+          { "name": "Google / YouTube / Jellyfin", "status": "planned" }
+        ]
+      }
+    ],
+    "hardwareEyebrow": "GETTING STARTED",
+    "hardwareTitle": "Do you need your own server?",
+    "hardwareDescription": "Kyrion needs a device to run on. The right size depends on what you want to use it for.",
+    "hardwareFaq": [
+      {
+        "question": "Do I need a traditional server or NAS?",
+        "answer": "No. A traditional server or NAS is not required. For early use, a compact local computer may be enough. Dedicated Kyrion hardware is a possible future direction, not an available product today."
+      },
+      {
+        "question": "What already runs on local hardware?",
+        "answer": "The prototype runs Kyrion Core, local storage and a Raspberry Pi gateway for selected device and voice paths. Hardware coverage is still being validated one path at a time."
+      },
+      {
+        "question": "Can I connect cloud services later?",
+        "answer": "Yes. Cloud services are intended as optional extensions. Kyrion should remain useful for local devices, rooms and configuration without those accounts."
+      }
+    ],
     "featuresEyebrow": "A HOME THAT WORKS TOGETHER",
     "featuresTitle": "Less fragmentation.\nMore connection.",
     "featuresDescription": "One coherent layer above the devices and services you already use. A foundation for everyday control, with room to grow.",
@@ -151,8 +243,8 @@
     "ecosystemDescription": "Integrations connect the devices. Core holds the rules. Web, voice and optional intelligence give you different ways to interact—with the same controlled action path.",
     "ecosystemLink": "Understand the architecture",
     "veloraEyebrow": "MEET VELORA",
-    "veloraTitle": "Intelligence with boundaries.",
-    "veloraDescription": "An evolving interaction layer for your home. Local chat and bounded device-command proposals exist today. Reliable, natural voice interaction is the next step.",
+    "veloraTitle": "AI that can run at home.",
+    "veloraDescription": "Chat, voice and intelligent functions can run on your own Kyrion hardware, so every sensitive interaction does not have to go to an external AI service. Other providers remain optional; the prototype is still being validated.",
     "veloraRule": "Intelligence proposes. Core decides.",
     "developmentEyebrow": "BUILT IN THE OPEN, STEP BY STEP",
     "developmentTitle": "Real progress.\nA clear development boundary.",
@@ -206,8 +298,8 @@
       "status": "available"
     },
     {
-      "title": "Local intelligence",
-      "description": "Local streaming chat and bounded German/English command proposals. Core validates permissions and targets before any action is executed.",
+      "title": "AI and voice at home",
+      "description": "Local streaming chat and bounded German/English command proposals. Core validates permissions and targets before any action is executed; reliable end-to-end voice remains in development.",
       "status": "available"
     },
     {

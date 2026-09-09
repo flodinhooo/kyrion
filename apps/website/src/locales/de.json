@@ -127,9 +127,9 @@
   },
   "home": {
     "eyebrow": "LOKALE PLATTFORM FÜR EIN INTELLIGENTES ZUHAUSE",
-    "title": "Dein Zuhause.",
-    "titleAccent": "Eine intelligente Plattform.",
-    "description": "Verbinde deine Geräte, bring dein Zuhause zusammen und behalte die Kontrolle. Auf deiner Infrastruktur. Mit Intelligenz nach deinen Regeln.",
+    "title": "Dein Zuhause. Deine Dienste.",
+    "titleAccent": "Eine Plattform, die alles verbindet.",
+    "description": "Kyrion verbindet deine Geräte, Automationen und digitalen Dienste – lokal, privat und unter deiner Kontrolle.",
     "heroNote": "Ein funktionierender Prototyp. Ein durchdachtes Fundament. Schritt für Schritt.",
     "diagramLabel": "Das Kyrion-Ökosystem",
     "diagramTop": "GERÄTE & INTEGRATIONEN",
@@ -143,6 +143,98 @@
       "Intelligenz ist optional",
       "Dein Zuhause bleibt deins"
     ],
+    "connectionEyebrow": "WENIGER WECHSELN, MEHR ERLEDIGEN",
+    "connectionTitle": "Dein Zuhause ist voller guter Einzelteile. Kyrion verbindet sie.",
+    "connectionDescription": "Licht, Musik, Räume und digitale Dienste müssen nicht in getrennten Apps bleiben. Kyrion schafft eine gemeinsame Ebene für das, was du bereits nutzt.",
+    "connectionCards": [
+      {
+        "title": "Dein Zuhause",
+        "description": "Räume, Licht und Gerätezustände an einem Ort verstehen und steuern."
+      },
+      {
+        "title": "Deine Dienste",
+        "description": "Optionale Verbindungen zu Musik, Kalendern und weiteren Diensten – wenn du sie möchtest."
+      },
+      {
+        "title": "Dein Alltag",
+        "description": "Weniger App-Wechsel, klare Zustände und eine Plattform, die mit dir wachsen kann."
+      }
+    ],
+    "localCloudEyebrow": "LOKAL ZUERST. CLOUD, WENN DU SIE WILLST.",
+    "localCloudTitle": "Du entscheidest, was in deinem System bleibt und was du verbindest.",
+    "localCloudDescription": "Kyrion selbst ist nicht von Cloud-Konten abhängig. Geräte, Räume, zentrale Einstellungen und lokale Funktionen bleiben nach Möglichkeit in deinem eigenen System.",
+    "localCard": {
+      "label": "DEIN SYSTEM",
+      "title": "Das Fundament bleibt lokal",
+      "description": "Kyrion ist für lokale Verarbeitung und Speicherung gebaut. Ein klassischer Server oder ein NAS ist dafür nicht zwingend erforderlich – ein geeigneter lokaler Computer genügt für den jeweiligen Einsatz."
+    },
+    "cloudCard": {
+      "label": "OPTIONALE VERBINDUNG",
+      "title": "Dienste kommen nur dazu, wenn du sie brauchst",
+      "description": "Verbinde zum Beispiel Spotify, Google oder YouTube über eine ausdrücklich aktivierte Integration. Du entscheidest, welche Verbindung besteht und kannst sie wieder entfernen."
+    },
+    "permissionsEyebrow": "VERBINDUNGEN MIT KLAREN GRENZEN",
+    "permissionsTitle": "Ein Konto erweitert Kyrion. Es übernimmt nicht dein Zuhause.",
+    "permissionsDescription": "Künftige Plugins sollen Dienste über getrennte, verständliche Berechtigungen anbinden. Du gibst nur frei, was du wirklich nutzen möchtest.",
+    "permissionsNote": "Berechtigungen bleiben sichtbar und widerrufbar",
+    "pluginMock": {
+      "account": "Verbunden als user@example.com",
+      "connected": "Verbunden",
+      "manage": "Berechtigungen verwalten",
+      "disconnect": "Trennen",
+      "note": "Konzeptdarstellung – kein bereits verfügbarer Google-Login.",
+      "scopes": [
+        { "name": "Calendar", "access": "Lesen · Verwalten", "allowed": true },
+        { "name": "Gmail", "access": "Kein Zugriff", "allowed": false },
+        { "name": "YouTube", "access": "Verbunden", "allowed": true }
+      ]
+    },
+    "integrationsEyebrow": "FÜR DAS, WAS DU BEREITS NUTZT",
+    "integrationsTitle": "Gebaut, um Systeme zu verbinden.",
+    "integrationsDescription": "Kyrion soll dein Zuhause nicht ersetzen. Die Plattform verbindet Geräte und Dienste verschiedener Hersteller über passende Integrationen. Der Status zeigt, was heute im Prototyp existiert und was noch folgt.",
+    "integrations": [
+      {
+        "title": "Standards",
+        "items": [
+          { "name": "Zigbee", "status": "available" },
+          { "name": "Bluetooth", "status": "available" },
+          { "name": "Matter / Thread", "status": "planned" }
+        ]
+      },
+      {
+        "title": "Gerätewelten",
+        "items": [
+          { "name": "Nanoleaf", "status": "available" },
+          { "name": "Philips Hue", "status": "available" },
+          { "name": "Aqara / myStrom", "status": "planned" }
+        ]
+      },
+      {
+        "title": "Dienste",
+        "items": [
+          { "name": "Spotify", "status": "available" },
+          { "name": "Home Assistant", "status": "available" },
+          { "name": "Google / YouTube / Jellyfin", "status": "planned" }
+        ]
+      }
+    ],
+    "hardwareEyebrow": "EINRICHTUNG",
+    "hardwareTitle": "Brauchst du einen eigenen Server?",
+    "hardwareDescription": "Kyrion benötigt ein Gerät, auf dem die Plattform läuft. Die passende Größe hängt vom Einsatzgebiet ab.",
+    "hardwareFaq": [
+      {
+        "question": "Brauche ich einen klassischen Server oder ein NAS?",
+        "answer": "Nein. Ein klassischer Server oder ein NAS ist nicht zwingend erforderlich. Für erste Einsätze kann ein kompakter lokaler Computer ausreichen. Speziell dafür vorgesehene Kyrion-Hardware ist eine mögliche spätere Richtung, aber heute kein verfügbares Produkt."
+      },
+      {
+        "question": "Was läuft heute bereits auf eigener Hardware?",
+        "answer": "Der Prototyp läuft mit Kyrion Core, lokaler Speicherung und einem Raspberry-Pi-Gateway für ausgewählte Geräte- und Sprachpfade. Die konkrete Hardware-Abdeckung wird weiterhin einzeln validiert."
+      },
+      {
+        "question": "Kann ich später Cloud-Dienste verbinden?",
+        "answer": "Ja. Cloud-Dienste sind als optionale Erweiterungen gedacht. Kyrion soll auch ohne diese Konten für lokale Geräte, Räume und Konfigurationen nutzbar bleiben."
+      }
+    ],
     "featuresEyebrow": "EIN ZUHAUSE, DAS ZUSAMMENARBEITET",
     "featuresTitle": "Weniger Insellösungen.\nMehr Verbindung.",
     "featuresDescription": "Eine gemeinsame Ebene über deinen vorhandenen Geräten und Diensten. Ein Fundament für die tägliche Steuerung, das wachsen kann.",
@@ -151,8 +243,8 @@
     "ecosystemDescription": "Integrationen verbinden Geräte. Core verwaltet die Regeln. Web, Sprache und optionale Intelligenz bieten unterschiedliche Zugänge – über denselben kontrollierten Aktionspfad.",
     "ecosystemLink": "Die Architektur verstehen",
     "veloraEyebrow": "DAS IST VELORA",
-    "veloraTitle": "Intelligenz mit klaren Grenzen.",
-    "veloraDescription": "Eine wachsende Interaktionsebene für dein Zuhause. Lokaler Chat und begrenzte Vorschläge zur Gerätesteuerung existieren bereits. Zuverlässige, natürliche Sprachinteraktion ist der nächste Schritt.",
+    "veloraTitle": "KI, die bei dir zuhause läuft.",
+    "veloraDescription": "Chat, Sprache und intelligente Funktionen können auf deiner eigenen Kyrion-Hardware laufen. So muss nicht jede sensible Interaktion an einen externen KI-Dienst gehen. Weitere Anbieter bleiben optional; der Prototyp wird noch weiter validiert.",
     "veloraRule": "Intelligenz schlägt vor. Core entscheidet.",
     "developmentEyebrow": "TRANSPARENT, SCHRITT FÜR SCHRITT",
     "developmentTitle": "Echter Fortschritt.\nEin klarer Entwicklungsstand.",
@@ -206,8 +298,8 @@
       "status": "available"
     },
     {
-      "title": "Lokale Intelligenz",
-      "description": "Lokaler Streaming-Chat und begrenzte Befehlsvorschläge auf Deutsch und Englisch. Core prüft Berechtigungen und Ziele vor jeder Ausführung.",
+      "title": "KI und Sprache zuhause",
+      "description": "Lokaler Streaming-Chat und begrenzte Befehlsvorschläge auf Deutsch und Englisch. Core prüft Berechtigungen und Ziele vor jeder Ausführung; zuverlässige Ende-zu-Ende-Sprache bleibt in Entwicklung.",
       "status": "available"
     },
     {
