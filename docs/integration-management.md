@@ -2,21 +2,42 @@
 
 The Web application exposes the central integration catalog at `/plugins`.
 It separates local integrations from optional external or cloud integrations.
-The catalog is a presentation boundary; Core remains the authority for
-connections, permissions, provider calls, persistence and audit records.
+Core is the source of truth for the provider registry and owner-scoped
+connection summaries; the Web application proxies these APIs. Core remains
+the authority for connections, permissions, provider calls, persistence and
+audit records.
 
 ## Current model
 
 An integration definition describes identity, category (local or cloud),
-authentication type (`local`, `oauth`, `token` or `none`) and provider-neutral
-capability identifiers. A connection contains only safe metadata in browser
+authentication type and provider-neutral capability identifiers. The current
+Core API uses `NONE`, `OAUTH`, `API_KEY`, `CREDENTIALS`, `LOCAL_DISCOVERY`,
+`DEVICE_FLOW` and `CUSTOM`. A connection contains only safe metadata in browser
 responses. Credentials remain Core-owned and encrypted according to ADR 0005.
-One provider connection may expose multiple capabilities; future Google-like
-providers should therefore manage capability grants independently.
+One provider may have multiple connections and capabilities.
+
+Provider availability (`LIVE`, `IN_DEVELOPMENT`, `PLANNED`) is separate from
+connection status (`CONNECTED`, `DISCONNECTED`, `CONFIGURATION_REQUIRED`,
+`DEGRADED`, `ERROR`). Supported capabilities belong to the provider. Granted
+capabilities belong to a connection through `enabledCapabilities`; the current
+read-only catalog reports this boundary without yet persisting editable grants.
+Physical resources remain owned by the existing device, room and gateway
+models.
 
 Nanoleaf, Zigbee and Spotify use existing live routes. Google and Jellyfin are
 catalog placeholders and are visibly marked planned. The UI does not invent
 provider scopes and does not implement fake OAuth.
+
+## API boundary
+
+Core exposes authenticated `GET /v1/integration-catalog/providers`,
+`/providers/{id}`, `/connections` and `/connections/{id}`. The Web proxies these
+at `/api/integration-catalog/...`. Responses contain no access tokens, refresh
+tokens, API keys, encrypted credential blobs or encryption material.
+
+Existing configuration routes remain active: Nanoleaf uses `/plugins/nanoleaf`,
+Zigbee uses `/settings/gateways`, and Spotify uses `/plugins/spotify` with its
+existing Core-owned OAuth flow.
 
 ## Adding an integration
 
@@ -26,9 +47,22 @@ configuration is insufficient. Provider authentication must be implemented in
 Core or an approved adapter. The Web layer may proxy authenticated requests,
 but must never receive access tokens or store secrets in browser storage.
 
+### Adding a new Kyrion integration
+
+1. Register provider metadata and its supported capabilities in Core.
+2. Choose an authentication type without assuming OAuth.
+3. Implement Core-owned connection and provider configuration logic where
+   required, returning sanitized connection metadata.
+4. Connect discovered resources or devices to existing Kyrion models.
+5. Add the Web proxy/detail escape hatch and German and English translations.
+6. Add serialization, ownership, compatibility and secret-sanitization tests.
+7. Update this guide and the provider documentation.
+
 ## Follow-up
 
-- Add a generic Core catalog and connection/capability contract.
+- Persist and manage granular capability grants when a provider requires it;
+  use a separate connection-capability relation so supported capabilities stay
+  immutable provider metadata.
 - Implement OAuth callback and state validation per provider.
 - Add encrypted token storage, refresh and revoked-credential handling.
 - Add connection health and audit-visible reconnect/disconnect operations.
