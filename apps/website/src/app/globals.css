@@ -96,6 +96,34 @@
 .core-line {
   background: var(--core-gradient);
 }
+.velora-wave-playing .velora-wave-bar {
+  animation: velora-wave 980ms ease-in-out infinite alternate;
+  transform-origin: center;
+}
+.velora-wave-playing .velora-wave-bar:nth-child(3n) {
+  animation-duration: 760ms;
+}
+.velora-wave-playing .velora-wave-bar:nth-child(4n) {
+  animation-duration: 1120ms;
+}
+@keyframes velora-wave {
+  0% {
+    opacity: 0.45;
+    transform: scaleY(0.55);
+  }
+  38% {
+    opacity: 0.8;
+    transform: scaleY(1.12);
+  }
+  72% {
+    opacity: 0.6;
+    transform: scaleY(0.72);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scaleY(1.28);
+  }
+}
 .brand-dark {
   display: none;
 }

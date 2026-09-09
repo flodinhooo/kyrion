@@ -28,6 +28,7 @@ import {
 } from "@/lib/site";
 import { Logo } from "../logo";
 import { Ecosystem } from "../ecosystem";
+import { VeloraVoicePreview } from "../velora-voice-preview";
 import { Button } from "../ui/button";
 import {
   Container,
@@ -346,22 +347,15 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
       <section className="py-20 sm:py-28">
         <Container>
           <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
-            <div
-              className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 lg:border-r lg:border-b-0"
-              aria-hidden="true"
-            >
+            <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
               <div className="core-halo absolute inset-0" />
-              <div className="flex h-24 items-center gap-2.5">
-                {[16, 26, 42, 30, 66, 88, 52, 36, 68, 42, 24, 14].map(
-                  (height, i) => (
-                    <span
-                      key={i}
-                      style={{ height }}
-                      className="core-line w-1.5 rounded-full opacity-55"
-                    />
-                  ),
-                )}
-              </div>
+              <VeloraVoicePreview
+                locale={locale}
+                label={t.home.veloraPlay}
+                speakingLabel={t.home.veloraSpeaking}
+                voiceNote={t.home.veloraVoiceNote}
+                unavailableLabel={t.home.veloraUnavailable}
+              />
             </div>
             <div className="p-7 sm:p-12">
               <StatusBadge status="experimental" labels={t.status} />
