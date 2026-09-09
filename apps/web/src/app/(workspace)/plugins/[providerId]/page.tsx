@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { isCoreConnectionList, isCoreProviderList, type CoreConnection, type CoreProvider } from "@/features/integrations/catalog-contracts";
+import { csrfHeader } from "@/features/auth/csrf";
 
 const customRoutes: Record<string, string> = { spotify: "/plugins/spotify", nanoleaf: "/plugins/nanoleaf", zigbee: "/settings/gateways" };
 
@@ -29,6 +30,8 @@ export default function IntegrationProviderPage() {
   if (state === "error" || !provider) return <section className="plugins-stage"><p role="status">{t.catalogError}</p><Link href="/plugins">← {t.plugins}</Link></section>;
   const planned = provider.availability === "PLANNED";
   const route = customRoutes[provider.id];
+  async function connect() { const response = await fetch(`/api/integrations/${providerId}/authorization`, { method: "POST", headers: csrfHeader() }); const value: unknown = await response.json().catch(() => null); if (response.ok && value && typeof value === "object" && typeof (value as { authorizationUrl?: unknown }).authorizationUrl === "string") window.location.assign((value as { authorizationUrl: string }).authorizationUrl); }
+  async function disconnect() { await fetch(`/api/integrations/${providerId}`, { method: "DELETE", headers: csrfHeader() }); window.location.reload(); }
   return <section className="plugins-stage integration-detail">
     <Link className="back-link" href="/plugins">← {t.plugins}</Link>
     <header className="plugins-header"><div><p className="eyebrow">{provider.locality === "LOCAL" ? t.integrationLocal : t.integrationCloud}</p><h1>{provider.name}</h1><p>{provider.description}</p></div></header>
@@ -37,6 +40,8 @@ export default function IntegrationProviderPage() {
       <article className="connection-card"><p className="eyebrow">{t.integrationAuthentication}</p><h2>{provider.authentication}</h2><p>{provider.locality === "LOCAL" ? t.integrationLocal : t.integrationCloud}</p></article>
     </div>
     <article className="connection-card"><p className="eyebrow">{t.integrationCapabilities}</p>{provider.capabilities.length === 0 ? <p>{planned ? t.integrationPlanned : t.integrationNoCapabilities}</p> : <div className="integration-capabilities">{provider.capabilities.map((capability) => <span className={`capability-pill ${connection?.enabledCapabilities.includes(capability.id) ? "enabled" : ""}`} key={capability.id}>{connection?.enabledCapabilities.includes(capability.id) ? "✓" : "○"} {capability.name}<small> {capability.id}</small></span>)}</div>}</article>
-    {route && <Link className="catalog-reload" href={route}>{t.integrationConfigure}</Link>}
+    {provider.id === "google" && !planned && !connection && <button className="catalog-reload" type="button" onClick={() => void connect()}>{t.integrationConfigure}</button>}
+    {connection && <button className="catalog-reload" type="button" onClick={() => void disconnect()}>{t.spotifyDisconnect}</button>}
+    {route && provider.id !== "google" && <Link className="catalog-reload" href={route}>{t.integrationConfigure}</Link>}
   </section>;
 }

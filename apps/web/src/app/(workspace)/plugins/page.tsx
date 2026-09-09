@@ -44,7 +44,7 @@ export default function PluginsPage() {
     { id: "zigbee", name: "Zigbee", description: t.pluginZigbeeDescription, kind: "local", authType: "local", capabilities: [{ id: "devices.discovery", label: t.integrationCapabilityDiscovery, enabled: true }], href: "/settings/gateways", live: true },
     { id: "jellyfin", name: "Jellyfin", description: t.integrationJellyfinDescription, kind: "local", authType: "token", capabilities: [{ id: "media.library", label: t.integrationCapabilityMedia, enabled: false }], href: "/plugins", live: false },
     { id: "spotify", name: "Spotify", description: t.pluginSpotifyDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "media.playback", label: t.integrationCapabilityPlayback, enabled: true }], href: "/plugins/spotify", live: true },
-    { id: "google", name: "Google", description: t.integrationGoogleDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "calendar.read", label: t.integrationCapabilityCalendar, enabled: false }, { id: "mail.read", label: t.integrationCapabilityMail, enabled: false }], href: "/plugins", live: false },
+    { id: "google", name: "Google", description: t.integrationGoogleDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "calendar.read", label: t.integrationCapabilityCalendar, enabled: false }], href: "/plugins/google", live: true },
   ];
 
   const renderGroup = (kind: "local" | "cloud", title: string) => <section className="integration-group" aria-labelledby={`${kind}-integrations`}>
