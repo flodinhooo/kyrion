@@ -45,6 +45,7 @@ data class IntegrationConnectionSummary(
 class IntegrationCatalogService(
     private val connections: IntegrationConnectionRepository,
     private val spotify: SpotifyIntegrationService,
+    private val grants: JdbcIntegrationCapabilityGrantRepository,
 ) {
     private val providers = listOf(
         IntegrationProvider("nanoleaf", "Nanoleaf", "Local Nanoleaf panels", IntegrationLocality.LOCAL, IntegrationAuthType.LOCAL_DISCOVERY, ProviderAvailability.LIVE,
@@ -67,15 +68,16 @@ class IntegrationCatalogService(
         if (!status.connected) return null
         val definition = provider("spotify")!!
         val connection = connections.findAll(ownerId).firstOrNull { it.provider == "spotify" } ?: return null
-        return IntegrationConnectionSummary("spotify", connection.id, ConnectionStatus.CONNECTED, status.accountName ?: connection.displayName,
-            definition.capabilities.map { it.id }, definition.capabilities.map { it.id }, connection.createdAt, connection.updatedAt)
+        return summary(connection, definition, status.accountName ?: connection.displayName)
     }
 
     private fun summary(connection: IntegrationConnection): IntegrationConnectionSummary {
-        val definition = provider(connection.provider)
+        return summary(connection, provider(connection.provider), connection.displayName)
+    }
+    private fun summary(connection: IntegrationConnection, definition: IntegrationProvider?, identity: String): IntegrationConnectionSummary {
         val capabilities = definition?.capabilities?.map { it.id }.orEmpty()
-        return IntegrationConnectionSummary(connection.provider, connection.id, ConnectionStatus.CONNECTED, connection.displayName,
-            capabilities, capabilities, connection.createdAt, connection.updatedAt)
+        val enabled = grants.findAll(connection.ownerId, connection.id).filter { it.granted }.map { it.capability }.filter { it in capabilities }
+        return IntegrationConnectionSummary(connection.provider, connection.id, ConnectionStatus.CONNECTED, identity, enabled, capabilities, connection.createdAt, connection.updatedAt)
     }
 }
 
