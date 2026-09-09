@@ -6,6 +6,20 @@ export type CatalogStatus = "loading" | "error" | "available" | "configured" | "
 export type CatalogEntry = { status: CatalogStatus; count?: number };
 export type IntegrationCatalog = { nanoleaf: CatalogEntry; zigbee: CatalogEntry; spotify: CatalogEntry };
 
+export type IntegrationAuthType = "local" | "oauth" | "token" | "none";
+export type IntegrationKind = "local" | "cloud";
+export type IntegrationCapability = { id: string; label: string; enabled: boolean };
+export type IntegrationDefinition = {
+  id: keyof IntegrationCatalog | "google" | "jellyfin";
+  name: string;
+  description: string;
+  kind: IntegrationKind;
+  authType: IntegrationAuthType;
+  capabilities: IntegrationCapability[];
+  href: string;
+  live: boolean;
+};
+
 export function loadingCatalog(): IntegrationCatalog {
   return { nanoleaf: { status: "loading" }, zigbee: { status: "loading" }, spotify: { status: "loading" } };
 }
