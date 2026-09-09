@@ -138,6 +138,42 @@ test("Velora voice preview follows the page language and stops on language chang
   await expect(page.getByRole("button", { name: "Meet Velora" })).toBeVisible();
 });
 
+test("How Kyrion works explains the local-first flow in both languages", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  for (const [path, title, cloud] of [
+    [
+      "/",
+      "Eine Plattform zwischen dir und deinem Zuhause.",
+      "Cloud, wenn du sie brauchst.",
+    ],
+    [
+      "/en",
+      "One platform between you and your home.",
+      "Cloud when you need it.",
+    ],
+  ]) {
+    await page.goto(path);
+    const section = page.locator(
+      'section[aria-labelledby="how-kyrion-works-title"]',
+    );
+    await expect(section).toBeVisible();
+    await expect(section.locator("h2")).toHaveText(title);
+    await expect(
+      section.getByText("Kyrion Core", { exact: true }),
+    ).toBeVisible();
+    await expect(section.getByText(cloud, { exact: true })).toBeVisible();
+    expect(
+      await page
+        .locator("body")
+        .evaluate((body) => body.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+});
+
 test("mobile navigation is keyboard accessible and closes on escape and navigation", async ({
   page,
 }, testInfo) => {

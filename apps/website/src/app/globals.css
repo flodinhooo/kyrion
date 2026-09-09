@@ -106,6 +106,153 @@
 .velora-wave-playing .velora-wave-bar:nth-child(4n) {
   animation-duration: 1120ms;
 }
+.how-kyrion-flow {
+  display: grid;
+  grid-template-columns: 1fr 48px 1fr 48px 1.15fr 48px 1.25fr;
+  align-items: center;
+}
+.how-kyrion-node,
+.how-kyrion-connector {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms ease,
+    transform 600ms ease;
+}
+.how-kyrion-connector {
+  height: 1px;
+  background: var(--border);
+  position: relative;
+}
+.how-kyrion-connector::after {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  border-top: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  content: "";
+  transform: rotate(45deg);
+}
+.how-kyrion-node-card {
+  min-height: 190px;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  padding: 1.5rem;
+}
+.how-kyrion-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--muted-foreground);
+  stroke-width: 1.4;
+}
+.how-kyrion-node-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.how-kyrion-node-copy {
+  margin: 0.55rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.how-kyrion-node-meta {
+  margin: 1rem 0 0;
+  color: var(--accent);
+  font-family: monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.how-kyrion-velora .how-kyrion-node-card {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.how-kyrion-core .how-kyrion-node-card {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.how-kyrion-core-mark {
+  margin-bottom: 1rem;
+}
+.how-kyrion-cloud-branch {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.9rem;
+  color: var(--muted-foreground);
+}
+.how-kyrion-cloud-branch svg {
+  margin-top: 0.1rem;
+  color: var(--accent);
+}
+.how-kyrion-cloud-branch span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.how-kyrion-cloud-branch strong {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.how-kyrion-cloud-branch small {
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+.how-kyrion-destinations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.how-kyrion-destinations span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+}
+.how-kyrion-destinations svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--accent);
+}
+.how-kyrion-works.is-visible .how-kyrion-node,
+.how-kyrion-works.is-visible .how-kyrion-connector {
+  opacity: 1;
+  transform: translateY(0);
+}
+.how-kyrion-works.is-visible .how-kyrion-node:nth-child(1) {
+  transition-delay: 0ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-node:nth-child(3) {
+  transition-delay: 100ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-node:nth-child(5) {
+  transition-delay: 200ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-node:nth-child(7) {
+  transition-delay: 300ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(2) {
+  transition-delay: 75ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(4) {
+  transition-delay: 175ms;
+}
+.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(6) {
+  transition-delay: 275ms;
+}
 @keyframes velora-wave {
   0% {
     opacity: 0.45;
@@ -165,5 +312,30 @@
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .how-kyrion-flow {
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 34rem;
+    margin-right: auto;
+    margin-left: auto;
+  }
+  .how-kyrion-node-card {
+    min-height: auto;
+  }
+  .how-kyrion-connector {
+    width: 1px;
+    height: 2rem;
+    margin: 0 auto;
+    background: var(--border);
+  }
+  .how-kyrion-connector::after {
+    top: auto;
+    right: -2px;
+    bottom: 0;
+    transform: rotate(135deg);
   }
 }

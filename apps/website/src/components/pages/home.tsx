@@ -29,6 +29,7 @@ import {
 import { Logo } from "../logo";
 import { Ecosystem } from "../ecosystem";
 import { VeloraVoicePreview } from "../velora-voice-preview";
+import { HowKyrionWorks } from "../how-kyrion-works";
 import { Button } from "../ui/button";
 import {
   Container,
@@ -136,6 +137,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
+      <HowKyrionWorks t={t.home} />
       <section className="py-20 sm:py-28">
         <Container>
           <SectionHeader
