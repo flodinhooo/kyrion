@@ -32,3 +32,7 @@ kyrion:
     client-id: ${KYRION_SPOTIFY_CLIENT_ID:}
     client-secret: ${KYRION_SPOTIFY_CLIENT_SECRET:}
     redirect-uri: ${KYRION_SPOTIFY_REDIRECT_URI:}
+  google:
+    client-id: ${KYRION_GOOGLE_CLIENT_ID:}
+    client-secret: ${KYRION_GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${KYRION_GOOGLE_REDIRECT_URI:}

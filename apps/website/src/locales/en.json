@@ -160,6 +160,33 @@
         "description": "Fewer app switches, clearer state and a platform that can grow with you."
       }
     ],
+    "worksEyebrow": "HOW KYRION WORKS",
+    "worksTitle": "One platform between you and your home.",
+    "worksDescription": "You decide what should happen. Velora and other interfaces help you express it. Kyrion Core understands the request, checks it and connects it to your devices and services.",
+    "worksUser": {
+      "title": "You",
+      "description": "Your request, your decision."
+    },
+    "worksVelora": {
+      "title": "Velora",
+      "description": "A natural interface for voice and interaction.",
+      "meta": "Voice · Web · Mobile to come"
+    },
+    "worksCore": {
+      "title": "Kyrion Core",
+      "description": "The shared center: understand, apply rules and execute with control.",
+      "meta": "Understand · Automate · Control"
+    },
+    "worksEnvironment": {
+      "title": "Your home",
+      "description": "Lighting, sensors, media, energy and more – through the right integrations.",
+      "items": ["Lighting", "Sensors", "Media", "Energy"]
+    },
+    "worksCloud": {
+      "title": "Cloud when you need it.",
+      "description": "Optional services, separate from the local foundation."
+    },
+    "worksNote": "Local functions remain independent wherever practical. Individual integration availability is limited in the prototype and shown separately.",
     "localCloudEyebrow": "LOCAL FIRST. CLOUD WHEN YOU WANT IT.",
     "localCloudTitle": "You decide what stays in your system and what you connect.",
     "localCloudDescription": "Kyrion itself does not depend on cloud accounts. Devices, rooms, central settings and local functions stay in your own system wherever practical.",
