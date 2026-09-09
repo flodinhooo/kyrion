@@ -24,9 +24,39 @@ read-only catalog reports this boundary without yet persisting editable grants.
 Physical resources remain owned by the existing device, room and gateway
 models.
 
-Nanoleaf, Zigbee and Spotify use existing live routes. Google and Jellyfin are
-catalog placeholders and are visibly marked planned. The UI does not invent
-provider scopes and does not implement fake OAuth.
+Nanoleaf, Zigbee, Spotify and the initial Google Calendar read capability use
+live provider routes. Jellyfin remains a catalog placeholder. Google does not
+authorize other Google services automatically; each future capability must be
+added explicitly with its own provider scope mapping.
+
+## Google OAuth and consumer deployment
+
+Development may provide `KYRION_GOOGLE_CLIENT_ID`,
+`KYRION_GOOGLE_CLIENT_SECRET` and `KYRION_GOOGLE_REDIRECT_URI` through Core
+environment configuration. These variables are deployment inputs for a
+developer or operator and are never part of the end-user setup flow.
+
+For a consumer appliance, Kyrion should provision a product-owned Google OAuth
+application. A client secret shipped to every appliance cannot be treated as
+confidential, so the production design must not rely on that secret as a trust
+anchor. The recommended future design is a minimal Kyrion-operated HTTPS
+callback at `auth.kyrion.ch` (or an equivalent product domain). It validates
+the provider response and a short-lived, one-time, owner-bound handoff, then
+redirects the result to the initiating local installation. Core keeps the
+Google tokens encrypted locally and continues making Calendar API requests
+directly to Google. The broker must not proxy normal Calendar traffic or hold
+long-lived customer tokens.
+
+Direct `kyrion-node.local` callbacks can work only where the hostname is
+reachable by the provider's browser flow and the registered HTTPS certificate
+and redirect URI are valid. They are suitable for controlled development or a
+managed installation, but are not a reliable general consumer callback behind
+NAT and private home DNS. Loopback or device authorization should be used only
+where Google supports it for the relevant client type.
+
+The customer experience remains one click: **Connect Google**, Google consent,
+then **Connected**. Customers must not create Cloud projects, edit `.env`
+files, enter client credentials or configure redirect URIs.
 
 ## API boundary
 
