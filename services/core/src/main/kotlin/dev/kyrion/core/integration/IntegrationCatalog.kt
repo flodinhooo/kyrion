@@ -54,7 +54,8 @@ class IntegrationCatalogService(
             listOf(IntegrationCapability("smart-home.devices", "Devices", "Discover Zigbee devices"), IntegrationCapability("smart-home.control", "Control", "Control approved devices"))),
         IntegrationProvider("spotify", "Spotify", "Spotify Connect playback", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
             listOf(IntegrationCapability("media.playback", "Playback", "Control Spotify Connect playback"), IntegrationCapability("media.library", "Library", "Read supported playlists"))),
-        IntegrationProvider("google", "Google", "Google services", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.PLANNED, emptyList()),
+        IntegrationProvider("google", "Google", "Google Calendar", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
+            listOf(IntegrationCapability("calendar.read", "Read calendar", "Read upcoming calendar events"))),
         IntegrationProvider("jellyfin", "Jellyfin", "Local media server", IntegrationLocality.LOCAL, IntegrationAuthType.API_KEY, ProviderAvailability.PLANNED, emptyList()),
     )
 
