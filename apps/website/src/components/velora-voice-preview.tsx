@@ -112,7 +112,11 @@ export function VeloraVoicePreview({
         className="group/voice flex min-h-20 w-full max-w-md touch-manipulation flex-col items-start gap-4 rounded-xl border border-border bg-background/45 px-5 py-4 text-left transition-colors hover:border-accent/50 focus-visible:border-accent"
       >
         <span
-          className={`flex h-12 w-full items-center justify-center gap-2 rounded-lg transition-[filter,opacity] group-hover/voice:brightness-110 ${isPlaying ? "velora-wave-playing" : ""}`}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+            toggle();
+          }}
+          className={`flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg transition-[filter,opacity] group-hover/voice:brightness-110 ${isPlaying ? "velora-wave-playing" : ""}`}
           aria-hidden="true"
         >
           {barHeights.map((height, index) => (
