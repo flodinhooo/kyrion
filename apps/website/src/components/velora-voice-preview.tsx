@@ -10,6 +10,7 @@ type VeloraVoicePreviewProps = {
   speakingLabel: string;
   voiceNote: string;
   unavailableLabel: string;
+  welcomedLabel: string;
 };
 
 const activeAudio = { element: null as HTMLAudioElement | null };
@@ -21,9 +22,11 @@ export function VeloraVoicePreview({
   speakingLabel,
   voiceNote,
   unavailableLabel,
+  welcomedLabel,
 }: VeloraVoicePreviewProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [state, setState] = useState<"idle" | "playing" | "error">("idle");
+  const [showToast, setShowToast] = useState(false);
   const source = `/audio/velora-intro-${locale}.mp3`;
 
   useEffect(() => {
@@ -63,14 +66,9 @@ export function VeloraVoicePreview({
     };
   }, []);
 
-  async function toggle() {
+  async function play() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (!audio.paused) {
-      audio.pause();
-      audio.currentTime = 0;
-      return;
-    }
     if (activeAudio.element && activeAudio.element !== audio) {
       activeAudio.element.pause();
       activeAudio.element.currentTime = 0;
@@ -79,10 +77,22 @@ export function VeloraVoicePreview({
     setState("idle");
     try {
       await audio.play();
+      setShowToast(true);
     } catch {
       if (activeAudio.element === audio) activeAudio.element = null;
       setState("error");
     }
+  }
+
+  function toggle() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused) {
+      audio.pause();
+      audio.currentTime = 0;
+      return;
+    }
+    void play();
   }
 
   const isPlaying = state === "playing";
@@ -92,6 +102,12 @@ export function VeloraVoicePreview({
       <button
         type="button"
         onClick={toggle}
+        onMouseEnter={() => {
+          if (audioRef.current?.paused) void play();
+        }}
+        onFocus={() => {
+          if (audioRef.current?.paused) void play();
+        }}
         aria-label={isPlaying ? speakingLabel : label}
         className="group/voice flex min-h-20 w-full max-w-md touch-manipulation flex-col items-start gap-4 rounded-xl border border-border bg-background/45 px-5 py-4 text-left transition-colors hover:border-accent/50 focus-visible:border-accent"
       >
@@ -125,6 +141,16 @@ export function VeloraVoicePreview({
           </span>
         </span>
       </button>
+      <div
+        role="status"
+        aria-live="polite"
+        className={`pointer-events-none fixed right-5 bottom-5 z-50 rounded-lg border border-accent/40 bg-card px-4 py-3 font-mono text-xs text-foreground shadow-lg transition-[opacity,transform] duration-300 ${showToast ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
+        onTransitionEnd={() => {
+          if (showToast) window.setTimeout(() => setShowToast(false), 2200);
+        }}
+      >
+        {welcomedLabel}
+      </div>
       {state === "error" && (
         <p className="mt-2 font-mono text-[10px] leading-5 text-muted-foreground">
           {unavailableLabel}

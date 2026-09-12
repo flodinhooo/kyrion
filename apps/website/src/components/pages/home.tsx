@@ -118,6 +118,36 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           })}
         </Container>
       </div>
+      <section className="border-b border-border py-20 sm:py-24">
+        <Container>
+          <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
+              <div className="core-halo absolute inset-0" />
+              <VeloraVoicePreview
+                locale={locale}
+                label={t.home.veloraPlay}
+                speakingLabel={t.home.veloraSpeaking}
+                voiceNote={t.home.veloraVoiceNote}
+                unavailableLabel={t.home.veloraUnavailable}
+                welcomedLabel={t.home.veloraWelcomed}
+              />
+            </div>
+            <div className="p-7 sm:p-12">
+              <StatusBadge status="experimental" labels={t.status} />
+              <div className="mt-7">
+                <SectionHeader
+                  eyebrow={t.home.veloraEyebrow}
+                  title={t.home.veloraTitle}
+                  description={t.home.veloraDescription}
+                />
+              </div>
+              <p className="mt-7 border-l-2 border-accent/40 pl-4 font-mono text-xs leading-6 text-accent">
+                {t.home.veloraRule}
+              </p>
+            </div>
+          </div>
+        </Container>
+      </section>
       <section className="py-20 sm:py-28">
         <Container className="grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
           <SectionHeader
@@ -343,35 +373,6 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                 </p>
               </details>
             ))}
-          </div>
-        </Container>
-      </section>
-      <section className="py-20 sm:py-28">
-        <Container>
-          <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
-              <div className="core-halo absolute inset-0" />
-              <VeloraVoicePreview
-                locale={locale}
-                label={t.home.veloraPlay}
-                speakingLabel={t.home.veloraSpeaking}
-                voiceNote={t.home.veloraVoiceNote}
-                unavailableLabel={t.home.veloraUnavailable}
-              />
-            </div>
-            <div className="p-7 sm:p-12">
-              <StatusBadge status="experimental" labels={t.status} />
-              <div className="mt-7">
-                <SectionHeader
-                  eyebrow={t.home.veloraEyebrow}
-                  title={t.home.veloraTitle}
-                  description={t.home.veloraDescription}
-                />
-              </div>
-              <p className="mt-7 border-l-2 border-accent/40 pl-4 font-mono text-xs leading-6 text-accent">
-                {t.home.veloraRule}
-              </p>
-            </div>
           </div>
         </Container>
       </section>
