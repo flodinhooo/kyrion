@@ -49,6 +49,9 @@ export function VeloraVoicePreview({
       if (activeAudio.element === audio) activeAudio.element = null;
     };
     const onError = () => {
+      // A rejected hover attempt can dispatch its error after the user has
+      // already started playback with a click. Never show that stale error.
+      if (!audio.paused) return;
       setState("error");
       if (activeAudio.element === audio) activeAudio.element = null;
     };
