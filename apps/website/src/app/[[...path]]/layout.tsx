@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { dictionaries, resolveRoute, siteUrl } from "@/lib/site";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
@@ -36,6 +37,7 @@ export default async function RootLayout({
             {children}
           </main>
           <SiteFooter locale={route.locale} t={t} />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
