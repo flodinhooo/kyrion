@@ -75,6 +75,15 @@ OAuth flow is lost when Core restarts. Reconnecting the same Google account
 reuses its owner-scoped connection and refreshes its encrypted credentials;
 multiple Google accounts remain representable by their account identity.
 
+## Calendar handoff status
+
+The local calendar and FullCalendar Web foundation are present, but the
+calendar slice is not complete. New local events currently fail to persist
+through the Web request path and this is a blocking issue. Google event import,
+local-to-Google export, opt-in synchronization and verified duplicate
+prevention remain unfinished. Do not describe the calendar as production-ready
+until the browser POST path and the synchronization tests pass.
+
 ## Adding an integration
 
 Add a provider definition and typed capability metadata to the catalog, then

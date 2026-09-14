@@ -4,11 +4,40 @@ Last updated: 2026-09-07
 
 ## Calendar and household model
 
+- [ ] **BLOCKED: Local calendar event creation does not currently persist from
+  the Web UI.** The local table exists and Core is healthy, but the browser
+  create request still fails and must be debugged from its actual HTTP status
+  and response code before more calendar work continues.
+- [ ] Verify the complete browser POST path `/api/calendar/events` → Core
+  `/v1/calendar/events` with an authenticated session and CSRF token.
+- [ ] Add an automated Web/Core test for successful local event creation.
 - [ ] Add an explicit household/workspace domain for multi-user households,
   including membership, personal/shared calendars, visibility and permissions.
 - [ ] Store local Kyrion calendar events as the local source of truth.
 - [ ] Add opt-in, idempotent Google Calendar import and export sync with stable
   external identifiers and content fingerprints to prevent duplicate events.
+
+### Calendar implementation status
+
+Implemented groundwork:
+
+- FullCalendar v6 React integration with month, week and day views.
+- Local `local_calendar_event` persistence migration and owner-scoped Core
+  CRUD endpoints.
+- Web proxy routes for local calendar event CRUD.
+- Google Calendar OAuth connection and Calendar API client groundwork.
+- Separate Calendar capability identifiers for read/create/update/delete.
+- Initial duplicate prevention fields using Google identifiers and a content
+  fingerprint.
+
+Known incomplete work:
+
+- The Web UI currently shows a save failure for new local events. This remains
+  unresolved and is the next required debugging task.
+- Google events are not yet reliably imported into the local calendar.
+- Local-to-Google and Google-to-local opt-in synchronization is not complete.
+- Calendar event editing, deletion and sync toggles are present in the UI
+  groundwork but require successful end-to-end persistence verification.
 
 ## Invited-user handoff - 2026-09-07
 

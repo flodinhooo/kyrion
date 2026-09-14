@@ -26,6 +26,7 @@ import { BrandAsset } from "@/components/brand-asset";
 import { isConversationList, type ConversationSummary } from "@/features/conversations/contracts";
 
 type WorkspaceContextValue = {
+  userId: string;
   username: string;
   canInvite: boolean;
   permissions: string[];
@@ -66,7 +67,7 @@ export function useWorkspace() {
   return context;
 }
 
-export function AppShell({ children, username, canInvite = false, roles = [], permissions = [] }: { children: ReactNode; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[] }) {
+export function AppShell({ children, userId, username, canInvite = false, roles = [], permissions = [] }: { children: ReactNode; userId: string; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [locale, setLocale] = useState<Locale>("de");
@@ -386,6 +387,7 @@ export function AppShell({ children, username, canInvite = false, roles = [], pe
 
   return (
     <WorkspaceContext.Provider value={{
+      userId,
       username,
       canInvite,
       permissions,

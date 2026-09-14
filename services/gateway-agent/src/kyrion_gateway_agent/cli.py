@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
+import socket
 import threading
 import time
 from pathlib import Path
@@ -242,13 +244,13 @@ def _play_youtube(payload: dict[str, object]) -> None:
         raise ValueError("invalid YouTube URL")
     if not isinstance(output_id, str) or not output_id or len(output_id) > 200:
         raise ValueError("invalid audio output")
-    if _youtube_process is not None and _youtube_process.poll() is None:
-        _youtube_process.terminate()
-        _youtube_process.wait(timeout=5)
-    _youtube_process = subprocess.Popen(
-        ["mpv", "--no-video", "--no-terminal", f"--audio-device={output_id}", url],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True,
-    )
+    media_port = int(os.getenv("KYRION_MEDIA_PORT", "18765"))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+        connection.settimeout(10)
+        connection.connect(("127.0.0.1", media_port))
+        connection.sendall(json.dumps({"url": url, "outputId": output_id}).encode())
+        if connection.recv(32).strip() != b"OK":
+            raise RuntimeError("media player rejected request")
 
 
 def _publish_and_confirm_power(
