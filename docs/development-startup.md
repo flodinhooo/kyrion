@@ -35,8 +35,10 @@ Spring Boot's optional import when started from `services\core`. The real
 `.env` is ignored by Git. Process/system environment variables take precedence
 over values in that file, followed by the defaults in `application.yml`.
 
-Use the same database password selected in `infrastructure\.env`, then start
-Core without repeating the variables in every shell:
+Core uses `KYRION_POSTGRES_DB`, `KYRION_POSTGRES_USER` and
+`KYRION_POSTGRES_PASSWORD` from `infrastructure\.env` directly. Explicit
+`KYRION_DATABASE_*` process variables remain supported and take precedence.
+Start Core without repeating variables in every shell:
 
 ```powershell
 Set-Location 'E:\dev\Kyrion\kyrion\services\core'

@@ -13,9 +13,9 @@ spring:
     async:
       request-timeout: 5m
   datasource:
-    url: ${KYRION_DATABASE_URL:jdbc:postgresql://127.0.0.1:5432/kyrion}
-    username: ${KYRION_DATABASE_USER:kyrion}
-    password: ${KYRION_DATABASE_PASSWORD}
+    url: ${KYRION_DATABASE_URL:jdbc:postgresql://127.0.0.1:5432/${KYRION_POSTGRES_DB:kyrion}}
+    username: ${KYRION_DATABASE_USER:${KYRION_POSTGRES_USER:kyrion}}
+    password: ${KYRION_DATABASE_PASSWORD:${KYRION_POSTGRES_PASSWORD}}
   flyway:
     locations: classpath:db/migration
 
