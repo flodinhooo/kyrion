@@ -23,7 +23,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 private const val GOOGLE_PROVIDER = "google"
 private const val CALENDAR_READ = "calendar.read"
-private val GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly"
+private const val CALENDAR_EVENT_CREATE = "calendar.event.create"
+private const val CALENDAR_EVENT_UPDATE = "calendar.event.update"
+private const val CALENDAR_EVENT_DELETE = "calendar.event.delete"
+private val GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"
 
 data class GoogleAuthorization(val authorizationUrl: String)
 data class GoogleStatus(val configured: Boolean, val connected: Boolean, val accountName: String? = null, val reauthorizationRequired: Boolean = false)
@@ -32,6 +35,9 @@ class GoogleToken(val accessToken: String, val refreshToken: String?, val expire
 }
 data class GoogleCalendarEvent(val id: String, val summary: String, val start: String?, val end: String?)
 data class GoogleCalendarEvents(val items: List<GoogleCalendarEvent>)
+data class GoogleCalendar(val id: String, val summary: String, val timeZone: String?)
+data class GoogleCalendars(val items: List<GoogleCalendar>)
+data class GoogleCalendarEventRequest(val calendarId: String = "primary", val summary: String, val start: String, val end: String)
 private data class StoredGoogleToken(val accessToken: String, val refreshToken: String?, val expiresAt: String, val accountName: String)
 
 interface GoogleOAuthClient {
@@ -39,6 +45,10 @@ interface GoogleOAuthClient {
     fun refresh(refreshToken: String, clientId: String, clientSecret: String, accountName: String): GoogleToken
     fun revoke(token: String)
     fun events(accessToken: String): GoogleCalendarEvents
+    fun calendars(accessToken: String): GoogleCalendars = throw UnsupportedOperationException()
+    fun createEvent(accessToken: String, body: GoogleCalendarEventRequest): GoogleCalendarEvent = throw UnsupportedOperationException()
+    fun updateEvent(accessToken: String, eventId: String, body: GoogleCalendarEventRequest): GoogleCalendarEvent = throw UnsupportedOperationException()
+    fun deleteEvent(accessToken: String, eventId: String): Unit = throw UnsupportedOperationException()
 }
 
 @Service
@@ -52,6 +62,13 @@ class HttpGoogleOAuthClient : GoogleOAuthClient {
     override fun refresh(refreshToken: String, clientId: String, clientSecret: String, accountName: String): GoogleToken { val node = post("https://oauth2.googleapis.com/token", form(mapOf("refresh_token" to refreshToken, "client_id" to clientId, "client_secret" to clientSecret, "grant_type" to "refresh_token"))); val refreshed = token(node, accountName); return GoogleToken(refreshed.accessToken, refreshToken, refreshed.expiresAt, refreshed.accountName) }
     override fun revoke(token: String) { post("https://oauth2.googleapis.com/revoke?token=${enc(token)}", "") }
     override fun events(accessToken: String): GoogleCalendarEvents { val request = HttpRequest.newBuilder(URI("https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=25")).header("Authorization", "Bearer $accessToken").GET().build(); val response = http.send(request, HttpResponse.BodyHandlers.ofString()); if (response.statusCode() !in 200..299) throw GoogleProviderException(response.statusCode()); val items = mapper.readTree(response.body()).path("items").map { GoogleCalendarEvent(it.path("id").asText(), it.path("summary").asText("(untitled)"), it.path("start").path("dateTime").asText(null), it.path("end").path("dateTime").asText(null)) }; return GoogleCalendarEvents(items) }
+    override fun calendars(accessToken: String): GoogleCalendars { val response = request("https://www.googleapis.com/calendar/v3/users/me/calendarList", "GET", accessToken, null); return GoogleCalendars(mapper.readTree(response).path("items").map { GoogleCalendar(it.path("id").asText(), it.path("summary").asText("(untitled)"), it.path("timeZone").asText(null)) }) }
+    override fun createEvent(accessToken: String, body: GoogleCalendarEventRequest): GoogleCalendarEvent = event(request("https://www.googleapis.com/calendar/v3/calendars/${enc(body.calendarId)}/events", "POST", accessToken, eventJson(body)))
+    override fun updateEvent(accessToken: String, eventId: String, body: GoogleCalendarEventRequest): GoogleCalendarEvent = event(request("https://www.googleapis.com/calendar/v3/calendars/${enc(body.calendarId)}/events/${enc(eventId)}", "PUT", accessToken, eventJson(body)))
+    override fun deleteEvent(accessToken: String, eventId: String) { request("https://www.googleapis.com/calendar/v3/calendars/primary/events/${enc(eventId)}", "DELETE", accessToken, null) }
+    private fun request(url: String, method: String, accessToken: String, body: String?): String { val builder=HttpRequest.newBuilder(URI(url)).header("Authorization", "Bearer $accessToken"); if(body!=null) builder.header("Content-Type", "application/json"); val request=when(method){"POST"->builder.POST(HttpRequest.BodyPublishers.ofString(body!!)).build();"PUT"->builder.PUT(HttpRequest.BodyPublishers.ofString(body!!)).build();"DELETE"->builder.DELETE().build();else->builder.GET().build()}; val response=http.send(request,HttpResponse.BodyHandlers.ofString()); if(response.statusCode() !in 200..299) throw GoogleProviderException(response.statusCode()); return response.body() }
+    private fun eventJson(body: GoogleCalendarEventRequest)=mapper.createObjectNode().apply { put("summary",body.summary); set<JsonNode>("start",mapper.createObjectNode().put("dateTime",body.start)); set<JsonNode>("end",mapper.createObjectNode().put("dateTime",body.end)) }.toString()
+    private fun event(body: String)=mapper.readTree(body).let { GoogleCalendarEvent(it.path("id").asText(),it.path("summary").asText("(untitled)"),it.path("start").path("dateTime").asText(null),it.path("end").path("dateTime").asText(null)) }
     private fun token(node: JsonNode, account: String?) = GoogleToken(node.path("access_token").asText().also { require(it.isNotBlank()) }, node.path("refresh_token").asText(null), Instant.now().plusSeconds(node.path("expires_in").asLong(3600)), account ?: node.path("email").asText("Google account"))
     private fun form(values: Map<String, String>) = values.entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }
     private fun enc(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
@@ -72,8 +89,13 @@ class GoogleIntegrationService(
     fun configured() = clientId.isNotBlank() && clientSecret.isNotBlank() && redirectUri.isNotBlank()
     fun status(ownerId: UUID): GoogleStatus { val connection = connection(ownerId) ?: return GoogleStatus(configured(), false); val enabled = grants.findAll(ownerId, connection.id).any { it.capability == CALENDAR_READ && it.granted }; return GoogleStatus(configured(), true, connection.displayName, !enabled) }
     fun authorize(ownerId: UUID): GoogleAuthorization { if (!configured()) throw GoogleNotConfiguredException(); val bytes = ByteArray(32).also(random::nextBytes); val state = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); pending[state] = ownerId to clock.instant().plusSeconds(600); val query = mapOf("client_id" to clientId, "redirect_uri" to redirectUri, "response_type" to "code", "scope" to "openid email profile $GOOGLE_CALENDAR_SCOPE", "access_type" to "offline", "prompt" to "consent", "state" to state).entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }; return GoogleAuthorization("https://accounts.google.com/o/oauth2/v2/auth?$query") }
-    fun complete(ownerId: UUID, code: String, state: String): GoogleStatus { val request = pending[state] ?: throw GoogleInvalidStateException(); if (request.first != ownerId || request.second.isBefore(clock.instant()) || !pending.remove(state, request)) throw GoogleInvalidStateException(); val token = client.exchange(code, redirectUri, clientId, clientSecret); val now = clock.instant(); val existing = repository.findAll(ownerId).firstOrNull { it.provider == GOOGLE_PROVIDER && it.displayName == token.accountName }; val id = existing?.id ?: UUID.randomUUID(); val payload = mapper.writeValueAsString(StoredGoogleToken(token.accessToken, token.refreshToken, token.expiresAt.toString(), token.accountName)); val protected = cipher.protect(payload, "$ownerId:$id:$GOOGLE_PROVIDER"); if (existing == null) repository.save(IntegrationConnection(id, ownerId, GOOGLE_PROVIDER, token.accountName, token.accountName, protected.ciphertext, protected.nonce, protected.version, now, now)) else repository.updateCredential(ownerId, id, protected, now); grants.replace(ownerId, id, setOf(CALENDAR_READ), now); return GoogleStatus(true, true, token.accountName) }
+    fun complete(ownerId: UUID, code: String, state: String): GoogleStatus { val request = pending[state] ?: throw GoogleInvalidStateException(); if (request.first != ownerId || request.second.isBefore(clock.instant()) || !pending.remove(state, request)) throw GoogleInvalidStateException(); val token = client.exchange(code, redirectUri, clientId, clientSecret); val now = clock.instant(); val existing = repository.findAll(ownerId).firstOrNull { it.provider == GOOGLE_PROVIDER && it.displayName == token.accountName }; val id = existing?.id ?: UUID.randomUUID(); val payload = mapper.writeValueAsString(StoredGoogleToken(token.accessToken, token.refreshToken, token.expiresAt.toString(), token.accountName)); val protected = cipher.protect(payload, "$ownerId:$id:$GOOGLE_PROVIDER"); if (existing == null) repository.save(IntegrationConnection(id, ownerId, GOOGLE_PROVIDER, token.accountName, token.accountName, protected.ciphertext, protected.nonce, protected.version, now, now)) else repository.updateCredential(ownerId, id, protected, now); grants.replace(ownerId, id, setOf(CALENDAR_READ, CALENDAR_EVENT_CREATE, CALENDAR_EVENT_UPDATE, CALENDAR_EVENT_DELETE), now); return GoogleStatus(true, true, token.accountName) }
     fun events(ownerId: UUID): GoogleCalendarEvents { val connection = connection(ownerId) ?: throw GoogleDisconnectedException(); if (!grants.findAll(ownerId, connection.id).any { it.capability == CALENDAR_READ && it.granted }) throw GoogleCapabilityDisabledException(); val token = token(connection); return try { client.events(token.accessToken) } catch (error: GoogleProviderException) { if (error.status != 401 || token.refreshToken == null) throw GoogleProviderUnavailableException(); val refreshed = client.refresh(token.refreshToken, clientId, clientSecret, token.accountName); saveToken(connection, refreshed); client.events(refreshed.accessToken) } }
+    fun calendars(ownerId: UUID) = withToken(ownerId, CALENDAR_READ) { client.calendars(it) }
+    fun createEvent(ownerId: UUID, body: GoogleCalendarEventRequest) = withToken(ownerId, CALENDAR_EVENT_CREATE) { client.createEvent(it, body) }
+    fun updateEvent(ownerId: UUID, eventId: String, body: GoogleCalendarEventRequest) = withToken(ownerId, CALENDAR_EVENT_UPDATE) { client.updateEvent(it, eventId, body) }
+    fun deleteEvent(ownerId: UUID, eventId: String) { withToken(ownerId, CALENDAR_EVENT_DELETE) { client.deleteEvent(it, eventId); Unit } }
+    private fun <T> withToken(ownerId: UUID, capability: String, action: (String) -> T): T { val connection = connection(ownerId) ?: throw GoogleDisconnectedException(); if (!grants.findAll(ownerId, connection.id).any { it.capability == capability && it.granted }) throw GoogleCapabilityDisabledException(); return action(token(connection).accessToken) }
     fun disconnect(ownerId: UUID) { val connection = connection(ownerId) ?: return; runCatching { client.revoke(token(connection).accessToken) }; grants.delete(ownerId, connection.id); repository.delete(ownerId, connection.id) }
     private fun connection(ownerId: UUID) = repository.findAll(ownerId).firstOrNull { it.provider == GOOGLE_PROVIDER }
     private fun token(connection: IntegrationConnection): GoogleToken { val value = mapper.readValue(cipher.reveal(connection), StoredGoogleToken::class.java); return GoogleToken(value.accessToken, value.refreshToken, Instant.parse(value.expiresAt), value.accountName) }
@@ -88,6 +110,10 @@ class GoogleIntegrationController(private val service: GoogleIntegrationService)
     @PostMapping("/authorization") fun authorize(request: HttpServletRequest) = service.authorize(request.workspaceOwnerId())
     @PostMapping("/authorization/complete") fun complete(@RequestBody body: Map<String, String>, request: HttpServletRequest) = service.complete(request.workspaceOwnerId(), body["code"] ?: throw GoogleInvalidRequestException(), body["state"] ?: throw GoogleInvalidRequestException())
     @GetMapping("/calendar/events") fun events(request: HttpServletRequest) = service.events(request.workspaceOwnerId())
+    @GetMapping("/calendar/calendars") fun calendars(request: HttpServletRequest) = service.calendars(request.workspaceOwnerId())
+    @PostMapping("/calendar/events") fun create(@RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = service.createEvent(request.workspaceOwnerId(), body)
+    @PutMapping("/calendar/events/{eventId}") fun update(@PathVariable eventId: String, @RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = service.updateEvent(request.workspaceOwnerId(), eventId, body)
+    @DeleteMapping("/calendar/events/{eventId}") @ResponseStatus(HttpStatus.NO_CONTENT) fun delete(@PathVariable eventId: String, request: HttpServletRequest) = service.deleteEvent(request.workspaceOwnerId(), eventId)
     @DeleteMapping @ResponseStatus(HttpStatus.NO_CONTENT) fun disconnect(request: HttpServletRequest) = service.disconnect(request.workspaceOwnerId())
 }
 

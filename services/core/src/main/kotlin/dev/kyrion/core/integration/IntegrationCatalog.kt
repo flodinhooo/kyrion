@@ -57,7 +57,11 @@ class IntegrationCatalogService(
         IntegrationProvider("spotify", "Spotify", "Spotify Connect playback", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
             listOf(IntegrationCapability("media.playback", "Playback", "Control Spotify Connect playback"), IntegrationCapability("media.library", "Library", "Read supported playlists"))),
         IntegrationProvider("google", "Google", "Google Calendar", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
-            listOf(IntegrationCapability("calendar.read", "Read calendar", "Read upcoming calendar events"))),
+            listOf(
+                IntegrationCapability("calendar.read", "Read calendar", "Read calendar events"),
+                IntegrationCapability("calendar.event.create", "Create events", "Create calendar events"),
+                IntegrationCapability("calendar.event.update", "Update events", "Update calendar events"),
+                IntegrationCapability("calendar.event.delete", "Delete events", "Delete calendar events"))),
         IntegrationProvider("jellyfin", "Jellyfin", "Local media server", IntegrationLocality.LOCAL, IntegrationAuthType.API_KEY, ProviderAvailability.PLANNED, emptyList()),
     )
 
