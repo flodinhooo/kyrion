@@ -24,7 +24,6 @@ import { Locale, messages } from "@/lib/messages";
 import { csrfHeader } from "@/features/auth/csrf";
 import { BrandAsset } from "@/components/brand-asset";
 import { isConversationList, type ConversationSummary } from "@/features/conversations/contracts";
-import { canViewManagementNavigation } from "@/features/auth/management-navigation";
 
 type WorkspaceContextValue = {
   username: string;
@@ -55,6 +54,7 @@ const navigation = [
   ["chat", Icons.chat, "/chat"],
   ["lounge", Icons.music, "/lounge"],
   ["devices", Icons.power, "/devices"],
+  ["calendarTitle", Icons.calendar, "/calendar"],
   ["automations", Icons.spark, "/automations"],
   ["plugins", Icons.plugins, "/plugins"],
   ["activity", Icons.activity, "/activity"],
@@ -426,11 +426,6 @@ export function AppShell({ children, username, canInvite = false, roles = [], pe
               <span>{pageTitle}</span>
             </div>
             <div className="topbar-actions">
-              <nav className="header-management-nav" aria-label={t.managementNavigation}>
-                {canViewManagementNavigation(permissions, "users", roles) && <Link className={`header-management-link ${pathname.startsWith("/users") ? "active" : ""}`} href="/users" aria-label={t.usersTitle} title={t.usersTitle}><Icons.user /></Link>}
-                {canViewManagementNavigation(permissions, "roles", roles) && <Link className={`header-management-link ${pathname.startsWith("/roles") ? "active" : ""}`} href="/roles" aria-label={t.rolesTitle} title={t.rolesTitle}><Icons.shield /></Link>}
-                {canViewManagementNavigation(permissions, "permissions", roles) && <Link className={`header-management-link ${pathname.startsWith("/roles") ? "active" : ""}`} href="/roles#permissions" aria-label={t.permissionsTitle} title={t.permissionsTitle}><Icons.key /></Link>}
-              </nav>
               <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile" aria-label={t.profile} title={username}>
                 <span>{username.slice(0, 1).toUpperCase()}</span>
                 <Icons.user />
