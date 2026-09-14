@@ -1,0 +1,16 @@
+[Unit]
+Description=Kyrion bounded media player
+After=pipewire.service wireplumber.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m kyrion_gateway_agent.media_player
+Environment=PYTHONPATH=%h/.local/lib/kyrion-gateway:/opt/kyrion-gateway/src
+EnvironmentFile=-%E/kyrion/media-player.env
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=default.target
