@@ -23,6 +23,11 @@ class HomeAssistantConnectionStore(
         ?.let { mapper.readValue(cipher.reveal(it), StoredHomeAssistantCredentials::class.java) }
         ?.let { HomeAssistantConnectionConfig(it.baseUrl, it.accessToken) }
 
+    fun connectionForOwner(ownerId: UUID): IntegrationConnection? = connections.findAll(ownerId)
+        .firstOrNull { it.provider == HOME_ASSISTANT_PROVIDER && it.credentialCiphertext.isNotEmpty() }
+
+    fun deleteForOwner(ownerId: UUID): Boolean = connectionForOwner(ownerId)?.let { connections.delete(ownerId, it.id) } ?: false
+
     fun saveForOwner(ownerId: UUID, config: HomeAssistantConnectionConfig): IntegrationConnection {
         val endpoint = endpointHost(config.baseUrl)
         val now = clock.instant()

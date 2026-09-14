@@ -35,6 +35,13 @@ data class HomeAssistantSyncStatus(
 
 data class HomeAssistantSyncResult(val imported: Int, val correlationId: UUID, val reason: String? = null)
 
+class HomeAssistantConnectionRequest(val baseUrl: String, val accessToken: String) {
+    override fun toString() = "HomeAssistantConnectionRequest(baseUrl=$baseUrl, accessToken=<redacted>)"
+}
+
+data class HomeAssistantProbeResponse(val status: String, val reachable: Boolean, val authenticated: Boolean, val deviceCount: Int? = null)
+data class HomeAssistantConnectResponse(val status: String, val connected: Boolean, val endpointHost: String, val importedDeviceCount: Int, val correlationId: UUID)
+
 interface ImportedDeviceRepository {
     fun all(ownerId: UUID): List<ImportedDeviceState>
     fun save(ownerId: UUID, state: ImportedDeviceState)
@@ -144,7 +151,26 @@ class HomeAssistantImportService(
     private val clock: Clock = Clock.systemUTC(),
     private val resolver: HomeAssistantConnectionResolver? = null,
     private val client: HomeAssistantClient? = null,
+    private val store: HomeAssistantConnectionStore? = null,
 ) {
+    fun storeFor(ownerId: UUID, config: HomeAssistantConnectionConfig) {
+        (store ?: throw HomeAssistantException("internal_error")).saveForOwner(ownerId, config)
+    }
+
+    fun disconnect(ownerId: UUID): Boolean =
+        (store ?: throw HomeAssistantException("internal_error")).deleteForOwner(ownerId)
+
+    fun probe(config: HomeAssistantConnectionConfig): HomeAssistantProbeResponse {
+        return try {
+            val devices = client?.snapshot(config) ?: throw HomeAssistantException("internal_error")
+            HomeAssistantProbeResponse("ok", true, true, devices.size)
+        } catch (exception: HomeAssistantException) {
+            throw exception
+        } catch (_: Exception) {
+            throw HomeAssistantException("internal_error")
+        }
+    }
+
     fun status(ownerId: UUID): HomeAssistantSyncStatus {
         if ((resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)) == null) return HomeAssistantSyncStatus(
             false,
@@ -210,6 +236,19 @@ class HomeAssistantController(private val service: HomeAssistantImportService) {
     fun status(request: HttpServletRequest) = service.status(request.ownerId())
     @PostMapping("/sync")
     fun sync(request: HttpServletRequest) = service.sync(request.ownerId())
+    @PostMapping("/probe")
+    fun probe(@RequestBody body: HomeAssistantConnectionRequest) = service.probe(HomeAssistantConnectionConfig(body.baseUrl, body.accessToken))
+    @PostMapping("/connect")
+    fun connect(@RequestBody body: HomeAssistantConnectionRequest, request: HttpServletRequest): HomeAssistantConnectResponse {
+        val ownerId = request.ownerId()
+        val config = HomeAssistantConnectionConfig(body.baseUrl, body.accessToken)
+        service.probe(config)
+        service.storeFor(ownerId, config)
+        val imported = service.sync(ownerId)
+        return HomeAssistantConnectResponse("connected", true, HomeAssistantConnectionStore.endpointHost(config.baseUrl), imported.imported, imported.correlationId)
+    }
+    @DeleteMapping
+    fun disconnect(request: HttpServletRequest): Map<String, Boolean> = mapOf("disconnected" to service.disconnect(request.ownerId()))
     private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 
     @ExceptionHandler(HomeAssistantException::class)
