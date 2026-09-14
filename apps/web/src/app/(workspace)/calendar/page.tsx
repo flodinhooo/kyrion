@@ -8,34 +8,18 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useWorkspace } from "@/components/app-shell";
 import { browserRequest } from "@/lib/browser-request";
+import { csrfHeader } from "@/features/auth/csrf";
 
-type CalendarEvent = { id: string; title: string; startsAt: string; endsAt: string };
+type CalendarEvent = { id: string; title: string; description?: string | null; startsAt: string; endsAt: string; timeZone?: string; syncToGoogle?: boolean };
+type Editor = { id?: string; title: string; description: string; startsAt: string; endsAt: string; syncToGoogle: boolean };
+const emptyEditor = (): Editor => ({ title: "", description: "", startsAt: new Date(Date.now() + 3600000).toISOString().slice(0, 16), endsAt: new Date(Date.now() + 7200000).toISOString().slice(0, 16), syncToGoogle: false });
 
 export default function CalendarPage() {
-  const { t } = useWorkspace();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-
-  useEffect(() => {
-    void browserRequest("/api/calendar/events", { cache: "no-store" }).then(async (response) => {
-      const value: unknown = await response.json();
-      if (!response.ok || !value || typeof value !== "object" || !Array.isArray((value as { items?: unknown }).items)) throw new Error();
-      setEvents((value as { items: CalendarEvent[] }).items);
-      setState("ready");
-    }).catch(() => setState("error"));
-  }, []);
-
-  const calendarEvents = events.map((event) => ({
-    id: event.id, title: event.title, start: event.startsAt, end: event.endsAt,
-  }));
-
-  return <section className="plugins-stage integration-detail calendar-page">
-    <header className="plugins-header"><div><h1>{t.calendarTitle}</h1><p>Google Calendar</p></div><Link className="catalog-reload" href="/plugins/google">Verbindungen</Link></header>
-    <article className="connection-card calendar-panel">
-      <FullCalendar plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="dayGridMonth" firstDay={1} height="auto" expandRows headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }} buttonText={{ today: "Heute", month: "Monat", week: "Woche", day: "Tag" }} events={calendarEvents} />
-      {state === "loading" && <p role="status">Kalender wird geladen ...</p>}
-      {state === "error" && <p role="alert">Termine konnten nicht geladen werden. <Link href="/plugins/google">Google-Verbindung prüfen</Link></p>}
-      {state === "ready" && events.length === 0 && <p>Keine kommenden Termine.</p>}
-    </article>
-  </section>;
+  const { t } = useWorkspace(); const [events, setEvents] = useState<CalendarEvent[]>([]); const [state, setState] = useState<"loading" | "ready" | "error">("loading"); const [editor, setEditor] = useState<Editor | null>(null); const [saving, setSaving] = useState(false); const [message, setMessage] = useState<string | null>(null);
+  async function load() { const response = await browserRequest("/api/calendar/events", { cache: "no-store" }); const value: unknown = await response.json(); if (!response.ok || !value || typeof value !== "object" || !Array.isArray((value as { items?: unknown }).items) && !Array.isArray(value)) throw new Error(); setEvents((Array.isArray(value) ? value : (value as { items: CalendarEvent[] }).items)); setState("ready"); }
+  useEffect(() => { const timer = window.setTimeout(() => { void load().catch(() => setState("error")); }, 0); return () => window.clearTimeout(timer); }, []);
+  async function save() { if (!editor || saving) return; setSaving(true); setMessage(null); try { const response = await browserRequest(editor.id ? `/api/calendar/events/${editor.id}` : "/api/calendar/events", { method: editor.id ? "PUT" : "POST", headers: { "Content-Type": "application/json", ...csrfHeader() }, body: JSON.stringify({ title: editor.title, description: editor.description || null, startsAt: new Date(editor.startsAt).toISOString(), endsAt: new Date(editor.endsAt).toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, syncToGoogle: editor.syncToGoogle }) }); if (!response.ok) { const value: unknown = await response.json().catch(() => null); throw new Error(value && typeof value === "object" && "code" in value && typeof value.code === "string" ? value.code : "UNKNOWN"); } setEditor(null); await load(); } catch (error) { setMessage(error instanceof Error && error.message === "CSRF_INVALID" ? "Die Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut speichern." : "Der Termin konnte nicht gespeichert werden."); } finally { setSaving(false); } }
+  async function remove() { if (!editor?.id || saving || !window.confirm("Diesen Termin wirklich löschen?")) return; setSaving(true); try { const response = await browserRequest(`/api/calendar/events/${editor.id}`, { method: "DELETE", headers: csrfHeader() }); if (!response.ok) throw new Error(); setEditor(null); await load(); } catch { setMessage("Der Termin konnte nicht gelöscht werden."); } finally { setSaving(false); } }
+  const calendarEvents = events.map((event) => ({ id: event.id, title: event.title, start: event.startsAt, end: event.endsAt }));
+  return <section className="plugins-stage integration-detail calendar-page"><header className="plugins-header"><div><h1>{t.calendarTitle}</h1><p>Lokaler Kyrion-Kalender</p></div><div className="calendar-actions"><button className="calendar-primary" type="button" onClick={() => setEditor(emptyEditor())}>+ Termin erstellen</button><Link className="calendar-secondary" href="/plugins/google">Google-Sync</Link></div></header><article className="connection-card calendar-panel"><FullCalendar plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="dayGridMonth" firstDay={1} height="auto" expandRows headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }} buttonText={{ today: "Heute", month: "Monat", week: "Woche", day: "Tag" }} dateClick={() => setEditor(emptyEditor())} events={calendarEvents} eventClick={(info) => { const found = events.find((event) => event.id === info.event.id); if (found) setEditor({ id: found.id, title: found.title, description: found.description ?? "", startsAt: found.startsAt.slice(0, 16), endsAt: found.endsAt.slice(0, 16), syncToGoogle: found.syncToGoogle ?? false }); }} />{state === "loading" && <p role="status">Kalender wird geladen ...</p>}{state === "error" && <p role="alert">Lokaler Kalender konnte nicht geladen werden.</p>}{state === "ready" && events.length === 0 && <p>Keine Termine vorhanden.</p>}{message && <p role="alert">{message}</p>}</article>{editor && <div className="calendar-dialog-backdrop"><form className="calendar-dialog" onSubmit={(event) => { event.preventDefault(); void save(); }}><h2>{editor.id ? "Termin bearbeiten" : "Termin erstellen"}</h2><label>Titel<input required value={editor.title} onChange={(event) => setEditor({ ...editor, title: event.target.value })} /></label><label>Beschreibung<textarea value={editor.description} onChange={(event) => setEditor({ ...editor, description: event.target.value })} /></label><label>Beginn<input required type="datetime-local" value={editor.startsAt} onChange={(event) => setEditor({ ...editor, startsAt: event.target.value })} /></label><label>Ende<input required type="datetime-local" value={editor.endsAt} onChange={(event) => setEditor({ ...editor, endsAt: event.target.value })} /></label><label className="calendar-checkbox"><input type="checkbox" checked={editor.syncToGoogle} onChange={(event) => setEditor({ ...editor, syncToGoogle: event.target.checked })} /> Mit Google Calendar synchronisieren</label><div className="calendar-dialog-actions"><button className="calendar-secondary" type="button" onClick={() => setEditor(null)}>Abbrechen</button>{editor.id && <button className="calendar-danger" type="button" onClick={() => void remove()} disabled={saving}>Löschen</button>}<button className="calendar-primary" type="submit" disabled={saving}>{saving ? "Speichern ..." : "Speichern"}</button></div></form></div>}</section>;
 }
