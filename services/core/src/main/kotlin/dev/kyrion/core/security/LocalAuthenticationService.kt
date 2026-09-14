@@ -27,6 +27,7 @@ class LocalAuthenticationService(
     private val clock: Clock = Clock.systemUTC(),
     private val loginAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
     private val invitationTokens: SessionTokenService = SessionTokenService(),
+    private val rbac: RbacService? = null,
 ) {
     fun setupRequired() = !users.exists()
 
@@ -47,6 +48,7 @@ class LocalAuthenticationService(
         val now = clock.instant()
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
         val created = users.register(account, invitationTokens.hash(invitationCode), now) ?: throw InvalidInvitationException()
+        rbac?.initializeUser(created.id, created.resourceOwnerId, false)
         record("auth.user.registered", ActivityStatus.SUCCEEDED, "activity.auth.userRegistered", created.id)
         return AuthenticatedOwner(created, sessions.create(created.id))
     }
@@ -56,6 +58,7 @@ class LocalAuthenticationService(
         val now = clock.instant()
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
         val created = users.createOwner(account) ?: throw SetupAlreadyCompletedException()
+        rbac?.initializeUser(created.id, created.id, true)
         record("auth.owner.setup", ActivityStatus.SUCCEEDED, "activity.auth.ownerSetup", created.id)
         return AuthenticatedOwner(created, sessions.create(created.id))
     }

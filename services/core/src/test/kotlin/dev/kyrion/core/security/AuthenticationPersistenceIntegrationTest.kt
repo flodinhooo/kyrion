@@ -144,7 +144,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             assertThat(results.single { it.isFailure }.exceptionOrNull()).isInstanceOf(InvalidInvitationException::class.java)
         } finally { executor.shutdownNow() }
         val expired = authentication.createInvitation(owner.session.rawToken)
-        jdbc.sql("UPDATE registration_invitation SET expires_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE token_hash=:hash")
+        val expiredAt = Instant.now().minusSeconds(1)
+        jdbc.sql("UPDATE registration_invitation SET expires_at=:expiresAt WHERE token_hash=:hash")
+            .param("expiresAt", Timestamp.from(expiredAt))
             .param("hash", SessionTokenService().hash(expired.code)).update()
         assertThatThrownBy { authentication.register("expired", OTHER_PASSWORD, expired.code) }
             .isInstanceOf(InvalidInvitationException::class.java)

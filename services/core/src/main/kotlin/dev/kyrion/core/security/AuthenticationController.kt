@@ -38,13 +38,13 @@ data class ChangePasswordRequest(
     @field:Size(min = 12, max = 200) val currentPassword: String,
     @field:Size(min = 12, max = 200) val newPassword: String,
 )
-data class UserResponse(val id: UUID, val username: String, val canInvite: Boolean)
+data class UserResponse(val id: UUID, val username: String, val canInvite: Boolean, val roles: Set<String> = emptySet(), val permissions: Set<String> = emptySet(), val enabled: Boolean = true)
 data class SessionResponse(val user: UserResponse, val sessionToken: String, val expiresAt: Instant)
 data class ErrorResponse(val code: String)
 
 @RestController
 @RequestMapping("/v1/auth")
-class AuthenticationController(private val authentication: LocalAuthenticationService) {
+class AuthenticationController(private val authentication: LocalAuthenticationService, private val rbac: RbacService) {
     @GetMapping("/setup/status") fun setupStatus() = SetupStatusResponse(authentication.setupRequired())
 
     @PostMapping("/setup") @ResponseStatus(HttpStatus.CREATED)
@@ -54,7 +54,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     fun login(@Valid @RequestBody body: CredentialsRequest) = authentication.login(body.username, body.password).response()
 
     @PostMapping("/invitations") @ResponseStatus(HttpStatus.CREATED)
-    fun invite(request: HttpServletRequest) = authentication.createInvitation(request.bearerToken())
+    fun invite(request: HttpServletRequest): CreatedInvitation { val user=authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException(); rbac.require(user.id,"invitations:create"); return authentication.createInvitation(request.bearerToken()) }
 
     @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody body: RegistrationRequest) =
@@ -63,7 +63,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     @GetMapping("/me")
     fun me(request: HttpServletRequest): UserResponse {
         val user = authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException()
-        return UserResponse(user.id, user.username, user.resourceOwnerId == user.id)
+        return UserResponse(user.id, user.username, user.resourceOwnerId == user.id, rbac.users(user.resourceOwnerId).first { it.id == user.id }.roles.toSet(), rbac.permissions(user.id), user.enabled)
     }
 
     @PostMapping("/logout") @ResponseStatus(HttpStatus.NO_CONTENT)
