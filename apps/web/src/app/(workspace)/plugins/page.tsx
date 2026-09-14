@@ -54,7 +54,7 @@ export default function PluginsPage() {
     { id: "home_assistant", name: "Home Assistant", description: "Read-only Home Assistant device import", kind: "local", authType: "token", capabilities: [{ id: "smart-home.import", label: "Import devices", enabled: true }], href: "/plugins/home_assistant", live: true },
     { id: "jellyfin", name: "Jellyfin", description: t.integrationJellyfinDescription, kind: "local", authType: "token", capabilities: [{ id: "media.library", label: t.integrationCapabilityMedia, enabled: false }], href: "/plugins", live: false },
     { id: "spotify", name: "Spotify", description: t.pluginSpotifyDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "media.playback", label: t.integrationCapabilityPlayback, enabled: true }], href: "/plugins/spotify", live: true },
-    { id: "google", name: "Google", description: t.integrationGoogleDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "calendar.read", label: t.integrationCapabilityCalendar, enabled: false }], href: "/plugins/google", live: true },
+    { id: "google", name: "Google", description: t.integrationGoogleDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "calendar.read", label: t.integrationCapabilityCalendar, enabled: false }, { id: "calendar.event.create", label: "Create events", enabled: false }, { id: "calendar.event.update", label: "Update events", enabled: false }, { id: "calendar.event.delete", label: "Delete events", enabled: false }], href: "/plugins/google", live: true },
   ];
 
   const renderGroup = (kind: "local" | "cloud", title: string) => <section className="integration-group" aria-labelledby={`${kind}-integrations`}>
