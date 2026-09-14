@@ -113,5 +113,5 @@ def _request(
             return json.loads(body) if body else None
     except HTTPError as error:
         raise CoreRequestError(f"Core rejected the request with HTTP {error.code}") from error
-    except (URLError, TimeoutError, json.JSONDecodeError) as error:
+    except (URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as error:
         raise CoreRequestError("Core is unavailable or returned invalid data") from error

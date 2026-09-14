@@ -270,6 +270,18 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `calendar routes authenticate the same bearer session as other workspace routes`() {
+        val login = authentication.setup("flo", OLD_PASSWORD)
+
+        mockMvc.perform(get("/v1/calendar/events"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", "Bearer ${login.session.rawToken}"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+    }
+
+    @Test
     fun `password change revokes every existing session and persists only the new password`() {
         val owner = authentication.setup("flo", OLD_PASSWORD)
         val secondSession = authentication.login("flo", OLD_PASSWORD)

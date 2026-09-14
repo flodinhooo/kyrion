@@ -35,6 +35,7 @@ class AuthenticatedRouteInterceptor(
         response.writer.write("{\"code\":\"UNAUTHENTICATED\"}")
         return false
     }
+
 }
 
 internal fun permissionFor(path: String, method: String): String? = when {
@@ -66,7 +67,7 @@ class AuthenticatedRouteConfiguration(
         registry.addInterceptor(interceptor).addPathPatterns(
             "/v1/activity/**", "/v1/conversations/**", "/v1/memory/**", "/v1/integrations/**", "/v1/integration-catalog/**", "/v1/home/**",
             "/v1/device-commands/**",
-            "/v1/devices/**",
+            "/v1/devices/**", "/v1/calendar/**",
             "/v1/gateways/**",
             "/v1/voice-satellites/**",
             "/v1/actions/**",
