@@ -1,33 +1,43 @@
 # Calendar authentication incident
 
-## Current status
+## Status
 
-The local calendar UI currently redirects away from `/calendar` or loses the
-visible authenticated workspace state. The issue is unresolved and must be
-investigated before further calendar work continues.
+RESOLVED
 
-## Observations
+## Root cause
 
-- The calendar API returns `401:UNAUTHENTICATED` in the affected browser flow.
-- Direct unauthenticated requests to Core correctly return HTTP 401.
-- Other authenticated Web requests such as devices and home data have worked
-  during the same development session.
-- Next.js development logs reported a stale module-factory error involving the
-  AppShell bundle.
+The Core authentication interceptor did not include `/v1/calendar/**` in its
+registered path patterns. Consequently, a request could contain a valid Bearer
+token without receiving the authenticated user and workspace context.
 
-## Changes attempted
+The Calendar controller then called `workspaceOwnerId()`, which found no
+authenticated context and threw `UnauthenticatedException`.
 
-- Added dynamic rendering and no-store handling around the workspace/calendar
-  route.
-- Added client-side navigation to `/login` when the calendar API returns 401.
-- Cleared the generated Next.js `.next` cache and restarted the Web dev
-  process.
-- Restored the original login-page behaviour that redirects an already
-  authenticated user to `/`.
+## Additional runtime factor
 
-## Follow-up
+After the source fix was applied, an older Kyrion Core process continued to
+run on port 8080. It had been started before the source change and therefore
+used the old compiled class state.
 
-Trace the browser request and redirect chain with the actual session cookie,
-then compare the session used by the workspace layout with the session used by
-`/api/calendar/events`. Do not change Core authentication, RBAC, or calendar
-business logic until that boundary is isolated.
+The fix became active only after that process was stopped and Core was cleanly
+restarted from the current repository state.
+
+## Runtime verification
+
+- `/v1/calendar/events` is matched by `AuthenticatedRouteInterceptor`.
+- The browser successfully loads local calendar events.
+- A local test event is displayed in the calendar UI.
+
+## Resolution
+
+Core now applies the existing authentication interceptor to `/v1/calendar/**`.
+The existing Web session validation and Bearer forwarding remain unchanged.
+
+## Separate follow-up work
+
+The following items are outside this incident and are not remaining incident
+work:
+
+- Correct selected-date handling when creating events.
+- Google Calendar event integration and synchronization.
+- Calendar UX and details.

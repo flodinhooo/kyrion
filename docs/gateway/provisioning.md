@@ -94,3 +94,16 @@ The final acceptance test will reset this Raspberry Pi and onboard it again as
 if it were a new owner's device. Product readiness requires completing that
 test without SSH, manual firewall editing, programming knowledge or copied
 terminal commands.
+
+## Verified media playback deployment
+
+The YouTube Pi playback slice was deployed and physically verified on
+2026-09-14. The update loaded the current ARM64 Core and Web images while
+preserving PostgreSQL data, platform keys, TLS configuration and gateway
+enrolment. The gateway agent and bounded media player user service were updated
+alongside the platform images.
+
+The media player uses the active PipeWire session and the reported Bluetooth
+sink, currently `Pebble V3`. Direct and Web initiated YouTube playback tests
+produced active PipeWire playback streams. Docker warnings about unavailable
+kernel memory limit capabilities are expected on this Pi and are non-blocking.

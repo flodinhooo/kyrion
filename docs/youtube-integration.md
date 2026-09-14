@@ -60,6 +60,19 @@ video owner, account/age requirements, browser restrictions or network filtering
 the direct service link remains available. Web tests using a mocked frame do not
 prove that YouTube serves a particular video in a real owner session.
 
+## Raspberry Pi verification
+
+On 2026-09-14, the Web/Core ARM64 images were deployed to the existing
+`kyrion-node` installation and YouTube playback was physically verified with
+an owner supplied link. The gateway reported the Bluetooth output `Pebble V3`,
+`yt-dlp` 2026.08.19 resolved the video, and `mpv` produced active left and
+right PipeWire streams on that sink.
+
+The media player runs as a separate user service in the active PipeWire user
+session while the gateway agent remains an authenticated command client. Docker
+may report unavailable kernel memory limit capabilities; those limits are
+discarded by the Pi kernel and do not block Core, Web or audio playback.
+
 ## References
 
 - [YouTube player parameters](https://developers.google.com/youtube/player_parameters)
