@@ -4,7 +4,7 @@ import { browserRequest } from "@/lib/browser-request";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Cpu, LampDesk, Pencil, Plus, RadioTower, ScanLine, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Cpu, GripVertical, LampDesk, Pencil, Plus, RadioTower, ScanLine, Trash2 } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { filterDevices, hasDeviceFilters, type DeviceFilters } from "@/features/devices/filter";
 import { useWorkspace } from "@/components/app-shell";
@@ -16,6 +16,7 @@ import { csrfHeader } from "@/features/auth/csrf";
 import { diagnosticsMessages } from "@/features/system-services/messages";
 import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isMotionEventList, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type MotionEvent, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
+import { deriveDevicePresentation } from "@/features/devices/presentation";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
   type IntegrationConnection,
@@ -50,6 +51,34 @@ export default function DevicesPage() {
   const [motionEvents, setMotionEvents] = useState<Record<string, MotionEvent[]>>({});
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
+  const [collapsedRooms, setCollapsedRooms] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(window.localStorage.getItem("kyrion.devices.rooms.collapsed") ?? "{}"); } catch { return {}; }
+  });
+  const [roomOrder, setRoomOrder] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(window.localStorage.getItem("kyrion.devices.rooms.order") ?? "[]"); } catch { return []; }
+  });
+  const [reorderingRooms, setReorderingRooms] = useState(false);
+
+  function toggleRoom(roomId: string) {
+    setCollapsedRooms((current) => {
+      const next = { ...current, [roomId]: !current[roomId] };
+      window.localStorage.setItem("kyrion.devices.rooms.collapsed", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function moveRoom(roomId: string, direction: -1 | 1) {
+    const ids = groups.filter((group) => group.room).map((group) => group.id);
+    const ordered = [...ids].sort((a, b) => (roomOrder.indexOf(a) < 0 ? ids.length : roomOrder.indexOf(a)) - (roomOrder.indexOf(b) < 0 ? ids.length : roomOrder.indexOf(b)));
+    const index = ordered.indexOf(roomId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= ordered.length) return;
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    setRoomOrder(ordered);
+    window.localStorage.setItem("kyrion.devices.rooms.order", JSON.stringify(ordered));
+  }
 
   const load = useCallback(async () => {
     const [roomResponse, connectionResponse, deviceResponse] = await Promise.all([
@@ -321,7 +350,10 @@ export default function DevicesPage() {
   function resetFilters() { setFilters({ query: "", availability: "all", deviceClass: "all" }); }
 
   const groups = [
-    ...rooms.map((room) => ({
+    ...[...rooms].sort((a, b) => {
+      const index = (id: string) => { const position = roomOrder.indexOf(id); return position < 0 ? roomOrder.length : position; };
+      return index(a.id) - index(b.id);
+    }).map((room) => ({
       id: room.id,
       name: room.name,
       room,
@@ -373,6 +405,7 @@ export default function DevicesPage() {
         <button type="button" disabled={pending} onClick={() => setRoomEditor({ mode: "create", room: null, name: "", roomType: "other" })}>
           <Plus aria-hidden="true" />{t.homeCreateRoom}
         </button>
+        <button type="button" onClick={() => setReorderingRooms((current) => !current)}>{reorderingRooms ? t.devicesDoneReordering : t.devicesReorderRooms}</button>
       </div>
     </header>
     <SnapshotStatus error={error} loaded={loaded} busy={reloading || pending} updatedAt={updatedAt} onReload={() => void reloadSnapshot()} />
@@ -392,20 +425,23 @@ export default function DevicesPage() {
     {loaded && !error && !filtering && devices.length === 0 && <div className="home-empty"><h2>{t.devicesEmptyTitle}</h2><p>{t.devicesEmptyDescription}</p><Link className="home-add-device" href="/devices/add">{t.addDevice}</Link></div>}
     {filtering && <p className="device-filter-hint">{t.devicesFilterRoomControl}</p>}
     {loaded && filtering && visibleDevices.length === 0 && <div className="home-empty"><h2>{t.devicesFilterEmpty}</h2><p>{t.devicesFilterEmptyHint}</p><button type="button" onClick={resetFilters}>{t.devicesFilterReset}</button></div>}
-    {loaded && <div className="room-grid">{groups.filter((group) => !filtering || group.items.length > 0).map((group) => <section className="room-card" key={group.id}>
-      <div className="room-heading">
-        <h2>{group.name}</h2>
+    {loaded && <div className="room-grid">{groups.filter((group) => !filtering || group.items.length > 0).map((group) => <section className={`room-card${collapsedRooms[group.id] ? " is-collapsed" : ""}`} key={group.id}>
+      <div className="room-heading" role="button" tabIndex={0} aria-expanded={!collapsedRooms[group.id]} aria-controls={`room-devices-${group.id}`} onClick={() => toggleRoom(group.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleRoom(group.id); } }}>
+        {reorderingRooms && group.room && <span className="room-drag-handle" aria-hidden="true"><GripVertical /></span>}
+        <div><h2>{group.name}</h2><small>{t.devicesRoomSummary.replace("{devices}", String(group.items.length)).replace("{online}", String(group.items.filter((device) => device.availability === "online").length))}</small></div>
         <div className="room-heading-actions">
           {!filtering && group.items.some((device) => device.capabilities.some((capability) => capability.id === "power.set")) && (() => {
             const controllableItems = group.items.filter((device) => device.capabilities.some((capability) => capability.id === "power.set"));
             const roomIsOn = controllableItems.some((device) => device.state?.on === true || nanoleafStates[device.id]?.on === true);
             return <label className="room-power-switch"><span>{roomCommandStates[group.id] ? t.commandPending : roomIsOn ? t.zigbeeOn : t.zigbeeOff}</span><button type="button" role="switch" aria-checked={roomIsOn} aria-label={`${group.name}: ${roomIsOn ? t.devicesRoomOff : t.devicesRoomOn}`} disabled={pending || roomCommandStates[group.id]} onClick={() => void roomPower(group.id, controllableItems, !roomIsOn)}><i /></button></label>;
           })()}
-          {group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={() => setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType })}>
+          {reorderingRooms && group.room && <><button type="button" onClick={(event) => { event.stopPropagation(); moveRoom(group.id, -1); }} aria-label={t.devicesMoveRoomUp}><ChevronUp /></button><button type="button" onClick={(event) => { event.stopPropagation(); moveRoom(group.id, 1); }} aria-label={t.devicesMoveRoomDown}><ChevronDown /></button></>}
+          <button type="button" className="room-collapse-button" aria-label={collapsedRooms[group.id] ? t.devicesExpandRoom : t.devicesCollapseRoom} onClick={(event) => { event.stopPropagation(); toggleRoom(group.id); }}>{collapsedRooms[group.id] ? <ChevronDown /> : <ChevronUp />}</button>
+          {group.room && <button className="room-edit-button" title={t.homeEditRoom} aria-label={`${t.homeEditRoom}: ${group.name}`} onClick={(event) => { event.stopPropagation(); setRoomEditor({ mode: "edit", room: group.room, name: group.room.name, roomType: group.room.roomType }); }}>
           <Pencil aria-hidden="true" />
         </button>}</div>
       </div>
-      {group.items.length === 0 ? <p className="room-empty">{t.homeNoDevices}</p> : <div className="room-devices">
+      {!collapsedRooms[group.id] && (group.items.length === 0 ? <p className="room-empty">{t.homeNoDevices}</p> : <div className="room-devices" id={`room-devices-${group.id}`}>
         {group.items.map((device) => {
           const availability = device.availability;
           const nanoleafState = nanoleafStates[device.id];
@@ -428,6 +464,7 @@ export default function DevicesPage() {
           const controllable = device.deviceClass === "light" && device.capabilities.some((capability) => capability.id === "power.set");
           const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
           const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
+          const presentation = deriveDevicePresentation(device, liveState, { closed: t.sensorClosed, open: t.sensorOpen, motionDetected: t.sensorDetected, noMotion: t.sensorClear, on: t.zigbeeOn, off: t.zigbeeOff, unknown: t.homeUnknown, temperature: t.sensorTemperature, humidity: t.sensorHumidity, battery: t.sensorBattery, brightness: t.homeCurrentBrightness, color: t.homeCurrentColor, lastAction: t.sensorLastAction });
           const hasLiveState = !!liveState && Object.values(liveState).some((value) => value !== null);
           const currentColor = liveState?.hue !== null && liveState?.hue !== undefined
             && liveState?.saturation !== null && liveState?.saturation !== undefined
@@ -439,8 +476,8 @@ export default function DevicesPage() {
               <div className="device-card-title"><span><DeviceIcon aria-hidden="true" /></span><strong>{device.displayName}</strong></div>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
               {device.capabilities.every((capability) => capability.id.endsWith(".read")) && <small>{(diagnosticsMessages[locale] ?? diagnosticsMessages.en).readOnly}</small>}
-              {device.diagnosticReason && <small>{(diagnosticsMessages[locale] ?? diagnosticsMessages.en)[device.diagnosticReason]}</small>}
-              {device?.observedAt && <small>{t.homeObservedAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</small>}
+              {presentation.hasPrimaryValue && <div className={`device-primary-state ${presentation.primaryTone}`}><small>{presentation.primaryLabel || t.homeCurrentState}</small><strong>{presentation.primaryValue}</strong></div>}
+              {presentation.secondaryMetrics.length > 0 && <div className="device-secondary-metrics">{presentation.secondaryMetrics.map((metric) => <span key={metric.label}>{metric.label}: <strong>{metric.value}</strong></span>)}</div>}
             </div>
             {device.capabilities.some((capability) => capability.id === "occupancy.read") && <aside className="motion-log" aria-label={t.motionHistory}>
               <strong>{t.motionHistory}</strong>
@@ -455,7 +492,7 @@ export default function DevicesPage() {
               <span><small>{t.homeCurrentColor}</small><strong className="lamp-color-value"><i className={`color-swatch${currentColor ? "" : " unknown"}`} style={currentColor ? { backgroundColor: currentColor } : undefined} />{currentColor ?? t.homeUnknown}</strong></span>
             </div>}
             {hasLiveState && liveState && !controllable && <div className="device-live-state sensor-live-state" aria-label={t.homeCurrentState}>
-              {liveState.on != null && <span>{t.homeCurrentState}: <strong>{liveState.on ? t.zigbeeOn : t.zigbeeOff}</strong></span>}
+              {liveState.on != null && !presentation.hasPrimaryValue && <span>{t.homeCurrentState}: <strong>{liveState.on ? t.zigbeeOn : t.zigbeeOff}</strong></span>}
               {liveState.temperatureCelsius != null && <span>{t.sensorTemperature}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.temperatureCelsius)} °C</strong></span>}
               {liveState.relativeHumidity != null && <span>{t.sensorHumidity}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.relativeHumidity)}%</strong></span>}
               {liveState.measuredAt && <small>{t.sensorMeasuredAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(liveState.measuredAt))}</small>}
@@ -511,7 +548,7 @@ export default function DevicesPage() {
             </details>
           </article>;
         })}
-      </div>}
+      </div>)}
     </section>)}</div>}
     <DeviceControlDialog connection={selected?.provider === "nanoleaf" ? connections.find((item) => item.id === selected.id) ?? null : null} open={selected?.provider === "nanoleaf"} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     <GatewayLightControlDialog device={(selected?.provider === "zigbee" || selected?.provider === "bluetooth") && selected.capabilities.some((capability) => capability.id === "power.set") ? selected : null} open={!!selected && (selected.provider === "zigbee" || selected.provider === "bluetooth") && selected.capabilities.some((capability) => capability.id === "power.set")} onOpenChange={(open) => { if (!open) setSelected(null); }} onCommandSucceeded={load} />
