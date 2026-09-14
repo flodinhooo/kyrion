@@ -44,9 +44,14 @@ embed is unavailable or the owner wants the full service experience.
 
 ## Intentional limits
 
-Playback occurs on the current browser device. The Spotify output-device list
-does not apply. Raspberry Pi playback, Cast discovery/control, account libraries,
-search and persisted favourites are future work requiring separate capabilities.
+Playback defaults to the current browser device. After a link has been prepared,
+Web can list registered Core gateways with a reported playback endpoint and send
+the validated link to one selected Raspberry Pi. Core enqueues an auditable
+`youtube.play` command; the gateway agent starts its locally configured `mpv`
+player with the reported audio output. Starting Pi playback unmounts the browser
+iframe so both outputs cannot play at once. The agent requires `mpv` with its
+YouTube `ytdl_hook` support installed. Cast discovery/control, account libraries,
+search and persisted favourites remain future work.
 Premium benefits are determined by YouTube's player, browser session and content;
 Kyrion neither grants them nor promises Premium parity in an embed.
 

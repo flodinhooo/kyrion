@@ -1,6 +1,8 @@
 package dev.kyrion.core.integration
 
 import dev.kyrion.core.activity.*
+import dev.kyrion.core.gateway.GatewayCommandService
+import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -17,6 +19,8 @@ import java.util.UUID
 enum class YouTubeSource { VIDEO, MUSIC }
 data class PrepareYouTubeRequest(@field:NotBlank @field:Size(max = 2048) val url: String, val source: YouTubeSource)
 data class YouTubeEmbed(val embedUrl: String, val watchUrl: String)
+data class PlayYouTubeRequest(@field:NotBlank @field:Size(max = 2048) val url: String, val source: YouTubeSource, val nodeId: UUID)
+data class GatewayPlaybackTarget(val nodeId: UUID, val displayName: String, val outputName: String)
 
 /** Resolves links locally; never fetches an owner-supplied URL or extracts a media stream. */
 object YouTubeLinks {
@@ -53,13 +57,24 @@ object YouTubeLinks {
 }
 
 @Service
-class YouTubeIntegrationService(private val activity: ActivityService) {
+class YouTubeIntegrationService(private val activity: ActivityService, private val gateways: GatewayService, private val commands: GatewayCommandService) {
     fun prepare(ownerId: UUID, request: PrepareYouTubeRequest): YouTubeEmbed {
         val embed = YouTubeLinks.resolve(request.url, request.source)
         // Preparation is audited, but does not claim the browser actually played the video.
         activity.record(ActivityCategory.INTEGRATION, "youtube.embed.prepared", ActivityStatus.SUCCEEDED,
             ActivityActorType.USER, "youtube", "YOUTUBE_EMBED_PREPARED", ownerId.toString(), ownerId = ownerId)
         return embed
+    }
+
+    fun play(ownerId: UUID, request: PlayYouTubeRequest): GatewayPlaybackTarget {
+        val embed = YouTubeLinks.resolve(request.url, request.source)
+        val gateway = gateways.all(ownerId).singleOrNull { it.id == request.nodeId }
+            ?: throw InvalidYouTubePlaybackTargetException()
+        val output = gateway.health?.audio?.playback ?: throw InvalidYouTubePlaybackTargetException()
+        commands.enqueue(ownerId, gateway.id, "youtube.play", mapOf("url" to embed.watchUrl, "outputId" to output.id))
+        activity.record(ActivityCategory.INTEGRATION, "youtube.play.requested", ActivityStatus.CONFIRMED,
+            ActivityActorType.USER, "youtube", "YOUTUBE_PLAY_REQUESTED", gateway.id.toString(), ownerId = ownerId)
+        return GatewayPlaybackTarget(gateway.id, gateway.displayName, output.displayName)
     }
 }
 
@@ -71,13 +86,23 @@ class YouTubeIntegrationController(private val service: YouTubeIntegrationServic
         val ownerId = request.workspaceOwnerId()
         return service.prepare(ownerId, body)
     }
+
+    @PostMapping("/play")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun play(@Valid @RequestBody body: PlayYouTubeRequest, request: HttpServletRequest): GatewayPlaybackTarget =
+        service.play(request.workspaceOwnerId(), body)
 }
 
 class InvalidYouTubeLinkException : RuntimeException()
+class InvalidYouTubePlaybackTargetException : RuntimeException()
 
 @RestControllerAdvice
 class YouTubeErrorHandler {
     @ExceptionHandler(InvalidYouTubeLinkException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun invalidLink() = mapOf("code" to "YOUTUBE_INVALID_LINK")
+
+    @ExceptionHandler(InvalidYouTubePlaybackTargetException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun invalidTarget() = mapOf("code" to "YOUTUBE_PLAYBACK_TARGET_UNAVAILABLE")
 }

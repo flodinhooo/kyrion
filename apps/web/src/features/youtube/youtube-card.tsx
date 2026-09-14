@@ -1,11 +1,12 @@
 "use client";
 
 import { createContext, useContext, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
-import { ExternalLink, Link2, MonitorPlay, X } from "lucide-react";
+import { ExternalLink, Link2, MonitorPlay, Speaker, X } from "lucide-react";
 import Image from "next/image";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isYouTubeEmbed, type YouTubeEmbed, type YouTubeSource } from "./contracts";
+import { isGatewayNodeList, type GatewayNode } from "@/features/gateways/contracts";
 
 export const LoungeSourceVisible = createContext(true);
 function subscribeVisibility(callback: () => void) {
@@ -21,11 +22,30 @@ export function YouTubeCard({ source }: { source: YouTubeSource }) {
   const [embed, setEmbed] = useState<YouTubeEmbed | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<"link" | "service" | null>(null);
+  const [gateways, setGateways] = useState<GatewayNode[]>([]);
+  const [nodeId, setNodeId] = useState("");
+  const [playing, setPlaying] = useState(false);
   const requestId = useRef(0);
   const id = useId();
   const music = source === "MUSIC";
   const name = music ? "YouTube Music" : "YouTube";
   const externalUrl = music ? "https://music.youtube.com" : "https://www.youtube.com";
+
+  async function loadGateways() {
+    const response = await fetch("/api/gateways", { cache: "no-store" });
+    const value: unknown = await response.json();
+    if (response.ok && isGatewayNodeList(value)) setGateways(value.filter((node) => node.health?.audio?.playback));
+  }
+
+  async function playOnPi() {
+    if (!embed || !nodeId) return;
+    setPending(true); setError(null);
+    try {
+      const response = await fetch("/api/integrations/youtube/play", { method: "POST", headers: { "Content-Type": "application/json", ...csrfHeader() }, body: JSON.stringify({ url: embed.watchUrl, source, nodeId }) });
+      if (!response.ok) throw new Error("playback failed");
+      setPlaying(true);
+    } catch { setError("service"); } finally { setPending(false); }
+  }
 
   async function prepare(event: FormEvent) {
     event.preventDefault();
@@ -57,9 +77,10 @@ export function YouTubeCard({ source }: { source: YouTubeSource }) {
     {error && <p className="lounge-error" role="alert">{error === "link" ? t.youtubeInvalidLink : t.youtubeUnavailable}</p>}
     {embed ? <div className="youtube-loaded">
       {/* Unmount hidden embeds: a source switch must never leave invisible YouTube audio playing. */}
-      {sourceVisible && documentVisible && <iframe key={embed.embedUrl} className="youtube-frame" src={embed.embedUrl} title={t.youtubePlayerTitle} allow="encrypted-media; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
+      {sourceVisible && documentVisible && !playing && <iframe key={embed.embedUrl} className="youtube-frame" src={embed.embedUrl} title={t.youtubePlayerTitle} allow="encrypted-media; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />}
       <div className="youtube-player-actions"><a href={embed.watchUrl} target="_blank" rel="noreferrer">{music ? t.youtubeOpenMusic : t.youtubeOpen}<ExternalLink size={16} /></a><button onClick={() => { ++requestId.current; setPending(false); setEmbed(null); }}><X size={16} />{t.youtubeClose}</button></div>
-      <p className="youtube-note">{t.youtubePlaybackHint}</p>
+      <div className="lounge-output"><label><span><Speaker size={17} />{t.loungeOutput}</span><select value={nodeId} onFocus={() => void loadGateways()} onChange={(event) => setNodeId(event.target.value)}><option value="">{t.loungeChooseDevice}</option>{gateways.map((node) => <option key={node.id} value={node.id}>{node.displayName} · {node.health?.audio?.playback?.displayName}</option>)}</select></label><button className="lounge-primary" disabled={!nodeId || pending} onClick={() => void playOnPi()}>{playing ? t.youtubePlayAgain : t.youtubePlayOnPi}</button></div>
+      <p className="youtube-note">{playing ? t.youtubePiPlaybackHint : t.youtubePlaybackHint}</p>
     </div> : <a className="youtube-discover" href={externalUrl} target="_blank" rel="noreferrer"><MonitorPlay size={32} /><span><strong>{music ? t.youtubeOpenMusic : t.youtubeOpen}</strong><span>{t.youtubeDiscoverHint}</span></span><ExternalLink size={18} /></a>}
     <p className="youtube-note youtube-output"><MonitorPlay size={16} />{t.youtubeOutput}</p>
   </article>;
