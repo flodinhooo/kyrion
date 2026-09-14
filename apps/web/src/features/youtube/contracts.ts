@@ -1,5 +1,11 @@
 export type YouTubeSource = "VIDEO" | "MUSIC";
 export type YouTubeEmbed = { embedUrl: string; watchUrl: string };
+export type YouTubePlaybackRequest = { url: string; source: YouTubeSource; nodeId: string };
+
+export function isYouTubePlaybackRequest(value: unknown): value is YouTubePlaybackRequest {
+  return isYouTubeRequest(value) && "nodeId" in value && typeof value.nodeId === "string"
+    && /^[0-9a-f-]{36}$/i.test(value.nodeId);
+}
 
 export function isYouTubeRequest(value: unknown): value is { url: string; source: YouTubeSource } {
   return !!value && typeof value === "object" && "url" in value && typeof value.url === "string"
