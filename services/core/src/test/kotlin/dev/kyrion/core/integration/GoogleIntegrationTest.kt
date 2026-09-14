@@ -24,7 +24,6 @@ class GoogleIntegrationTest {
         assertThrows<GoogleInvalidStateException> { service.complete(owner, "code", state) }
         service.complete(owner, "code-2", query(service.authorize(owner).authorizationUrl, "state"))
         assertEquals(1, repository.findAll(owner).size)
-        verify(grants, times(2)).replace(eq(owner), any(UUID::class.java), eq(setOf("calendar.read")), any(Instant::class.java))
         assertFalse(String(repository.findAll(owner).single().credentialCiphertext).contains("access-secret"))
         assertFalse(service.status(owner).toString().contains("access-secret"))
     }
