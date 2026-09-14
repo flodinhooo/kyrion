@@ -1,0 +1,3 @@
+import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
+type Context={params:Promise<{id:string}>};
+export async function PUT(request:Request,{params}:Context){const a=await requireApiSession();if(a instanceof Response)return a;if(!(await csrfIsValid(request)))return Response.json({code:"CSRF_INVALID"},{status:403});const {id}=await params;const value=new URL(request.url).searchParams.get("value");const r=await fetch(`${CORE_SERVICE_URL}/v1/rbac/users/${id}/enabled?value=${value}`,{method:"PUT",headers:{Authorization:`Bearer ${a.token}`}});return new Response(await r.text(),{status:r.status,headers:{"content-type":"application/json"}})}

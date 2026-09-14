@@ -1,0 +1,3 @@
+import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
+async function auth(request:Request){const a=await requireApiSession();if(a instanceof Response)return a;if(!(await csrfIsValid(request)))return Response.json({code:"CSRF_INVALID"},{status:403});return a;}
+export async function POST(request:Request){const a=await auth(request);if(a instanceof Response)return a;const response=await fetch(`${CORE_SERVICE_URL}/v1/rbac/roles`,{method:"POST",headers:{Authorization:`Bearer ${a.token}`,"Content-Type":"application/json"},body:await request.text()});return new Response(await response.text(),{status:response.status,headers:{"content-type":"application/json"}});}
