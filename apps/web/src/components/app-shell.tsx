@@ -28,6 +28,8 @@ import { isConversationList, type ConversationSummary } from "@/features/convers
 type WorkspaceContextValue = {
   username: string;
   canInvite: boolean;
+  permissions: string[];
+  hasPermission: (permission: string) => boolean;
   locale: Locale;
   modelCatalog: ModelCatalog | null;
   selectedModelId: string | null;
@@ -62,7 +64,7 @@ export function useWorkspace() {
   return context;
 }
 
-export function AppShell({ children, username, canInvite = false }: { children: ReactNode; username: string; canInvite?: boolean }) {
+export function AppShell({ children, username, canInvite = false, permissions = [] }: { children: ReactNode; username: string; canInvite?: boolean; permissions?: string[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [locale, setLocale] = useState<Locale>("de");
@@ -81,6 +83,7 @@ export function AppShell({ children, username, canInvite = false }: { children: 
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = messages[locale];
+  const hasPermission = (permission: string) => permissions.includes(permission);
   const activeConversationId = pathname.match(/^\/conversations\/([^/]+)$/)?.[1] ?? null;
 
   const isChatPage = pathname === "/chat" || activeConversationId !== null;
@@ -330,6 +333,8 @@ export function AppShell({ children, username, canInvite = false }: { children: 
               </Link>
             );
           })}
+          {hasPermission("users:read") && <Link className="nav-item" href="/users" onClick={onNavigate}><Icons.user /><span>{t.usersTitle}</span></Link>}
+          {hasPermission("roles:read") && <Link className="nav-item" href="/roles" onClick={onNavigate}><Icons.shield /><span>{t.rolesTitle}</span></Link>}
         </nav>
 
         {isChatPage && <div className="recent-section">
@@ -381,6 +386,8 @@ export function AppShell({ children, username, canInvite = false }: { children: 
     <WorkspaceContext.Provider value={{
       username,
       canInvite,
+      permissions,
+      hasPermission,
       locale,
       modelCatalog,
       selectedModelId,
