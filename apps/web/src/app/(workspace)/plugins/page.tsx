@@ -46,10 +46,12 @@ export default function PluginsPage() {
     Jellyfin: "/branding/jellyfin.svg",
     Spotify: "/branding/spotify/icon.svg",
     Google: "/branding/google.svg",
+    "Home Assistant": "/branding/home-assistant.svg",
   };
   const cards: IntegrationDefinition[] = [
     { id: "nanoleaf", name: "Nanoleaf", description: t.pluginNanoleafDescription, kind: "local", authType: "local", capabilities: [{ id: "devices.control", label: t.integrationCapabilityDeviceControl, enabled: true }], href: "/plugins/nanoleaf", live: true },
     { id: "zigbee", name: "Zigbee", description: t.pluginZigbeeDescription, kind: "local", authType: "local", capabilities: [{ id: "devices.discovery", label: t.integrationCapabilityDiscovery, enabled: true }], href: "/settings/gateways", live: true },
+    { id: "home_assistant", name: "Home Assistant", description: "Read-only Home Assistant device import", kind: "local", authType: "token", capabilities: [{ id: "smart-home.import", label: "Import devices", enabled: true }], href: "/plugins/home_assistant", live: true },
     { id: "jellyfin", name: "Jellyfin", description: t.integrationJellyfinDescription, kind: "local", authType: "token", capabilities: [{ id: "media.library", label: t.integrationCapabilityMedia, enabled: false }], href: "/plugins", live: false },
     { id: "spotify", name: "Spotify", description: t.pluginSpotifyDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "media.playback", label: t.integrationCapabilityPlayback, enabled: true }], href: "/plugins/spotify", live: true },
     { id: "google", name: "Google", description: t.integrationGoogleDescription, kind: "cloud", authType: "oauth", capabilities: [{ id: "calendar.read", label: t.integrationCapabilityCalendar, enabled: false }], href: "/plugins/google", live: true },

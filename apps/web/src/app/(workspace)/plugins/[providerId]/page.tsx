@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { isCoreConnectionList, isCoreProviderList, type CoreConnection, type CoreProvider } from "@/features/integrations/catalog-contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import { HomeAssistantConnection } from "@/features/integrations/home-assistant-connection";
 
 const customRoutes: Record<string, string> = { spotify: "/plugins/spotify", nanoleaf: "/plugins/nanoleaf", zigbee: "/settings/gateways" };
 
@@ -17,6 +18,7 @@ export default function IntegrationProviderPage() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   useEffect(() => {
     const controller = new AbortController();
+    if (providerId === "home_assistant") return () => controller.abort();
     void Promise.all([fetch("/api/integration-catalog/providers", { cache: "no-store", signal: controller.signal }), fetch("/api/integration-catalog/connections", { cache: "no-store", signal: controller.signal })]).then(async ([providerResponse, connectionResponse]) => {
       const [providers, connections] = await Promise.all([providerResponse.json(), connectionResponse.json()]);
       if (!isCoreProviderList(providers) || !isCoreConnectionList(connections)) throw new Error("Invalid integration catalog");
@@ -26,6 +28,7 @@ export default function IntegrationProviderPage() {
     }).catch(() => setState("error"));
     return () => controller.abort();
   }, [providerId]);
+  if (providerId === "home_assistant") return <section className="plugins-stage integration-detail"><Link className="back-link" href="/plugins">← {t.plugins}</Link><HomeAssistantConnection /></section>;
   if (state === "loading") return <section className="plugins-stage"><p role="status">{t.catalogLoading}</p></section>;
   if (state === "error" || !provider) return <section className="plugins-stage"><p role="status">{t.catalogError}</p><Link href="/plugins">← {t.plugins}</Link></section>;
   const planned = provider.availability === "PLANNED";
