@@ -1101,9 +1101,80 @@ body { font-size: calc(15px + var(--text-size-step)); }
 .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .typography-setting { grid-column: 1 / -1; background: var(--surface-solid); }
 .settings-link-card { background: var(--surface-solid); }
+
+/* Administration pages: keep the existing controls, give them a deliberate workspace layout. */
+.admin-page .admin-card { max-width: 1180px; }
+.admin-page .settings-card > p.eyebrow { margin-bottom: 8px; color: var(--primary); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.admin-page .settings-card > h1 { max-width: 760px; font-size: clamp(2rem, 4vw, 3.25rem); }
+.admin-page .settings-card > p:not(.eyebrow) { max-width: 680px; margin: 10px 0 28px; color: var(--text-muted); line-height: 1.6; }
+.admin-page .settings-card > div:first-of-type { display: flex; align-items: center; gap: 12px; }
+.admin-page .settings-card > div:first-of-type input { flex: 1; min-height: 44px; border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; background: var(--surface-solid); color: var(--text); }
+.admin-page .settings-card > div:first-of-type button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid color-mix(in srgb,var(--primary) 50%,var(--border)); border-radius: 12px; background: var(--primary-soft); color: var(--primary); font-weight: 750; }
+.admin-page .settings-grid { grid-template-columns: minmax(230px,.7fr) minmax(0,1.3fr); align-items: start; gap: 22px; margin-top: 28px; }
+.admin-page .settings-grid > .settings-link-card { display: flex; align-items: center; justify-content: space-between; min-height: 74px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-solid); color: var(--text); text-align: left; transition: border-color .18s, background .18s, transform .18s; }
+.admin-page .settings-grid > .settings-link-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.admin-page .settings-grid > .settings-link-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.admin-page .settings-grid > .settings-link-card strong { font-size: .98rem; letter-spacing: .01em; }
+.admin-page .settings-grid > .settings-link-card small { color: var(--text-muted); }
+.admin-page .settings-grid + div { grid-column: 2; grid-row: 1; min-width: 0; padding: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-solid); }
+.admin-page .settings-grid + div h2 { margin: 0 0 20px; font-size: 1.25rem; }
+.admin-page fieldset { display: grid; gap: 4px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-muted); }
+.admin-page fieldset legend { padding: 0 6px; color: var(--text-muted); font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.admin-page fieldset label { display: flex !important; align-items: center; gap: 10px; min-height: 34px; padding: 5px 7px; border-radius: 8px; color: var(--text); font-size: .86rem; }
+.admin-page fieldset label:hover { background: color-mix(in srgb,var(--primary) 7%,transparent); }
+.admin-page fieldset label input { accent-color: var(--primary); }
+.admin-page fieldset label small { margin-left: auto; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .68rem; }
+.admin-page .settings-grid + div > button { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; margin: 4px 8px 0 0; padding: 0 14px; border-radius: 11px; }
+.admin-page .settings-grid + div > button.danger { color: var(--destructive); }
+.admin-page .settings-grid + div > p[role="status"] { display: inline-flex; color: #31be80; font-size: .85rem; }
+.admin-page .settings-grid + div > p[role="alert"] { color: var(--destructive); font-size: .85rem; }
+.admin-page .settings-grid + div { display: grid; gap: 18px; align-content: start; }
+.admin-page .settings-grid + div > h2 { display: flex; align-items: center; gap: 10px; margin: 0; padding-bottom: 4px; font-size: 1.35rem; letter-spacing: -.02em; }
+.admin-page .settings-grid + div > h2::after { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 5px var(--primary-soft); content: ""; }
+.admin-page .settings-grid + div fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin: 0; padding: 16px; border: 1px solid color-mix(in srgb,var(--border) 85%,transparent); border-radius: 16px; background: linear-gradient(145deg, color-mix(in srgb,var(--surface-muted) 75%,transparent), color-mix(in srgb,var(--surface-solid) 88%,transparent)); }
+.admin-page .settings-grid + div fieldset legend { grid-column: 1 / -1; width: 100%; margin-bottom: 3px; padding: 0; color: var(--text); font-size: .92rem; font-weight: 780; letter-spacing: .01em; text-transform: capitalize; }
+.admin-page .settings-grid + div fieldset label { display: flex !important; align-items: center; gap: 8px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb,var(--background) 58%,transparent); transition: border-color .16s, background .16s, color .16s; }
+.admin-page .settings-grid + div fieldset label:has(input:checked) { border-color: color-mix(in srgb,var(--primary) 55%,var(--border)); background: var(--primary-soft); color: var(--primary); }
+.admin-page .settings-grid + div fieldset label input { width: 15px; height: 15px; margin: 0; accent-color: var(--primary); }
+.admin-page .settings-grid + div fieldset label small { display: none; }
+.admin-page .settings-grid + div fieldset label::after { margin-left: auto; color: var(--text-muted); font-size: .7rem; content: ""; }
+.admin-page .settings-grid + div fieldset label input:checked + * { color: var(--primary); }
+.admin-page .settings-grid + div fieldset label input + * { display: block; min-width: 0; }
+.admin-page .settings-grid + div fieldset label input + * strong { display: block; font-size: .79rem; font-weight: 750; text-transform: uppercase; }
+.admin-page .settings-grid + div fieldset label input + * small { display: none; }
+.admin-page .settings-grid + div fieldset label:not(:has(span)) { font-size: .78rem; font-weight: 700; }
+.admin-page .settings-grid + div > button { justify-self: start; }
+.admin-page .settings-link-card + .settings-link-card { margin-top: 0; }
+.admin-page .settings-grid:has(+ div) { display: contents; }
+.admin-page .settings-card:has(.settings-grid + div) { display: grid; grid-template-columns: minmax(230px,.7fr) minmax(0,1.3fr); column-gap: 22px; }
+.admin-page .settings-card:has(.settings-grid + div) > :is(.eyebrow, h1, p:not(.eyebrow)) { grid-column: 1 / -1; }
+.admin-page .settings-card:has(.settings-grid + div) > .settings-grid { grid-column: 1; }
+.admin-page .settings-card:has(.settings-grid + div) > .settings-grid + div { grid-column: 2; }
+.admin-page .settings-grid:has(+ div) > .settings-link-card { grid-column: 1; }
+.admin-page .settings-grid:has(+ div) + div { grid-column: 2; }
+.admin-page .settings-card:has(.settings-grid + div) > p:not(.eyebrow) { margin-bottom: 20px; }
+.admin-page .settings-card:has(.settings-grid + div) { padding-bottom: 28px; }
+
+.admin-page .settings-grid article.settings-link-card { display: grid; gap: 12px; align-content: start; }
+.admin-page .settings-grid article.settings-link-card select { min-height: 96px; width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); color: var(--text); }
+.admin-page .settings-grid article.settings-link-card > button { justify-self: start; min-height: 36px; border-radius: 9px; }
+
+.room-card { overflow: hidden; box-shadow: 0 10px 35px rgb(0 0 0 / .08); }
+.room-heading { min-height: 58px; padding: 4px 2px 14px; border-bottom: 1px solid color-mix(in srgb,var(--border) 70%,transparent); }
+.room-heading-actions { gap: 6px; }
+.room-heading-actions button { width: 34px; min-height: 34px; padding: 0; border-radius: 9px; }
+.room-heading-actions .room-power-switch { margin-right: 6px; }
+.device-filter-bar { padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-solid); box-shadow: 0 8px 28px rgb(0 0 0 / .07); }
+.device-card { box-shadow: 0 8px 22px rgb(0 0 0 / .08); }
+.device-card-title > span { width: 36px; height: 36px; border-radius: 11px; }
+.device-primary-state { box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--device-accent) 12%,transparent); }
 @media (max-width: 1100px) {
   .home-dashboard > header { flex-direction: column; align-items: stretch; }
   .home-actions { justify-content: flex-start; }
+  .admin-page .settings-grid { grid-template-columns: 1fr; }
+  .admin-page .settings-card:has(.settings-grid + div) { display: block; }
+  .admin-page .settings-grid:has(+ div) { display: grid; }
+  .admin-page .settings-grid + div, .admin-page .settings-grid:has(+ div) + div { grid-column: auto; grid-row: auto; }
 }
 @media (max-width: 760px) {
   .app-shell { --page-padding: 16px; }
@@ -1242,5 +1313,36 @@ body { font-size: calc(15px + var(--text-size-step)); }
   .topbar { padding-inline: 12px; gap: 8px; }
   .topbar-actions { gap: 6px; }
   .confirm-dialog-content, .device-dialog { padding: 20px; }
-  .confirm-dialog-actions button { flex: 1; min-height: 44px; }
+.confirm-dialog-actions button { flex: 1; min-height: 44px; }
 }
+
+/* Compact permission categories on the existing roles markup. */
+.settings-stage:has(.settings-grid + div) > .settings-card { display: grid; grid-template-columns: minmax(220px,.72fr) minmax(0,1.28fr); column-gap: 24px; width: min(1180px,100%); max-width: none; padding: 0; border: 0; background: transparent; box-shadow: none; text-align: left; }
+.settings-stage:has(.settings-grid + div) > .settings-card > :is(.eyebrow,h1,p:not(.eyebrow)) { grid-column: 1 / -1; }
+.settings-stage:has(.settings-grid + div) > .settings-card > .settings-grid { grid-column: 1; grid-row: 4; grid-template-columns: 1fr; align-content: start; gap: 10px; margin: 0; }
+.settings-stage:has(.settings-grid + div) > .settings-card > .settings-grid + div { grid-column: 2; grid-row: 4; display: grid; gap: 16px; align-content: start; margin: 0; padding: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-solid); }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 8px; margin: 0; padding: 15px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface-muted); }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset legend { grid-column: 1 / -1; margin-bottom: 2px; color: var(--text); font-size: .9rem; font-weight: 800; text-transform: capitalize; }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset label { display: flex !important; align-items: center; gap: 7px; min-height: 36px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--background); font-size: .76rem; font-weight: 750; text-transform: uppercase; }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset label input { flex: none; width: 15px; height: 15px; accent-color: var(--primary); }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset label:has(input:checked) { border-color: color-mix(in srgb,var(--primary) 60%,var(--border)); background: var(--primary-soft); color: var(--primary); }
+.settings-stage:has(.settings-grid + div) > .settings-card fieldset label small { display: none; }
+@media (max-width: 1100px) { .settings-stage:has(.settings-grid + div) > .settings-card { display: block; } .settings-stage:has(.settings-grid + div) > .settings-card > .settings-grid { margin-bottom: 18px; } .settings-stage:has(.settings-grid + div) > .settings-card > .settings-grid + div { display: grid; } }
+
+/* User management: avoid the browser's tall native multi-select taking over the card. */
+.settings-stage > .settings-card:has(.settings-grid article) { max-width: 1180px; padding: 0; border: 0; background: transparent; box-shadow: none; text-align: left; }
+.settings-stage > .settings-card:has(.settings-grid article) > .settings-grid { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 14px; margin-top: 24px; }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card { display: grid; gap: 14px; min-height: 0; padding: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-solid); box-shadow: 0 10px 30px rgb(0 0 0 / .08); }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card > strong { font-size: 1rem; }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card > small { color: var(--text-muted); }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card select[multiple] { width: 100%; min-height: 44px; height: 44px; overflow: hidden; padding: 0 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--background); color: var(--text); font: inherit; }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card select[multiple] option { padding: 8px; }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card select[multiple] option:checked { background: var(--primary) linear-gradient(0deg,var(--primary),var(--primary)); color: var(--primary-foreground); }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card select[multiple]:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+.settings-stage > .settings-card:has(.settings-grid article) article.settings-link-card > button { justify-self: start; min-height: 38px; padding-inline: 13px; border-radius: 10px; }
+.user-role-field { display: grid; gap: 9px; color: var(--text-muted); font-size: .78rem; font-weight: 750; }
+.user-role-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.user-role-option { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); color: var(--text); font-size: .8rem; font-weight: 700; cursor: pointer; }
+.user-role-option:has(input:checked) { border-color: color-mix(in srgb,var(--primary) 60%,var(--border)); background: var(--primary-soft); color: var(--primary); }
+.user-role-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--primary); }
+.user-role-option input:disabled { opacity: .65; }

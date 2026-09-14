@@ -16,6 +16,8 @@ export default function IntegrationProviderPage() {
   const [provider, setProvider] = useState<CoreProvider | null>(null);
   const [connection, setConnection] = useState<CoreConnection | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [oauthState, setOauthState] = useState<"idle" | "starting" | "error">("idle");
+  const [oauthError, setOauthError] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     if (providerId === "home_assistant") return () => controller.abort();
@@ -33,7 +35,7 @@ export default function IntegrationProviderPage() {
   if (state === "error" || !provider) return <section className="plugins-stage"><p role="status">{t.catalogError}</p><Link href="/plugins">← {t.plugins}</Link></section>;
   const planned = provider.availability === "PLANNED";
   const route = customRoutes[provider.id];
-  async function connect() { const response = await fetch(`/api/integrations/${providerId}/authorization`, { method: "POST", headers: csrfHeader() }); const value: unknown = await response.json().catch(() => null); if (response.ok && value && typeof value === "object" && typeof (value as { authorizationUrl?: unknown }).authorizationUrl === "string") window.location.assign((value as { authorizationUrl: string }).authorizationUrl); }
+  async function connect() { setOauthState("starting"); setOauthError(null); try { const response = await fetch(`/api/integrations/${providerId}/authorization`, { method: "POST", headers: csrfHeader() }); const value: unknown = await response.json().catch(() => null); if (!response.ok) throw new Error(value && typeof value === "object" && "code" in value && typeof value.code === "string" ? value.code : "GOOGLE_AUTH_FAILED"); if (value && typeof value === "object" && typeof (value as { authorizationUrl?: unknown }).authorizationUrl === "string") window.location.assign((value as { authorizationUrl: string }).authorizationUrl); else throw new Error("GOOGLE_AUTH_FAILED"); } catch (error) { setOauthState("error"); setOauthError(error instanceof Error && error.message === "GOOGLE_NOT_CONFIGURED" ? "Google ist im Core noch nicht konfiguriert." : "Die Google-Anmeldung konnte nicht gestartet werden."); } }
   async function disconnect() { await fetch(`/api/integrations/${providerId}`, { method: "DELETE", headers: csrfHeader() }); window.location.reload(); }
   return <section className="plugins-stage integration-detail">
     <Link className="back-link" href="/plugins">← {t.plugins}</Link>
@@ -43,7 +45,7 @@ export default function IntegrationProviderPage() {
       <article className="connection-card"><p className="eyebrow">{t.integrationAuthentication}</p><h2>{provider.authentication}</h2><p>{provider.locality === "LOCAL" ? t.integrationLocal : t.integrationCloud}</p></article>
     </div>
     <article className="connection-card"><p className="eyebrow">{t.integrationCapabilities}</p>{provider.capabilities.length === 0 ? <p>{planned ? t.integrationPlanned : t.integrationNoCapabilities}</p> : <div className="integration-capabilities">{provider.capabilities.map((capability) => <span className={`capability-pill ${connection?.enabledCapabilities.includes(capability.id) ? "enabled" : ""}`} key={capability.id}>{connection?.enabledCapabilities.includes(capability.id) ? "✓" : "○"} {capability.name}<small> {capability.id}</small></span>)}</div>}</article>
-    {provider.id === "google" && !planned && !connection && <button className="catalog-reload" type="button" onClick={() => void connect()}>{t.integrationConfigure}</button>}
+    {provider.id === "google" && !planned && !connection && <div><button className="catalog-reload" type="button" disabled={oauthState === "starting"} onClick={() => void connect()}>{oauthState === "starting" ? "Google wird geöffnet …" : "Mit Google verbinden"}</button>{oauthError && <p className="auth-error" role="alert">{oauthError}</p>}</div>}
     {connection && <button className="catalog-reload" type="button" onClick={() => void disconnect()}>{t.spotifyDisconnect}</button>}
     {route && provider.id !== "google" && <Link className="catalog-reload" href={route}>{t.integrationConfigure}</Link>}
   </section>;
