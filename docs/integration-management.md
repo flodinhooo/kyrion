@@ -69,6 +69,12 @@ Existing configuration routes remain active: Nanoleaf uses `/plugins/nanoleaf`,
 Zigbee uses `/settings/gateways`, and Spotify uses `/plugins/spotify` with its
 existing Core-owned OAuth flow.
 
+Google OAuth state is currently held in Core process memory for the local
+development flow. It is one-time and expires after ten minutes, but any open
+OAuth flow is lost when Core restarts. Reconnecting the same Google account
+reuses its owner-scoped connection and refreshes its encrypted credentials;
+multiple Google accounts remain representable by their account identity.
+
 ## Adding an integration
 
 Add a provider definition and typed capability metadata to the catalog, then
