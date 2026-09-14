@@ -14,6 +14,7 @@ import { AboutPage } from "@/components/pages/about";
 import { DevelopmentPage } from "@/components/pages/development";
 import { DocsPage } from "@/components/pages/docs";
 import { ContactPage } from "@/components/pages/contact";
+import { LegalPage } from "@/components/pages/legal";
 
 type Props = { params: Promise<{ path?: string[] }> };
 
@@ -30,9 +31,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!route) return {};
   const { locale, page } = route;
   const t = dictionaries[locale];
-  const title = page === "home" ? t.meta.title : `${t.nav[page]} — Kyrion`;
+  const title =
+    page === "home"
+      ? t.meta.title
+      : page === "privacy" || page === "terms"
+        ? t.legal[page].title
+        : `${t.nav[page]} — Kyrion`;
   const description =
-    page === "home" ? t.meta.description : t[page].description;
+    page === "home"
+      ? t.meta.description
+      : page === "privacy" || page === "terms"
+        ? t.legal[page].intro
+        : t[page].description;
   const url = new URL(href(locale, page), siteUrl).href;
   return {
     title,
@@ -78,11 +88,16 @@ const components = {
   development: DevelopmentPage,
   docs: DocsPage,
   contact: ContactPage,
+  privacy: LegalPage,
+  terms: LegalPage,
 };
 
 export default async function PublicPage({ params }: Props) {
   const route = resolveRoute((await params).path);
   if (!route) notFound();
+  if (route.page === "privacy" || route.page === "terms") {
+    return <LegalPage t={dictionaries[route.locale]} page={route.page} />;
+  }
   const Component = components[route.page];
   return <Component t={dictionaries[route.locale]} locale={route.locale} />;
 }

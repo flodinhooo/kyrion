@@ -88,6 +88,8 @@
     "development": "Development",
     "docs": "Docs",
     "github": "GitHub",
+    "privacy": "Privacy",
+    "terms": "Terms",
     "menu": "Open navigation",
     "close": "Close navigation",
     "label": "Main navigation",
@@ -462,5 +464,98 @@
     "code": "apps/website    → public website\napps/web        → local interface\nservices/core   → platform authority",
     "note": "This is a layout foundation, not an installation guide. Search, versioned articles and the full reference will arrive with public documentation.",
     "repoLink": "Read the repository docs"
+  },
+  "legal": {
+    "privacy": {
+      "eyebrow": "PRIVACY",
+      "title": "Privacy Policy | Kyrion",
+      "intro": "How Kyrion processes information on its public website and through its product and connected services.",
+      "sections": [
+        {
+          "title": "Responsible party and contact",
+          "body": "Kyrion is responsible for this website. Contact: hello@kyrion.ch."
+        },
+        {
+          "title": "Website access data",
+          "body": "Hosting and security systems may process your IP address, request timestamp, requested URL or resource, browser and user-agent information, and server or security logs. Processing and retention depend on the actual hosting and security configuration."
+        },
+        {
+          "title": "Contact",
+          "body": "Information entered in the contact form, and messages sent to hello@kyrion.ch, are processed to answer and follow up on your inquiry. Please do not send passwords or sensitive personal details."
+        },
+        {
+          "title": "Cookies and browser storage",
+          "body": "When you choose an explicit theme, the site stores that preference in localStorage under kyrion-website-theme. This is used to remember the theme. No cookies or sessionStorage usage were identified in the website application, and contact-form drafts are not stored."
+        },
+        {
+          "title": "Analytics and tracking",
+          "body": "The current public website uses Vercel Analytics for website measurement. It does not include advertising or behavioural marketing trackers such as Google Analytics, Plausible, Matomo or Meta Pixel."
+        },
+        {
+          "title": "Google integrations and Google API data",
+          "body": "Kyrion may allow users to connect Google services such as Google Calendar. Google access occurs only after explicit authorization. Kyrion requests permissions required for enabled functionality, limits access to functionality requested by the user, and allows users to disconnect or revoke access. Google API data is not sold or used for advertising. Kyrion's use and transfer of information received from Google APIs is intended to adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
+          "google": true
+        },
+        {
+          "title": "Local-first architecture",
+          "body": "Kyrion is designed as a local-first smart-home platform. Data is processed locally wherever practical. External services receive information only when their functionality requires it and the corresponding integration or cloud capability is explicitly used or enabled."
+        },
+        {
+          "title": "Third-party services",
+          "body": "Explicitly connected providers may process data under their own policies. The public website uses Vercel for hosting and analytics, and its contact channel uses server-side SMTP delivery."
+        },
+        {
+          "title": "Data security",
+          "body": "Kyrion uses appropriate technical and organizational measures intended to protect information against unauthorized access, loss and misuse."
+        },
+        {
+          "title": "Requests and rights",
+          "body": "Contact hello@kyrion.ch with questions or requests concerning access to, correction of, or deletion of personal data. Requests are handled according to applicable law."
+        }
+      ]
+    },
+    "terms": {
+      "eyebrow": "TERMS",
+      "title": "Terms of Service | Kyrion",
+      "intro": "Terms for using the Kyrion website and publicly available Kyrion services.",
+      "sections": [
+        {
+          "title": "Scope",
+          "body": "These terms apply to the Kyrion website and publicly available Kyrion services where applicable."
+        },
+        {
+          "title": "Product status",
+          "body": "Kyrion is currently under development. Features may change, be added, removed or temporarily unavailable. The website does not promise a finished consumer product."
+        },
+        {
+          "title": "Availability",
+          "body": "Kyrion is provided without a guarantee of uninterrupted or error-free availability."
+        },
+        {
+          "title": "Third-party integrations",
+          "body": "Google and other external provider features also depend on those providers. Kyrion cannot guarantee their availability or behaviour."
+        },
+        {
+          "title": "Acceptable use",
+          "body": "Do not misuse Kyrion, attempt unauthorized access, interfere with services, exploit vulnerabilities, or use Kyrion unlawfully."
+        },
+        {
+          "title": "Intellectual property",
+          "body": "The Kyrion website, branding, software and original content remain protected by applicable rights unless otherwise stated. Third-party and open-source components remain subject to their own licenses."
+        },
+        {
+          "title": "Liability",
+          "body": "Kyrion is provided according to its current development state. Liability is limited to the extent permitted by applicable law."
+        },
+        {
+          "title": "Changes",
+          "body": "These terms may be updated as Kyrion evolves. The current version is published on this page."
+        },
+        {
+          "title": "Contact",
+          "body": "Questions can be sent to hello@kyrion.ch."
+        }
+      ]
+    }
   }
 }

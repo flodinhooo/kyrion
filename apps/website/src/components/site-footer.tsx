@@ -33,6 +33,18 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dictionary }) {
                 {t.nav[page]}
               </Link>
             ))}
+            <Link
+              className="flex min-h-11 items-center text-muted-foreground hover:text-foreground"
+              href={href(locale, "privacy")}
+            >
+              {t.nav.privacy}
+            </Link>
+            <Link
+              className="flex min-h-11 items-center text-muted-foreground hover:text-foreground"
+              href={href(locale, "terms")}
+            >
+              {t.nav.terms}
+            </Link>
             <a
               href={github}
               className="flex min-h-11 items-center gap-2 text-muted-foreground hover:text-foreground"

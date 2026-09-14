@@ -11,6 +11,8 @@ export const pages = [
   "development",
   "docs",
   "contact",
+  "privacy",
+  "terms",
 ] as const;
 export type Page = (typeof pages)[number];
 export const dictionaries: Record<Locale, Dictionary> = { en, de };
