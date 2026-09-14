@@ -27,6 +27,7 @@ from kyrion_gateway_agent.config import DEFAULT_CONFIG_PATH, AgentConfig
 from kyrion_gateway_agent.health import collect_health, platform_identity
 
 LOGGER = logging.getLogger("kyrion-gateway-agent")
+_youtube_process: subprocess.Popen[str] | None = None
 
 
 def main() -> None:
@@ -163,6 +164,10 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         complete_command(config, command_id, False, "INVALID_PAYLOAD")
         return
     try:
+        if kind == "youtube.play":
+            _play_youtube(payload)
+            complete_command(config, command_id, True)
+            return
         if kind in {"bluetooth.power", "bluetooth.brightness", "bluetooth.color"}:
             address = str(payload["deviceId"])
             if kind == "bluetooth.power":
@@ -227,6 +232,23 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             command_id, type(error).__name__, str(error)[:80],
         )
         complete_command(config, command_id, False, "EXECUTION_FAILED")
+
+
+def _play_youtube(payload: dict[str, object]) -> None:
+    global _youtube_process
+    url = payload.get("url")
+    output_id = payload.get("outputId")
+    if not isinstance(url, str) or not url.startswith(("https://www.youtube.com/", "https://music.youtube.com/")) or len(url) > 2048:
+        raise ValueError("invalid YouTube URL")
+    if not isinstance(output_id, str) or not output_id or len(output_id) > 200:
+        raise ValueError("invalid audio output")
+    if _youtube_process is not None and _youtube_process.poll() is None:
+        _youtube_process.terminate()
+        _youtube_process.wait(timeout=5)
+    _youtube_process = subprocess.Popen(
+        ["mpv", "--no-video", "--no-terminal", f"--audio-device={output_id}", url],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True,
+    )
 
 
 def _publish_and_confirm_power(

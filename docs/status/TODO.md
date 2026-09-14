@@ -2,6 +2,14 @@
 
 Last updated: 2026-09-07
 
+## Calendar and household model
+
+- [ ] Add an explicit household/workspace domain for multi-user households,
+  including membership, personal/shared calendars, visibility and permissions.
+- [ ] Store local Kyrion calendar events as the local source of truth.
+- [ ] Add opt-in, idempotent Google Calendar import and export sync with stable
+  external identifiers and content fingerprints to prevent duplicate events.
+
 ## Invited-user handoff - 2026-09-07
 
 See the [session closeout](2026-09-07-invited-users-closeout.md) for scope and
