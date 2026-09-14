@@ -13,6 +13,18 @@ import java.util.UUID
 
 class HomeAssistantHttpTest {
     @Test
+    fun `client accepts explicit connection credentials`() {
+        val config = HomeAssistantConnectionConfig("http://192.168.1.10:8123", "private-token")
+        val http = mock(HttpClient::class.java)
+        @Suppress("UNCHECKED_CAST")
+        val response = mock(HttpResponse::class.java) as HttpResponse<InputStream>
+        `when`(response.statusCode()).thenReturn(200)
+        `when`(response.body()).thenReturn(ByteArrayInputStream("[]".toByteArray()))
+        `when`(http.send(any(HttpRequest::class.java), org.mockito.ArgumentMatchers.any<HttpResponse.BodyHandler<InputStream>>())).thenReturn(response)
+        assertEquals(emptyList<HomeAssistantDevice>(), HomeAssistantClient(HomeAssistantDevelopmentConfiguration("", "", ""), jacksonObjectMapper(), http).snapshot(config))
+    }
+
+    @Test
     fun `authentication unreachable and malformed responses become safe diagnostic codes`() {
         val owner = UUID.randomUUID()
         val config = HomeAssistantConfiguration("http://192.168.1.10:8123", "private-token", owner.toString())

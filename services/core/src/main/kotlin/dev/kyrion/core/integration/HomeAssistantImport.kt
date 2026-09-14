@@ -135,16 +135,18 @@ class HomeAssistantReconciler(
 
 @Service
 class HomeAssistantImportService(
-    private val configuration: HomeAssistantConfiguration,
-    private val gateway: HomeAssistantGateway,
+    private val configuration: HomeAssistantConfiguration? = null,
+    private val gateway: HomeAssistantGateway? = null,
     private val reconciler: HomeAssistantReconciler,
     private val jdbc: JdbcClient,
     private val transactions: TransactionTemplate,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val resolver: HomeAssistantConnectionResolver? = null,
+    private val client: HomeAssistantClient? = null,
 ) {
     fun status(ownerId: UUID): HomeAssistantSyncStatus {
-        if (!configuration.configured(ownerId)) return HomeAssistantSyncStatus(
+        if ((resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)) == null) return HomeAssistantSyncStatus(
             false,
             "unknown",
             reason = "configuration_missing"
@@ -167,7 +169,8 @@ class HomeAssistantImportService(
     }
 
     fun sync(ownerId: UUID): HomeAssistantSyncResult {
-        if (!configuration.configured(ownerId)) throw HomeAssistantException("configuration_missing")
+        val connection = resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)
+            ?: throw HomeAssistantException("configuration_missing")
         val correlationId = UUID.randomUUID()
         // Serialize the snapshot fetch as well as writes across Core processes.
         return transactions.execute {
@@ -175,7 +178,8 @@ class HomeAssistantImportService(
                 .query(UUID::class.java).single()
             var reason: String? = null
             val devices = try {
-                gateway.snapshot(ownerId)
+                client?.snapshot(connection) ?: gateway?.snapshot(ownerId)
+                ?: throw HomeAssistantException("configuration_missing")
             } catch (exception: HomeAssistantException) {
                 reason = exception.code; null
             }

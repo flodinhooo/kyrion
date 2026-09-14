@@ -16,17 +16,34 @@ import java.util.UUID
 
 class HomeAssistantException(val code: String) : RuntimeException(code)
 
+class HomeAssistantConnectionConfig(
+    val baseUrl: String,
+    val accessToken: String,
+) {
+    override fun toString() = "HomeAssistantConnectionConfig(baseUrl=$baseUrl, accessToken=<redacted>)"
+}
+
 @Component
-class HomeAssistantConfiguration(
+class HomeAssistantDevelopmentConfiguration(
     @Value("\${KYRION_HA_URL:}") private val url: String,
     @Value("\${KYRION_HA_TOKEN:}") private val token: String,
     @Value("\${KYRION_HA_OWNER_ID:}") private val owner: String,
 ) {
     fun configured(ownerId: UUID) = owner == ownerId.toString() && url.isNotBlank() && token.isNotBlank()
-    fun request(ownerId: UUID, body: String): HttpRequest {
+    fun connection(ownerId: UUID): HomeAssistantConnectionConfig {
         if (!configured(ownerId)) throw HomeAssistantException("configuration_missing")
+        return HomeAssistantConnectionConfig(url, token)
+    }
+
+    /** Compatibility adapter for the existing development-only gateway tests. */
+    fun request(ownerId: UUID, body: String): HttpRequest = homeAssistantRequest(connection(ownerId), body)
+}
+
+typealias HomeAssistantConfiguration = HomeAssistantDevelopmentConfiguration
+
+internal fun homeAssistantRequest(config: HomeAssistantConnectionConfig, body: String): HttpRequest {
         val uri = try {
-            URI(url)
+            URI(config.baseUrl)
         } catch (_: Exception) {
             throw HomeAssistantException("configuration_invalid")
         }
@@ -43,14 +60,13 @@ class HomeAssistantConfiguration(
             uri.path !in setOf(
                 "",
                 "/"
-            ) || uri.port !in -1..65535 || uri.port == 0 || token.any { it == '\r' || it == '\n' }
+            ) || uri.port !in -1..65535 || uri.port == 0 || config.accessToken.isBlank() || config.accessToken.any { it == '\r' || it == '\n' }
         ) {
             throw HomeAssistantException("configuration_invalid")
         }
-        return HttpRequest.newBuilder(URI(url.trimEnd('/') + "/api/template"))
-            .timeout(Duration.ofSeconds(10)).header("Authorization", "Bearer $token")
+        return HttpRequest.newBuilder(URI(config.baseUrl.trimEnd('/') + "/api/template"))
+            .timeout(Duration.ofSeconds(10)).header("Authorization", "Bearer ${config.accessToken}")
             .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build()
-    }
 }
 
 data class HomeAssistantDevice(
@@ -70,14 +86,18 @@ interface HomeAssistantGateway {
 
 @Component
 class HomeAssistantClient(
-    private val configuration: HomeAssistantConfiguration,
+    private val configuration: HomeAssistantDevelopmentConfiguration,
     private val mapper: ObjectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper(),
     private val http: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
         .followRedirects(HttpClient.Redirect.NEVER).build(),
 ) : HomeAssistantGateway {
 
     override fun snapshot(ownerId: UUID): List<HomeAssistantDevice> {
-        val request = configuration.request(ownerId, mapper.writeValueAsString(mapOf("template" to TEMPLATE)))
+        return snapshot(configuration.connection(ownerId))
+    }
+
+    fun snapshot(config: HomeAssistantConnectionConfig): List<HomeAssistantDevice> {
+        val request = homeAssistantRequest(config, mapper.writeValueAsString(mapOf("template" to TEMPLATE)))
         try {
             val response = http.send(request, HttpResponse.BodyHandlers.ofInputStream())
             response.body().use { stream ->
