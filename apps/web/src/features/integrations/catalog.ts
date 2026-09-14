@@ -10,7 +10,7 @@ export type IntegrationAuthType = "local" | "oauth" | "token" | "none";
 export type IntegrationKind = "local" | "cloud";
 export type IntegrationCapability = { id: string; label: string; enabled: boolean };
 export type IntegrationDefinition = {
-  id: keyof IntegrationCatalog | "google" | "jellyfin";
+  id: keyof IntegrationCatalog | "google" | "jellyfin" | "home_assistant";
   name: string;
   description: string;
   kind: IntegrationKind;

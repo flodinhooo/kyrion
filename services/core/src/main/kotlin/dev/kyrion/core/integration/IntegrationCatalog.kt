@@ -52,6 +52,8 @@ class IntegrationCatalogService(
             listOf(IntegrationCapability("light.read", "Read lights", "Read light state"), IntegrationCapability("light.control", "Control lights", "Control power and brightness"), IntegrationCapability("light.color", "Color", "Control color and temperature"))),
         IntegrationProvider("zigbee", "Zigbee", "Local Zigbee devices through a gateway", IntegrationLocality.LOCAL, IntegrationAuthType.LOCAL_DISCOVERY, ProviderAvailability.LIVE,
             listOf(IntegrationCapability("smart-home.devices", "Devices", "Discover Zigbee devices"), IntegrationCapability("smart-home.control", "Control", "Control approved devices"))),
+        IntegrationProvider("home_assistant", "Home Assistant", "Read-only Home Assistant device import", IntegrationLocality.LOCAL, IntegrationAuthType.CREDENTIALS, ProviderAvailability.LIVE,
+            listOf(IntegrationCapability("smart-home.import", "Import devices", "Import devices and basic state read-only"))),
         IntegrationProvider("spotify", "Spotify", "Spotify Connect playback", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
             listOf(IntegrationCapability("media.playback", "Playback", "Control Spotify Connect playback"), IntegrationCapability("media.library", "Library", "Read supported playlists"))),
         IntegrationProvider("google", "Google", "Google Calendar", IntegrationLocality.CLOUD, IntegrationAuthType.OAUTH, ProviderAvailability.LIVE,
