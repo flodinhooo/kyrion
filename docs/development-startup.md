@@ -29,11 +29,11 @@ is an ordinary E: directory, not an anonymous Docker volume on C:.
 
 ### 2. Start Kyrion Core
 
-Copy `services\core\.env.example` to `services\core\.env` and fill in the
-local values. The real `.env` is ignored by Git. Core loads it from the Core
-working directory through Spring Boot's optional `.env` import. Process/system
-environment variables take precedence over values in that file, followed by
-the defaults in `application.yml`.
+Configure the local Core values in `infrastructure\.env` using
+`infrastructure\.env.example`. Core loads that repository-wide file through
+Spring Boot's optional import when started from `services\core`. The real
+`.env` is ignored by Git. Process/system environment variables take precedence
+over values in that file, followed by the defaults in `application.yml`.
 
 Use the same database password selected in `infrastructure\.env`, then start
 Core without repeating the variables in every shell:

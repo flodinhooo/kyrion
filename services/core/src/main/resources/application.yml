@@ -4,7 +4,9 @@ server:
 
 spring:
   config:
-    import: optional:file:.env[.properties]
+    # Local development uses the repository-wide infrastructure/.env.
+    # Process/system environment variables still take precedence.
+    import: optional:file:../../infrastructure/.env[.properties]
   application:
     name: kyrion-core
   mvc:
