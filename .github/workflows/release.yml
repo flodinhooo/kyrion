@@ -1,0 +1,72 @@
+name: Release bundle
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Immutable test version, for example 0.0.0-test.1
+        required: true
+        type: string
+      publish:
+        description: Must remain false until the release environment is approved
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then version="${{ inputs.version }}"; fi
+          [[ "$version" != *latest* && "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build unsigned ARM64 bundle
+        run: sh infrastructure/installer-v1/release/build-bundle.sh "${{ steps.version.outputs.version }}" "$RUNNER_TEMP/bundle"
+      - name: Validate unsigned bundle
+        run: python3 infrastructure/installer-v1/bundle.py "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/bundle/manifest.json"
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with: { name: unsigned-bundle, path: ${ { runner.temp } }/bundle, if-no-files-found: error }
+
+  sign:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: release-signing
+    permissions: { contents: read }
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { name: unsigned-bundle, path: bundle }
+      - name: Sign and verify manifest
+        env: { RELEASE_SIGNING_KEY: ${ { secrets.KYRION_RELEASE_SIGNING_KEY_PEM } }, RELEASE_PUBLIC_KEY: ${ { secrets.KYRION_RELEASE_PUBLIC_KEY_PEM } } }
+        run: |
+          test -n "$RELEASE_SIGNING_KEY"; test -n "$RELEASE_PUBLIC_KEY"
+          umask 077; printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/signing.pem"; printf '%s\n' "$RELEASE_PUBLIC_KEY" > "$RUNNER_TEMP/public.pem"
+          sh infrastructure/installer-v1/release/sign-manifest.sh bundle/manifest.json "$RUNNER_TEMP/signing.pem" bundle/manifest.sig
+          sh infrastructure/installer-v1/release/verify-manifest.sh bundle/manifest.json bundle/manifest.sig "$RUNNER_TEMP/public.pem"
+          rm -f "$RUNNER_TEMP/signing.pem"
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with: { name: signed-bundle, path: bundle, if-no-files-found: error }
+
+  publish:
+    needs: sign
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == true && false }}
+    runs-on: ubuntu-24.04
+    permissions: { contents: write }
+    steps:
+      - run: echo 'Publishing is intentionally disabled until release gates are approved.' && exit 1

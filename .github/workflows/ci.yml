@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core tests and boot JAR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify runner Java
+        run: java -version
+      - name: Run Core tests and boot JAR
+        working-directory: services/core
+        run: ./gradlew test bootJar --no-daemon --console=plain
+
+  web:
+    name: Web checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@10.29.3 --activate
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: apps/web
+        run: pnpm lint
+      - name: TypeScript
+        working-directory: apps/web
+        run: pnpm exec tsc --noEmit
+      - name: Tests
+        working-directory: apps/web
+        run: pnpm test
+      - name: Production build
+        working-directory: apps/web
+        run: pnpm build
+
+  installer:
+    name: Installer validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Python tests and syntax
+        run: |
+          python3 infrastructure/installer-v1/tests/test_installer.py
+          python3 -m py_compile infrastructure/installer-v1/*.py
+      - name: Shell syntax
+        run: |
+          sh -n infrastructure/installer-v1/*.sh infrastructure/installer-v1/release/*.sh
+      - name: Signature chain
+        run: sh infrastructure/installer-v1/release/test-signature.sh
+      - name: Compose contract
+        run: |
+          mkdir -p "$RUNNER_TEMP/kyrion-data" "$RUNNER_TEMP/kyrion-secrets"
+          cp infrastructure/installer-v1/templates/compose.yml "$RUNNER_TEMP/compose.yml"
+          printf 'KYRION_RELEASE=ci-test\nKYRION_HOSTNAME=kyrion.test\nKYRION_DATA_DIR=%s\nKYRION_SECRETS_DIR=%s\n' "$RUNNER_TEMP/kyrion-data" "$RUNNER_TEMP/kyrion-secrets" > "$RUNNER_TEMP/compose.env"
+          docker compose --env-file "$RUNNER_TEMP/compose.env" -f "$RUNNER_TEMP/compose.yml" config --quiet
+          docker compose -f "$RUNNER_TEMP/compose.yml" config --quiet
