@@ -7,11 +7,11 @@ services:
       POSTGRES_USER: kyrion
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
     secrets: [ postgres-password ]
-    volumes: [ __KYRION_DATA_DIR__/postgres:/var/lib/postgresql/data ]
+    volumes: [ "${KYRION_DATA_DIR:-/var/lib/kyrion}/postgres:/var/lib/postgresql/data" ]
     networks: [ platform ]
     healthcheck: { test: [ CMD-SHELL, "pg_isready -U kyrion -d kyrion" ], interval: 10s, timeout: 5s, retries: 12 }
   core:
-    image: kyrion/core:__KYRION_RELEASE__
+    image: "kyrion/core:${KYRION_RELEASE:?KYRION_RELEASE is required}"
     restart: unless-stopped
     depends_on: { postgres: { condition: service_healthy } }
     environment:
@@ -29,10 +29,10 @@ services:
     security_opt: [ no-new-privileges:true ]
     healthcheck: { test: [ CMD, curl, --fail, --silent, http://127.0.0.1:8080/actuator/health ], interval: 10s, timeout: 5s, retries: 12 }
   web:
-    image: kyrion/web:__KYRION_RELEASE__
+    image: "kyrion/web:${KYRION_RELEASE:?KYRION_RELEASE is required}"
     restart: unless-stopped
     depends_on: { core: { condition: service_healthy } }
-    environment: { CORE_SERVICE_URL: http://core:8080, KYRION_PUBLIC_URL: https://__KYRION_HOSTNAME__ }
+    environment: { CORE_SERVICE_URL: http://core:8080, KYRION_PUBLIC_URL: "https://${KYRION_HOSTNAME:-kyrion.local}" }
     networks: [ platform ]
     read_only: true
     cap_drop: [ ALL ]
@@ -42,14 +42,14 @@ services:
     restart: unless-stopped
     depends_on: { web: { condition: service_started } }
     ports: [ "443:443" ]
-    volumes: [ __KYRION_DATA_DIR__/Caddyfile:/etc/caddy/Caddyfile:ro, __KYRION_DATA_DIR__/tls:/etc/caddy/tls:ro ]
+    volumes: [ "${KYRION_DATA_DIR:-/var/lib/kyrion}/Caddyfile:/etc/caddy/Caddyfile:ro", "${KYRION_DATA_DIR:-/var/lib/kyrion}/tls:/etc/caddy/tls:ro" ]
     networks: [ platform ]
     cap_drop: [ ALL ]
     cap_add: [ NET_BIND_SERVICE ]
     security_opt: [ no-new-privileges:true ]
 networks: { platform: { driver: bridge } }
 secrets:
-  postgres-password: { file: __KYRION_SECRETS_DIR__/postgres-password }
-  credential-key: { file: __KYRION_SECRETS_DIR__/credential.key }
-  audit-key: { file: __KYRION_SECRETS_DIR__/audit-integrity.key }
-  bootstrap-secret: { file: __KYRION_SECRETS_DIR__/bootstrap.secret }
+  postgres-password: { file: "${KYRION_SECRETS_DIR:-/var/lib/kyrion/secrets}/postgres-password" }
+  credential-key: { file: "${KYRION_SECRETS_DIR:-/var/lib/kyrion/secrets}/credential.key" }
+  audit-key: { file: "${KYRION_SECRETS_DIR:-/var/lib/kyrion/secrets}/audit-integrity.key" }
+  bootstrap-secret: { file: "${KYRION_SECRETS_DIR:-/var/lib/kyrion/secrets}/bootstrap.secret" }

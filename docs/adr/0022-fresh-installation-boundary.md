@@ -1,6 +1,6 @@
 # ADR 0022: Fresh installation boundary for Installer v1
 
-- Status: Proposed
+- Status: Accepted for implementation; release gates remain open
 - Date: 2026-10-11
 
 ## Context
@@ -41,7 +41,10 @@ update/rollback and actual disaster recovery require separate future contracts.
   fixes before fresh installation is pilot-ready.
 - Refusing partial existing state favours preservation over automatic recovery.
 - A tested isolated restore is a release gate, not evidence about live hardware.
-- This is a planning proposal; no installer or new bootstrap policy is implemented.
+- The bounded installer and release tooling now live under
+  `infrastructure/installer-v1`. This ADR does not constitute pilot approval:
+  signed production artifacts, clean ARM64 execution and isolated restore
+  evidence remain separate gates.
 
 See the [implementation plan](../installer-v1-plan.md) and
 [readiness risks](../status/2026-10-11-installer-readiness.md).

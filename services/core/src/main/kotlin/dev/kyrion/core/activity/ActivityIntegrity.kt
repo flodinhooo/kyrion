@@ -18,8 +18,9 @@ import javax.crypto.spec.SecretKeySpec
 @Component
 class ActivityIntegrity(
     @Value("\${kyrion.audit.integrity-key-file:E:/Kyrion/Data/secrets/audit-integrity.key}") keyFile: String,
+    @Value("\${kyrion.audit.allow-key-generation:false}") allowGeneration: Boolean = true,
 ) {
-    private val key = SecretKeySpec(loadOrCreateKey(keyFile), "HmacSHA256")
+    private val key = SecretKeySpec(loadOrCreateKey(keyFile, allowGeneration), "HmacSHA256")
 
     fun eventHash(event: ActivityEvent, scope: String, previousHash: ByteArray?): ByteArray = authenticate(
         listOf(
@@ -39,10 +40,11 @@ class ActivityIntegrity(
         doFinal(value.toByteArray(StandardCharsets.UTF_8))
     }
 
-    private fun loadOrCreateKey(value: String): ByteArray {
+    private fun loadOrCreateKey(value: String, allowGeneration: Boolean): ByteArray {
         val path = Path.of(value).toAbsolutePath().normalize()
-        Files.createDirectories(path.parent)
         if (Files.exists(path)) return Files.readAllBytes(path).also { require(it.size == 32) }
+        require(allowGeneration) { "Audit integrity key is missing; provision it before starting Core" }
+        Files.createDirectories(path.parent)
         return ByteArray(32).also(SecureRandom()::nextBytes).also {
             Files.write(path, it, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
         }

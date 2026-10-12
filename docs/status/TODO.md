@@ -76,6 +76,8 @@ The initial fresh-install boundary is implemented under
   checks; refuse existing/stopped/partial installations, keys, DBs and symlink targets.
 - [ ] Build a public, signed, immutable ARM64 release bundle containing all four
   runtime images and no developer DB, keys, provider secrets or private artifacts.
+- [x] Add guarded GitHub Actions CI and a disabled release/signing workflow;
+  live GitHub execution and release-environment acceptance remain open.
 - [x] Create runtime-only portable Compose/Caddy templates, validated hostname/IP,
   file-backed secrets, load-only Core keys and verified health dependencies.
 - [x] Implement fresh provisioning, trusted local HTTPS and bounded first-owner

@@ -35,6 +35,7 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 import java.nio.file.Files
+import java.nio.file.Path
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
@@ -1127,7 +1128,12 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         private const val OLD_PASSWORD = "old-secure-password"
         private const val NEW_PASSWORD = "new-secure-password"
         private const val OTHER_PASSWORD = "other-secure-password"
-        private val auditKeyPath = Files.createTempDirectory("kyrion-audit-test").resolve("integrity.key").toString()
+        private val auditKeyPath = Files.createTempDirectory("kyrion-audit-test").resolve("integrity.key").also {
+            Files.write(it, ByteArray(32) { index -> (index + 1).toByte() })
+        }.toString()
+        private val credentialKeyPath = Path.of("$auditKeyPath.credentials").also {
+            Files.write(it, ByteArray(32) { index -> (index + 33).toByte() })
+        }
 
         @Container
         @JvmStatic
@@ -1144,7 +1150,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)
             registry.add("kyrion.audit.integrity-key-file") { auditKeyPath }
-            registry.add("kyrion.credentials.key-file") { "$auditKeyPath.credentials" }
+            registry.add("kyrion.credentials.key-file") { credentialKeyPath.toString() }
         }
     }
 }

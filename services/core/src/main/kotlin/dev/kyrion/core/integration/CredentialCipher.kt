@@ -15,6 +15,7 @@ data class ProtectedCredential(val ciphertext: ByteArray, val nonce: ByteArray, 
 @Component
 class CredentialCipher(
     @Value("\${kyrion.credentials.key-file:E:/Kyrion/Data/secrets/credential.key}") private val keyFile: String,
+    @Value("\${kyrion.credentials.allow-generation:false}") private val allowGeneration: Boolean = true,
 ) {
     private val random = SecureRandom()
     private val key by lazy { SecretKeySpec(loadOrCreateKey(), "AES") }
@@ -36,8 +37,9 @@ class CredentialCipher(
 
     private fun loadOrCreateKey(): ByteArray {
         val path = Path.of(keyFile).toAbsolutePath().normalize()
-        Files.createDirectories(path.parent)
         if (Files.exists(path)) return Files.readAllBytes(path).also { require(it.size == 32) { "Credential key must be 32 bytes" } }
+        require(allowGeneration) { "Credential key is missing; provision it before starting Core" }
+        Files.createDirectories(path.parent)
         val generated = ByteArray(32).also(random::nextBytes)
         Files.write(path, generated, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
         return generated
