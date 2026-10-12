@@ -26,6 +26,8 @@ management:
         include: health
 
 kyrion:
+  security:
+    bootstrap-secret-file: ${KYRION_BOOTSTRAP_SECRET_FILE:}
   ai:
     base-url: ${KYRION_AI_BASE_URL:http://127.0.0.1:8000}
   credentials:

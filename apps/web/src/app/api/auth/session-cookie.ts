@@ -27,6 +27,7 @@ export async function authenticate(request: Request, path: string, successStatus
     if (isBrowserForm) {
       const form = await request.formData();
       body = { username: form.get("username"), password: form.get("password"),
+        ...(path === "/v1/auth/setup" ? { setupSecret: form.get("setupSecret") } : {}),
         ...(path === "/v1/auth/register" ? { invitationCode: form.get("invitationCode") } : {}) };
     } else {
       body = await request.json();
@@ -34,9 +35,19 @@ export async function authenticate(request: Request, path: string, successStatus
   } catch {
     return Response.json({ code: "INVALID_REQUEST" }, { status: 400 });
   }
+  let setupSecret: string | undefined;
+  if (path === "/v1/auth/setup") {
+    if (typeof body !== "object" || body === null || !("setupSecret" in body) || typeof body.setupSecret !== "string") {
+      return Response.json({ code: "BOOTSTRAP_FORBIDDEN" }, { status: 403 });
+    }
+    const { setupSecret: secret, ...credentials } = body;
+    if (!/^[A-Za-z0-9_-]{43}$/.test(secret)) return Response.json({ code: "BOOTSTRAP_FORBIDDEN" }, { status: 403 });
+    setupSecret = secret;
+    body = credentials;
+  }
   try {
     const response = await fetch(`${CORE_SERVICE_URL}${path}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store",
+      method: "POST", headers: { "Content-Type": "application/json", ...(setupSecret ? { "X-Kyrion-Setup-Secret": setupSecret } : {}) }, body: JSON.stringify(body), cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
     const value: unknown = await response.json();

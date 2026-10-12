@@ -1,4 +1,7 @@
 <p align="center">
+
+Latest implementation: [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
+
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/logo/kyrion-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="branding/logo/kyrion-light.svg">
@@ -104,15 +107,17 @@ coverage does not establish repeatable acoustic or device acceptance.
 
 ## Current focus
 
-The pre-Velora consolidation covers the bounded HA import, existing System
-services diagnostics, provider-neutral device contracts, the Activity execution
-inspector and repository hygiene. No HA control or new product domain is added.
+The current handoff prepares a bounded fresh Installer v1. Read the
+[readiness review](docs/status/2026-10-11-installer-readiness.md),
+[consolidated TODO](docs/status/TODO.md) and
+[implementation plan](docs/installer-v1-plan.md). Installer v1 is planned,
+not delivered. Security prerequisites, existing-installation preservation,
+trusted setup and isolated recovery are explicit acceptance gates.
 
-Read the [consolidation report](docs/status/2026-09-06-platform-consolidation.md)
-and [current TODO](docs/status/TODO.md). The next dedicated Velora phase starts
-with the existing processing/audio/device-result order and repeatability
-acceptance, using the inspector to distinguish Core decisions from audio issues.
-It does not implicitly reopen TTS provider discovery.
+Installation-wide RBAC and local Calendar CRUD/read-only Google display are
+implemented. Remaining permissions, audit, privacy and reliability gaps are
+documented separately. Existing HA/Voice acceptance remains open; this handoff
+does not claim new deployment or physical verification or reopen TTS discovery.
 
 ## Architecture
 
@@ -229,11 +234,11 @@ private recordings or generated training data.
 
 ## Roadmap direction
 
-The immediate handoff is the bounded consolidation described above, followed by
-an explicitly scoped Velora phase. Wider integration profiles, backup/restore
-orchestration, Matter/Thread, remote access, mobile and public plugins remain
-future roadmap items. Spotify and YouTube already have bounded Lounge slices;
-they are not new work for this consolidation.
+The immediate handoff is Installer v1 preparation and its security prerequisites.
+Existing HA/Voice hardware acceptance remains a separate workstream. Wider
+integration profiles, complete recovery/update orchestration, Matter/Thread,
+remote access, mobile and public plugins remain future roadmap items. Spotify
+and YouTube already have bounded Lounge slices.
 
 ## Contributing
 

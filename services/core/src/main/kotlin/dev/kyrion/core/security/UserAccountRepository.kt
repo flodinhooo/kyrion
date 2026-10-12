@@ -2,6 +2,7 @@ package dev.kyrion.core.security
 
 interface UserAccountRepository {
     fun exists(): Boolean
+    fun setupCompleted(): Boolean = exists()
     fun createOwner(account: UserAccount): UserAccount?
     fun createInvitation(invitation: RegistrationInvitation)
     fun register(account: UserAccount, invitationHash: String, now: java.time.Instant): UserAccount?

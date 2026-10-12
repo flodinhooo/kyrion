@@ -7,11 +7,13 @@ import org.springframework.stereotype.Component
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import dev.kyrion.core.activity.*
 
 @Component
 class AuthenticatedRouteInterceptor(
     private val authentication: LocalAuthenticationService,
     private val rbac: RbacService,
+    private val activity: ActivityService,
 ) : HandlerInterceptor {
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         val header = request.getHeader("Authorization")
@@ -20,13 +22,17 @@ class AuthenticatedRouteInterceptor(
         if (user != null) {
             request.setAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE, user.id)
             request.setAttribute(WORKSPACE_OWNER_ID_ATTRIBUTE, user.resourceOwnerId)
-            permissionFor(request.requestURI, request.method)?.let { permission ->
-                try { rbac.require(user.id, permission) } catch (_: ForbiddenException) {
+            val permission = permissionFor(request.requestURI, if (request.method == "HEAD") "GET" else request.method)
+            try {
+                if (permission == null) throw ForbiddenException()
+                rbac.require(user.id, permission)
+            } catch (_: ForbiddenException) {
+                    activity.record(ActivityCategory.SECURITY, "security.permission.denied", ActivityStatus.DENIED,
+                        ActivityActorType.USER, "kyrion-core", permission ?: "route.unmapped", user.id.toString(), ownerId = user.resourceOwnerId)
                     response.status = HttpServletResponse.SC_FORBIDDEN
                     response.contentType = "application/json"
                     response.writer.write("{\"code\":\"FORBIDDEN\"}")
                     return false
-                }
             }
             return true
         }
@@ -42,10 +48,12 @@ internal fun permissionFor(path: String, method: String): String? = when {
     path.startsWith("/v1/rbac/permissions") -> "permissions:read"
     path.startsWith("/v1/rbac/roles") -> when (method) { "GET" -> "roles:read"; "POST" -> "roles:create"; "PUT", "PATCH" -> "roles:update"; "DELETE" -> "roles:delete"; else -> null }
     path.startsWith("/v1/rbac/users") -> when (method) { "GET" -> "users:read"; "PUT", "PATCH" -> "users:update"; else -> null }
+    path.startsWith("/v1/calendar/") || path.startsWith("/v1/integrations/google/calendar/") -> when (method) { "GET" -> "calendar:read"; "POST" -> "calendar:create"; "PUT", "PATCH" -> "calendar:update"; "DELETE" -> "calendar:delete"; else -> null }
     path.startsWith("/v1/activity") -> "activity_log:read"
     path.startsWith("/v1/conversations") -> when (method) { "GET" -> "conversations:read"; "POST" -> "conversations:create"; "PUT", "PATCH" -> "conversations:update"; "DELETE" -> "conversations:delete"; else -> null }
     path.startsWith("/v1/memory") -> when (method) { "GET" -> "personal_memories:read"; "POST" -> "personal_memories:create"; "PUT", "PATCH" -> "personal_memories:update"; "DELETE" -> "personal_memories:delete"; else -> null }
     path.startsWith("/v1/home/rooms") -> when (method) { "GET" -> "rooms:read"; "POST" -> "rooms:create"; "PUT", "PATCH" -> "rooms:update"; "DELETE" -> "rooms:delete"; else -> null }
+    path.startsWith("/v1/home/connections") -> when (method) { "GET" -> "integrations:read"; "POST" -> "integrations:create"; "PUT", "PATCH" -> "integrations:update"; "DELETE" -> "integrations:delete"; else -> null }
     path.startsWith("/v1/devices") -> when (method) { "GET" -> "devices:read"; "POST" -> "devices:create"; "PUT", "PATCH" -> "devices:update"; "DELETE" -> "devices:delete"; else -> null }
     path.startsWith("/v1/device-commands") || path.startsWith("/v1/actions") -> "devices:execute"
     path.startsWith("/v1/gateways") -> when (method) { "GET" -> "gateways:read"; "POST" -> "gateways:execute"; "PUT", "PATCH" -> "gateways:update"; "DELETE" -> "gateways:delete"; else -> null }

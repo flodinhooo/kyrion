@@ -1,13 +1,19 @@
 # Kyrion Chat Context Snapshot
 
+Latest implementation supersedes the readiness security findings: see [security hardening](2026-10-11-security-hardening.md). Installer provisioning, signed releases and real recovery/physical acceptance remain open.
+
+
 Snapshot: 2026-08-12, repository baseline `3a80ba1`.
 
-Latest supplement: [invited-user closeout, 2026-09-07](2026-09-07-invited-users-closeout.md).
-Owner-issued invitations now allow additional accounts to control shared
-devices and rooms. Individual credentials and personal data remain separate;
-RBAC is deferred. Core/Web rollout and browser/physical acceptance are pending.
-Read that supplement and the current TODO before relying on the historical
-identity description below.
+Latest supplement: [Installer readiness review, 2026-10-11](2026-10-11-installer-readiness.md).
+Read the [consolidated TODO](TODO.md) and [Installer v1 plan](../installer-v1-plan.md)
+first. Installation-wide RBAC, deactivation, local Calendar CRUD and read-only
+Google display are implemented; September 14 records a Pi deployment. Current
+tests repair the YouTube fixture, cover Calendar/RBAC HTTP paths and expose a
+fixed account-state JDBC timestamp bug. Calendar permissions, durable role
+restrictions, transactionality, audit completeness and first-owner bootstrap
+remain release gates. Installer v1 is planned, with no live rollout or new
+hardware acceptance. The baseline and detailed sections below are historical.
 
 Historical snapshot: read [the current consolidation handoff](2026-09-06-platform-consolidation.md)
 and [current TODO](TODO.md) first. It

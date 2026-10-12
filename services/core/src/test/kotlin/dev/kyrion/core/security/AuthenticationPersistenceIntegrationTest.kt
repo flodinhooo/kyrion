@@ -58,20 +58,26 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val rooms: dev.kyrion.core.home.RoomRepository,
     private val transactions: org.springframework.transaction.support.TransactionTemplate,
     private val nanoleaf: NanoleafIntegrationService,
+    private val rbac: RbacService,
+    private val google: dev.kyrion.core.integration.GoogleIntegrationService,
 ) {
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
+
+    @MockitoBean
+    lateinit var googleClient: dev.kyrion.core.integration.GoogleOAuthClient
 
     @BeforeEach
     fun cleanDatabase() {
         jdbc.sql(
             "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
+        jdbc.sql("UPDATE installation_bootstrap_state SET initialized=FALSE").update()
     }
 
     @Test
     fun `invited friend controls owner devices while keeping identity and personal data separate`() {
-        val owner = authentication.setup("flo", OLD_PASSWORD)
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val invitationResult = mockMvc.perform(post("/v1/auth/invitations")
             .header("Authorization", "Bearer ${owner.session.rawToken}"))
             .andExpect(status().isCreated).andReturn()
@@ -131,7 +137,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @Test
     fun `registration rejects duplicates expired invitations and concurrent redemption atomically`() {
-        val owner = authentication.setup("flo", OLD_PASSWORD)
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val invitation = authentication.createInvitation(owner.session.rawToken)
         assertThatThrownBy { authentication.register("FLO", OTHER_PASSWORD, invitation.code) }
             .isInstanceOf(UsernameTakenException::class.java)
@@ -159,7 +165,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @Test
     fun `HA sync records success and safe failure diagnostics without replacing prior inventory`() {
-        val login = authentication.setup("flo", OLD_PASSWORD)
+        val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val owner = login.user.id
         var failure: String? = null
         val gateway = object : dev.kyrion.core.integration.HomeAssistantGateway {
@@ -196,7 +202,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @Test
     fun `HA device import persists identity room state and owner boundaries through HTTP catalog`() {
-        val login = authentication.setup("flo", OLD_PASSWORD)
+        val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val owner = login.user.id
         val now = Instant.now()
         val room = rooms.create(owner, dev.kyrion.core.home.Room(UUID.randomUUID(), "Wohnzimmer", now, now))
@@ -233,7 +239,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @Test
     fun `timeline queries complete owner scoped history and sanitize legacy provider payloads`() {
-        val login = authentication.setup("flo", OLD_PASSWORD)
+        val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val other = insertAdditionalOwner("another")
         val correlation = UUID.randomUUID()
         val target = UUID.randomUUID()
@@ -260,18 +266,18 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     @Test
     fun `setup closes permanently and login persists across service calls`() {
         assertThat(authentication.setupRequired()).isTrue()
-        val owner = authentication.setup(" Flo ", OLD_PASSWORD)
+        val owner = authentication.setup(" Flo ", OLD_PASSWORD, setupSecret)
 
         assertThat(authentication.setupRequired()).isFalse()
         assertThat(authentication.authenticate(owner.session.rawToken)?.username).isEqualTo("flo")
         assertThat(authentication.login("FLO", OLD_PASSWORD).user.id).isEqualTo(owner.user.id)
-        assertThatThrownBy { authentication.setup("other", OTHER_PASSWORD) }
+        assertThatThrownBy { authentication.setup("other", OTHER_PASSWORD, setupSecret) }
             .isInstanceOf(SetupAlreadyCompletedException::class.java)
     }
 
     @Test
     fun `calendar routes authenticate the same bearer session as other workspace routes`() {
-        val login = authentication.setup("flo", OLD_PASSWORD)
+        val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
 
         mockMvc.perform(get("/v1/calendar/events"))
             .andExpect(status().isUnauthorized)
@@ -282,8 +288,87 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `local calendar creation persists and CRUD remains scoped to its workspace`() {
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
+        val body = """{"title":"Installer review","description":null,"startsAt":"2026-10-12T09:00:00Z","endsAt":"2026-10-12T10:00:00Z","timeZone":"Europe/Zurich","syncToGoogle":false}"""
+        mockMvc.perform(post("/v1/calendar/events").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isUnauthorized)
+        val result = mockMvc.perform(post("/v1/calendar/events")
+            .header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("Installer review"))
+            .andReturn()
+        val id = UUID.fromString(com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+            .readTree(result.response.contentAsString).path("id").asText())
+        assertThat(jdbc.sql("SELECT owner_id FROM local_calendar_event WHERE id=:id")
+            .param("id", id).query(UUID::class.java).single()).isEqualTo(owner.user.id)
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$[0].id").value(id.toString()))
+
+        insertAdditionalOwner("other")
+        val other = authentication.login("other", OTHER_PASSWORD)
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", "Bearer ${other.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
+        mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${other.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", "Bearer ${other.session.rawToken}"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body.replace("Installer review", "Updated review")))
+            .andExpect(status().isOk).andExpect(jsonPath("$.title").value("Updated review"))
+        mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk)
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM local_calendar_event WHERE id=:id")
+            .param("id", id).query(Int::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `owner role and primary owner account remain protected over HTTP`() {
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
+        val result = mockMvc.perform(get("/v1/rbac/roles")
+            .header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andReturn()
+        val ownerRole = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+            .readTree(result.response.contentAsString).first { it.path("key").asText() == "OWNER" }
+        mockMvc.perform(put("/v1/rbac/roles/${ownerRole.path("id").asText()}")
+            .header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""{"key":"OWNER","name":"Owner","permissions":[]}"""))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("SYSTEM_ROLE_PROTECTED"))
+        mockMvc.perform(put("/v1/rbac/users/${owner.user.id}/enabled").param("value", "false")
+            .header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("LAST_OWNER_PROTECTED"))
+        assertThat(authentication.authenticate(owner.session.rawToken)?.id).isEqualTo(owner.user.id)
+    }
+
+    @Test
+    fun `deactivating an invited member revokes access and records the actual actor`() {
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
+        val invitation = authentication.createInvitation(owner.session.rawToken)
+        val friend = authentication.register("friend", OTHER_PASSWORD, invitation.code)
+        mockMvc.perform(put("/v1/rbac/users/${friend.user.id}/enabled").param("value", "false")
+            .header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isNoContent)
+        assertThat(authentication.authenticate(friend.session.rawToken)).isNull()
+        mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer ${friend.session.rawToken}"))
+            .andExpect(status().isUnauthorized)
+        val event = activity.recent(owner.user.id, 100).single { it.eventType == "rbac.user.deactivated" }
+        assertThat(event.actorId).isEqualTo(owner.user.id.toString())
+        assertThat(event.ownerId).isEqualTo(owner.user.id)
+        mockMvc.perform(put("/v1/rbac/users/${friend.user.id}/enabled").param("value", "true")
+            .header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isNoContent)
+        assertThat(authentication.authenticate(friend.session.rawToken)).isNull()
+        assertThat(authentication.login("friend", OTHER_PASSWORD).user.id).isEqualTo(friend.user.id)
+    }
+
+    @Test
     fun `password change revokes every existing session and persists only the new password`() {
-        val owner = authentication.setup("flo", OLD_PASSWORD)
+        val owner = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val secondSession = authentication.login("flo", OLD_PASSWORD)
 
         val rotated = authentication.changePassword(owner.session.rawToken, OLD_PASSWORD, NEW_PASSWORD)
@@ -302,7 +387,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @Test
     fun `conversation queries enforce owner isolation in PostgreSQL`() {
-        val first = authentication.setup("first", OLD_PASSWORD).user
+        val first = authentication.setup("first", OLD_PASSWORD, setupSecret).user
         val second = insertAdditionalOwner("second")
         val now = Instant.parse("2026-08-03T20:00:00Z")
         val conversation = Conversation(
@@ -337,7 +422,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
 
         val setupResult = mockMvc.perform(
-            post("/v1/auth/setup").contentType(MediaType.APPLICATION_JSON)
+            post("/v1/auth/setup").header("X-Kyrion-Setup-Secret", setupSecret).contentType(MediaType.APPLICATION_JSON)
                 .content("""{"username":"flo","password":"$OLD_PASSWORD"}"""),
         ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.user.username").value("flo"))
@@ -346,7 +431,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val token = Regex("\"sessionToken\":\"([^\"]+)\"").find(setupResult.response.contentAsString)!!.groupValues[1]
 
         mockMvc.perform(
-            post("/v1/auth/setup").contentType(MediaType.APPLICATION_JSON)
+            post("/v1/auth/setup").header("X-Kyrion-Setup-Secret", setupSecret).contentType(MediaType.APPLICATION_JSON)
                 .content("""{"username":"other","password":"$OTHER_PASSWORD"}"""),
         ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("SETUP_ALREADY_COMPLETED"))
@@ -723,6 +808,289 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(memories.find(ownerId, memoryId)).isNull()
     }
 
+    @Test
+    fun `registration preserves revoked permissions during parallel invitations and reseeding`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val role = rbac.roles(owner.user.id).single { it.key == "USER" }
+        rbac.updateRole(owner.user.id, role.id, RoleRequest("USER", "User", role.permissions - "devices:execute"))
+        val invitations = (1..3).map { authentication.createInvitation(owner.session.rawToken) }
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(3)
+        try {
+            val members = executor.invokeAll(invitations.mapIndexed { index, invitation -> java.util.concurrent.Callable {
+                authentication.register("member$index", OTHER_PASSWORD, invitation.code)
+            } }).map { it.get() }
+            members.forEach {
+                rbac.initializeUser(it.user.id, owner.user.id, false)
+                assertThat(rbac.permissions(it.user.id)).doesNotContain("devices:execute")
+            }
+            assertThat(rbac.roles(owner.user.id).single { it.id == role.id }.permissions).isEqualTo(role.permissions - "devices:execute")
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test
+    fun `delegated admin manages only bounded roles in the owner workspace with correct audit actor`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val admin = authentication.register("admin", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val user = authentication.register("member", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val roles = rbac.roles(owner.user.id)
+        rbac.assignRoles(owner.user.id, admin.user.id, setOf(roles.single { it.key == "ADMIN" }.id))
+        val created = mockMvc.perform(post("/v1/rbac/roles").header("Authorization", "Bearer ${admin.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"key":"lamps","name":"Lamps","permissions":["devices:read"]}"""))
+            .andExpect(status().isCreated).andReturn()
+        val roleId = UUID.fromString(com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(created.response.contentAsString).path("id").asText())
+        assertThat(rbac.roles(owner.user.id).map { it.id }).contains(roleId)
+        val event = activity.recent(owner.user.id, 100).single { it.eventType == "rbac.role.created" }
+        assertThat(event.actorId).isEqualTo(admin.user.id.toString())
+        assertThat(event.summaryCode).isEqualTo(roleId.toString())
+        assertThatThrownBy { rbac.assignRoles(admin.user.id, user.user.id, setOf(roles.single { it.key == "OWNER" }.id)) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { rbac.assignRoles(admin.user.id, admin.user.id, setOf(roleId)) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { rbac.createRole(admin.user.id, RoleRequest("private", "Private", setOf("personal_memories:read"))) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { rbac.updateRole(admin.user.id, roles.single { it.key == "ADMIN" }.id, RoleRequest("ADMIN", "Admin", emptySet())) }.isInstanceOf(ForbiddenException::class.java)
+        rbac.assignRoles(owner.user.id, user.user.id, setOf(roleId))
+        rbac.assignRoles(admin.user.id, user.user.id, setOf(roleId))
+        rbac.deactivate(admin.user.id, user.user.id, false)
+        rbac.deactivate(admin.user.id, user.user.id, true)
+        mockMvc.perform(post("/v1/auth/invitations").header("Authorization", "Bearer ${admin.session.rawToken}"))
+            .andExpect(status().isCreated)
+        mockMvc.perform(post("/v1/rbac/roles").header("Authorization", "Bearer ${user.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"key":"bad","name":"Bad","permissions":[]}"""))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `cross workspace deactivation cannot revoke foreign sessions`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val foreign = insertAdditionalOwner("foreign")
+        val login = authentication.login("foreign", OTHER_PASSWORD)
+        assertThatThrownBy { rbac.deactivate(owner.user.id, foreign, false) }.isInstanceOf(RoleNotFoundException::class.java)
+        assertThat(authentication.authenticate(login.session.rawToken)).isNotNull()
+    }
+
+    @Test
+    fun `bootstrap rejects missing and invalid secrets and only one parallel owner wins`() {
+        val body = """{"username":"owner","password":"$OLD_PASSWORD"}"""
+        mockMvc.perform(post("/v1/auth/setup").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("BOOTSTRAP_FORBIDDEN"))
+        assertThatThrownBy { authentication.setup("owner", OLD_PASSWORD, "invalid") }.isInstanceOf(BootstrapForbiddenException::class.java)
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val results = executor.invokeAll((1..2).map { index -> java.util.concurrent.Callable {
+                runCatching { authentication.setup("owner$index", OLD_PASSWORD, setupSecret) }
+            } }).map { it.get() }
+            assertThat(results.count { it.isSuccess }).isEqualTo(1)
+            assertThat(results.single { it.isFailure }.exceptionOrNull()).isInstanceOf(SetupAlreadyCompletedException::class.java)
+        } finally { executor.shutdownNow() }
+        assertThatThrownBy { authentication.setup("again", OLD_PASSWORD, setupSecret) }.isInstanceOf(SetupAlreadyCompletedException::class.java)
+        assertThat(jdbc.sql("SELECT initialized FROM installation_bootstrap_state").query(Boolean::class.java).single()).isTrue()
+    }
+
+    @Test
+    fun `transaction rollback restores permissions and registration invitation`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val role = rbac.roles(owner.user.id).single { it.key == "USER" }
+        assertThatThrownBy { transactions.executeWithoutResult {
+            rbac.updateRole(owner.user.id, role.id, RoleRequest("USER", "User", emptySet()))
+            throw IllegalStateException("simulated failure")
+        } }.isInstanceOf(IllegalStateException::class.java)
+        assertThat(rbac.roles(owner.user.id).single { it.id == role.id }.permissions).isEqualTo(role.permissions)
+        val invitation = authentication.createInvitation(owner.session.rawToken)
+        assertThatThrownBy { transactions.executeWithoutResult {
+            authentication.register("rollback", OTHER_PASSWORD, invitation.code)
+            throw IllegalStateException("simulated failure")
+        } }.isInstanceOf(IllegalStateException::class.java)
+        assertThat(authentication.register("retry", OTHER_PASSWORD, invitation.code).user.username).isEqualTo("retry")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM user_account WHERE username='rollback'").query(Int::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `calendar permissions defaults and audit protect shared resources and private content`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val member = authentication.register("member", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val body = """{"title":"Private title","description":"Never audit this","startsAt":"2026-10-12T09:00:00Z","endsAt":"2026-10-12T10:00:00Z"}"""
+        val header = "Bearer ${member.session.rawToken}"
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isForbidden)
+        mockMvc.perform(post("/v1/calendar/events").header("Authorization", header).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden)
+        val role = rbac.createRole(owner.user.id, RoleRequest("calendar_reader", "Calendar reader", setOf("calendar:read")))
+        rbac.assignRoles(owner.user.id, member.user.id, setOf(role.id))
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isOk)
+        mockMvc.perform(post("/v1/calendar/events").header("Authorization", header).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden)
+        for (value in listOf<String?>(null, "true", "false")) {
+            val payload = if (value == null) body else body.dropLast(1) + ",\"syncToGoogle\":$value}"
+            mockMvc.perform(post("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isOk).andExpect(jsonPath("$.syncToGoogle").value(value == "true"))
+        }
+        mockMvc.perform(post("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}").contentType(MediaType.APPLICATION_JSON)
+            .content(body.dropLast(1) + ",\"syncToGoogle\":{}}"))
+            .andExpect(status().isBadRequest)
+        for (invalid in listOf("\"true\"", "1", "[]")) {
+            mockMvc.perform(post("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON).content(body.dropLast(1) + ",\"syncToGoogle\":$invalid}"))
+                .andExpect(status().isBadRequest)
+        }
+        assertThat(activity.recent(owner.user.id, 100).filter { it.eventType.startsWith("calendar.") }).hasSize(3)
+            .allMatch { it.actorId == owner.user.id.toString() && !it.summaryCode.contains("Private") && !it.summaryCode.contains("Never") }
+        mockMvc.perform(post("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body.dropLast(1) + ",\"timeZone\":\"Not/AZone\"}"))
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("CALENDAR_EVENT_INVALID"))
+        val id = jdbc.sql("SELECT id FROM local_calendar_event LIMIT 1").query(UUID::class.java).single()
+        mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", header).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden)
+        mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", header)).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `audit write failure rolls back setup roles account changes and calendar writes`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val member = authentication.register("member", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val role = rbac.roles(owner.user.id).single { it.key == "USER" }
+        val invitation = authentication.createInvitation(owner.session.rawToken)
+        jdbc.sql("""CREATE FUNCTION reject_security_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN RAISE EXCEPTION 'injected audit failure'; END; $$""").update()
+        jdbc.sql("CREATE TRIGGER reject_security_test_audit BEFORE INSERT ON activity_event FOR EACH ROW EXECUTE FUNCTION reject_security_test_audit()").update()
+        try {
+            assertThatThrownBy { rbac.updateRole(owner.user.id, role.id, RoleRequest("USER", "User", emptySet())) }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(rbac.roles(owner.user.id).single { it.id == role.id }.permissions).isEqualTo(role.permissions)
+            assertThatThrownBy { rbac.assignRoles(owner.user.id, member.user.id, setOf(rbac.roles(owner.user.id).single { it.key == "VIEWER" }.id)) }
+                .isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(rbac.permissions(member.user.id)).isEqualTo(role.permissions)
+            assertThatThrownBy { authentication.register("audit_rollback", OTHER_PASSWORD, invitation.code) }
+                .isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThatThrownBy { rbac.deactivate(owner.user.id, member.user.id, false) }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(authentication.authenticate(member.session.rawToken)).isNotNull()
+            val count = jdbc.sql("SELECT COUNT(*) FROM local_calendar_event").query(Int::class.java).single()
+            assertThatThrownBy { mockMvc.perform(post("/v1/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"title":"Rollback","startsAt":"2026-10-12T09:00:00Z","endsAt":"2026-10-12T10:00:00Z"}""")) }.isInstanceOf(jakarta.servlet.ServletException::class.java)
+            assertThat(jdbc.sql("SELECT COUNT(*) FROM local_calendar_event").query(Int::class.java).single()).isEqualTo(count)
+        } finally {
+            jdbc.sql("DROP TRIGGER reject_security_test_audit ON activity_event").update()
+            jdbc.sql("DROP FUNCTION reject_security_test_audit()").update()
+        }
+        assertThat(authentication.register("audit_retry", OTHER_PASSWORD, invitation.code).user.username).isEqualTo("audit_retry")
+    }
+
+    @Test
+    fun `viewer and ordinary users cannot administer identities and calendar`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val member = authentication.register("member", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        for (key in listOf("USER", "VIEWER")) {
+            rbac.assignRoles(owner.user.id, member.user.id, setOf(rbac.roles(owner.user.id).single { it.key == key }.id))
+            val header = "Bearer ${member.session.rawToken}"
+            mockMvc.perform(get("/v1/rbac/users").header("Authorization", header)).andExpect(status().isForbidden)
+            mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isForbidden)
+            mockMvc.perform(put("/v1/rbac/users/${owner.user.id}/enabled?value=false").header("Authorization", header)).andExpect(status().isForbidden)
+            mockMvc.perform(post("/v1/auth/invitations").header("Authorization", header)).andExpect(status().isForbidden)
+        }
+        assertThat(activity.recent(owner.user.id, 100).filter { it.eventType == "security.permission.denied" })
+            .hasSize(8).allMatch { it.actorId == member.user.id.toString() && it.status == ActivityStatus.DENIED }
+    }
+
+    @Test
+    fun `additive migration closes bootstrap on an existing V30 installation and preserves grants`() {
+        val schema = "upgrade_" + UUID.randomUUID().toString().replace("-", "")
+        java.sql.DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            connection.createStatement().use { it.execute("CREATE SCHEMA $schema") }
+            try {
+                fun flyway(target: String?) = org.flywaydb.core.Flyway.configure()
+                    .dataSource(postgres.jdbcUrl, postgres.username, postgres.password).schemas(schema).defaultSchema(schema)
+                    .locations("classpath:db/migration").apply { if (target != null) target(target) }.load()
+                flyway("30").migrate()
+                connection.schema = schema
+                val id = UUID.randomUUID()
+                connection.prepareStatement("INSERT INTO user_account(id, username, password_hash, enabled, created_at, updated_at) VALUES (?, 'existing', 'test-only-hash', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)").use {
+                    it.setObject(1, id); it.executeUpdate()
+                }
+                val roleId = UUID.randomUUID()
+                connection.prepareStatement("INSERT INTO rbac_role(id, installation_owner_id, role_key, display_name, system_role) VALUES (?, ?, 'USER', 'Restricted', TRUE)").use {
+                    it.setObject(1, roleId); it.setObject(2, id); it.executeUpdate()
+                }
+                connection.prepareStatement("INSERT INTO rbac_role_permission(role_id, permission_key) VALUES (?, 'devices:read')").use {
+                    it.setObject(1, roleId); it.executeUpdate()
+                }
+                flyway(null).migrate()
+                connection.createStatement().use { statement ->
+                    statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
+                    statement.executeQuery("SELECT permission_key FROM rbac_role_permission").use { it.next(); assertThat(it.getString(1)).isEqualTo("devices:read"); assertThat(it.next()).isFalse() }
+                    statement.executeQuery("SELECT COUNT(*) FROM user_account").use { it.next(); assertThat(it.getInt(1)).isEqualTo(1) }
+                    statement.executeQuery("SELECT COUNT(*) FROM rbac_permission WHERE resource='calendar'").use { it.next(); assertThat(it.getInt(1)).isEqualTo(4) }
+                    statement.executeUpdate("DELETE FROM user_account")
+                    statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
+                }
+            } finally {
+                connection.schema = "public"
+                connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") }
+            }
+        }
+    }
+
+    @Test
+    fun `google HTTP routes never use another workspace members private connection and audit writes`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val member = authentication.register("member", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val role = rbac.createRole(owner.user.id, RoleRequest("calendar", "Calendar", setOf("calendar:read", "integrations:read")))
+        rbac.assignRoles(owner.user.id, member.user.id, setOf(role.id))
+        val authorization = google.authorize(owner.user.id)
+        val state = java.net.URI(authorization.authorizationUrl).rawQuery.split("&").single { it.startsWith("state=") }.substringAfter("=")
+        `when`(googleClient.exchange("code", "http://localhost.test/callback", "test-only-client", "test-only-secret"))
+            .thenReturn(dev.kyrion.core.integration.GoogleToken("temporary-access", "temporary-refresh", Instant.now().plusSeconds(3600), "private@test.invalid"))
+        google.complete(owner.user.id, "code", state)
+        mockMvc.perform(get("/v1/integration-catalog/connections").header("Authorization", "Bearer ${member.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
+        mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
+        `when`(googleClient.events("temporary-access")).thenReturn(dev.kyrion.core.integration.GoogleCalendarEvents(emptyList()))
+        mockMvc.perform(get("/v1/integrations/google/calendar/events").header("Authorization", "Bearer ${member.session.rawToken}"))
+            .andExpect(status().isConflict).andExpect(jsonPath("$.code").value("GOOGLE_DISCONNECTED"))
+        mockMvc.perform(get("/v1/integrations/google").header("Authorization", "Bearer ${member.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.connected").value(false))
+        mockMvc.perform(get("/v1/integrations/google/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk)
+        `when`(googleClient.createEvent("temporary-access", dev.kyrion.core.integration.GoogleCalendarEventRequest("primary", "Private", "2026-10-12T09:00:00Z", "2026-10-12T10:00:00Z")))
+            .thenReturn(dev.kyrion.core.integration.GoogleCalendarEvent("provider-id", "Private", "2026-10-12T09:00:00Z", "2026-10-12T10:00:00Z"))
+        mockMvc.perform(post("/v1/integrations/google/calendar/events").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"calendarId":"primary","summary":"Private","start":"2026-10-12T09:00:00Z","end":"2026-10-12T10:00:00Z"}"""))
+            .andExpect(status().isOk)
+        val events = activity.recent(owner.user.id, 100).filter { it.eventType == "google.calendar.event.created" }
+        assertThat(events.map { it.status }).containsExactlyInAnyOrder(ActivityStatus.PROPOSED, ActivityStatus.SUCCEEDED)
+        assertThat(events.map { it.correlationId }.distinct()).hasSize(1)
+        assertThat(events).allMatch { it.actorId == owner.user.id.toString() && !it.summaryCode.contains("Private") }
+    }
+
+    @Test
+    fun `concurrent delegated mutation waits for revoked permissions and fails closed`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val admin = authentication.register("admin", OTHER_PASSWORD, authentication.createInvitation(owner.session.rawToken).code)
+        val role = rbac.roles(owner.user.id).single { it.key == "ADMIN" }
+        rbac.assignRoles(owner.user.id, admin.user.id, setOf(role.id))
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        val started = java.util.concurrent.CountDownLatch(1)
+        var future: java.util.concurrent.Future<Result<RoleView>>? = null
+        try {
+            transactions.executeWithoutResult {
+                rbac.updateRole(owner.user.id, role.id, RoleRequest("ADMIN", "Admin", role.permissions - "roles:create"))
+                future = executor.submit(java.util.concurrent.Callable {
+                    started.countDown()
+                    runCatching { rbac.createRole(admin.user.id, RoleRequest("late", "Late", setOf("devices:read"))) }
+                })
+                assertThat(started.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+                assertThatThrownBy { future!!.get(200, java.util.concurrent.TimeUnit.MILLISECONDS) }.isInstanceOf(java.util.concurrent.TimeoutException::class.java)
+            }
+            assertThat(future!!.get(5, java.util.concurrent.TimeUnit.SECONDS).exceptionOrNull()).isInstanceOf(ForbiddenException::class.java)
+            assertThat(rbac.roles(owner.user.id).map { it.key }).doesNotContain("late")
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test
+    fun `failed owner setup transaction leaves bootstrap unconsumed for retry`() {
+        assertThatThrownBy { transactions.executeWithoutResult {
+            authentication.setup("rollback", OLD_PASSWORD, setupSecret)
+            throw IllegalStateException("injected outer transaction failure")
+        } }.isInstanceOf(IllegalStateException::class.java)
+        assertThat(authentication.setupRequired()).isTrue()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM user_account").query(Int::class.java).single()).isZero()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM auth_session").query(Int::class.java).single()).isZero()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM rbac_role").query(Int::class.java).single()).isZero()
+        assertThat(authentication.setup("retry", OLD_PASSWORD, setupSecret).user.username).isEqualTo("retry")
+    }
+
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {
         mockMvc.perform(
             post("/v1/conversations/$conversationId/turns").header("Authorization", "Bearer $token")
@@ -736,7 +1104,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     private fun setupToken(): String {
         val result = mockMvc.perform(
-            post("/v1/auth/setup").contentType(MediaType.APPLICATION_JSON)
+            post("/v1/auth/setup").header("X-Kyrion-Setup-Secret", setupSecret).contentType(MediaType.APPLICATION_JSON)
                 .content("""{"username":"flo","password":"$OLD_PASSWORD"}"""),
         ).andExpect(status().isCreated).andReturn()
         return Regex("\"sessionToken\":\"([^\"]+)\"").find(result.response.contentAsString)!!.groupValues[1]
@@ -753,6 +1121,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     companion object {
+        private val setupSecret = SessionTokenService().create().rawToken
+        private val bootstrapPath = Files.createTempFile("kyrion-bootstrap-test", ".secret").also { Files.writeString(it, setupSecret) }
+
         private const val OLD_PASSWORD = "old-secure-password"
         private const val NEW_PASSWORD = "new-secure-password"
         private const val OTHER_PASSWORD = "other-secure-password"
@@ -765,6 +1136,10 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         @DynamicPropertySource
         @JvmStatic
         fun databaseProperties(registry: DynamicPropertyRegistry) {
+            registry.add("kyrion.google.client-id") { "test-only-client" }
+            registry.add("kyrion.google.client-secret") { "test-only-secret" }
+            registry.add("kyrion.google.redirect-uri") { "http://localhost.test/callback" }
+            registry.add("kyrion.security.bootstrap-secret-file") { bootstrapPath.toString() }
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)
             registry.add("spring.datasource.password", postgres::getPassword)

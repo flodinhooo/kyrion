@@ -48,13 +48,20 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     @GetMapping("/setup/status") fun setupStatus() = SetupStatusResponse(authentication.setupRequired())
 
     @PostMapping("/setup") @ResponseStatus(HttpStatus.CREATED)
-    fun setup(@Valid @RequestBody body: CredentialsRequest) = authentication.setup(body.username, body.password).response()
+    fun setup(@Valid @RequestBody body: CredentialsRequest, request: HttpServletRequest) =
+        authentication.setup(body.username, body.password, request.getHeader("X-Kyrion-Setup-Secret")).response()
 
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: CredentialsRequest) = authentication.login(body.username, body.password).response()
 
     @PostMapping("/invitations") @ResponseStatus(HttpStatus.CREATED)
-    fun invite(request: HttpServletRequest): CreatedInvitation { val user=authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException(); rbac.require(user.id,"invitations:create"); return authentication.createInvitation(request.bearerToken()) }
+    fun invite(request: HttpServletRequest): CreatedInvitation {
+        val user = authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException()
+        request.setAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE, user.id)
+        request.setAttribute(WORKSPACE_OWNER_ID_ATTRIBUTE, user.resourceOwnerId)
+        rbac.require(user.id, "invitations:create")
+        return authentication.createInvitation(request.bearerToken())
+    }
 
     @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody body: RegistrationRequest) =
@@ -63,7 +70,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     @GetMapping("/me")
     fun me(request: HttpServletRequest): UserResponse {
         val user = authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException()
-        return UserResponse(user.id, user.username, user.resourceOwnerId == user.id, rbac.users(user.resourceOwnerId).first { it.id == user.id }.roles.toSet(), rbac.permissions(user.id), user.enabled)
+        return UserResponse(user.id, user.username, "invitations:create" in rbac.permissions(user.id), rbac.users(user.resourceOwnerId).first { it.id == user.id }.roles.toSet(), rbac.permissions(user.id), user.enabled)
     }
 
     @PostMapping("/logout") @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -86,7 +93,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
     }
 
     private fun AuthenticatedOwner.response() = SessionResponse(
-        UserResponse(user.id, user.username, user.resourceOwnerId == user.id), session.rawToken, session.session.expiresAt,
+        UserResponse(user.id, user.username, "invitations:create" in rbac.permissions(user.id)), session.rawToken, session.session.expiresAt,
     )
 }
 
@@ -100,6 +107,9 @@ class UnauthenticatedException : RuntimeException()
 
 @RestControllerAdvice
 class AuthenticationErrorHandler {
+    @ExceptionHandler(BootstrapForbiddenException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun bootstrapForbidden() = ErrorResponse("BOOTSTRAP_FORBIDDEN")
     @ExceptionHandler(InvitationForbiddenException::class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     fun invitationForbidden() = ErrorResponse("INVITATION_FORBIDDEN")

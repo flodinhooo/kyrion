@@ -25,6 +25,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
       const response = await fetch(endpoint, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: data.get("username"), password: data.get("password"),
+          ...(setup ? { setupSecret: data.get("setupSecret") } : {}),
           ...(registration && !setup ? { invitationCode: data.get("invitationCode") } : {}) }),
         signal: AbortSignal.timeout(15_000),
       });
@@ -55,6 +56,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
         <small id="password-hint">{setup ? t.authPasswordHint : t.authRegistrationPasswordHint}</small>
         <label>{t.authConfirmPassword}<input name="passwordConfirmation" type="password" autoComplete="new-password" minLength={12} maxLength={200} aria-describedby="password-hint" required /></label>
       </>}
+      {setup && <label>{t.authSetupSecret}<input name="setupSecret" type="password" autoComplete="off" minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
       {registration && !setup && <label>{t.authInvitationCode}<input name="invitationCode" autoComplete="off" autoCapitalize="none" spellCheck={false} minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
       {error && <p className="auth-error" role="alert">{t[error]}</p>}
       <button disabled={pending} type="submit">{pending ? t.authPending : setup ? t.authSetup : registration ? t.authSignupTitle : t.authLogin}</button>

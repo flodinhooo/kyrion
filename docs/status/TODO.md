@@ -1,817 +1,152 @@
 # Kyrion Development TODO
 
-Last updated: 2026-09-07
-
-## Calendar and household model
-
-- [ ] **BLOCKED: Local calendar event creation does not currently persist from
-  the Web UI.** The local table exists and Core is healthy, but the browser
-  create request still fails and must be debugged from its actual HTTP status
-  and response code before more calendar work continues.
-- [ ] Verify the complete browser POST path `/api/calendar/events` → Core
-  `/v1/calendar/events` with an authenticated session and CSRF token.
-- [ ] Add an automated Web/Core test for successful local event creation.
-- [ ] Add an explicit household/workspace domain for multi-user households,
-  including membership, personal/shared calendars, visibility and permissions.
-- [ ] Store local Kyrion calendar events as the local source of truth.
-- [ ] Add opt-in, idempotent Google Calendar import and export sync with stable
-  external identifiers and content fingerprints to prevent duplicate events.
-
-### Calendar implementation status
-
-Implemented groundwork:
-
-- FullCalendar v6 React integration with month, week and day views.
-- Local `local_calendar_event` persistence migration and owner-scoped Core
-  CRUD endpoints.
-- Web proxy routes for local calendar event CRUD.
-- Google Calendar OAuth connection and Calendar API client groundwork.
-- Separate Calendar capability identifiers for read/create/update/delete.
-- Initial duplicate prevention fields using Google identifiers and a content
-  fingerprint.
-
-Known incomplete work:
-
-- The Web UI currently shows a save failure for new local events. This remains
-  unresolved and is the next required debugging task.
-- Google events are not yet reliably imported into the local calendar.
-- Local-to-Google and Google-to-local opt-in synchronization is not complete.
-- Calendar event editing, deletion and sync toggles are present in the UI
-  groundwork but require successful end-to-end persistence verification.
-
-## Invited-user handoff - 2026-09-07
-
-See the [session closeout](2026-09-07-invited-users-closeout.md) for scope and
-verification evidence.
-
-- [x] Implement owner-issued, single-use invitations and bilingual `/signup`.
-- [x] Share device/room/integration control while preserving individual identity,
-  private conversations, sessions and personal memory.
-- [x] Verify invitation redemption, shared commands and audit attribution with
-  automated tests and a mocked device adapter.
-- [ ] Update/restart Core and Web together and confirm Flyway V27 application.
-- [ ] Review owner invitation and friend registration in separate browsers.
-- [ ] Verify a real device command and its actual user attribution in Activity.
-- [ ] Define RBAC and account/invitation revocation in a later dedicated slice.
-
-This feature does not change the consolidation acceptance tasks below.
-
-## Current consolidation checkpoint - 2026-09-06
-
-The [platform consolidation report](2026-09-06-platform-consolidation.md) is the
-current handoff. It supersedes conflicting priorities in the historical sections
-below. HA scope is device/basic-state import into existing owner rooms only;
-control, services, profiles, events and migrations are deferred. Shelly native
-code is experimental; the selected sensor path is through HA.
-
-- [x] Add bounded read-only HA import with stable identity and existing-room mapping.
-- [x] Consolidate existing System services diagnostics and stale gateway handling.
-- [x] Add the owner-scoped Activity execution inspector and correlated action stages.
-- [x] Preserve experiments while separating local private/generated artifacts.
-- [ ] Physically verify HA/Shelly import, room mapping, repeated sync and offline transitions.
-- [ ] Physically verify generic Nanoleaf colour execution and gateway failure diagnosis.
-- [ ] Start the dedicated Velora acceptance phase after reviewing this report; validate
-  processing audio, device execution, final response order and twenty repeated actions.
-
-## Historical worklists and wider backlog
-
-Unchecked entries below are not authorization to expand this consolidation.
-Existing Core orchestration and exact target resolution are implemented; broader
-household roles, integration profiles and restore orchestration remain planned.
-
-
-This file contains the immediate continuation point for the next development
-session. The current implementation status is documented in [README.md](README.md).
-
-## Stable Voice MVP
-
-- [x] Add exact `Danke Velora` and `Vielen Dank Velora` session-close intents
-  with five owner-reviewed, checksum-pinned German fixed responses.
-- [ ] Physically verify both explicit gratitude phrases, response playback and
-  that the following `Hey Velora` opens a fresh session.
-
-- [x] Include every approved `light` device in provider-neutral Voice room,
-  global and exact-name power commands without a provider-specific Voice
-  change; include room-scoped brightness when the device advertises it.
-- [ ] Correct and physically verify provider-neutral living-room power order:
-  end of speech/VAD, processing response, real device change, truthful final
-  success response. The 16:36 run executed before processing playback.
-- [ ] Physically verify `Schalte Lampe Rechts an/aus` through the Voice
-  Satellite and confirm that only the named lamp changes.
-- [ ] Physically verify room brightness after dark; ambient light at the 16:36
-  power acceptance was too bright for a trustworthy judgement.
-
-Canonical continuation:
-[Kyrion/Velora Voice MVP handoff](2026-08-12-voice-mvp-handoff.md).
-
-Latest physical checkpoint:
-[Voice Satellite closeout — 2026-08-21](2026-08-21-voice-satellite-closeout.md).
-
-- [x] Replace productive Faster-Whisper final STT with the provider-neutral
-  local Parakeet/NeMo-Speech.cpp HTTP path; retain explicit locale, upstream
-  VAD, visible failure and no silent fallback.
-- [x] Execute one German multi-room light command successfully through the
-  physical Voice Satellite after the Parakeet switch.
-- [x] Emit a truthful fixed `action.processing` response only after Core has
-  validated an action proposal and revalidate the session before execution.
-- [x] Owner-review and register four German processing responses and four
-  additional German greetings with checksum-pinned audio.
-- [ ] Physically verify the deployed audible sequence: processing response,
-  device change and final outcome response. The 2026-08-22 Bluetooth run was
-  rejected because execution preceded the processing response.
-- [ ] Record twenty consecutive physical action attempts covering multi-room,
-  polarity, unavailable targets and partial success.
-- [ ] Add a typed partial-success Voice outcome and fixed/template response.
-
-- [x] Close dedicated Short-TTS provider discovery with no accepted provider.
-  Piper, Chatterbox, Qwen and CosyVoice are C; MOSS-TTS-Nano is not accepted;
-  Zonos remains research-only. Do not run further discovery or downloads for
-  this MVP.
-- [x] Route session greeting, acknowledgement, farewell and dynamic replies
-  through the existing typed response resolver in the live batch Voice path.
-- [x] Speak registered command success/failure responses only from the real
-  Core-confirmed Action Orchestrator outcome; never infer success from model
-  text.
-- [ ] Complete the remaining English Fixed Velora WAV review and registration.
-  German greeting, farewell, acknowledgement, command-result and processing
-  assets are registered; English assets remain pending.
-- [ ] Complete the documented Raspberry Pi batch-Voice acceptance, including
-  processing/result order, repeated action reliability and English assets.
-
-## Closed Short-TTS provider benchmark
-
-- [x] Freeze the XTTS dynamic-Short optimisation lane and preserve XTTS as an
-  experimental normal/long quality reference.
-- [x] Define the staged DE/EN Short and Category-B corpus and an isolated
-  provider-neutral benchmark measurement format.
-- [x] Run Stage 1 for the already installed Piper German model and Chatterbox
-  Multilingual Velora clone. Preserve fourteen WAVs and raw measurements under
-  `E:/Kyrion/Data/voice-training/short-tts-provider-benchmark/`.
-- [x] Record the owner's Stage-1 listening review: Piper and Chatterbox are both
-  C / eliminated for unacceptable Velora quality or voice identity; Chatterbox
-  also fails the Short latency requirement. Neither enters Stage 2.
-- [x] Complete a second primary-source candidate discovery without forcing a
-  winner. Select only MOSS-TTS-Nano for an isolated Stage-1 smoke test; retain
-  Zonos as a hardware-conditional research candidate and reject F5-TTS, Fish,
-  Kokoro, OpenVoice V2 and NeuTTS before download for the documented support or
-  licence gaps.
-- [x] Close the MOSS-TTS-Nano Stage-1 lane without accepting it and without
-  starting Stage 2. Its seven WAV labels remain historical
-  `pending_manual_review`; no further review is required for the MVP. Current
-  accepted Short-TTS provider: **none**. See the
-  [Short-TTS provider benchmark](2026-08-11-short-tts-provider-benchmark.md).
-
-## Superseded: XTTS physical-path recovery plan (2026-08-12)
-
-This older checklist is retained as historical context only. The later Short
-completion and MVP decisions close XTTS Short optimisation and dedicated
-provider discovery. Do not execute the remaining items below unless the owner
-explicitly reopens that separate lane after the Fixed-asset/Pi MVP acceptance.
-
-Today's physical Raspberry Pi/Pebble run is rejected. Do not interpret the
-isolated XTTS benchmark as an end-to-end pass and do not make XTTS the default.
-
-The separate, parallelisable and strictly isolated Short-output investigation
-is tracked in the
-[XTTS short-output optimisation plan](2026-08-12-xtts-short-output-optimization-plan.md).
-It explicitly excludes Core/provider integration and should complete its
-EOS/tokenisation evidence before any further XTTS integration decision.
-
-- [x] Instrument the installed XTTS autoregressive generator directly. The
-  model-declared audio EOS is `1025`, not the previously assumed `8193`; direct
-  traces do not support an EOS-bias experiment because EOS was excluded from
-  sampling before native completion in 9/10 Short runs. See the
-  [direct EOS trace](2026-08-11-xtts-v2-eos-trace.md).
-- [x] Complete the exact `.`, `!`, `?` and `;` text-token/terminal
-  representation comparison. Each uses the same explicit start `261`, stop `0`
-  and sequence length; only the punctuation token differs, so no neutral hidden
-  completion marker was found.
-- [ ] Listen to and classify the ten preserved EOS-trace Short WAVs; reconcile
-  any disagreement with the independent ASR transcripts in the report.
-- [x] Evaluate a retrospective multi-signal audio-code guard without VAD-only
-  stopping or per-chunk ASR. EOS, repeated code n-grams and entropy changes do
-  not confirm the useful pauses, and text attention is not safely exposed by
-  the installed streaming generator. Decision B: end the dynamic XTTS-Short
-  completion lane. See the
-  [multi-signal guard report](2026-08-11-xtts-v2-multisignal-code-guard.md).
-
-- [ ] Preserve the failed run before changing behavior: record the six turn
-  IDs, stored transcripts/responses and timing boundaries from wake detection
-  through playback. The worst observed turn waited about 31.8 seconds after
-  speech end; XTTS took 27.9 seconds, produced 26.0 seconds of audio at RTF
-  1.067 and recorded one simulated underrun.
-- [ ] Add an explicit physical-path acceptance report separating VAD/capture,
-  final Faster-Whisper STT, LLM, XTTS generation, Core delivery and Pi playback.
-  Report both internal XTTS TTFA and user-perceived first audio; never present
-  internal chunk arrival as physical streaming latency.
-- [ ] Fix the runtime startup contract: Core must bind to the intended LAN
-  address for the Pi while the existing firewall remains restricted to the two
-  `kyrion-node` addresses. Add a documented health check from the Pi before a
-  listening run. Do not broaden Core exposure.
-- [ ] Remove the hard-coded `gemma3:1b` selection from the voice dialogue path.
-  Route voice through the configured provider-neutral model selection and test
-  it with the same German/English language-policy fixtures as ordinary chat.
-- [ ] Enforce response-locale consistency before TTS. For a German voice turn,
-  reject or regenerate an unrequested English continuation instead of sending
-  mixed-language model output to the German XTTS frontend. Preserve legitimate
-  names and requested translations; do not implement a vocabulary allowlist.
-- [ ] Add regressions for the two captured failures: German question followed
-  by a German-to-English LLM continuation, and a German complaint transcribed
-  incorrectly as English despite locale `de`.
-- [ ] Determine whether the latter was an STT recognition error, captured
-  playback/echo, or session-turn contamination. Preserve and inspect the exact
-  utterance WAV if still available before changing Faster-Whisper settings.
-- [ ] Replace the transactional full-WAV XTTS handoff with actual bounded PCM
-  streaming through the already tested provider-neutral Core downlink and Pi
-  jitter-buffer/PipeWire components. Keep provider details and the private
-  `max_gen_mel_tokens` workaround inside the XTTS adapter.
-- [ ] Define the streaming failure boundary before implementation: no
-  Chatterbox replay after XTTS audio has become audible; fallback is allowed
-  only before release, otherwise terminate the turn cleanly and report the
-  provider failure.
-- [ ] Carry provider chunk timestamps through Core and the satellite so the
-  physical run measures XTTS TTFA, first released PCM, first Pi receipt,
-  playback start, buffer depth, underruns and cancellation independently.
-- [ ] Repeat a bounded physical matrix only after automated tests pass: short
-  DE repeated, medium/long DE, dialogue DE, numbers DE/EN, domain DE/EN,
-  mixed-name terms and natural pauses. Include the exact questions that failed
-  today.
-- [ ] Accept the next physical run only if the answer language remains correct,
-  Short-DE has no tail, user-perceived first audio meets the agreed gate,
-  long-form RTF is below 0.90 and Pi playback has zero underruns.
-- [ ] Keep Chatterbox available as the stable operational fallback after the
-  isolated XTTS-only measurement. XTTS remains opt-in until public termination
-  and repeated physical short-output correctness are solved.
-
-## Next session: Local voice Phase 3
-
-- [x] Preserve the immutable provider-neutral `velora-f` voice profile and its
-  original Qwen reference, transcript, checksum and provenance.
-- [x] Benchmark Qwen 1.7B internal codec-frame streaming on the RTX 2070 with
-  cached F conditioning, warm FP16 runtime, cancellation and bounded memory.
-- [x] Complete the owner's listening gate. Accept `start 10, then 20` without
-  crossfade as the spike candidate: it is nearly full-decode quality to the
-  owner, averages 2.309 seconds to first PCM and avoids the crossfade variant's
-  larger measured worst boundary jump.
-- [x] Phase 3.1: define and implement only a typed authenticated continuous
-  PCM16 uplink prototype from the already-woken Voice Satellite to a bounded
-  Core ingress. Include `sessionId`, `turnId`, sample rate, channel count and a
-  monotonically increasing frame sequence; record transport timing.
-- [x] Complete physical Pi-to-Core acceptance for ordering, bounded buffering,
-  authentication failure, disconnect, cancellation, reconnect and measured
-  latency. Three 20-second Pi runs delivered 250 frames each with stable Core
-  memory; the reference run measured 2-12 ms after per-session clock
-  calibration. Authentication, cancellation, disconnect and reconnect passed.
-- [x] Phase 3.2 spike: measure CPU-int8 Faster-Whisper rolling STT separately.
-  Real Delock German/English, silence/noise and correction tests reject the
-  design for production: `small` full-window recomputation delays authoritative
-  finals to roughly 2.4-2.9 seconds when a partial is in flight, while `base`
-  is fast enough but loses too much German command meaning. Keep final-utterance
-  `small/int8` as fallback and do not wire either rolling design to Core.
-- [x] Evaluate Nemotron 3.5 ASR as a genuinely stateful incremental local STT
-  candidate against the preserved private Delock set. Its CPU Q8 runtime has
-  stable partials, zero hallucinations across six noise clips and under 0.49
-  seconds mean EOS-to-final latency at 160 ms chunks, but only ties
-  `small/int8` at 16/20 usable sentence meanings and regresses `desk lamp`. Do
-  not integrate it or replace the existing final-transcript fallback.
-- [x] Close Phase 3.2 with Nemotron retained as a documented no-go and
-  Faster-Whisper `small/int8` retained as the productive bounded-final baseline.
-- [x] Define shared future STT acceptance criteria with fivefold weighting for
-  `Velora`, room and device identity, hard safety/latency/resource gates and a
-  clear-win threshold beyond aggregate WER.
-- [ ] Leave production streaming STT unplanned until another stateful local
-  candidate clearly beats the preserved `small/int8` quality gate, including
-  `Velora`, `Gamingraum`, `desk lamp` and interrupted self-correction.
-- [x] Keep Chatterbox operational as the batch fallback and do not make the
-  Qwen spike a production provider until a later provider-adapter phase.
-  The Phase 3.13 smoke check returned a valid 3.28-second mono 24 kHz PCM16 WAV
-  in 3.624 seconds and rejected an unknown voice. No audio was played.
-- [x] Phase 3.3 software prototype: add only a provider-neutral authenticated
-  bounded PCM downlink with synthetic PCM and strict session/turn, format,
-  sequence, size, total and local-cancellation validation. Keep it disconnected
-  from the production Satellite runtime and every speech provider.
-- [x] Complete Phase 3.3 physical Pi acceptance. Four 20-second 160 ms runs
-  delivered 125 frames and 960,000 bytes each in 19.85–19.88 seconds with
-  stable Core memory; cancellation, authentication rejection and reconnect
-  passed. The unstable 80 ms framing is rejected.
-- [x] Phase 3.4: add and verify only a bounded Satellite PCM jitter buffer with
-  synthetic frames, explicit prebuffer, backpressure, underflow metrics and
-  cancellation clearing. The silent Pi test consumed 125/125 frames with a
-  two-frame peak, no underflow/drop and correct queued-frame cancellation.
-- [x] Phase 3.5: add a bounded raw-PCM PipeWire sink and physically verify the
-  Creative Pebble output. The corrected two-frame downstream priming sounded
-  clean in two owner-confirmed streaming runs; completion and 59 ms
-  post-signal cancellation pass. Keep it disconnected from TTS and dialogue.
-- [x] Phase 3.6: define the smallest provider-neutral streaming-TTS contract
-  behind the existing AI boundary, including format/capability declaration,
-  cancellation and phrase granularity. Do not wire Qwen into Core until the
-  contract and an isolated adapter test pass. The contract now validates typed
-  start/audio/terminal events, provider capabilities, bounds and cancellation.
-- [x] Phase 3.7: implement and test an isolated Qwen mapping against a mocked
-  capability-reporting streaming runtime. Keep it unavailable for selection
-  because the current real Qwen runtime does not implement that interface.
-- [x] Phase 3.8: add the capability and bounded NDJSON streaming interface to
-  the isolated Qwen runtime and rerun the gate through the real adapter.
-  Capability, terminal and 208.3 ms cancellation behaviour pass, and the owner
-  accepted the short DE/EN quality samples. Integration is rejected because
-  first audio takes 2.4–2.7 seconds, update gaps reach 4.3–4.6 seconds and one
-  longer sample has an audible codec-boundary jerk. Keep Qwen isolated.
-- [ ] Do not schedule Qwen/Core integration. The next local streaming-TTS
-  candidate must sustain generation faster than playback, provide continuous
-  bounded chunks and preserve the accepted voice quality and cancellation.
-- [x] Phase 3.9: implement and test only the provider-neutral LLM-text to TTS
-  phrase-boundary policy. It emits bounded DE/EN sentences incrementally,
-  preserves domain names, avoids common abbreviation splits and discards
-  buffered text on cancellation. Keep it disconnected from production chat.
-- [x] Phase 3.10: compose a mock LLM text stream, the phrase boundary and a
-  synthetic streaming-TTS provider. Phrase/audio ordering, per-phrase sequence,
-  totals and shared cancellation pass without provider or Core integration.
-- [ ] Resume Voice Pipeline integration only after a local streaming-TTS
-  provider passes continuous faster-than-playback generation, voice quality,
-  cancellation, stability, memory and licence gates. Until then retain the
-  working batch dialogue and avoid speculative Core wiring.
-- [x] Phase 3.11: define shared streaming-TTS acceptance criteria. Treat
-  continuous post-prebuffer playback, long-form RTF below 0.90, bounded chunk
-  deadlines and critical Velora/domain/boundary listening scores as hard gates,
-  rather than accepting TTFA alone.
-- [x] Select at most one new local streaming-TTS candidate for an isolated
-  Phase 3.12 spike based on official streaming, cloning, licence and RTX 2070
-  feasibility evidence. `Fun-CosyVoice3-0.5B-2512` is selected because its
-  official project supports DE/EN zero-shot cloning and bi-streaming under an
-  Apache-2.0 code licence. Do not integrate it or download other candidates.
-- [x] Install CosyVoice 3 only in the isolated training WSL environment and
-  prove model load plus one DE/EN `velora-f` clone before running the full
-  Phase 3.11 acceptance matrix. The cached warm proof fails early: first PCM
-  takes 4.2–5.4 seconds, five of six outputs arrive as a single complete chunk,
-  and warm RTF is roughly 0.94–1.52. Freeze CosyVoice as a no-go.
-- [ ] Leave streaming-TTS provider selection open. Qwen and CosyVoice are
-  documented no-go candidates on the RTX 2070; Chatterbox remains the working
-  batch fallback and the synthetic provider-neutral contracts remain ready.
-- [x] Replace the Qwen-specific name of the existing AI-side local batch HTTP
-  TTS client with an explicit provider-neutral name. Preserve Piper and typed
-  failure behaviour; do not add silent fallback, streaming or Core changes.
-  `http_batch` now targets the explicit `KYRION_HTTP_TTS_URL`; the real
-  Chatterbox acceptance returned valid mono 24 kHz PCM16 and all 72 tests pass.
-- [x] Run and diagnose the first physical five-turn batch voice dialogue. The
-  path is reliable but not accepted as a natural conversation: perceived waits
-  were approximately 7.858-13.814 seconds, the prompt imposes at most two
-  concise sentences, and voice generation is capped at 48 tokens. Core applies
-  no content shortening before Chatterbox. Preserve STT and TTS while the
-  documented prompt/latency diagnosis is reviewed.
-- [x] Adjust the voice response policy after review: retain short answers
-  for simple facts, allow two to four natural sentences for open/explanatory
-  questions, and replace the blanket 48-token ceiling with a 256-token upper
-  safety bound controlled in practice by the adaptive response policy.
-  Prompt/context and natural stop-phrase regressions pass without
-  changing STT, TTS, transport or Satellite infrastructure.
-- [ ] Physically repeat the Phase 3.15 multi-turn dialogue with the Phase 3.16
-  policy, including a fact, contextual follow-up, open explanation, challenged
-  prior claim and natural compound session end. Record the same per-turn
-  content and latency boundaries for a direct before/after comparison.
-
-Do not begin the Pi audio downlink, production Dialogue Controller changes,
-WebSocket/NDJSON TTS streaming, playback buffer or barge-in in Phase 3.1.
-
-## Completed: Local authentication and ownership
-
-- [x] Add an identity and session database schema without creating a default
-  user or exposing public registration.
-- [x] Hash passwords with Argon2id using unique salts.
-- [x] Generate opaque 256-bit session tokens and persist only SHA-256 hashes.
-- [x] Implement and test session creation, expiry, last-seen updates and
-  revocation in Core.
-- [x] Add a one-time local-owner setup endpoint and setup screen.
-- [x] Add Core login, current-user and logout endpoints.
-- [x] Set the session through a same-origin `HttpOnly` and `SameSite` cookie;
-  use `Secure` whenever Kyrion is served over HTTPS.
-- [x] Add CSRF protection to authenticated state-changing requests.
-- [x] Protect private Core and Next.js routes through authoritative session checks.
-- [x] Add automated integration coverage that proves owner isolation with two
-  users before multi-user setup is introduced.
-- [x] Record authentication success, failure and logout as data-minimised
-  security activity events without logging credentials or raw tokens.
-- [x] Add automated tests for cookie flags, CSRF validation, invalid
-  credentials, expiry, revocation, session rotation and PostgreSQL owner
-  isolation.
-- [x] Add authenticated password change with current-password verification,
-  revocation of all existing sessions and a fresh session cookie.
-
-## Completed chat and voice refinement
-
-- [x] Render assistant responses as Markdown instead of displaying Markdown
-  syntax such as `**bold**` as plain text.
-- [x] Add polished styling for headings, paragraphs, lists, links, inline code
-  and fenced code blocks in both themes.
-- [x] Improve spacing and readable line lengths for longer responses.
-- [x] Add persistent standard, comfortable and large typography options that
-  scale body text, headings and page titles without enlarging layout chrome.
-- [x] Keep the conversation scrolled to the newest content while a response is
-  streaming, without overriding intentional user scrolling.
-- [x] Add a Kyrion/Velora system prompt so the assistant identifies itself as
-  Velora and describes its role accurately instead of repeating the base
-  model's identity.
-- [x] Define sensible defaults for response language, tone and length.
-- [x] Refine the loading, stop-generation and error states.
-- [x] Manually exercise the primary chat, history and authentication flows in
-  both light and dark mode.
-- [ ] Complete a systematic German and English visual pass for every settings
-  and error state.
-
-## Verification
-
-- [x] Run `pnpm lint`.
-- [x] Run `pnpm build`.
-- [x] Start the full local stack using
-  [Local Development Startup](../development-startup.md).
-- [x] Send short, long and list-based prompts through
-  `http://localhost:3000`.
-- [ ] Add a dedicated code-block prompt to the next visual regression pass.
-- [x] Confirm that streaming and continued persisted conversations work after
-  adding Markdown rendering.
-
-## After the chat refinement
-
-- [x] Add an AI-service readiness state to the web status indicator.
-- [x] Add a controlled per-device model selector backed by the deployment
-  allowlist.
-- [x] Add a dedicated model page with metadata from the local model runtime.
-- [x] Add a controlled per-device benchmark with a transparent model
-  recommendation.
-- [x] Introduce conversation identifiers.
-- [x] Add an initial browser-backed Voice Mode opened from the Velora orb.
-- [x] Add per-language browser voice selection, previews and speaking-rate
-  controls.
-- [x] Stream visible answer tokens immediately for reasoning-capable models
-  without waiting for an invisible Qwen thinking pass.
-- [x] Begin speaking completed sentences while later answer text is still being
-  generated.
-- [x] Isolate voice turns so old messages and cancelled utterance callbacks do
-  not enter the next response queue.
-- [x] Add a centred, wider Voice Mode transcript with subtle spoken-word focus.
-- [ ] Replace prototype browser speech recognition and system TTS with
-  explicitly selected local providers.
-- [x] Train and deploy the first local `Hey Velora` ONNX wake-word candidate as
-  a non-privileged Pi user service; prove one live Delock microphone detection.
-- [x] Train and deploy a second wake-word test candidate with reviewed room
-  examples, a deterministic holdout and a rollback copy; record its mixed
-  synthetic and real-room comparison honestly.
-- [ ] Broaden physical wake-word evaluation and improve missed-phrase recall,
-  then add interruption and voice-device settings above the accepted Pi audio
-  endpoints.
-- [ ] Record a dedicated independent `Velora`-only negative set and positive
-  holdouts across the Pi microphone and at least one phone microphone before
-  accepting another strongly personalised wake-word candidate.
-- [ ] Keep V2 deployed until V5 passes independent complete-phrase,
-  partial-phrase and cross-microphone holdouts; never deploy the archived V3 or
-  V4 overfit experiments merely because they reached 11/11 same-session recall.
-- [ ] After V5 acceptance, build the bounded first-dialog slice in this order:
-  acknowledgement tone, VAD-bounded post-wake capture, authenticated Core
-  delivery, local STT, existing assistant routing, local TTS and Pebble output.
-- [x] Add `/activity` to the primary navigation with an honest Core-bound empty
-  state.
-- [x] Define the Core-owned activity event contract and append-only log.
-- [x] Connect `/activity` to persisted Core events without exposing sensitive
-  payloads.
-- [x] Define the Core/database boundary for conversation persistence.
-- [x] Add a local PostgreSQL development database after the first Core contracts
-  are stable.
-- [ ] Add authenticated actor ownership, retention policy and tamper-evidence to
-  the activity log before treating it as a compliance audit trail. Explicit
-  owner scoping is implemented through Flyway V17 and ADR 0012; retention
-  enforcement and tamper evidence remain open.
-- [x] Add active conversation highlighting, editable titles, confirmed
-  deletion, history states and visible persistence errors.
-- [x] Add owner-scoped PostgreSQL conversation and message persistence after the
-  authentication slice is complete.
-
-## Next session: Authoritative context and compaction
-
-- [x] Document the typed contract for Core-owned conversation context supplied
-  to the AI service.
-- [x] Load stored messages by authenticated owner and conversation ID instead of
-  treating a browser-supplied full transcript as authoritative.
-- [x] Define a transparent context token budget for the selected models under
-  the current shared 4,096-token runtime configuration.
-- [x] Preserve the latest turns verbatim while compacting only older context.
-- [x] Persist summaries with source ranges, versioning and regeneration rules.
-- [x] Tell the user when older context was compacted.
-- [x] Add tests for ordering, owner isolation and deterministic context
-  selection. Malformed model-summary output is not applicable because the first
-  compaction algorithm is deterministic and does not invoke a model.
-- [x] Persist a visibly stopped partial assistant response through the new
-  authoritative turn contract.
-
-## Then: Explicit personal memory
-
-- [x] Record an ADR for personal-memory consent, sensitivity and ownership.
-- [x] Add a profile-level opt-in with German and English explanations.
-- [x] Support an explicit “remember this” request as the first extraction path.
-- [x] Require confirmation before retaining sensitive memories such as religion,
-  health, relationships or political beliefs.
-- [x] Add a profile view to inspect, correct and forget individual memories.
-- [x] Retrieve only a small relevant set and make memory influence visible.
-- [x] Keep memory records separate from conversation history and executable
-  plugin authority.
-
-## Security and operations follow-up
-
-- [x] Add Core-owned login throttling before remote exposure. Five consecutive
-  failures for a normalised account key now trigger a 30-second temporary
-  backoff that doubles to a 15-minute cap; successful login resets the state,
-  and rejected requests return `LOGIN_RATE_LIMITED` with `Retry-After` without
-  logging credentials or the attempted username. The current single-Core
-  development deployment keeps this bounded state in memory; a future
-  multi-instance deployment must move it to shared protected storage.
-- [x] Add owner-scoped active-session listing and selective revocation to the
-  profile. Core returns only session IDs and timestamps, marks the current
-  session, restricts revocation in SQL to the authenticated owner and records
-  successful revocations without exposing session-token hashes. Web keeps
-  credentials in the existing HTTP-only cookie boundary and protects the
-  revoke route with CSRF validation.
-- [x] Define owner-controlled conversation and activity retention policies with
-  safe `keep_forever` defaults. Flyway V18 persists typed policy intent; this
-  first slice performs no automatic deletion and reports enforcement as inactive.
-- [x] Implement reviewed manual retention enforcement for conversations,
-  activity and personal memory. Preview reports owner-scoped cutoffs and counts;
-  cleanup requires exact confirmation, recalculates inside one transaction and
-  records an audit event. Automatic deletion remains inactive.
-- [ ] Define personal-memory archival separately from permanent retention
-  cleanup, including legal holds and future household administration.
-- [x] Add owner/system activity scoping and tamper evidence. New events use
-  HMAC-SHA-256 chains with serialized heads; verification reports legacy rows,
-  detects changed content and supports signed anchors for authorised retention
-  prefixes. This is not presented as compliance certification or protection
-  after simultaneous database and integrity-key compromise.
-- [x] Add PostgreSQL backup and isolated restore verification. The operational
-  scripts create a custom-format dump plus SHA-256 manifest outside the
-  repository, restore into a random temporary database, validate Flyway history
-  and public tables, and never overwrite the active production database.
-- [x] Add a portable passphrase-encrypted personal backup export for
-  conversations, personal memories and retention settings. The versioned V1
-  envelope excludes authentication, sessions, integration credentials, device
-  tokens and private keys. Preview and confirmed transactional import remap data
-  to the authenticated destination owner, preserve relationships and skip
-  records already imported from the same backup. Automated integration coverage
-  verifies cross-owner restore and repeat-import safety; clean-room operational
-  restore exercises remain follow-up work.
-
-## Next vertical slice: Velora device control through Core
-
-Current planning checkpoint: implementation may continue on the software-only
-items below while physical Nanoleaf verification is deferred until the owner
-completes physical testing. The market and user-needs analysis now prioritises
-Kyrion's trustworthy orchestration and operations layer over raw integration
-breadth, without bypassing Core authority or the local-first boundary. See
-[Product Strategy](../product-strategy.md).
-
-- [x] Add the first bounded German and English proposal schema for room-scoped
-  Nanoleaf power and brightness commands.
-- [x] Resolve exact owner-visible room names in Core and apply a command to all
-  matching owner-scoped Nanoleaf connections without an unnecessary follow-up.
-- [x] Return and persist deterministic text/Voice Mode feedback derived from
-  the Core execution result rather than model-generated success claims.
-- [x] Reject descriptive questions and out-of-range brightness values instead
-  of treating them as executable commands.
-- [x] Expose an owner-scoped Core runtime catalog containing safe device, room
-  and capability metadata without provider hosts or credentials.
-- [x] Supply the runtime catalog to the AI service and suppress proposals for
-  capabilities that are not currently available to the owner.
-- [x] Define provider-neutral `online`, `offline`, `degraded` and `unknown`
-  availability with an optional observation timestamp; report `unknown` until
-  Core has a real sufficiently recent observation.
-- [x] Refuse device-specific qualifiers in the initial room-wide parser instead
-  of silently discarding them and controlling every device in the room.
-- [x] Persist the latest owner-scoped device observation through Flyway V10.
-- [x] Add a CSRF-protected explicit refresh capped at 20 devices; keep catalog
-  reads side-effect free and expire observations to `unknown` after 60 seconds.
-- [x] Connect Home to passive catalog reads and a visible German/English status
-  refresh with unknown, online, offline, degraded and last-observed display.
-- [x] Persist availability observations from Velora command outcomes without
-  allowing secondary observation-storage failure to falsify command results.
-- [x] Add exact owner-scoped stable-device selectors and move Home quick-power
-  actions onto the same provider-neutral Core command path as Velora.
-- [x] Let Velora address one device by an exact, unique catalog display name;
-  pass only its stable owner-scoped ID to Core and refuse partial or duplicate
-  name matches instead of guessing.
-- [ ] Define provider-neutral device identity, state, capability, command and
-  command-result contracts above the working Nanoleaf implementation.
-- [ ] Expose an owner-scoped Core inventory that can resolve devices by stable
-  ID and natural-language selectors such as room, display name and capability.
-- [x] Define a bounded tool catalogue from the capabilities currently available
-  to the authenticated owner; do not give the AI service provider credentials
-  or arbitrary network access.
-- [x] Let Velora propose typed commands while keeping target resolution,
-  argument validation and execution authoritative in Core.
-- [ ] Add explicit clarification UX for plausible ambiguous rooms or devices;
-  the current exact-name slice safely refuses duplicate, partial and invented
-  device names without executing them.
-- [ ] Define permission and confirmation policy for routine, destructive,
-  costly, privacy-sensitive and safety-relevant capabilities.
-- [x] Execute accepted proposals through the same integration command path used
-  by Web controls and return a typed result to text and voice conversations.
-- [ ] Record proposed, rejected, confirmation-required and executed actions with
-  actor, source and one correlation identifier without logging private prompts
-  or secrets.
-- [ ] Prove the first end-to-end action with German and English requests to turn
-  on the existing Nanoleaf devices in the living room.
-- [ ] Add tests for successful execution, ambiguity, missing capability,
-  unavailable devices, cross-owner access, malformed model output and adapter
-  failure.
-
-Success criterion:
-
-> An authenticated owner can ask Velora by text or browser-backed voice to turn
-> on the Nanoleafs in the living room. Core resolves and validates the targets,
-> executes through the Nanoleaf adapter, records the correlated outcome and
-> returns an accurate result without exposing credentials to Web or AI.
-
-## Ordered gateway hardware preparation
-
-- [x] Record the August 2026 Raspberry Pi, radio, voice and smart-home hardware
-  order in the [Development Hardware Roadmap](../hardware-roadmap.md).
-- [x] Define and implement authenticated gateway registration, identity,
-  heartbeat and health
-  contracts before implementing radio-specific control.
-- [x] Separate heartbeat-reported Zigbee candidates from owner-approved Home
-  devices in the first UI slice; require an explicit name and Add action before
-  Core creates or reconciles the stable inventory record.
-- [ ] Apply the same post-approval contract to Thread/Matter, local-network and
-  future adapter discovery: create or reconcile a
-  stable database device record, display it automatically on `/home`, and
-  persist every room assignment, rename and removal lifecycle change.
-- [x] Apply explicit candidate approval, owner naming, stable catalog
-  persistence and typed async Core commands to the first bounded Bluetooth
-  model (`MELK-OA20`) without routing control through Home Assistant.
-- [x] Define stable USB adapter identity/configuration without assuming device
-  paths before the Raspberry Pi and radios are available.
-- [ ] Prepare provider-neutral Integration Manager, Device Manager, discovery
-  inbox and gateway/voice-satellite health views in German and English.
-- [ ] Complete hardware acceptance: Raspberry Pi, Sonoff ZBDongle-E and USB
-  voice hardware baseline validation is complete; ZBT-2 and recovery drills
-  remain.
-- [x] Expose the first stable owner-scoped Zigbee light capabilities and typed,
-  audited device commands in Web through Core.
-- [x] Replace automatic post-pairing import with a Core-owned Zigbee discovery
-  inbox and explicit approve, name, remove and re-pair lifecycle. Rejection of
-  a discovered-but-unapproved candidate remains a small UX follow-up.
-- [ ] Harden the implemented asynchronous Zigbee command-status contract and
-  visible pending/failure UI; test ownership, timeout, malformed
-  payload, adapter failure, retry and idempotency boundaries.
-- [x] Separate fast 250 ms gateway command polling from the five-second health
-  heartbeat and add a Home entry point for explicit Zigbee or local-network
-  device discovery. The first asynchronous command-status slice is implemented.
-- [ ] Prove Zigbee, Matter-over-Thread, Wi-Fi and voice support as separate
-  end-to-end slices; do not mark an integration complete based only on pairing
-  or discovery.
-
-### Deferred gateway productisation
-
-The current SSH, `sudo`, firewall and command-line provisioning flow is an
-intentional development path, not the finished owner experience. Do not pause
-protocol validation to generalise it prematurely. After the planned gateway
-integrations work end to end:
-
-- [ ] Replace developer provisioning with a guided German/English Web
-  onboarding flow that requires no programming or terminal knowledge.
-- [ ] Package the gateway agent with installation, update, rollback and clean
-  removal support.
-- [ ] Add automatic local discovery, understandable physical confirmation and
-  a discovery inbox that separates detected candidates from approved devices.
-- [ ] Add guided Zigbee, Thread/Matter, Bluetooth and voice setup with safe
-  permissions, restore points and translated diagnostics.
-- [ ] Reset the development Raspberry Pi and perform a complete clean-room
-  onboarding test as a new owner would, recording every manual prerequisite,
-  failure and recovery step.
-- [ ] Do not call gateway onboarding product-ready until that clean-room test
-  succeeds without SSH, manual firewall editing or copied terminal commands.
-
-## Current open-work grouping
-
-### Implementable now
-
-- [ ] Stabilise the provider-neutral device and capability contracts.
-- [ ] Centralise stable-ID, exact-room, exact-name and capability target
-  resolution in a Core-owned Device Manager.
-- [ ] Introduce households, members and initial owner/member/guest roles above
-  the current single-owner foundation.
-- [ ] Define action permission and confirmation classes.
-- [ ] Implement Observe, Control and Manage integration profiles as presets over
-  granular permissions, including immediate reduction and confirmed elevation.
-- [ ] Audit proposed, rejected, confirmation-required and executed actions with
-  actor, source and correlation ID, without storing private prompts.
-- [ ] Define integration-health reason codes and user-facing diagnostic
-  explanations.
-- [ ] Add a Home Assistant adapter that maps bounded devices, areas, state,
-  capabilities and health into Kyrion-owned contracts and enforces the selected
-  Observe, Control or Manage profile.
-- [ ] Implement pre-change restore-point orchestration before integration
-  onboarding, permission elevation and material device lifecycle operations.
-- [ ] Add a Core restore-point manifest with `complete`, `partial`,
-  `unsupported` and `failed` coverage plus separate restore-verification state.
-- [ ] Add backup-provider adapters for Core/PostgreSQL, Home Assistant, gateway
-  configuration and supported Zigbee/Thread infrastructure.
-- [ ] Block protected changes after required backup failure and present exact
-  unsupported coverage before any limited owner-approved operation.
-- [ ] Add checkpoint retention, deduplication, integrity checks, storage quotas
-  and scheduled real restore exercises.
-- [ ] Preserve HA identities and automation provenance; classify migrations as
-  full, partial or unsupported and never silently delete source data.
-- [ ] Add a clarification response and continuation flow for ambiguous targets.
-- [ ] Complete boundary tests for ambiguity, missing capability, unavailable
-  devices, cross-owner access, malformed AI output and adapter failure.
-- [ ] Prepare German and English Device Manager, Integration Manager, discovery
-  inbox and gateway/voice-satellite health views.
-
-### Awaiting owner verification
-
-- [ ] Retest the SNZB-01P single-click living-room toggle twice against the
-  22:14 Core JAR and confirm alternating Bluetooth `on=true` / `on=false`
-  commands. Core now tracks the last successfully commanded state because the
-  OA20 devices report `on: null`.
-- [ ] Measure the confirmed long-press path from Zigbee event to Nanoleaf
-  completion and reduce only the measured source of latency.
-- [ ] Harden Voice failure audio so an unavailable dynamic TTS response cannot
-  abort the NDJSON turn with HTTP 500.
-
-- [x] Physically verify fresh authentication and Home quick-power actions
-  against the existing Nanoleaf devices.
-- [ ] Repeat the German Velora text command after the unique `room`/`raum` alias
-  and contextual room-correction fix, then verify brightness, English and Voice
-  Mode commands.
-- [ ] Physically verify explicit status refresh and truthful
-  unavailable-controller feedback.
-- [ ] Activate and physically verify OA20 last-command state reporting in Web;
-  test external-app and power-cycle drift without presenting it as live
-  device telemetry.
-
-### Physical gateway and hardware validation
-
-- [x] Validate the Raspberry Pi 5 host, storage, Ethernet, IPv6, temperature,
-  throttling and integrated Bluetooth inventory.
-- [x] Validate the Sonoff ZBDongle-E and first Philips Hue colour lamp through
-  real pairing, state reporting and reversible Web commands.
-- [x] Pair a second Philips Hue colour lamp, verify automatic Core database and
-  `/home` import, and configure both lamps to recover their last state after a
-  cold power cycle.
-- [x] Validate the Delock USB microphone and Pebble V3 Bluetooth playback,
-  including temporary capture, direct/browser playback, reboot reconnect and
-  bounded authenticated gateway health.
-- [ ] Validate the Home Assistant Connect ZBT-2 after attaching it.
-- [ ] Complete Bluetooth OA20 acceptance: add and independently control the
-  second discovered lamp, repeat brightness after dark, add bounded Web-driven
-  scanning, and test reconnect plus power-cycle behaviour. First-lamp Web
-  power and direct RGB colour commands are physically proven.
-- [ ] Prove gateway registration, heartbeat, restart and temporary-network-loss
-  behaviour on the real Raspberry Pi node. Registration, repeated heartbeat
-  and agent-service restart are proven; Pi reboot and network-loss recovery
-  remain open.
-- [ ] Accept Matter-over-Thread, Wi-Fi, general Bluetooth and voice independently
-  through recorded end-to-end results.
-
-This grouping is a status view over the authoritative tasks above and does not
-create duplicate scope. The priority order reflects the recorded market and
-user-needs analysis: trust foundation, daily usability, then differentiation.
-
-## Later product slices
-
-- [ ] Add the future three-mode AI product choice: Kyrion Local, Kyrion Managed
-  AI and Bring Your Own AI, all using the same provider-neutral contracts.
-- [ ] Detect and benchmark CPU, RAM and VRAM, then recommend transparent local
-  profiles such as CPU-only, Local Lite, Local Standard and Local Performance.
-- [ ] Let Expert Mode route STT, LLM and TTS independently; keep Simple Mode to
-  understandable Local, Managed or External choices.
-- [ ] Before building Kyrion Managed AI, decide data minimisation, residency,
-  retention, consent, billing, quotas, availability and operational support.
-- [ ] Implement and validate a bounded external-provider plugin only after the
-  provider contract, secret handling, permissions, data-flow disclosure and
-  audit boundaries are stable.
-- [x] Add an official internal Plugins catalog and Nanoleaf detail page.
-- [x] Discover Nanoleaf controllers through mDNS with a manual private-IPv4 fallback.
-- [x] Persist owner-specific connections and AES-GCM-encrypted credentials in Core.
-- [x] Add editable persistent device names and confirmed connection removal.
-- [x] Control power, brightness, colour, colour temperature and stored scenes.
-- [x] Show controller-derived palette previews for compatible scenes.
-- [x] Add owner-specific rooms and persistent device assignments.
-- [x] Replace the Home placeholder with live room/device cards, quick actions
-  and detailed controller dialogs.
-- [ ] Add bounded background status refresh or device events.
-- [ ] Reconcile connections automatically after DHCP address changes.
-- [ ] Revoke physical-controller tokens when removing reachable connections.
-- [ ] Add focused Core HTTP integration tests for room ownership, cross-owner
-  assignment rejection and Nanoleaf command validation.
-- [ ] Complete a responsive German/English visual pass for Plugins and Home in
-  both themes.
-- [ ] Replace browser speech providers only after explicitly selecting suitable
-  local STT and TTS runtimes.
-# Spotify Connect vertical slice
-
-- [x] Add Core-owned Spotify Authorization Code flow with encrypted tokens,
-  owner-bound state, minimal playback scopes and explicit error codes.
-- [x] Add the German/English Web integration overlay, connection status,
-  Connect-device list and typed playback transfer.
-- [ ] Register the exact `kyrion-node.local` HTTPS callback in a Spotify
-  development app and add its owner account to the development allowlist.
-- [ ] Install a reviewed, version-pinned ARM64 `librespot` receiver as the
-  unprivileged audio user and physically verify the Bluetooth sink.
-- [ ] Add typed pause, resume, skip, volume and search actions plus Voice
-  Satellite ducking through Core policy.
+Last updated: 2026-10-11.
+
+This is the consolidated active backlog. Source of truth: current code,
+the [hardening closeout](2026-10-11-security-hardening.md), the
+September 14/15 closeouts and the [Installer readiness review](2026-10-11-installer-readiness.md).
+A checkbox means implemented/tested only to the extent stated; it never implies
+new deployment or physical acceptance. The prior mixed/historical list is
+preserved byte-for-byte in [the historical snapshot](TODO-history-before-2026-10-11.md).
+Historical unchecked experiments are not the current work order.
+
+## Completed foundations, with bounded evidence
+
+- [x] Core-owned authentication, invitations, installation-wide RBAC, protected
+  OWNER role and member deactivation are present. September 14 records Pi
+  deployment; current HTTP regressions cover primary-owner protection and
+  deactivation/session revocation. Security hardening and its remaining operational limits are recorded below.
+- [x] Calendar authentication interceptor registration is fixed. Local CRUD and
+  combined local/read-only Google display exist. Current tests cover missing/explicit optional fields, permissions and
+  the
+  Web creation payload and workspace-scoped Core CRUD; live browser UX remains open.
+- [x] Shared Core Action Orchestrator, exact target resolution, initial policy
+  classes, owner-scoped audit integrity and Activity inspector are implemented.
+- [x] Bounded read-only HA import, stable identities, basic state and room mapping
+  exist. Web probe/connect/disconnect and encrypted credential persistence are
+  also present; old operator-only documentation has been corrected.
+- [x] PostgreSQL backup and isolated SQL restore scripts, encrypted personal
+  exports and auditable retention exist. These are not complete deployment recovery.
+- [x] Always-on Pi platform Compose and migration/HTTPS scripts exist. They are
+  developer-operated deployment tooling, not Installer v1 or a safe general updater.
+- [x] Reproduce and fix YouTubeLinksTest constructor compilation failure; verify
+  link preparation does not invoke gateway or command services.
+- [x] Reproduce and fix member deactivation's PostgreSQL Instant binding error;
+  verify revocation and reactivation/new login without reviving old sessions.
+- [x] Run current Core/Web checks and infrastructure syntax/configuration checks;
+  record exact results and limitations in the readiness review.
+
+## Security hardening implemented and tested (2026-10-11)
+
+See the [hardening closeout](2026-10-11-security-hardening.md); previous readiness
+findings are retained as a historical baseline, not a current implementation status.
+
+- [x] R1: Explicit Calendar CRUD permissions, service checks, workspace ownership,
+  unmapped authenticated-route denial and USER/VIEWER/custom-role HTTP denials.
+- [x] R2: Registration uses existing roles without seeding; fresh role defaults
+  never replenish existing grants. Parallel invitations preserve revoked rights.
+- [x] R3: Actual actor and workspace are separate. Delegates have permission ceilings,
+  self-change and OWNER protections; actual actor/target is audited.
+- [x] R4: RBAC, identity/session changes, registration and local Calendar changes
+  include audit in transactions; workspace locks serialize authorization/mutation.
+  Audit failure, rollback and concurrent permission-revocation regressions exist.
+- [x] R5: Protected file bootstrap, 30-minute expiry, bounded throttling, global
+  owner lock and permanent V31 initialization marker; concurrent/reused/invalid
+  claims, rollback/retry and V30 upgrade are tested.
+- [x] R6: Local/Google calendar mutations and HTTP permission refusals are audited
+  without event text or secrets; actor/target/correlation is retained.
+- [x] R7: Local calendars explicitly remain shared workspace data. Google APIs and
+  catalogue metadata use the linking identity, excluded from shared device data.
+- [ ] Installer-only acceptance: protected bootstrap provisioning/private delivery,
+  TLS and mount permissions; Windows ACL and Linux permissions must be exercised
+  on the supported target. No real installation/hardware acceptance is claimed.
+- [ ] External Google success followed by audit storage failure needs operator
+  reconciliation from the retained proposed event; no distributed transaction exists.
+- [ ] Existing orphan roles from the previous delegated-workspace bug require a
+  deliberate operator review if present; no automatic deletion or reassignment.
+
+## P1: Installer v1 sprint
+
+Follow [the implementation plan](../installer-v1-plan.md) and proposed ADR 0022.
+Installer v1 implementation has not started.
+
+- [ ] Accept the bounded fresh-install ADR before implementation.
+- [ ] Implement read-only preflight plus exclusive lock and repeated existing-state
+  checks; refuse existing/stopped/partial installations, keys, DBs and symlink targets.
+- [ ] Build a public, signed, immutable ARM64 release bundle containing all four
+  runtime images and no developer DB, keys, provider secrets or private artifacts.
+- [ ] Create runtime-only portable Compose/Caddy templates, validated hostname/IP,
+  file-backed secrets, load-only Core keys and verified health dependencies.
+- [ ] Implement fresh provisioning, trusted local HTTPS and bounded first-owner
+  setup with German/English messages; Core/Web/device contracts stay authoritative.
+- [ ] Add stable failure codes, bounded timeouts, protected stage journal,
+  redacted diagnostics and explicit safe resume; preserve persistent state on failure.
+- [ ] Add scoped deployment backup and isolated restore verification covering
+  database, original keys/configuration, RBAC, Calendar and audit integrity.
+- [ ] Test clean supported Debian ARM64 install, AI offline, concurrency,
+  interruptions, corrupt bundle, missing keys and existing-installation preservation.
+- [ ] Perform independent clean-room/reference-host acceptance before pilot release;
+  record hardware evidence separately and never use the existing owner Pi as a fixture.
+
+## P2: Current functionality and physical acceptance
+
+### Calendar and household
+
+- [x] R8: Local calendar survives thrown optional Google fetches; that request
+  has a 10-second timeout and a regression. Local upstream timeout remains follow-up.
+- [x] R9 API: Missing/null syncToGoogle defaults to false; strict Booleans,
+  timezone validation and bounded description are implemented. Browser timezone/DST
+  and bilingual Calendar UX below remain open.
+- [ ] Review selected-date creation and event editing in the browser, especially
+  UTC/local/DST conversion; move existing hardcoded German text to bilingual resources.
+- [ ] Correct the sync checkbox's user promise: it currently persists intent but
+  does not perform full sync. Define conflict/delete/retry/idempotency semantics
+  before implementing optional bidirectional Google sync.
+- [ ] Define explicit household membership, personal/shared calendar scope and
+  room/device-level permissions as a later bounded extension to RBAC V1.
+- [ ] Resolve consumer OAuth ownership/callback design (proposed ADR 0021) separately;
+  do not bundle common OAuth client secrets into the installer.
+
+### Smart home, integrations and Lounge
+
+- [ ] Physically verify HA/Shelly import, Web connection flow, exact-room mapping,
+  repeated sync, offline transitions and recovery; direct Shelly remains experimental.
+- [ ] Physically verify generic Nanoleaf colour, unavailable-controller reporting
+  and gateway failure diagnosis. Check DHCP reconciliation/token removal separately.
+- [ ] Retest Sonoff button single/double/long room actions and motion history over
+  restart with recorded latency and multi-provider/partial-failure cases.
+- [ ] Verify OA20 exact-device independence, brightness, reconnect and power-cycle
+  drift; present last-command state honestly instead of measured live telemetry.
+- [ ] Record real Pi reboot/network-loss recovery and independently close remaining
+  Thread/Matter/Wi-Fi/radio acceptance; provisioning scripts alone are not acceptance.
+- [ ] Verify Spotify Web playback on the live receiver and invited-account rights;
+  scope remaining playback/search/Voice ducking actions through Core.
+- [ ] Complete German/English responsive visual review of Home, Plugins, Activity,
+  Calendar, Users and Roles in both themes.
+
+### Velora
+
+- [ ] Verify capture/VAD -> processing playback -> device action -> truthful final
+  outcome order; record twenty physical attempts including offline/partial cases.
+- [ ] Verify exact lamp selection, room brightness, explicit gratitude/session end
+  and next wake word; complete English reviewed fixed audio.
+- [ ] Add typed partial-success speech and harden failure audio and reconnect
+  across Core restarts. Do not reopen general TTS provider discovery for this slice.
+
+## Later bounded product work
+
+- [ ] Safe existing-installation updater with verified backup, migration compatibility
+  and tested rollback; separate from fresh Installer v1.
+- [ ] Integration Observe/Control/Manage profiles and pre-change restore orchestration;
+  HA control/services/migration remain outside the current read-only import.
+- [ ] General automation editor over existing typed device/event/action contracts;
+  button bindings and motion history are already implemented groundwork.
+- [ ] Mobile-responsive installable Web experience; then small Expo app with
+  authenticated connection, device status and quick actions. apps/mobile is empty
+  scaffolding, not an existing app. Remote access is a separate security slice.
+- [ ] Energy views/Solar Manager, understandable notifications and diagnostic export
+  after installation and recovery have been proven.
+- [ ] Local/managed/external AI choices, signed plugin lifecycle and later marketplace;
+  no new model/provider/runtime is required for Installer v1.
+- [ ] Select a repository licence and publish contribution guidance before public
+  source/release distribution; review bundled runtime/model licences separately.

@@ -15,6 +15,11 @@ import java.util.UUID
 class LocalAuthenticationServiceTest {
     private val now = Instant.parse("2026-08-03T20:00:00Z")
     private val clock = MutableClock(now)
+    private val setupSecret = SessionTokenService().create().rawToken
+    private val bootstrapPath = java.nio.file.Files.createTempFile("kyrion-bootstrap-unit", ".secret").also {
+        java.nio.file.Files.writeString(it, setupSecret)
+        java.nio.file.Files.setLastModifiedTime(it, java.nio.file.attribute.FileTime.from(now))
+    }
     private val users = InMemoryUserAccountRepository()
     private val sessions = InMemoryAuthSessionRepositoryForAuthentication()
     private val service = LocalAuthenticationService(
@@ -23,11 +28,12 @@ class LocalAuthenticationServiceTest {
         AuthSessionService(sessions, SessionTokenService(), clock),
         ActivityService(InMemorySecurityActivityRepository(), clock),
         clock,
+        bootstrap = FirstOwnerBootstrap(bootstrapPath.toString(), clock),
     )
 
     @Test
     fun `invited account shares resources but cannot invite or revoke owner sessions`() {
-        val owner = service.setup("flo", "a-secure-local-password")
+        val owner = service.setup("flo", "a-secure-local-password", setupSecret)
         val invitation = service.createInvitation(owner.session.rawToken)
         val friend = service.register(" Friend ", "friends-secure-password", invitation.code)
         assertThat(friend.user.id).isNotEqualTo(owner.user.id)
@@ -44,7 +50,7 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `expired invitations and anonymous invitation requests are rejected`() {
-        val owner = service.setup("flo", "a-secure-local-password")
+        val owner = service.setup("flo", "a-secure-local-password", setupSecret)
         assertThatThrownBy { service.createInvitation("invalid-token") }.isInstanceOf(UnauthenticatedException::class.java)
         val invitation = service.createInvitation(owner.session.rawToken)
         clock.advance(Duration.ofHours(24))
@@ -55,7 +61,7 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `duplicate username does not consume the invitation`() {
-        val owner = service.setup("flo", "a-secure-local-password")
+        val owner = service.setup("flo", "a-secure-local-password", setupSecret)
         val invitation = service.createInvitation(owner.session.rawToken)
         assertThatThrownBy { service.register("FLO", "friends-secure-password", invitation.code) }
             .isInstanceOf(UsernameTakenException::class.java)
@@ -64,18 +70,18 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `creates exactly one owner and immediately authenticates it`() {
-        val owner = service.setup(" Flo ", "a-secure-local-password")
+        val owner = service.setup(" Flo ", "a-secure-local-password", setupSecret)
 
         assertThat(owner.user.username).isEqualTo("flo")
         assertThat(service.setupRequired()).isFalse()
         assertThat(service.authenticate(owner.session.rawToken)?.id).isEqualTo(owner.user.id)
-        assertThatThrownBy { service.setup("other", "another-secure-password") }
+        assertThatThrownBy { service.setup("other", "another-secure-password", setupSecret) }
             .isInstanceOf(SetupAlreadyCompletedException::class.java)
     }
 
     @Test
     fun `rejects invalid credentials and revokes logout session`() {
-        val owner = service.setup("flo", "a-secure-local-password")
+        val owner = service.setup("flo", "a-secure-local-password", setupSecret)
         assertThatThrownBy { service.login("flo", "definitely-the-wrong-password") }
             .isInstanceOf(InvalidCredentialsException::class.java)
 
@@ -86,7 +92,7 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `changes password and rotates all sessions`() {
-        val owner = service.setup("flo", "a-secure-local-password")
+        val owner = service.setup("flo", "a-secure-local-password", setupSecret)
         val changed = service.changePassword(owner.session.rawToken, "a-secure-local-password", "a-brand-new-password")
 
         assertThat(service.authenticate(owner.session.rawToken)).isNull()
@@ -97,7 +103,7 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `temporarily backs off repeated login failures and resets after success`() {
-        service.setup("flo", "a-secure-local-password")
+        service.setup("flo", "a-secure-local-password", setupSecret)
 
         repeat(5) {
             assertThatThrownBy { service.login("FLO", "definitely-the-wrong-password") }
@@ -118,7 +124,7 @@ class LocalAuthenticationServiceTest {
 
     @Test
     fun `lists only owner sessions and selectively revokes another session`() {
-        val current = service.setup("flo", "a-secure-local-password")
+        val current = service.setup("flo", "a-secure-local-password", setupSecret)
         val other = service.login("flo", "a-secure-local-password")
 
         val active = service.activeSessions(current.session.rawToken)

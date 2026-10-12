@@ -31,12 +31,12 @@ class AuthSessionService(
         return CreatedSession(session = session, rawToken = token.rawToken)
     }
 
-    fun authenticate(rawToken: String): AuthSession? {
+    fun authenticate(rawToken: String, touch: Boolean = true): AuthSession? {
         val tokenHash = tokenService.hash(rawToken)
         val session = repository.findByTokenHash(tokenHash) ?: return null
         val now = clock.instant()
         if (!session.isActive(now)) return null
-        repository.updateLastSeen(tokenHash, now)
+        if (touch) repository.updateLastSeen(tokenHash, now)
         return session.copy(lastSeenAt = now)
     }
 

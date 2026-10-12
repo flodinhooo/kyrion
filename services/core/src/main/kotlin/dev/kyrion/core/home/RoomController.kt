@@ -45,10 +45,11 @@ class RoomController(
     @DeleteMapping("/rooms/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(@PathVariable id: UUID, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.delete(ownerId, id)) throw RoomNotFoundException(); record(ownerId, "home.room.deleted", "room.deleted", id) }
     @PutMapping("/connections/{id}/room") @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun assign(@PathVariable id: UUID, @RequestBody body: RoomAssignmentRequest, request: HttpServletRequest) { val ownerId = request.ownerId(); if (!rooms.assignConnection(ownerId, id, body.roomId)) throw RoomAssignmentException(); record(ownerId, "home.device.assigned", "device.room.assigned", id) }
+    fun assign(@PathVariable id: UUID, @RequestBody body: RoomAssignmentRequest, request: HttpServletRequest) { val ownerId = request.ownerId(); if (connections.find(ownerId, id)?.provider == "google") throw RoomAssignmentException(); if (!rooms.assignConnection(ownerId, id, body.roomId)) throw RoomAssignmentException(); record(ownerId, "home.device.assigned", "device.room.assigned", id) }
     @PatchMapping("/connections/{id}")
     fun renameDevice(@PathVariable id: UUID, @Valid @RequestBody body: DeviceUpdateRequest, request: HttpServletRequest): IntegrationConnectionView {
         val ownerId = request.ownerId()
+        if (connections.find(ownerId, id)?.provider == "google") throw RoomAssignmentException()
         val updated = connections.update(ownerId, id, body.name.trim(), body.deviceClass, clock.instant()) ?: throw RoomAssignmentException()
         record(ownerId, "home.device.renamed", "device.renamed", id)
         return updated.view()

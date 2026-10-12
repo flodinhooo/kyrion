@@ -1,9 +1,13 @@
 package dev.kyrion.core.integration
 
 import dev.kyrion.core.activity.*
+import dev.kyrion.core.gateway.GatewayCommandService
+import dev.kyrion.core.gateway.GatewayService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verifyNoInteractions
 import java.util.UUID
 
 class YouTubeLinksTest {
@@ -44,10 +48,12 @@ class YouTubeLinksTest {
     @Test
     fun `audit records preparation and owner without retaining links`() {
         val events = mutableListOf<ActivityEvent>()
+        val gateways = mock(GatewayService::class.java)
+        val commands = mock(GatewayCommandService::class.java)
         val service = YouTubeIntegrationService(ActivityService(object : ActivityEventRepository {
             override fun append(event: ActivityEvent) = event.also(events::add)
             override fun findRecent(limit: Int) = emptyList<ActivityEvent>()
-        }))
+        }), gateways, commands)
         val owner = UUID.randomUUID()
         service.prepare(owner, PrepareYouTubeRequest("https://youtu.be/$id", YouTubeSource.VIDEO))
         assertEquals(owner, events.single().ownerId)
@@ -55,5 +61,6 @@ class YouTubeLinksTest {
         assertFalse(events.single().toString().contains(id))
         assertThrows<InvalidYouTubeLinkException> { service.prepare(owner, PrepareYouTubeRequest("https://evil.test", YouTubeSource.VIDEO)) }
         assertEquals(1, events.size)
+        verifyNoInteractions(gateways, commands)
     }
 }

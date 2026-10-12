@@ -2,7 +2,8 @@ package dev.kyrion.core.integration
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import dev.kyrion.core.security.workspaceOwnerId
+import dev.kyrion.core.security.authenticatedUserId
+import dev.kyrion.core.activity.*
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
@@ -105,16 +106,42 @@ class GoogleIntegrationService(
 
 @RestController
 @RequestMapping("/v1/integrations/google")
-class GoogleIntegrationController(private val service: GoogleIntegrationService) {
-    @GetMapping fun status(request: HttpServletRequest) = service.status(request.workspaceOwnerId())
-    @PostMapping("/authorization") fun authorize(request: HttpServletRequest) = service.authorize(request.workspaceOwnerId())
-    @PostMapping("/authorization/complete") fun complete(@RequestBody body: Map<String, String>, request: HttpServletRequest) = service.complete(request.workspaceOwnerId(), body["code"] ?: throw GoogleInvalidRequestException(), body["state"] ?: throw GoogleInvalidRequestException())
-    @GetMapping("/calendar/events") fun events(request: HttpServletRequest) = service.events(request.workspaceOwnerId())
-    @GetMapping("/calendar/calendars") fun calendars(request: HttpServletRequest) = service.calendars(request.workspaceOwnerId())
-    @PostMapping("/calendar/events") fun create(@RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = service.createEvent(request.workspaceOwnerId(), body)
-    @PutMapping("/calendar/events/{eventId}") fun update(@PathVariable eventId: String, @RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = service.updateEvent(request.workspaceOwnerId(), eventId, body)
-    @DeleteMapping("/calendar/events/{eventId}") @ResponseStatus(HttpStatus.NO_CONTENT) fun delete(@PathVariable eventId: String, request: HttpServletRequest) = service.deleteEvent(request.workspaceOwnerId(), eventId)
-    @DeleteMapping @ResponseStatus(HttpStatus.NO_CONTENT) fun disconnect(request: HttpServletRequest) = service.disconnect(request.workspaceOwnerId())
+class GoogleIntegrationController(private val service: GoogleIntegrationService, private val activity: ActivityService) {
+    @GetMapping fun status(request: HttpServletRequest) = service.status(request.authenticatedUserId())
+    @PostMapping("/authorization") fun authorize(request: HttpServletRequest) = service.authorize(request.authenticatedUserId())
+    @PostMapping("/authorization/complete") fun complete(@RequestBody body: Map<String, String>, request: HttpServletRequest) = service.complete(request.authenticatedUserId(), body["code"] ?: throw GoogleInvalidRequestException(), body["state"] ?: throw GoogleInvalidRequestException())
+    @GetMapping("/calendar/events") fun events(request: HttpServletRequest) = service.events(request.authenticatedUserId())
+    @GetMapping("/calendar/calendars") fun calendars(request: HttpServletRequest) = service.calendars(request.authenticatedUserId())
+    @PostMapping("/calendar/events") fun create(@RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = audited(request, "google.calendar.event.created") { service.createEvent(request.authenticatedUserId(), body) }
+    @PutMapping("/calendar/events/{eventId}") fun update(@PathVariable eventId: String, @RequestBody body: GoogleCalendarEventRequest, request: HttpServletRequest) = audited(request, "google.calendar.event.updated") { service.updateEvent(request.authenticatedUserId(), eventId, body) }
+    @DeleteMapping("/calendar/events/{eventId}") @ResponseStatus(HttpStatus.NO_CONTENT) fun delete(@PathVariable eventId: String, request: HttpServletRequest) = audited(request, "google.calendar.event.deleted") { service.deleteEvent(request.authenticatedUserId(), eventId) }
+    @DeleteMapping @ResponseStatus(HttpStatus.NO_CONTENT) fun disconnect(request: HttpServletRequest) = service.disconnect(request.authenticatedUserId())
+    private fun <T> audited(request: HttpServletRequest, type: String, action: () -> T): T {
+        val actor = request.authenticatedUserId()
+        val correlation = UUID.randomUUID()
+        fun record(status: ActivityStatus) = activity.record(ActivityCategory.INTEGRATION, type, status,
+            ActivityActorType.USER, "kyrion-core", type, actor.toString(), correlation, actor)
+        // Persist intent before contacting the provider; do not hold a DB transaction across HTTP.
+        record(ActivityStatus.PROPOSED)
+        val result = try { action() } catch (error: Exception) {
+            record(ActivityStatus.FAILED)
+            throw error
+        }
+        record(ActivityStatus.SUCCEEDED)
+        return result
+    }
+
 }
 
 class GoogleNotConfiguredException : RuntimeException(); class GoogleInvalidStateException : RuntimeException(); class GoogleInvalidRequestException : RuntimeException(); class GoogleDisconnectedException : RuntimeException(); class GoogleCapabilityDisabledException : RuntimeException(); class GoogleProviderUnavailableException : RuntimeException(); class GoogleProviderException(val status: Int) : RuntimeException()
+
+
+@RestControllerAdvice
+class GoogleErrorHandler {
+    @ExceptionHandler(GoogleDisconnectedException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun disconnected() = mapOf("code" to "GOOGLE_DISCONNECTED")
+    @ExceptionHandler(GoogleCapabilityDisabledException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun disabled() = mapOf("code" to "GOOGLE_CAPABILITY_DISABLED")
+}

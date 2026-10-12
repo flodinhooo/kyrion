@@ -15,6 +15,12 @@ path alone does not change the running service.
 
 ## Always-on Kyrion platform
 
+Installer v1 is a separate planned fresh-install workflow; see the
+[implementation plan](../../../docs/installer-v1-plan.md) and
+[readiness review](../../../docs/status/2026-10-11-installer-readiness.md).
+Do not run these migration/HTTPS scripts to implement that plan or update an
+existing installation. The review changed no deployment script or live node.
+
 For an existing installation, use the read-only `check-platform-update.ps1`
 preflight and the [September update handoff](../../../docs/status/2026-09-05-web-pre-image-review.md).
 The first-migration installer below must not be reused to update an existing

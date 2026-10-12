@@ -28,13 +28,16 @@ class LocalAuthenticationService(
     private val loginAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
     private val invitationTokens: SessionTokenService = SessionTokenService(),
     private val rbac: RbacService? = null,
+    private val bootstrap: FirstOwnerBootstrap? = null,
 ) {
-    fun setupRequired() = !users.exists()
+    fun setupRequired() = !users.setupCompleted()
 
     @Transactional
     fun createInvitation(rawToken: String): CreatedInvitation {
-        val inviter = authenticate(rawToken) ?: throw UnauthenticatedException()
-        if (inviter.resourceOwnerId != inviter.id) throw InvitationForbiddenException()
+        val inviter = authenticatedSession(rawToken, touch = false)?.first ?: throw UnauthenticatedException()
+        if (rbac != null) rbac.authorizeMutation(inviter.id, "invitations:create")
+        else if (inviter.resourceOwnerId != inviter.id) throw InvitationForbiddenException()
+        if (authenticatedSession(rawToken, touch = false) == null) throw UnauthenticatedException()
         val token = invitationTokens.create()
         val expiresAt = clock.instant().plus(java.time.Duration.ofHours(24))
         users.createInvitation(RegistrationInvitation(token.tokenHash, inviter.id, inviter.resourceOwnerId, expiresAt))
@@ -53,7 +56,10 @@ class LocalAuthenticationService(
         return AuthenticatedOwner(created, sessions.create(created.id))
     }
 
-    fun setup(username: String, password: String): AuthenticatedOwner {
+    @Transactional
+    fun setup(username: String, password: String, setupSecret: String? = null): AuthenticatedOwner {
+        if (users.setupCompleted()) throw SetupAlreadyCompletedException()
+        (bootstrap ?: throw BootstrapForbiddenException()).verify(setupSecret)
         val normalized = normalizeUsername(username)
         val now = clock.instant()
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
@@ -104,7 +110,9 @@ class LocalAuthenticationService(
 
     @Transactional
     fun changePassword(rawToken: String, currentPassword: String, newPassword: String): AuthenticatedOwner {
-        val account = authenticate(rawToken) ?: throw UnauthenticatedException()
+        val initial = authenticatedSession(rawToken, touch = false)?.first ?: throw UnauthenticatedException()
+        rbac?.lockIdentity(initial.id)
+        val account = authenticatedSession(rawToken, touch = false)?.first ?: throw UnauthenticatedException()
         if (!passwords.matches(currentPassword, account.passwordHash)) {
             record("auth.password.change", ActivityStatus.DENIED, "activity.auth.passwordChangeFailed", account.id)
             throw InvalidCurrentPasswordException()
@@ -122,8 +130,8 @@ class LocalAuthenticationService(
 
     private fun normalizeUsername(value: String) = value.trim().lowercase()
 
-    private fun authenticatedSession(rawToken: String): Pair<UserAccount, AuthSession>? {
-        val session = sessions.authenticate(rawToken) ?: return null
+    private fun authenticatedSession(rawToken: String, touch: Boolean = true): Pair<UserAccount, AuthSession>? {
+        val session = sessions.authenticate(rawToken, touch) ?: return null
         val user = users.findById(session.userId)?.takeIf { it.enabled } ?: return null
         return user to session
     }
@@ -137,6 +145,7 @@ class LocalAuthenticationService(
             actorId = actorId?.toString(),
             source = "kyrion-core",
             summaryCode = summary,
+            ownerId = actorId?.let { users.findById(it)?.resourceOwnerId },
         )
     }
 }

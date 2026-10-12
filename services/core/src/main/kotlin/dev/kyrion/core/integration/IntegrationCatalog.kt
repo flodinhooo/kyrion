@@ -1,6 +1,7 @@
 package dev.kyrion.core.integration
 
 import dev.kyrion.core.security.workspaceOwnerId
+import dev.kyrion.core.security.authenticatedUserId
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -93,8 +94,14 @@ class IntegrationCatalogService(
 class IntegrationCatalogController(private val service: IntegrationCatalogService) {
     @GetMapping("/providers") fun providers() = service.providers()
     @GetMapping("/providers/{id}") fun provider(@PathVariable id: String) = service.provider(id) ?: throw ProviderNotFoundException()
-    @GetMapping("/connections") fun connections(request: HttpServletRequest) = service.connections(request.workspaceOwnerId())
-    @GetMapping("/connections/{id}") fun connection(@PathVariable id: UUID, request: HttpServletRequest) = service.connection(request.workspaceOwnerId(), id) ?: throw ConnectionNotFoundException()
+    @GetMapping("/connections") fun connections(request: HttpServletRequest): List<IntegrationConnectionSummary> {
+        val actor = request.authenticatedUserId()
+        val owner = request.workspaceOwnerId()
+        return service.connections(owner).filter { it.providerId != "google" || actor == owner } +
+            if (actor == owner) emptyList() else service.connections(actor).filter { it.providerId == "google" }
+    }
+    @GetMapping("/connections/{id}") fun connection(@PathVariable id: UUID, request: HttpServletRequest) =
+        connections(request).firstOrNull { it.connectionId == id } ?: throw ConnectionNotFoundException()
 }
 
 class ProviderNotFoundException : RuntimeException()

@@ -9,19 +9,28 @@ This is not a full Home Assistant integration or a native Shelly integration.
 
 ## Configuration and use
 
-Set these variables only in the Core process environment (or the platform
-Compose environment), following `infrastructure/.env.example`:
+The current code also supports Web connection setup: the HA integration flow
+can probe/connect/disconnect through authenticated, CSRF-protected same-origin
+routes. Core validates the bounded private-IPv4 endpoint and stores the access
+token encrypted in `HomeAssistantConnectionStore`; public status contains only
+bounded endpoint metadata. Core's stored connection is used for subsequent
+read-only sync. This source verification does not establish new physical HA
+acceptance. Web credential setup therefore is no longer entirely deferred.
+
+Development-only fallback remains available through these variables in the Core
+process environment (or platform Compose), following `infrastructure/.env.example`:
 
 - `KYRION_HA_URL`: the HA base URL, for example `http://192.168.1.20:8123`;
 - `KYRION_HA_TOKEN`: an owner-controlled HA access token, kept out of Git and Web;
 - `KYRION_HA_OWNER_ID`: the authenticated Kyrion owner's UUID (`GET /v1/auth/me`).
 
-Empty configuration disables the import. This minimal slice accepts literal
+With no stored connection or applicable fallback, import is unconfigured. This slice accepts literal
 private IPv4 addresses, HTTP or HTTPS, no URL credentials, path, query or fragment,
-and follows no redirects. DNS names, multiple HA installations per owner and
-credential editing in Web are intentionally deferred. Use one HA installation
+and follows no redirects. DNS names and multiple HA installations per owner
+are intentionally deferred. Use one HA installation
 per owner; do not repoint it to a different installation without reviewing the
-existing imported inventory. Core must be restarted after environment changes.
+existing imported inventory. Core must be restarted after fallback environment changes;
+the authenticated stored connection flow does not require that environment restart.
 
 In **Settings > System services**, the Home Assistant card shows configuration
 and the last sync diagnostic. **Import / sync devices** explicitly reads HA and
@@ -69,7 +78,8 @@ read-only template at `/api/template`.
 
 ## Scope
 
-Implemented: operator connection/configuration, explicit device import, bounded
+Implemented: Web probe/connect/disconnect with encrypted credentials, development
+fallback configuration, explicit device import, bounded
 basic state/sensor import, mapping to existing rooms, stable reconciliation,
 owner boundaries, status diagnostics and correlated sync audit.
 

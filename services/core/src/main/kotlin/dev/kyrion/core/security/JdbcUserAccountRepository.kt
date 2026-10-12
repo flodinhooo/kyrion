@@ -15,11 +15,15 @@ class JdbcUserAccountRepository(
     override fun exists(): Boolean = jdbcClient.sql("SELECT EXISTS (SELECT 1 FROM user_account)")
         .query(Boolean::class.java).single()
 
+    override fun setupCompleted(): Boolean = jdbcClient.sql(
+        "SELECT initialized OR EXISTS(SELECT 1 FROM user_account) FROM installation_bootstrap_state WHERE singleton",
+    ).query(Boolean::class.java).single()
+
     override fun createOwner(account: UserAccount): UserAccount? = transactions.execute {
         jdbcClient.sql("SELECT pg_advisory_xact_lock(1264939342)")
             .query { _, _ -> Unit }
             .single()
-        if (exists()) return@execute null
+        if (setupCompleted()) return@execute null
         jdbcClient.sql(
             """
             INSERT INTO user_account (id, username, password_hash, enabled, created_at, updated_at)
@@ -33,6 +37,7 @@ class JdbcUserAccountRepository(
             .param("createdAt", Timestamp.from(account.createdAt))
             .param("updatedAt", Timestamp.from(account.updatedAt))
             .update()
+        jdbcClient.sql("UPDATE installation_bootstrap_state SET initialized=TRUE WHERE singleton").update()
         account
     }
 

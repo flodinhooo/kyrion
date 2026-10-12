@@ -8,11 +8,11 @@ export async function GET() {
     const headers = { Authorization: `Bearer ${auth.token}` };
     const [localResponse, googleResponse] = await Promise.all([
       fetch(`${CORE_SERVICE_URL}/v1/calendar/events`, { headers }),
-      fetch(`${CORE_SERVICE_URL}/v1/integrations/google/calendar/events`, { headers }),
+      fetch(`${CORE_SERVICE_URL}/v1/integrations/google/calendar/events`, { headers, signal: AbortSignal.timeout(10_000) }).catch(() => null),
     ]);
     const localValue: unknown = await localResponse.json().catch(() => null);
     if (!localResponse.ok) return Response.json(localValue ?? { code: "CORE_UNAVAILABLE" }, { status: localResponse.status });
-    const googleValue: unknown = googleResponse.ok ? await googleResponse.json().catch(() => null) : null;
+    const googleValue: unknown = googleResponse?.ok ? await googleResponse.json().catch(() => null) : null;
     return Response.json({ items: [...normalizeLocalEvents(localValue), ...normalizeGoogleEvents(googleValue)] });
   } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503 }); }
 }

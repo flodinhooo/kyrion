@@ -2,36 +2,67 @@
 
 ## Implemented boundary
 
-Kyrion Core is the authentication authority. A fresh installation exposes a
-one-time owner setup status and setup command. Once the first account exists,
-setup is permanently closed. Additional accounts register with an invitation
-issued by the original owner; see [ADR 0019](adr/0019-shared-installation-registration.md).
+Kyrion Core is the authentication authority. Fresh first-owner setup requires a
+locally provisioned setup secret; existing installations retain their identities
+and never need another setup secret. See [ADR 0023](adr/0023-security-bootstrap-and-delegation.md)
+and the [security hardening report](status/2026-10-11-security-hardening.md).
 
-The Web registration page is available at `/signup`. On fresh installations,
-`/login` redirects there. It uses the existing Core owner-setup command for the
-first account, then the invitation registration command for additional users.
-German and English labels, password confirmation and a sign-in link are provided.
-Authenticated visitors are redirected home. Core availability failures offer a retry.
+The `/signup` and `/login` first-owner flow accepts a one-time setup secret in a
+password input. Web forwards it only in `X-Kyrion-Setup-Secret`, removes it from
+the credentials body and never returns it. Core reads a protected file configured
+by `KYRION_BOOTSTRAP_SECRET_FILE`; the file contains exactly a 32-byte CSPRNG
+base64url value (43 characters), valid for 30 minutes from its modification time.
+Missing, malformed, expired, future-dated, symlinked or POSIX group/world-accessible
+files fail closed. No secret is generated, printed or exposed by Core. Failed
+attempts use the existing bounded backoff limiter. Operators must provision the
+file privately, owner-only (0600 on POSIX), and protect its parent directory and
+Windows ACLs. Installer v1 will implement provisioning and private delivery; this
+is not implemented host onboarding. An expired unclaimed file requires explicit
+local renewal, never a remote reset endpoint.
 
-The owner creates a code under Profile > Security > Invite a friend. The code
-is random, valid for 24 hours and usable once. Core stores only its SHA-256 hash;
-redemption and account/session creation are transactional. Duplicate usernames
-do not consume the invitation. The profile displays the code only in memory;
-it is not placed in URLs or browser storage. Invitees cannot issue invitations.
+Flyway V31 adds a permanent initialization marker, initialized to closed if users
+already exist. Owner creation, marker consumption, initial roles, session and
+successful audit are one transaction; the existing global PostgreSQL advisory
+lock admits one concurrent winner. Failure rolls everything back and leaves the
+claim retryable until expiry. Once consumed, the file cannot reopen setup, even
+if accounts are subsequently absent. Restore must preserve this marker and the
+original credential/audit keys. Existing startup must not refresh bootstrap files.
 
-Every invited account can control and manage the same devices, rooms,
-integrations, gateways and satellite enrollment, with the existing Core command
-validation and confirmations. This is an explicit shared-control policy before
-RBAC. The server derives the resource scope from the invitation relationship;
-browser input cannot select a workspace. Audit events retain the real user as
-actor separately from the resource owner. Shared action idempotency includes the
-actor to prevent another user's request from reusing a prior result.
+Additional accounts require a cryptographically random, single-use invitation
+valid for 24 hours. Only users explicitly granted `invitations:create` can issue
+one. Actor and workspace are separate, including for delegated administrators.
+Invitation redemption, account/session creation and audit are transactional.
+Registration assigns the existing USER role without changing any role grants.
+Repeated initial seeding only grants defaults to newly created roles.
 
-Passwords, sessions, conversations, personal memory, personal backups and
-retention settings remain account-scoped. Existing resource data is not moved
-or copied, and existing audit seals are not rewritten. Account revocation and
-granular roles remain follow-up work. Both Core and Web must be updated; Core
-applies Flyway V27 on startup.
+Core checks effective permissions and workspace ownership. Non-owner delegates
+cannot assign OWNER, manage owner identities, modify their own roles, or grant
+permissions beyond their effective permissions. Managing a target or existing role
+also requires covering its current permissions. Consequently default ADMIN cannot
+manage a default USER/VIEWER role containing personal rights outside ADMIN's grant
+set; the owner must choose an explicitly bounded delegation. The primary owner
+cannot be disabled or stripped of OWNER. Role keys remain immutable on update;
+display names and grants can change. Workspace advisory locks serialize mutations
+and recheck active identity/permissions, with the audit in the same transaction.
+Session authentication inside these transactions avoids taking last-seen row locks
+before the workspace lock.
+
+Local calendar events are shared workspace resources: this data model has no
+personal-local-calendar flag. Access requires `calendar:read/create/update/delete`;
+existing non-owner grants remain unchanged, and new permissions are not silently
+granted to them. Owners can explicitly delegate shared-calendar access. Google
+connections and calendars are scoped to the authenticated account, including
+OAuth completion and catalogue visibility. Their metadata is excluded from the
+shared device list. Local calendar mutation/audit is atomic. Google writes record
+intent and outcome with one correlation ID outside long database transactions;
+a provider success followed by local audit failure leaves an intent requiring
+operator reconciliation. Appointment text and secrets are never audit summaries.
+`syncToGoogle` is an optional Boolean (missing/null means false); strings, numbers
+and containers are rejected. It stores intent only, without bidirectional sync.
+
+Personal sessions, conversations, memories, exports and retention stay scoped to
+the individual account. No existing sealed audit rows are rewritten or data moved.
+No production deployment or hardware acceptance is implied by automated checks.
 
 Core hashes passwords with Argon2id and stores only SHA-256 hashes of opaque
 256-bit session tokens. The raw token crosses the trusted localhost boundary

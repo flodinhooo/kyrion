@@ -1,8 +1,28 @@
 # Kyrion Development Status
 
-Last updated: 2026-09-07
+Latest: [2026-10-11 security hardening](2026-10-11-security-hardening.md), with code, regression and additive migration evidence.
 
-## Latest feature closeout - 2026-09-07
+
+Last updated: 2026-10-11
+
+## Current handoff - Installer v1 preparation
+
+Read the [security hardening closeout](2026-10-11-security-hardening.md),
+[consolidated TODO](TODO.md) and [Installer v1 plan](../installer-v1-plan.md).
+RBAC delegation/transactions, Calendar permissions/audit and protected first-owner
+bootstrap are implemented and covered by regressions. Core has 187 passing tests;
+Web has 104. Additive V31 is verified against a synthetic existing V30 installation.
+Installer provisioning, key/recovery policy and physical acceptance remain release
+gates. No Installer v1, production rollout or new physical acceptance is claimed.
+
+The September 14 [RBAC closeout](2026-09-14-shared-user-and-rbac-closeout.md) and
+September 15 [Calendar handoff](2026-09-15-calendar-view-handoff.md) supersede
+the old claims that all RBAC is deferred and Calendar authentication is blocked.
+The [Calendar authentication incident](calendar-auth-incident.md) is resolved.
+The prior TODO is preserved in [the historical snapshot](TODO-history-before-2026-10-11.md).
+All dated sections below are historical checkpoints, not the current work order.
+
+## Historical feature closeout - 2026-09-07
 
 The [invited-user closeout](2026-09-07-invited-users-closeout.md) records
 registration with owner-issued, single-use invitations and shared device

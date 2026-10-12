@@ -1,12 +1,30 @@
 # Kyrion Roadmap
 
+Security prerequisite implementation is recorded in the [hardening closeout](status/2026-10-11-security-hardening.md). Installer release and physical acceptance gates remain separate.
+
+
 This roadmap describes outcome-oriented direction rather than fixed deadlines.
 It implements the priorities in [Product Strategy](product-strategy.md): build
 the trustworthy orchestration layer first, then daily usability, followed by
 energy and operational differentiation. Integration breadth must not outrun
 permissions, diagnosis, audit and recovery.
 
-## Current delivery boundary - 2026-09-06
+## Current delivery boundary - 2026-10-11
+
+The current handoff is [Installer v1 preparation](installer-v1-plan.md), with
+[reviewed risks and verification](status/2026-10-11-installer-readiness.md) and
+the [consolidated active TODO](status/TODO.md). Installer v1 is not implemented.
+Priorities are security correctness, fresh-install state preservation, trusted
+owner setup and isolated recovery. Existing installations are not migrated or
+updated as part of this preparation.
+
+Installation-wide roles, invitations and deactivation are implemented (RBAC V1),
+as are local Calendar CRUD and read-only Google display. Household/resource scopes,
+Calendar permission enforcement and broader recovery remain open. The milestones
+below describe wider outcomes; an unchecked broad outcome may contain implemented
+groundwork and does not override the current TODO.
+
+## Historical consolidation boundary - 2026-09-06
 
 The [consolidation checkpoint](status/2026-09-06-platform-consolidation.md) precedes
 the dedicated Velora phase. The HA implementation currently imports devices and
@@ -16,7 +34,8 @@ orchestration below are future scope, not prerequisites for this import.
 
 Core orchestration, policy classes, owner-scoped audit, exact device/room target
 resolution, gateway enrollment and the bounded Web/Voice paths already exist.
-Household roles and broader permission/backup policies remain open.
+Explicit household/resource scopes and broader permission/backup policies remain open;
+installation-wide RBAC has since been implemented.
 
 ## Milestone 0 — Foundation
 

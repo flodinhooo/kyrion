@@ -79,7 +79,7 @@ class DeviceCatalogService(
             .associateBy { it.ieeeAddress }
         val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
             .associateBy { it.address }
-        return connections.findAll(ownerId).map { connection ->
+        return connections.findAll(ownerId).filter { it.provider != "google" }.map { connection ->
             val observation = ownerObservations[connection.id]
             val currentAvailability = observation?.takeIf { isFresh(it.observedAt) }?.availability
                 ?: DeviceAvailability.UNKNOWN
