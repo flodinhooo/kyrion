@@ -41,7 +41,7 @@ jobs:
         run: sh infrastructure/installer-v1/release/build-bundle.sh "${{ steps.version.outputs.version }}" "$RUNNER_TEMP/bundle"
       - name: Validate unsigned bundle
         run: python3 infrastructure/installer-v1/bundle.py "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/bundle/manifest.json"
-      - uses: actions/upload-artifact@<bestehender-gepinnter-SHA>
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: unsigned-bundle
           path: ${{ runner.temp }}/bundle
@@ -51,12 +51,17 @@ jobs:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     environment: release-signing
-    permissions: { contents: read }
+    permissions:
+      contents: read
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: { name: unsigned-bundle, path: bundle }
+        with:
+          name: unsigned-bundle
+          path: bundle
       - name: Sign and verify manifest
-        env: { RELEASE_SIGNING_KEY: ${ { secrets.KYRION_RELEASE_SIGNING_KEY_PEM } }, RELEASE_PUBLIC_KEY: ${ { secrets.KYRION_RELEASE_PUBLIC_KEY_PEM } } }
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.KYRION_RELEASE_SIGNING_KEY_PEM }}
+          RELEASE_PUBLIC_KEY: ${{ secrets.KYRION_RELEASE_PUBLIC_KEY_PEM }}
         run: |
           test -n "$RELEASE_SIGNING_KEY"; test -n "$RELEASE_PUBLIC_KEY"
           umask 077; printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/signing.pem"; printf '%s\n' "$RELEASE_PUBLIC_KEY" > "$RUNNER_TEMP/public.pem"
@@ -64,12 +69,16 @@ jobs:
           sh infrastructure/installer-v1/release/verify-manifest.sh bundle/manifest.json bundle/manifest.sig "$RUNNER_TEMP/public.pem"
           rm -f "$RUNNER_TEMP/signing.pem"
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
-        with: { name: signed-bundle, path: bundle, if-no-files-found: error }
+        with:
+          name: signed-bundle
+          path: bundle
+          if-no-files-found: error
 
   publish:
     needs: sign
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == true && false }}
     runs-on: ubuntu-24.04
-    permissions: { contents: read }
+    permissions:
+      contents: read
     steps:
       - run: echo 'Publishing is intentionally disabled until release gates are approved.' && exit 1
