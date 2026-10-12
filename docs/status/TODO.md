@@ -35,7 +35,6 @@ Historical unchecked experiments are not the current work order.
   verify revocation and reactivation/new login without reviving old sessions.
 - [x] Run current Core/Web checks and infrastructure syntax/configuration checks;
   record exact results and limitations in the readiness review.
-
 ## Security hardening implemented and tested (2026-10-11)
 
 See the [hardening closeout](2026-10-11-security-hardening.md); previous readiness
