@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kyrion
+      POSTGRES_USER: kyrion
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+    secrets: [ postgres-password ]
+    volumes: [ __KYRION_DATA_DIR__/postgres:/var/lib/postgresql/data ]
+    networks: [ platform ]
+    healthcheck: { test: [ CMD-SHELL, "pg_isready -U kyrion -d kyrion" ], interval: 10s, timeout: 5s, retries: 12 }
+  core:
+    image: kyrion/core:__KYRION_RELEASE__
+    restart: unless-stopped
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      KYRION_CORE_ADDRESS: 0.0.0.0
+      KYRION_DATABASE_URL: jdbc:postgresql://postgres:5432/kyrion
+      KYRION_DATABASE_USER: kyrion
+      KYRION_DATABASE_PASSWORD_FILE: /run/secrets/postgres-password
+      KYRION_CREDENTIAL_KEY_FILE: /run/secrets/credential-key
+      KYRION_AUDIT_INTEGRITY_KEY_FILE: /run/secrets/audit-key
+      KYRION_BOOTSTRAP_SECRET_FILE: /run/secrets/bootstrap-secret
+    secrets: [ postgres-password, credential-key, audit-key, bootstrap-secret ]
+    networks: [ platform ]
+    read_only: true
+    cap_drop: [ ALL ]
+    security_opt: [ no-new-privileges:true ]
+    healthcheck: { test: [ CMD, curl, --fail, --silent, http://127.0.0.1:8080/actuator/health ], interval: 10s, timeout: 5s, retries: 12 }
+  web:
+    image: kyrion/web:__KYRION_RELEASE__
+    restart: unless-stopped
+    depends_on: { core: { condition: service_healthy } }
+    environment: { CORE_SERVICE_URL: http://core:8080, KYRION_PUBLIC_URL: https://__KYRION_HOSTNAME__ }
+    networks: [ platform ]
+    read_only: true
+    cap_drop: [ ALL ]
+    security_opt: [ no-new-privileges:true ]
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on: { web: { condition: service_started } }
+    ports: [ "443:443" ]
+    volumes: [ __KYRION_DATA_DIR__/Caddyfile:/etc/caddy/Caddyfile:ro, __KYRION_DATA_DIR__/tls:/etc/caddy/tls:ro ]
+    networks: [ platform ]
+    cap_drop: [ ALL ]
+    cap_add: [ NET_BIND_SERVICE ]
+    security_opt: [ no-new-privileges:true ]
+networks: { platform: { driver: bridge } }
+secrets:
+  postgres-password: { file: __KYRION_SECRETS_DIR__/postgres-password }
+  credential-key: { file: __KYRION_SECRETS_DIR__/credential.key }
+  audit-key: { file: __KYRION_SECRETS_DIR__/audit-integrity.key }
+  bootstrap-secret: { file: __KYRION_SECRETS_DIR__/bootstrap.secret }

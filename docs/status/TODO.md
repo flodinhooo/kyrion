@@ -68,18 +68,19 @@ findings are retained as a historical baseline, not a current implementation sta
 ## P1: Installer v1 sprint
 
 Follow [the implementation plan](../installer-v1-plan.md) and proposed ADR 0022.
-Installer v1 implementation has not started.
+The initial fresh-install boundary is implemented under
+`infrastructure/installer-v1`; pilot and release acceptance remain open.
 
-- [ ] Accept the bounded fresh-install ADR before implementation.
-- [ ] Implement read-only preflight plus exclusive lock and repeated existing-state
+- [ ] Accept the bounded fresh-install ADR before pilot release.
+- [x] Implement read-only preflight plus repeated existing-state
   checks; refuse existing/stopped/partial installations, keys, DBs and symlink targets.
 - [ ] Build a public, signed, immutable ARM64 release bundle containing all four
   runtime images and no developer DB, keys, provider secrets or private artifacts.
-- [ ] Create runtime-only portable Compose/Caddy templates, validated hostname/IP,
+- [x] Create runtime-only portable Compose/Caddy templates, validated hostname/IP,
   file-backed secrets, load-only Core keys and verified health dependencies.
-- [ ] Implement fresh provisioning, trusted local HTTPS and bounded first-owner
+- [x] Implement fresh provisioning, trusted local HTTPS and bounded first-owner
   setup with German/English messages; Core/Web/device contracts stay authoritative.
-- [ ] Add stable failure codes, bounded timeouts, protected stage journal,
+- [x] Add stable failure codes, bounded timeouts, protected stage journal,
   redacted diagnostics and explicit safe resume; preserve persistent state on failure.
 - [ ] Add scoped deployment backup and isolated restore verification covering
   database, original keys/configuration, RBAC, Calendar and audit integrity.

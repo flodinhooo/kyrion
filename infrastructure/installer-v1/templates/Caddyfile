@@ -1,0 +1,4 @@
+https://__KYRION_HOSTNAME__ {
+  tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem
+  reverse_proxy web:3000
+}
