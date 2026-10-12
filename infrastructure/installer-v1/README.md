@@ -45,5 +45,7 @@ triggered by `v*.*.*` tags or manual dispatch. It requires a protected
 `release-signing` environment with `KYRION_RELEASE_SIGNING_KEY_PEM` and
 `KYRION_RELEASE_PUBLIC_KEY_PEM`. The publication job is disabled in this
 repository until ARM64, signature custody and release acceptance are complete.
+Manual workflow dispatches only validate unsigned artifacts and never receive
+release signing secrets.
 The unsigned builder never receives release secrets; the signing job only
 receives them after the build artifact has been produced and validated.

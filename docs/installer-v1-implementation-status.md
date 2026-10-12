@@ -34,6 +34,8 @@ version tags, validates it, and signs it only inside the protected
 `release-signing` environment using `KYRION_RELEASE_SIGNING_KEY_PEM` and
 `KYRION_RELEASE_PUBLIC_KEY_PEM`. The publish job is intentionally disabled in
 the repository (`&& false`); no GitHub Release is created automatically.
+Manual dispatch performs only unsigned build validation and cannot reach the
+signing job or any release secret.
 
 The signing private key must be an environment secret and must never be stored
 in the repository. The public key should be distributed independently with the
