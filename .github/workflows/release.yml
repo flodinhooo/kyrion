@@ -41,9 +41,11 @@ jobs:
         run: sh infrastructure/installer-v1/release/build-bundle.sh "${{ steps.version.outputs.version }}" "$RUNNER_TEMP/bundle"
       - name: Validate unsigned bundle
         run: python3 infrastructure/installer-v1/bundle.py "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/bundle/manifest.json"
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
-        with: { name: unsigned-bundle, path: ${ { runner.temp } }/bundle, if-no-files-found: error }
-
+      - uses: actions/upload-artifact@<bestehender-gepinnter-SHA>
+        with:
+          name: unsigned-bundle
+          path: ${{ runner.temp }}/bundle
+          if-no-files-found: error
   sign:
     needs: build
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
