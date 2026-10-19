@@ -1,5 +1,3 @@
-"use client";
-
 import {
   AudioLines,
   BatteryCharging,
@@ -10,13 +8,10 @@ import {
   UserRound,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/lib/site";
 import { Logo } from "./logo";
 
 export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
   const destinationIcons = [Lightbulb, Radio, AudioLines, BatteryCharging];
   const integrationLogos: Record<string, string> = {
     Zigbee: "/branding/integrations/zigbee.svg",
@@ -24,29 +19,9 @@ export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
     "Home Assistant": "/branding/integrations/homeassistant.svg",
   };
 
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section || typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.18 },
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
-      className={`how-kyrion-works border-y border-border bg-muted/35 py-20 sm:py-28 ${visible ? "is-visible" : ""}`}
+      className="how-kyrion-works border-y border-border bg-muted/35 py-20 sm:py-28"
       aria-labelledby="how-kyrion-works-title"
     >
       <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">

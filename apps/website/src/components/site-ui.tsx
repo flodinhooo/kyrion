@@ -104,7 +104,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[11px]",
+        "inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[11px]",
         statusStyles[status],
       )}
     >
@@ -145,11 +145,12 @@ export function FeatureCard({
   children?: ReactNode;
 }) {
   return (
-    <article className="group rounded-xl border border-border bg-card p-7 transition-colors hover:border-accent/40 sm:p-8">
+    <article
+      className="group h-full rounded-xl border border-border bg-card p-6 transition-colors hover:border-accent/40 sm:p-7">
       <Icon
         aria-hidden="true"
         strokeWidth={1.4}
-        className="mb-9 size-7 text-muted-foreground transition-colors group-hover:text-accent"
+        className="mb-6 size-7 text-muted-foreground transition-colors group-hover:text-accent"
       />
       {children && <div className="mb-4">{children}</div>}
       <h3 className="text-xl font-medium tracking-tight">{title}</h3>

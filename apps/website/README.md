@@ -2,7 +2,7 @@
 
 Standalone public Next.js App Router website for kyrion.ch. It presents the
 Kyrion development prototype without authentication, device APIs, databases,
-analytics, private installation data or a dependency on `apps/web`.
+private installation data or a dependency on `apps/web`.
 
 ## Pages and content
 
@@ -20,12 +20,14 @@ implementations and resolves the correct HTML language and metadata on the
 server. Unknown paths return 404. Content lives in `src/locales/{en,de}.json`.
 The header language link retains the current page.
 
-Capability statements follow the root README, `docs/roadmap.md` and the
-2026-09-06 consolidation report. Shared invitations follow the implemented
-README status rather than the broader, still-planned household-role roadmap.
-“Available” means implemented in the prototype, not a general release. Voice
-acceptance, HA physical verification and planned automation boundaries remain
-explicit. Update both locales when development claims change.
+Capability statements are synchronized with repository code, the root README,
+`docs/rbac.md`, the security hardening closeout, integration documents and
+`docs/installer-v1-implementation-status.md`. See [refresh review](REFRESH.md)
+for evidence and known documentation conflicts. "Available" means implemented
+in the prototype, not a general release. Installation-wide roles and Calendar
+are implemented; resource scopes, general automations, mobile and public plugins
+remain planned. Voice reliability and physical HA acceptance remain open.
+Update both locales when development claims change.
 
 ## Development
 
@@ -111,8 +113,10 @@ The Velora voice preview on the home page uses the optional static assets
 `public/audio/velora-intro-de.mp3` and `public/audio/velora-intro-en.mp3`.
 `VeloraVoicePreview` selects the asset from the active page locale, starts only
 after an explicit click or keyboard activation, and fails softly when an asset
-is missing. The audio is intentionally not included in the repository until
-reviewed DE/EN recordings are available.
+is missing. The repository includes both DE/EN voice samples. Playback requires explicit
+click or keyboard activation; hover and focus alone do not start audio.
+Vercel Analytics is included by the existing root layout. It remains separate
+from the local platform; this website does not claim to be analytics-free.
 No real delivery is attempted by tests. Full public docs, search, version
 selection and signup handling are intentionally not implemented. No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no

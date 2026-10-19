@@ -1,5 +1,6 @@
 import {
   AudioLines,
+  CalendarDays,
   Cable,
   House,
   ScanLine,
@@ -28,6 +29,7 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
     ScanLine,
     Server,
     AudioLines,
+    CalendarDays,
     Workflow,
     Cable,
   ];
@@ -43,16 +45,21 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
             description={t.product.availableNote}
           />
           <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {t.capabilities.slice(0, 6).map((item, i) => (
-              <FeatureCard
-                key={item.title}
-                title={item.title}
-                description={item.description}
-                icon={icons[i]}
-              >
-                <StatusBadge status={statusOf(item.status)} labels={t.status} />
-              </FeatureCard>
-            ))}
+            {t.capabilities
+              .filter((item) => item.status === "available")
+              .map((item, i) => (
+                <FeatureCard
+                  key={item.title}
+                  title={item.title}
+                  description={item.description}
+                  icon={icons[i] ?? CalendarDays}
+                >
+                  <StatusBadge
+                    status={statusOf(item.status)}
+                    labels={t.status}
+                  />
+                </FeatureCard>
+              ))}
           </div>
         </Container>
       </section>
@@ -63,16 +70,21 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
             description={t.product.futureNote}
           />
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {t.capabilities.slice(6).map((item, i) => (
-              <FeatureCard
-                key={item.title}
-                title={item.title}
-                description={item.description}
-                icon={icons[i + 6]}
-              >
-                <StatusBadge status={statusOf(item.status)} labels={t.status} />
-              </FeatureCard>
-            ))}
+            {t.capabilities
+              .filter((item) => item.status !== "available")
+              .map((item, i) => (
+                <FeatureCard
+                  key={item.title}
+                  title={item.title}
+                  description={item.description}
+                  icon={icons[i + 6] ?? Server}
+                >
+                  <StatusBadge
+                    status={statusOf(item.status)}
+                    labels={t.status}
+                  />
+                </FeatureCard>
+              ))}
           </div>
         </Container>
       </section>

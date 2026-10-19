@@ -1,6 +1,6 @@
 # Kyrion Development TODO
 
-Last updated: 2026-10-11.
+Last updated: 2026-10-12.
 
 This is the consolidated active backlog. Source of truth: current code,
 the [hardening closeout](2026-10-11-security-hardening.md), the
@@ -66,20 +66,26 @@ findings are retained as a historical baseline, not a current implementation sta
 
 ## P1: Installer v1 sprint
 
-Follow [the implementation plan](../installer-v1-plan.md) and proposed ADR 0022.
+Follow [the implementation plan](../installer-v1-plan.md) and accepted ADR 0022.
 The initial fresh-install boundary is implemented under
 `infrastructure/installer-v1`; pilot and release acceptance remain open.
 
-- [ ] Accept the bounded fresh-install ADR before pilot release.
+- [x] Accept the bounded fresh-install ADR for implementation; pilot release gates remain open.
 - [x] Implement read-only preflight plus repeated existing-state
   checks; refuse existing/stopped/partial installations, keys, DBs and symlink targets.
+- [x] Implement the reproducible ARM64 bundle builder, manifest digest validation
+  and detached Ed25519 signing/verification scripts. A public signed release is
+  still open until a protected GitHub release run succeeds.
 - [ ] Build a public, signed, immutable ARM64 release bundle containing all four
   runtime images and no developer DB, keys, provider secrets or private artifacts.
 - [x] Add guarded GitHub Actions CI and a disabled release/signing workflow;
-  live GitHub execution and release-environment acceptance remain open.
+  workflow files are locally reviewed; live GitHub execution and release-environment acceptance remain open.
+- [x] Document installer `.env` variables and provide a secret-free
+  `infrastructure/installer-v1/.env.example`; generated `.env` files remain
+  protected installation state.
 - [x] Create runtime-only portable Compose/Caddy templates, validated hostname/IP,
   file-backed secrets, load-only Core keys and verified health dependencies.
-- [x] Implement fresh provisioning, trusted local HTTPS and bounded first-owner
+- [x] Implement fresh provisioning, trusted local HTTPS template and bounded first-owner
   setup with German/English messages; Core/Web/device contracts stay authoritative.
 - [x] Add stable failure codes, bounded timeouts, protected stage journal,
   redacted diagnostics and explicit safe resume; preserve persistent state on failure.

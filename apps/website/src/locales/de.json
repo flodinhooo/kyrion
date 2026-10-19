@@ -77,8 +77,8 @@
     }
   },
   "meta": {
-    "title": "Kyrion — Lokale Plattform für ein intelligentes Zuhause",
-    "description": "Kyrion ist eine lokale Plattform für intelligente Haussteuerung, Automatisierung und vernetzte Geräte. Derzeit in Entwicklung."
+    "title": "Kyrion — Local-First Home Operating System",
+    "description": "Ein Local-First Home Operating System für Geräte, Dienste und optionale KI. Entdecke den Prototyp, belegte Integrationen und die nächsten Entwicklungsschritte."
   },
   "nav": {
     "contact": "Kontakt",
@@ -128,11 +128,11 @@
     "copyright": "© 2026 Kyrion"
   },
   "home": {
-    "eyebrow": "LOKALE PLATTFORM FÜR EIN INTELLIGENTES ZUHAUSE",
+    "eyebrow": "LOCAL-FIRST HOME OPERATING SYSTEM",
     "title": "Dein Zuhause. Deine Dienste.",
     "titleAccent": "Eine Plattform, die alles verbindet.",
-    "description": "Kyrion verbindet deine Geräte, Automationen und digitalen Dienste – lokal, privat und unter deiner Kontrolle.",
-    "heroNote": "Ein funktionierender Prototyp. Ein durchdachtes Fundament. Schritt für Schritt.",
+    "description": "Kyrion ist ein Local-First Home Operating System: eine kontrollierte Ebene für deine Geräte, Räume und digitalen Dienste, mit optionaler KI und Automationen als geplantem nächsten Schritt.",
+    "heroNote": "Funktionierender Entwicklungsprototyp · Noch keine allgemeine Freigabe · Grundlegende Steuerung ohne KI",
     "diagramLabel": "Das Kyrion-Ökosystem",
     "diagramTop": "GERÄTE & INTEGRATIONEN",
     "diagramCore": "EIN VERTRAUENSWÜRDIGER CORE",
@@ -176,12 +176,12 @@
     },
     "worksCore": {
       "title": "Kyrion Core",
-      "description": "Die gemeinsame Mitte: verstehen, Regeln anwenden und kontrolliert ausführen.",
-      "meta": "Verstehen · Automatisieren · Steuern"
+      "description": "Prüft Identität, Berechtigungen und Aktionsregeln und protokolliert die Ergebnisse.",
+      "meta": "Prüfen · Autorisieren · Ausführen"
     },
     "worksEnvironment": {
       "title": "Dein Zuhause",
-      "description": "Licht, Sensoren, Medien, Energie und weitere Geräte – über passende Integrationen.",
+      "description": "Ausgewählte Lampen, Sensoren und Medien über klar begrenzte Integrationen.",
       "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
     },
     "worksCloud": {
@@ -200,68 +200,91 @@
     "cloudCard": {
       "label": "OPTIONALE VERBINDUNG",
       "title": "Dienste kommen nur dazu, wenn du sie brauchst",
-      "description": "Verbinde zum Beispiel Spotify, Google oder YouTube über eine ausdrücklich aktivierte Integration. Du entscheidest, welche Verbindung besteht und kannst sie wieder entfernen."
+      "description": "Spotify nutzt ein ausdrücklich verbundenes Konto. Google Calendar wird nur lesend angezeigt; YouTube lädt einen sichtbaren Link-Player ohne Kontoverbindung. Diese Dienste benötigen ihre Anbieter und Netzwerkzugriff."
     },
     "permissionsEyebrow": "VERBINDUNGEN MIT KLAREN GRENZEN",
     "permissionsTitle": "Ein Konto erweitert Kyrion. Es übernimmt nicht dein Zuhause.",
-    "permissionsDescription": "Künftige Plugins sollen Dienste über getrennte, verständliche Berechtigungen anbinden. Du gibst nur frei, was du wirklich nutzen möchtest.",
-    "permissionsNote": "Berechtigungen bleiben sichtbar und widerrufbar",
-    "pluginMock": {
-      "account": "Verbunden als user@example.com",
-      "connected": "Verbunden",
-      "manage": "Berechtigungen verwalten",
-      "disconnect": "Trennen",
-      "note": "Konzeptdarstellung – kein bereits verfügbarer Google-Login.",
-      "scopes": [
-        { "name": "Calendar", "access": "Lesen · Verwalten", "allowed": true },
-        { "name": "Gmail", "access": "Kein Zugriff", "allowed": false },
-        { "name": "YouTube", "access": "Verbunden", "allowed": true }
-      ]
-    },
+    "permissionsDescription": "Core setzt installationsweite Rollen durch und prüft Geräteaktionen. Optionale KI schlägt Anfragen über denselben kontrollierten Pfad vor. Berechtigungen je Raum oder Gerät sind noch geplant.",
+    "permissionsNote": "Core verantwortet Berechtigungen und Ausführung",
     "integrationsEyebrow": "FÜR DAS, WAS DU BEREITS NUTZT",
     "integrationsTitle": "Gebaut, um Systeme zu verbinden.",
-    "integrationsDescription": "Kyrion soll dein Zuhause nicht ersetzen. Die Plattform verbindet Geräte und Dienste verschiedener Hersteller über passende Integrationen. Der Status zeigt, was heute im Prototyp existiert und was noch folgt.",
+    "integrationsDescription": "Implementiert bedeutet im Entwicklungsprototyp vorhanden, keine Endkundenfreigabe. Hardware-Nachweise gelten für ausgewählte Geräte und belegen keine Kompatibilität mit jedem Gerät eines Ökosystems.",
     "integrations": [
       {
         "title": "Standards",
         "items": [
-          { "name": "Zigbee", "status": "available" },
-          { "name": "Bluetooth", "status": "available" },
-          { "name": "Matter / Thread", "status": "planned" }
+          {
+            "name": "Zigbee (Zigbee2MQTT)",
+            "status": "available"
+          },
+          {
+            "name": "Bluetooth (MELK-OA20)",
+            "status": "experimental"
+          },
+          {
+            "name": "Matter / Thread",
+            "status": "planned"
+          }
         ]
       },
       {
         "title": "Gerätewelten",
         "items": [
-          { "name": "Nanoleaf", "status": "available" },
-          { "name": "Philips Hue", "status": "available" },
-          { "name": "Aqara / myStrom", "status": "planned" }
+          {
+            "name": "Nanoleaf",
+            "status": "available"
+          },
+          {
+            "name": "Philips Hue (Zigbee)",
+            "status": "available"
+          },
+          {
+            "name": "Aqara / myStrom",
+            "status": "planned"
+          }
         ]
       },
       {
         "title": "Dienste",
         "items": [
-          { "name": "Spotify", "status": "available" },
-          { "name": "Home Assistant", "status": "available" },
-          { "name": "Google / YouTube / Jellyfin", "status": "planned" }
+          {
+            "name": "Spotify Connect",
+            "status": "available"
+          },
+          {
+            "name": "Home Assistant (lesend)",
+            "status": "experimental"
+          },
+          {
+            "name": "YouTube (Link-Player)",
+            "status": "available"
+          },
+          {
+            "name": "Google Calendar (lesend)",
+            "status": "available"
+          },
+          {
+            "name": "Jellyfin",
+            "status": "planned"
+          }
         ]
       }
     ],
     "hardwareEyebrow": "EINRICHTUNG",
     "hardwareTitle": "Brauchst du einen eigenen Server?",
-    "hardwareDescription": "Kyrion benötigt ein Gerät, auf dem die Plattform läuft. Die passende Größe hängt vom Einsatzgebiet ab.",
+    "hardwareDescription": "Core, Web und PostgreSQL benötigen einen eingerichteten lokalen Host. Lokale KI und Sprache stellen zusätzliche Anforderungen an Laufzeit und Hardware.",
     "hardwareFaq": [
       {
-        "question": "Brauche ich einen klassischen Server oder ein NAS?",
-        "answer": "Nein. Ein klassischer Server oder ein NAS ist nicht zwingend erforderlich. Für erste Einsätze kann ein kompakter lokaler Computer ausreichen. Speziell dafür vorgesehene Kyrion-Hardware ist eine mögliche spätere Richtung, aber heute kein verfügbares Produkt."
+        "question": "Kann ich Kyrion mit einem Befehl installieren?",
+        "answer": "Noch nicht. Installer v1 besitzt eine implementierte Grenze für Neuinstallationen, aber das eingecheckte Manifest enthält keine installierbaren Artefakte. Signierte Release-Abnahme, Zertifikate, Backup-/Restore-Prüfung und ein Durchlauf auf einem frischen Raspberry Pi stehen aus."
       },
       {
         "question": "Was läuft heute bereits auf eigener Hardware?",
-        "answer": "Der Prototyp läuft mit Kyrion Core, lokaler Speicherung und einem Raspberry-Pi-Gateway für ausgewählte Geräte- und Sprachpfade. Die konkrete Hardware-Abdeckung wird weiterhin einzeln validiert."
+        "answer": "Core, Web und PostgreSQL bilden die lokale Plattform. Ein Raspberry-Pi-Gateway unterstützt ausgewählte Licht- und Sprachpfade. Lokale KI und Sprache benötigen separat konfigurierte Anbieter; ein reiner Pi-Betrieb mit KI ist nicht belegt."
       },
       {
-        "question": "Kann ich später Cloud-Dienste verbinden?",
-        "answer": "Ja. Cloud-Dienste sind als optionale Erweiterungen gedacht. Kyrion soll auch ohne diese Konten für lokale Geräte, Räume und Konfigurationen nutzbar bleiben."
+        "question": "Wo finde ich Anleitungen zur Einrichtung?",
+        "answer": "Das Repository enthält Anleitungen für den Entwicklungsstart und den Implementierungsstand des Installers. Das sind technische Einrichtungsdokumente; eine unterstützte Endkundeninstallation ist noch in Entwicklung."
       }
     ],
     "featuresEyebrow": "EIN ZUHAUSE, DAS ZUSAMMENARBEITET",
@@ -272,8 +295,8 @@
     "ecosystemDescription": "Integrationen verbinden Geräte. Core verwaltet die Regeln. Web, Sprache und optionale Intelligenz bieten unterschiedliche Zugänge – über denselben kontrollierten Aktionspfad.",
     "ecosystemLink": "Die Architektur verstehen",
     "veloraEyebrow": "DAS IST VELORA",
-    "veloraTitle": "KI, die bei dir zuhause läuft.",
-    "veloraDescription": "Chat, Sprache und intelligente Funktionen können auf deiner eigenen Kyrion-Hardware laufen. So muss nicht jede sensible Interaktion an einen externen KI-Dienst gehen. Weitere Anbieter bleiben optional; der Prototyp wird noch weiter validiert.",
+    "veloraTitle": "Velora: eine Assistenz im Aufbau.",
+    "veloraDescription": "Velora entsteht als intelligente Sprachschnittstelle für Kyrion. Lokaler Chat, „Hey Velora“-Erkennung, Transkription und begrenzte Gerätebefehle existieren. Wiederholbare Sprachzuverlässigkeit und natürliche Dialoge müssen weiter geprüft werden; KI bleibt optional.",
     "veloraRule": "Intelligenz schlägt vor. Core entscheidet.",
     "veloraPlay": "Velora kennenlernen",
     "veloraSpeaking": "Velora spricht",
@@ -282,8 +305,30 @@
     "veloraWelcomed": "Velora hat dich gerade begrüßt.",
     "developmentEyebrow": "TRANSPARENT, SCHRITT FÜR SCHRITT",
     "developmentTitle": "Echter Fortschritt.\nEin klarer Entwicklungsstand.",
-    "developmentDescription": "Kyrion ist ein funktionierender Entwicklungsprototyp auf dem Weg zu einer privaten Alpha. Zentrale Steuerungspfade existieren; breitere Nutzbarkeit, Sprachzuverlässigkeit und neue Funktionen brauchen weitere Prüfung.",
-    "developmentNote": "Kein öffentliches Erscheinungsdatum. Noch nicht allgemein verfügbar. Funktionen und Architektur können sich ändern."
+    "developmentDescription": "Aktuell wird eine erste frische Installation mit Installer v1 vorbereitet. Sicherheitsarbeit, installationsweite Rollen und lokale Kalenderfunktionen sind implementiert. Sprach- und Home-Assistant-Hardwareabnahmen bleiben separat offen.",
+    "developmentNote": "Kein öffentliches Erscheinungsdatum. Noch nicht allgemein verfügbar. Funktionen und Architektur können sich ändern.",
+    "permissionModel": {
+      "title": "Ein kontrollierter Aktionspfad",
+      "note": "Architekturübersicht, kein Screenshot der Anwendung.",
+      "items": [
+        {
+          "title": "Personen und Rollen",
+          "description": "Owner, Admin, User und Viewer, eigene Rollen sowie Einladungen durch Eigentümer.",
+          "status": "available"
+        },
+        {
+          "title": "Aktionen und Ergebnisse",
+          "description": "Core prüft Vorschläge und protokolliert wichtige Aktionen mit Korrelationskennungen.",
+          "status": "available"
+        },
+        {
+          "title": "Raum- und Gerätegrenzen",
+          "description": "Feinere Haushaltsberechtigungen und öffentliche Plugin-Verträge folgen später.",
+          "status": "planned"
+        }
+      ]
+    },
+    "integrationNote": "Der Home-Assistant-Import wartet auf physische Prüfung. Für Spotify-Websteuerung und wiederholbare Sprachzuverlässigkeit stehen Abnahmen noch aus."
   },
   "features": [
     {
@@ -304,7 +349,7 @@
     },
     {
       "title": "Ein Zuhause zum Teilen",
-      "description": "Einladungen durch den Eigentümer ermöglichen bereits gemeinsame Gerätesteuerung. Feinere Haushaltsrollen folgen später."
+      "description": "Einladungen und installationsweite System- sowie eigene Rollen sind implementiert. Berechtigungen je Raum oder Gerät bleiben geplant."
     },
     {
       "title": "Klarheit bei Veränderungen",
@@ -332,13 +377,13 @@
       "status": "available"
     },
     {
-      "title": "KI und Sprache zuhause",
+      "title": "Lokaler Chat & Vorschläge",
       "description": "Lokaler Streaming-Chat und begrenzte Befehlsvorschläge auf Deutsch und Englisch. Core prüft Berechtigungen und Ziele vor jeder Ausführung; zuverlässige Ende-zu-Ende-Sprache bleibt in Entwicklung.",
       "status": "available"
     },
     {
       "title": "Gemeinsame Installationen",
-      "description": "Eigentümer können weitere Konten zur gemeinsamen Gerätesteuerung einladen. Fein abgestufte Haushaltsrollen sind noch nicht implementiert.",
+      "description": "Einladungen und installationsweite System- sowie eigene Rollen sind implementiert. Berechtigungen je Raum oder Gerät bleiben geplant.",
       "status": "available"
     },
     {
@@ -365,6 +410,16 @@
       "title": "Weitere Integrationen",
       "description": "Versionierte Plugin-Verträge, erweiterte Home-Assistant-Fähigkeiten und weitere Gerätewelten. Ein öffentlicher Marktplatz ist nicht implementiert.",
       "status": "planned"
+    },
+    {
+      "title": "Kalender & Lounge",
+      "description": "Lokale Kalenderverwaltung, lesende Google-Calendar-Anzeige, Spotify-Connect-Steuerung und ein sichtbarer YouTube-Link-Player sind implementiert. Die Spotify-Webabnahme am Empfänger steht aus.",
+      "status": "available"
+    },
+    {
+      "title": "Installer v1",
+      "description": "Noch nicht. Installer v1 besitzt eine implementierte Grenze für Neuinstallationen, aber das eingecheckte Manifest enthält keine installierbaren Artefakte. Signierte Release-Abnahme, Zertifikate, Backup-/Restore-Prüfung und ein Durchlauf auf einem frischen Raspberry Pi stehen aus.",
+      "status": "development"
     }
   ],
   "about": {
@@ -397,8 +452,8 @@
     "title": "Eine Plattform im Aufbau.\nEine Richtung mit Substanz.",
     "description": "Kyrion ist ein funktionierender Prototyp auf dem Weg zur privaten Alpha-Validierung. Es ist kein fertiges Endkundenprodukt und noch nicht allgemein verfügbar.",
     "checkpoint": "AKTUELLER STAND",
-    "checkpointTitle": "Das Fundament stärken.\nDann Interaktion natürlich machen.",
-    "checkpointDescription": "Die jüngste Arbeit konsolidiert den lesenden Home-Assistant-Import, die Dienstdiagnose und den Aktionsinspektor. Die nächste Velora-Phase konzentriert sich auf wiederholbare Verarbeitung, Audio und bestätigte Geräteergebnisse.",
+    "checkpointTitle": "Eine sichere Neuinstallation vorbereiten.\nAuf echter Hardware belegen.",
+    "checkpointDescription": "Installationsweite Rollen, lokale Kalenderverwaltung und die lesende Google-Calendar-Anzeige sind implementiert. Installer v1 prüft Neuinstallationsgrenzen und signierte Manifeste, hat aber noch kein veröffentlichtes Artefaktpaket. ARM64-Abnahme, Zertifikate, Backup-/Restore-Prüfung und ein frischer Pi-Durchlauf stehen aus.",
     "areasTitle": "Wo die Plattform steht",
     "legendTitle": "Was die Status bedeuten",
     "legend": [
@@ -411,18 +466,18 @@
     "roadmapDescription": "An Ergebnissen orientiert, ohne erfundene Termine.",
     "roadmap": [
       {
-        "title": "Den Alltag validieren",
-        "description": "Zuverlässige Sprachrückmeldung, nachvollziehbare Ergebnisse und wiederholbares Verhalten auf lokaler Hardware.",
+        "title": "Installer v1 validieren",
+        "description": "Signierte Artefakte, erste Eigentümereinrichtung, Zertifikate und Wiederherstellung vor einer Pilotfreigabe auf einem frischen Raspberry Pi prüfen.",
         "status": "development"
       },
       {
-        "title": "Das Zuhause besser koordinieren",
-        "description": "Automationen, feinere Haushaltsberechtigungen und weitere Integrationsfähigkeiten.",
-        "status": "planned"
+        "title": "Alltagszuverlässigkeit prüfen",
+        "description": "Wiederholbare Sprach- und Home-Assistant-Hardwareabnahmen abschließen; danach Automationen und feinere Haushaltsberechtigungen ausbauen.",
+        "status": "development"
       },
       {
-        "title": "Mit Bedacht öffnen",
-        "description": "Öffentliche Dokumentation, breitere Validierung und Erweiterungsverträge vor einem öffentlichen Marktplatz.",
+        "title": "Gezielt erweitern",
+        "description": "Mobile, Matter/Thread und versionierte Plugin-Verträge bleiben geplant. Offizielle Plugins vor einem öffentlichen Marktplatz belegen.",
         "status": "planned"
       }
     ],
@@ -444,25 +499,28 @@
       "Integrationen",
       "Referenz"
     ],
-    "articleTitle": "Dokumentation, von Grund auf.",
-    "articleDescription": "Die öffentliche Dokumentation ist noch nicht veröffentlicht. Das Repository enthält die aktuellen technischen Dokumente, Entscheidungen und Entwicklungsnachweise.",
+    "articleTitle": "Beginne im Repository.",
+    "articleDescription": "Im Repository findest du technische Anleitungen, Entscheidungen und Nachweise. Diese Links öffnen die tatsächlichen Dokumente; ein eigenes Dokumentationsportal bleibt geplant.",
     "cards": [
       {
-        "title": "Erste Schritte",
-        "description": "Künftige Anleitungen für eine unterstützte lokale Einrichtung und den Einstieg."
+        "title": "Entwicklungsstart",
+        "description": "Core, Web, PostgreSQL und optionale lokale Anbieter einrichten.",
+        "path": "docs/development-startup.md"
       },
       {
-        "title": "Grundkonzepte",
-        "description": "Die Grenzen zwischen Geräten, Core, Integrationen und Intelligenz."
+        "title": "Installer-v1-Status",
+        "description": "Implementierte Grenzen, Release-Hürden und offene Hardwareabnahmen.",
+        "path": "docs/installer-v1-implementation-status.md"
       },
       {
-        "title": "Integrationsreferenz",
-        "description": "Unterstützte Fähigkeiten, Berechtigungsgrenzen und Prüfstatus."
+        "title": "Architektur & Verantwortung",
+        "description": "Core-Autorität, Integrationsgrenzen und optionale Intelligenz.",
+        "path": "docs/architecture.md"
       }
     ],
     "codeTitle": "Wo was liegt",
     "code": "apps/website    → öffentliche Website\napps/web        → lokale Oberfläche\nservices/core   → Plattformautorität",
-    "note": "Dies ist ein Layout-Fundament, keine Installationsanleitung. Suche, versionierte Artikel und die vollständige Referenz folgen mit der öffentlichen Dokumentation.",
+    "note": "Die Entwicklungsanleitungen beschreiben einen Prototyp. Eine unterstützte Endkundeninstallation, Dokumentationssuche und versionierte Artikel sind noch in Entwicklung oder geplant.",
     "repoLink": "Repository-Dokumentation lesen"
   },
   "legal": {

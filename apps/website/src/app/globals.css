@@ -50,6 +50,7 @@
     border-color: var(--border);
   }
   body {
+    overflow-wrap: break-word;
     margin: 0;
     background: var(--background);
     color: var(--foreground);
@@ -111,7 +112,10 @@
   grid-template-columns: 1fr 48px 1fr 48px 1.15fr 48px 1.25fr;
   align-items: center;
 }
-.how-kyrion-node,
+
+.how-kyrion-node {
+  min-width: 0;
+}
 .how-kyrion-connector {
   opacity: 0;
   transform: translateY(14px);
@@ -226,32 +230,6 @@
   width: 0.85rem;
   height: 0.85rem;
   color: var(--accent);
-}
-.how-kyrion-works.is-visible .how-kyrion-node,
-.how-kyrion-works.is-visible .how-kyrion-connector {
-  opacity: 1;
-  transform: translateY(0);
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(1) {
-  transition-delay: 0ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(3) {
-  transition-delay: 100ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(5) {
-  transition-delay: 200ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(7) {
-  transition-delay: 300ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(2) {
-  transition-delay: 75ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(4) {
-  transition-delay: 175ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(6) {
-  transition-delay: 275ms;
 }
 @keyframes velora-wave {
   0% {

@@ -5,10 +5,8 @@ import {
   AudioLines,
   CalendarDays,
   Cable,
-  Check,
   Cloud,
   CloudOff,
-  ExternalLink,
   House,
   Lightbulb,
   LockKeyhole,
@@ -17,7 +15,6 @@ import {
   Server,
   ShieldCheck,
   Users,
-  X,
 } from "lucide-react";
 import {
   github,
@@ -97,7 +94,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </span>
             </div>
           </div>
-          <p className="mt-12 font-mono text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-10 max-w-2xl border-l-2 border-accent/40 pl-4 text-xs leading-6 text-muted-foreground">
             {t.home.heroNote}
           </p>
         </Container>
@@ -149,7 +146,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
         </Container>
       </section>
       <section className="py-20 sm:py-28">
-        <Container className="grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+        <Container className="grid items-start gap-12 xl:grid-cols-[0.85fr_1.15fr] xl:gap-16">
           <SectionHeader
             eyebrow={t.home.connectionEyebrow}
             title={t.home.connectionTitle}
@@ -236,51 +233,36 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
-              <div>
-                <p className="font-medium">Google</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t.home.pluginMock.account}
-                </p>
-              </div>
-              <span className="rounded-full border border-emerald-700/20 bg-emerald-700/5 px-2.5 py-1 font-mono text-[10px] text-emerald-800 dark:text-emerald-300">
-                {t.home.pluginMock.connected}
-              </span>
-            </div>
-            <div className="divide-y divide-border">
-              {t.home.pluginMock.scopes.map((scope) => (
-                <div
-                  key={scope.name}
-                  className="flex items-center justify-between gap-4 py-4 text-sm"
-                >
-                  <span>{scope.name}</span>
-                  <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      {scope.allowed ? (
-                        <Check className="size-3.5 text-emerald-600" />
-                      ) : (
-                        <X className="size-3.5 text-muted-foreground" />
-                      )}
-                      {scope.access}
-                    </span>
-                  </span>
+          <aside
+            className="rounded-2xl border border-border bg-card p-6 sm:p-8"
+            aria-labelledby="permission-model-title"
+          >
+            <h3
+              id="permission-model-title"
+              className="text-xl font-medium tracking-tight"
+            >
+              {t.home.permissionModel.title}
+            </h3>
+            <dl className="mt-5 divide-y divide-border">
+              {t.home.permissionModel.items.map((item) => (
+                <div key={item.title} className="py-5">
+                  <dt className="flex flex-wrap items-center justify-between gap-3 text-sm font-medium">
+                    {item.title}
+                    <StatusBadge
+                      status={statusOf(item.status)}
+                      labels={t.status}
+                    />
+                  </dt>
+                  <dd className="mt-3 text-sm leading-7 text-muted-foreground">
+                    {item.description}
+                  </dd>
                 </div>
               ))}
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3 border-t border-border pt-5">
-              <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium">
-                {t.home.pluginMock.manage}
-                <ExternalLink className="size-3.5" aria-hidden="true" />
-              </span>
-              <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground">
-                {t.home.pluginMock.disconnect}
-              </span>
-            </div>
-            <p className="mt-5 font-mono text-[10px] leading-5 text-muted-foreground">
-              {t.home.pluginMock.note}
+            </dl>
+            <p className="border-t border-border pt-5 text-xs leading-6 text-muted-foreground">
+              {t.home.permissionModel.note}
             </p>
-          </div>
+          </aside>
         </Container>
       </section>
       <section className="border-y border-border bg-muted/35 py-20 sm:py-24">
@@ -308,7 +290,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
             title={t.home.integrationsTitle}
             description={t.home.integrationsDescription}
           />
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
             {t.home.integrations.map((group, i) => (
               <article
                 key={group.title}
@@ -334,7 +316,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                   {group.items.map((item) => (
                     <div
                       key={item.name}
-                      className="flex items-center justify-between gap-3 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-3 text-sm"
                     >
                       <span>{item.name}</span>
                       <StatusBadge
@@ -347,6 +329,9 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </article>
             ))}
           </div>
+          <p className="mt-6 max-w-3xl text-sm leading-7 text-muted-foreground">
+            {t.home.integrationNote}
+          </p>
         </Container>
       </section>
       <section className="border-t border-border bg-muted/35 py-20 sm:py-28">
@@ -373,6 +358,13 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                 </p>
               </details>
             ))}
+            <a
+              href={`${github}/blob/HEAD/docs/development-startup.md`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-accent"
+            >
+              {t.docs.cards[0].title}
+              <ArrowUpRight aria-hidden="true" className="size-4" />
+            </a>
           </div>
         </Container>
       </section>

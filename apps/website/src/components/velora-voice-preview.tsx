@@ -49,8 +49,7 @@ export function VeloraVoicePreview({
       if (activeAudio.element === audio) activeAudio.element = null;
     };
     const onError = () => {
-      // A rejected hover attempt can dispatch its error after the user has
-      // already started playback with a click. Never show that stale error.
+      // A previous attempt can report an error after playback has started.
       if (!audio.paused) return;
       setState("error");
       if (activeAudio.element === audio) activeAudio.element = null;
@@ -105,20 +104,10 @@ export function VeloraVoicePreview({
       <button
         type="button"
         onClick={toggle}
-        onMouseEnter={() => {
-          if (audioRef.current?.paused) void play();
-        }}
-        onFocus={() => {
-          if (audioRef.current?.paused) void play();
-        }}
         aria-label={isPlaying ? speakingLabel : label}
         className="group/voice flex min-h-20 w-full max-w-md touch-manipulation flex-col items-start gap-4 rounded-xl border border-border bg-background/45 px-5 py-4 text-left transition-colors hover:border-accent/50 focus-visible:border-accent"
       >
         <span
-          onClick={(event) => {
-            event.stopPropagation();
-            toggle();
-          }}
           className={`flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg transition-[filter,opacity] group-hover/voice:brightness-110 ${isPlaying ? "velora-wave-playing" : ""}`}
           aria-hidden="true"
         >
@@ -133,7 +122,7 @@ export function VeloraVoicePreview({
             />
           ))}
         </span>
-        <span className="flex w-full items-center justify-between gap-4">
+        <span className="flex w-full flex-wrap items-center justify-between gap-3">
           <span className="flex items-center gap-2.5 text-sm font-medium">
             {isPlaying ? (
               <Pause className="size-4 text-accent" aria-hidden="true" />

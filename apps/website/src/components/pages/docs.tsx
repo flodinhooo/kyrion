@@ -70,8 +70,19 @@ export function DocsPage({ t }: { t: Dictionary; locale: Locale }) {
                 key={item.title}
                 className="rounded-lg border border-border p-5"
               >
-                <StatusBadge status="planned" labels={t.status} />
-                <h3 className="mt-5 font-medium">{item.title}</h3>
+                <BookOpen aria-hidden="true" className="size-5 text-accent"/>
+                <h3 className="mt-5 font-medium">
+                  <a
+                    href={`${github}/blob/HEAD/${item.path}`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-md hover:text-accent"
+                  >
+                    {item.title}
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
+                  </a>
+                </h3>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   {item.description}
                 </p>

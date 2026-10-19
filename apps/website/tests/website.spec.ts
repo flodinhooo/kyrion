@@ -119,6 +119,9 @@ test("Velora voice preview follows the page language and stops on language chang
   await expect(audio).toHaveAttribute("src", "/audio/velora-intro-de.mp3");
   const control = page.getByRole("button", { name: "Velora kennenlernen" });
   await expect(control).toBeVisible();
+  await control.hover();
+  await control.focus();
+  await expect(audio).toHaveJSProperty("paused", true);
   await control.press("Enter");
   await expect(
     page.getByRole("button", { name: "Velora spricht" }),
@@ -282,4 +285,89 @@ test("German is canonical, legacy URLs redirect and language links retain the pa
   const sitemap = await request.get("/sitemap.xml");
   expect(await sitemap.text()).toContain("https://kyrion.ch/en/product");
   expect(await sitemap.text()).not.toContain("https://kyrion.ch/de/");
+});
+
+test("prototype claims and real documentation stay explicit", async ({
+                                                                       page,
+                                                                     }) => {
+  for (const path of ["/", "/en"]) {
+    await page.goto(path);
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(page.locator("main")).toContainText(
+      "Local-First Home Operating System",
+    );
+    await expect(page.locator("main")).not.toContainText("user@example.com");
+    await expect(
+      page.locator('a[href$="docs/development-startup.md"]'),
+    ).toBeVisible();
+    const integrations = page
+      .locator("article")
+      .filter({hasText: "Bluetooth (MELK-OA20)"});
+    await expect(integrations).toContainText(
+      path === "/en" ? "Experimental" : "Experimentell",
+    );
+    await page.goto(`${path === "/en" ? "/en" : ""}/product`);
+    const installer = page.locator("article").filter({
+      has: page.getByRole("heading", {name: "Installer v1", exact: true}),
+    });
+    await expect(installer).toContainText(
+      path === "/en" ? "In development" : "In Entwicklung",
+    );
+    await expect(
+      page.locator("article").filter({hasText: "Calendar & Lounge"}),
+    ).toHaveCount(path === "/en" ? 1 : 0);
+    await page.goto(`${path === "/en" ? "/en" : ""}/docs`);
+    for (const doc of [
+      "development-startup",
+      "installer-v1-implementation-status",
+      "architecture",
+    ]) {
+      await expect(page.locator(`a[href$="docs/${doc}.md"]`)).toBeVisible();
+    }
+  }
+});
+
+test("architecture content remains visible without JavaScript", async ({
+                                                                         browser,
+                                                                       }) => {
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+  await page.goto("/en");
+  const node = page.locator(".how-kyrion-core");
+  await expect(node).toBeVisible();
+  await expect(node).toHaveCSS("opacity", "1");
+  await context.close();
+});
+
+test("tablet layouts and internal links remain usable", async ({
+                                                                 page,
+                                                                 request,
+                                                               }) => {
+  await page.setViewportSize({width: 768, height: 1024});
+  const paths = new Set<string>();
+  for (const prefix of ["", "/en"]) {
+    for (const suffix of [
+      "",
+      "/product",
+      "/development",
+      "/docs",
+      "/privacy",
+      "/terms",
+    ]) {
+      await page.goto(`${prefix}${suffix}` || "/");
+      expect(
+        await page
+          .locator("body")
+          .evaluate((body) => body.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      for (const href of await page
+        .locator('a[href^="/"]')
+        .evaluateAll((links) =>
+          links.map((link) => link.getAttribute("href")!),
+        ))
+        paths.add(href);
+    }
+  }
+  for (const path of paths)
+    expect((await request.get(path)).status(), path).toBe(200);
 });
