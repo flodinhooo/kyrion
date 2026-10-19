@@ -68,11 +68,10 @@ effects. `components/ui/button.tsx` uses the shadcn/ui Button pattern with Radix
 Slot, CVA and the local `cn` helper. `components.json` supports future additions.
 The site uses a local system font stack; it makes no runtime font requests.
 
-The brand guide's Dark Ink, Light Ink, white/navy surfaces and Core gradient
-are authoritative. The local application's current gold/cyan surface accents
-differ from the guide; this website deliberately follows the guide rather than
-copying the application's stylesheet. Its theme-aware logo selection follows
-the same light-on-light-surface/dark-on-dark-surface asset naming convention.
+The public site retains Kyrion's logos and Core gradient, with a dark-first
+charcoal/violet presentation and restrained amber status details. The palette
+is local to the website; root branding and the local application's styling
+remain unchanged. System fonts avoid runtime font requests.
 
 `scripts/prepare-branding.mjs` runs before `dev` and `build`:
 
@@ -91,13 +90,17 @@ listing social assets as pending. The generated wordmark card is a baseline
 until a reviewed social master exists; it does not claim to reuse a finished
 social design. Root brand files and `apps/web` remain unchanged.
 
-`next-themes` applies the saved/system theme before hydration using `data-theme`.
-The site uses its own `kyrion-website-theme` localStorage key, follows system
-changes, until the visitor chooses an explicit theme. A labeled sun/moon button switches
-directly between light and dark and persists that choice. The language link
-shows a flag and DE/EN for its destination language, retaining the current page. A CSS system fallback supports
-visits without JavaScript. If a CSP is added, allow the theme initialization
-script through an appropriate nonce/hash to retain flash prevention.
+`next-themes` applies the saved theme before hydration using `data-theme`.
+New visitors start in dark mode. Saved light, dark or system preferences remain
+respected through `kyrion-website-theme`; the sun/moon button persists explicit
+choices. Without JavaScript the CSS defaults to dark, including theme-specific
+brand assets and status colors. Reduced-motion preferences disable animations
+and transitions. If a CSP is added, allow the theme initialization script
+through an appropriate nonce/hash to retain flash prevention.
+The language link retains the current page.
+
+The [product credibility review](PREMIUM.md) records the visual rationale,
+audience audit, implemented capability evidence and verification limits.
 
 ## Publication boundaries
 

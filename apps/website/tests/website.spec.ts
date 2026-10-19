@@ -349,6 +349,9 @@ test("architecture content remains visible without JavaScript", async ({
   const node = page.locator(".how-kyrion-core");
   await expect(node).toBeVisible();
   await expect(node).toHaveCSS("opacity", "1");
+  for (const connector of await page.locator(".how-kyrion-connector").all()) {
+    await expect(connector).toHaveCSS("opacity", "1");
+  }
   await context.close();
 });
 
