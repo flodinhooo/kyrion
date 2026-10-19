@@ -119,7 +119,10 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
         <Container>
           <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
             <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
-              <div className="core-halo absolute inset-0" />
+              <div
+                aria-hidden="true"
+                className="core-halo pointer-events-none absolute inset-0"
+              />
               <VeloraVoicePreview
                 locale={locale}
                 label={t.home.veloraPlay}

@@ -54,7 +54,19 @@ Metadata and social descriptions use the same accurate positioning.
 
 ## Verification
 
-See the implementation report for command outcomes. The Playwright suite
+Verified locally on 2026-10-19: `pnpm --filter website lint`, `format:check`,
+`typecheck`, `build` and `test` pass. Playwright: **26 passed** in Chromium.
+Screenshots were reviewed for the desktop homepage and mobile navigation;
+responsive overflow checks cover 320px, 390px, 768px and desktop layouts.
+GitHub and the linked documentation returned HTTP 200.
+
+The first browser run found that the decorative Velora halo intercepted pointer
+events; the corrected halo ignores pointer events, and click/pause coverage
+passes. A concurrent lint run encountered disappearing Playwright artifacts;
+generated test/report directories are now ignored and lint passes. Initial
+formatting failures were corrected. No unresolved test failures remain.
+
+The Playwright suite
 covers both locales, public routes, metadata, theme persistence, keyboard/mobile
 navigation, assets, voice activation, no-JavaScript architecture, prototype
 claims, real documentation links and tablet overflow/internal navigation.

@@ -126,6 +126,10 @@ test("Velora voice preview follows the page language and stops on language chang
   await expect(
     page.getByRole("button", { name: "Velora spricht" }),
   ).toBeVisible();
+  await page.getByRole("button", {name: "Velora spricht"}).click();
+  await expect(audio).toHaveJSProperty("paused", true);
+  await control.click();
+  await expect(audio).toHaveJSProperty("paused", false);
   await page.locator("audio").evaluate((element) => {
     element.dispatchEvent(new Event("ended"));
   });
