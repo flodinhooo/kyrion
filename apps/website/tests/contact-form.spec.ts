@@ -130,6 +130,9 @@ test("delivery and network failures retain all entries", async ({ page }) => {
 test("contact works in both themes and German at narrow widths", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("kyrion-website-theme", "system"),
+  );
   for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     await page.setViewportSize({ width: 390, height: 844 });

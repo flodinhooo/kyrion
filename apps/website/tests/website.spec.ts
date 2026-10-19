@@ -3,6 +3,9 @@ import { expect, test } from "@playwright/test";
 test("all public pages and translations render with metadata and no runtime errors", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("kyrion-website-theme", "light"),
+  );
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   for (const prefix of ["", "/en"]) {
@@ -49,6 +52,10 @@ test("all public pages and translations render with metadata and no runtime erro
 test("theme follows the system, persists overrides and uses matching brand assets", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("kyrion-website-theme"))
+      localStorage.setItem("kyrion-website-theme", "system");
+  });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/en");
   const html = page.locator("html");
@@ -326,7 +333,9 @@ test("prototype claims and real documentation stay explicit", async ({
       "installer-v1-implementation-status",
       "architecture",
     ]) {
-      await expect(page.locator(`a[href$="docs/${doc}.md"]`)).toBeVisible();
+      await expect(
+        page.locator(`article a[href$="docs/${doc}.md"]`),
+      ).toBeVisible();
     }
   }
 });
@@ -374,4 +383,73 @@ test("tablet layouts and internal links remain usable", async ({
   }
   for (const path of paths)
     expect((await request.get(path)).status(), path).toBe(200);
+});
+
+test("dark-first product presentation has readable contrast and real hero destinations", async ({
+                                                                                                  page,
+                                                                                                }, testInfo) => {
+  await page.emulateMedia({colorScheme: "light", reducedMotion: "reduce"});
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const hero = page.locator("main > section").first();
+  await expect(hero.getByRole("heading", {level: 1})).toHaveText(
+    "Your home. One system.Your control.",
+  );
+  await expect(
+    hero.getByRole("link", {name: "Explore Kyrion", exact: true}),
+  ).toHaveAttribute("href", "/en/product");
+  await expect(
+    hero.getByRole("link", {name: "View on GitHub", exact: true}),
+  ).toHaveAttribute("href", "https://github.com/flodinhooo/kyrion");
+  for (const selector of [
+    "--foreground",
+    "--muted-foreground",
+    "--accent",
+    "--warm",
+    "--primary",
+  ]) {
+    const contrast = await page.locator("html").evaluate((element, token) => {
+      const style = getComputedStyle(element);
+
+      function luminance(hex: string) {
+        hex = hex.trim().replace("#", "");
+        if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
+        const rgb = hex
+          .trim()
+          .replace("#", "")
+          .match(/../g)!
+          .map((channel) => {
+            const v = parseInt(channel, 16) / 255;
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          });
+        return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+      }
+
+      const a = luminance(
+        style.getPropertyValue(
+          token === "--primary" ? "--primary-foreground" : token,
+        ),
+      );
+      const b = luminance(
+        style.getPropertyValue(token === "--primary" ? token : "--card"),
+      );
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }, selector);
+    expect(contrast, selector).toBeGreaterThanOrEqual(4.5);
+  }
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({width, height: 1000});
+    expect(
+      await page
+        .locator("body")
+        .evaluate((body) => body.scrollWidth <= innerWidth),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`premium-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole("button", {name: "Switch to light mode"}).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

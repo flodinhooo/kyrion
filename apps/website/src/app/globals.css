@@ -14,21 +14,24 @@
   --primary-foreground: #f7f8fa;
   --accent: #5840c4;
   --ring: #6c43f5;
+  --warm: #925b08;
   --core-gradient: linear-gradient(135deg, #8b4dff, #6c43f5 45%, #168bff);
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+:root:not([data-theme]) {
   color-scheme: dark;
-  --background: #0b1421;
-  --foreground: #f7f8fa;
-  --muted: #101d2e;
-  --muted-foreground: #a3b2c5;
-  --card: #0e1929;
-  --border: #263447;
-  --primary: #f7f8fa;
-  --primary-foreground: #101e2d;
-  --accent: #b6acff;
-  --ring: #a593ff;
+  --background: #0d0d14;
+  --foreground: #f5f3fa;
+  --muted: #15141e;
+  --muted-foreground: #aaa6b8;
+  --card: #191722;
+  --border: #302c3d;
+  --primary: #8250e8;
+  --primary-foreground: #ffffff;
+  --accent: #b9a0ff;
+  --ring: #c0aaff;
+  --warm: #efb65b;
 }
 
 @theme inline {
@@ -42,7 +45,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-warm: var(--warm);
+  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 @layer base {
@@ -115,13 +119,6 @@
 
 .how-kyrion-node {
   min-width: 0;
-}
-.how-kyrion-connector {
-  opacity: 0;
-  transform: translateY(14px);
-  transition:
-    opacity 600ms ease,
-    transform 600ms ease;
 }
 .how-kyrion-connector {
   height: 1px;
@@ -259,26 +256,12 @@
   display: block;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --background: #0b1421;
-    --foreground: #f7f8fa;
-    --muted: #101d2e;
-    --muted-foreground: #a3b2c5;
-    --card: #0e1929;
-    --border: #263447;
-    --primary: #f7f8fa;
-    --primary-foreground: #101e2d;
-    --accent: #b6acff;
-    --ring: #a593ff;
-  }
-  :root:not([data-theme]) .brand-light {
-    display: none;
-  }
-  :root:not([data-theme]) .brand-dark {
-    display: block;
-  }
+:root:not([data-theme]) .brand-light {
+  display: none;
+}
+
+:root:not([data-theme]) .brand-dark {
+  display: block;
 }
 
 @media (prefers-reduced-motion: reduce) {

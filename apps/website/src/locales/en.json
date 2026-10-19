@@ -113,7 +113,7 @@
     "core": "Kyrion Core",
     "explore": "Explore Kyrion",
     "viewDevelopment": "View development",
-    "follow": "Follow the development",
+    "follow": "Explore what comes next",
     "readDocs": "Explore the docs",
     "learnMore": "Explore the platform",
     "inDevelopment": "Currently in development",
@@ -122,17 +122,17 @@
     "notFoundDescription": "Explore the platform or return to the Kyrion homepage.",
     "github": "View on GitHub",
     "footer": "Your home. Your infrastructure.",
-    "footerNote": "An independent platform in active development. Not yet generally available.",
+    "footerNote": "An independently developed Home Operating System. Working prototype; not yet generally available.",
     "footerLinks": "Explore",
     "footerPrinciple": "Local first. Human controlled.",
     "copyright": "© 2026 Kyrion"
   },
   "home": {
     "eyebrow": "LOCAL-FIRST HOME OPERATING SYSTEM",
-    "title": "Your home. Your services.",
-    "titleAccent": "One platform that connects them.",
-    "description": "Kyrion is a Local-First Home Operating System: one controlled layer for your devices, rooms and digital services, with optional AI and automation on the roadmap.",
-    "heroNote": "Working development prototype · No general release · Essential controls work without AI",
+    "title": "Your home. One system.",
+    "titleAccent": "Your control.",
+    "description": "A Local-First Home Operating System for your devices, rooms and digital services. Keep everyday control on your own infrastructure, with intelligence as an option.",
+    "heroNote": "Working development prototype. General automations and a supported consumer installation are still in development or planned.",
     "diagramLabel": "The Kyrion ecosystem",
     "diagramTop": "DEVICES & INTEGRATIONS",
     "diagramCore": "ONE TRUSTED CORE",
@@ -146,20 +146,20 @@
       "Your home stays yours"
     ],
     "connectionEyebrow": "LESS SWITCHING, MORE DOING",
-    "connectionTitle": "Your home is full of useful pieces. Kyrion connects them.",
-    "connectionDescription": "Lights, music, rooms and digital services do not have to stay in separate apps. Kyrion creates one understandable layer for the things you already use.",
+    "connectionTitle": "Less switching. More control.",
+    "connectionDescription": "Bring selected devices and services into one understandable place. Start with the controls that work today.",
     "connectionCards": [
       {
-        "title": "Your home",
-        "description": "Understand and control rooms, lights and device state in one place."
+        "title": "Rooms & lighting",
+        "description": "Organise rooms and control selected Nanoleaf, Zigbee and Bluetooth lights."
       },
       {
-        "title": "Your services",
-        "description": "Optional connections to music, calendars and other services – when you want them."
+        "title": "Calendar & media",
+        "description": "Local events, read-only Google Calendar, Spotify Connect and YouTube links."
       },
       {
-        "title": "Your everyday",
-        "description": "Fewer app switches, clearer state and a platform that can grow with you."
+        "title": "People & access",
+        "description": "Invitations, installation-wide roles and a shared, Core-controlled action path."
       }
     ],
     "worksEyebrow": "HOW KYRION WORKS",
@@ -170,9 +170,9 @@
       "description": "Your request, your decision."
     },
     "worksVelora": {
-      "title": "Velora",
-      "description": "A natural interface for voice and interaction.",
-      "meta": "Voice · Web · Mobile to come"
+      "title": "Web & optional voice",
+      "description": "Use the Web interface today. Velora voice reliability is still being validated.",
+      "meta": "Web available / Voice experimental"
     },
     "worksCore": {
       "title": "Kyrion Core",
@@ -190,7 +190,7 @@
     },
     "worksNote": "Local functions remain independent wherever practical. Individual integration availability is limited in the prototype and shown separately.",
     "localCloudEyebrow": "LOCAL FIRST. CLOUD WHEN YOU WANT IT.",
-    "localCloudTitle": "You decide what stays in your system and what you connect.",
+    "localCloudTitle": "Your infrastructure.\nYour choice of connections.",
     "localCloudDescription": "Kyrion itself does not depend on cloud accounts. Devices, rooms, central settings and local functions stay in your own system wherever practical.",
     "localCard": {
       "label": "YOUR SYSTEM",
@@ -203,7 +203,7 @@
       "description": "Spotify uses an explicitly connected account. Google Calendar display is read-only; YouTube loads a visible link player without an account connection. These services require their providers and network access."
     },
     "permissionsEyebrow": "CONNECTIONS WITH CLEAR BOUNDARIES",
-    "permissionsTitle": "An account extends Kyrion. It does not take over your home.",
+    "permissionsTitle": "Every action has a boundary.",
     "permissionsDescription": "Core enforces installation-wide roles and validates device actions. Optional AI proposes requests through the same controlled path. Room and device permission scopes remain planned.",
     "permissionsNote": "Core owns authorisation and execution",
     "integrationsEyebrow": "FOR THE THINGS YOU ALREADY USE",
@@ -288,7 +288,7 @@
       }
     ],
     "featuresEyebrow": "A HOME THAT WORKS TOGETHER",
-    "featuresTitle": "Less fragmentation.\nMore connection.",
+    "featuresTitle": "A practical foundation.\nBuilt around your home.",
     "featuresDescription": "One coherent layer above the devices and services you already use. A foundation for everyday control, with room to grow.",
     "ecosystemEyebrow": "CONNECTED THROUGH ONE CORE",
     "ecosystemTitle": "Many systems.\nOne place to bring them together.",
@@ -304,7 +304,7 @@
     "veloraUnavailable": "The voice sample is currently unavailable.",
     "veloraWelcomed": "Velora just welcomed you.",
     "developmentEyebrow": "BUILT IN THE OPEN, STEP BY STEP",
-    "developmentTitle": "Real progress.\nA clear development boundary.",
+    "developmentTitle": "Independent by design.\nTransparent in development.",
     "developmentDescription": "Current work prepares a fresh Installer v1 release, following security hardening, installation-wide roles and local Calendar support. Voice and Home Assistant hardware acceptance remain separate open gates.",
     "developmentNote": "No public release date. No general availability. Features and architecture may change.",
     "permissionModel": {
@@ -328,7 +328,15 @@
         }
       ]
     },
-    "integrationNote": "Home Assistant import awaits physical verification. Spotify Web controls and repeatable voice reliability still have acceptance gates."
+    "integrationNote": "Home Assistant import awaits physical verification. Spotify Web controls and repeatable voice reliability still have acceptance gates.",
+    "overviewTitle": "Built on a working foundation",
+    "overviewLabel": "IMPLEMENTED IN THE PROTOTYPE",
+    "overviewItems": [
+      "Rooms and lighting control",
+      "Local Calendar and media services",
+      "Accounts, roles and action history"
+    ],
+    "overviewLink": "See capabilities and limitations"
   },
   "features": [
     {

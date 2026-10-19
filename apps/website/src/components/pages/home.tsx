@@ -24,7 +24,6 @@ import {
   type Locale,
 } from "@/lib/site";
 import { Logo } from "../logo";
-import { Ecosystem } from "../ecosystem";
 import { VeloraVoicePreview } from "../velora-voice-preview";
 import { HowKyrionWorks } from "../how-kyrion-works";
 import { Button } from "../ui/button";
@@ -44,7 +43,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
       <section className="relative isolate overflow-hidden border-b border-border pt-14 pb-16 sm:pt-20 sm:pb-24">
         <div
           aria-hidden="true"
-          className="core-grid pointer-events-none absolute inset-0 -z-10 opacity-50"
+          className="core-grid pointer-events-none absolute inset-0 -z-10 opacity-20"
         />
         <div
           aria-hidden="true"
@@ -52,12 +51,13 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
         />
         <Container>
           <DevelopmentBanner t={t} locale={locale} />
-          <div className="mt-10 grid items-center gap-8 lg:grid-cols-[1fr_320px]">
+          <div className="mt-10 grid items-center gap-8 lg:grid-cols-[1.35fr_0.8fr] lg:gap-16">
             <div>
               <p className="mb-6 max-w-lg font-mono text-[10px] tracking-[0.18em] text-muted-foreground sm:text-xs">
                 {t.home.eyebrow}
               </p>
-              <h1 className="max-w-4xl text-[clamp(2.8rem,6.8vw,5.9rem)] leading-[1.04] font-medium tracking-[-0.065em]">
+              <h1
+                className="max-w-4xl text-[clamp(2.65rem,5.4vw,4.8rem)] leading-[1.08] font-semibold tracking-[-0.05em]">
                 {t.home.title}
                 <br />
                 <span className="text-muted-foreground">
@@ -75,24 +75,58 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href={href(locale, "development")}>
-                    {t.common.viewDevelopment}
-                  </Link>
+                  <a href={github}>
+                    {t.common.github}
+                    <ArrowUpRight aria-hidden="true"/>
+                  </a>
                 </Button>
               </div>
             </div>
-            <div
-              className="relative mx-auto hidden aspect-square w-full max-w-80 items-center justify-center lg:flex"
-              aria-hidden="true"
+            <aside
+              className="relative rounded-2xl border border-border bg-card p-6 sm:p-8"
+              aria-labelledby="prototype-overview-title"
             >
-              <div className="absolute inset-0 rounded-full border border-border/70" />
-              <div className="absolute inset-7 rounded-full border border-border/70" />
-              <div className="absolute inset-14 rounded-full border border-border/70" />
-              <Logo mark className="relative size-60" priority />
-              <span className="absolute right-5 bottom-8 rounded-md border border-border bg-background px-3 py-2 font-mono text-[10px] text-muted-foreground">
-                {t.home.diagramCore}
-              </span>
-            </div>
+              <div className="mb-7 flex items-center justify-between gap-4">
+                <Logo mark className="size-14"/>
+                <span className="flex items-center gap-2 text-xs text-warm">
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 rounded-full bg-warm"
+                  />
+                  {t.common.inDevelopment}
+                </span>
+              </div>
+              <p className="mb-3 font-mono text-[10px] tracking-[0.12em] text-muted-foreground">
+                {t.home.overviewLabel}
+              </p>
+              <h2
+                id="prototype-overview-title"
+                className="text-2xl leading-tight font-medium tracking-tight"
+              >
+                {t.home.overviewTitle}
+              </h2>
+              <ul className="mt-6 divide-y divide-border">
+                {t.home.overviewItems.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 py-4 text-sm leading-6"
+                  >
+                    <ShieldCheck
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-accent"
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={href(locale, "product")}
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md text-sm text-accent"
+              >
+                {t.home.overviewLink}
+                <ArrowRight aria-hidden="true" className="size-4 shrink-0"/>
+              </Link>
+            </aside>
           </div>
           <p className="mt-10 max-w-2xl border-l-2 border-accent/40 pl-4 text-xs leading-6 text-muted-foreground">
             {t.home.heroNote}
@@ -115,40 +149,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           })}
         </Container>
       </div>
-      <section className="border-b border-border py-20 sm:py-24">
-        <Container>
-          <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
-              <div
-                aria-hidden="true"
-                className="core-halo pointer-events-none absolute inset-0"
-              />
-              <VeloraVoicePreview
-                locale={locale}
-                label={t.home.veloraPlay}
-                speakingLabel={t.home.veloraSpeaking}
-                voiceNote={t.home.veloraVoiceNote}
-                unavailableLabel={t.home.veloraUnavailable}
-                welcomedLabel={t.home.veloraWelcomed}
-              />
-            </div>
-            <div className="p-7 sm:p-12">
-              <StatusBadge status="experimental" labels={t.status} />
-              <div className="mt-7">
-                <SectionHeader
-                  eyebrow={t.home.veloraEyebrow}
-                  title={t.home.veloraTitle}
-                  description={t.home.veloraDescription}
-                />
-              </div>
-              <p className="mt-7 border-l-2 border-accent/40 pl-4 font-mono text-xs leading-6 text-accent">
-                {t.home.veloraRule}
-              </p>
-            </div>
-          </div>
-        </Container>
-      </section>
-      <section className="py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <Container className="grid items-start gap-12 xl:grid-cols-[0.85fr_1.15fr] xl:gap-16">
           <SectionHeader
             eyebrow={t.home.connectionEyebrow}
@@ -168,7 +169,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
         </Container>
       </section>
       <HowKyrionWorks t={t.home} />
-      <section className="py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <Container>
           <SectionHeader
             eyebrow={t.home.featuresEyebrow}
@@ -189,7 +190,41 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </Link>
         </Container>
       </section>
-      <section className="border-y border-border bg-muted/35 py-20 sm:py-28">
+      <section className="border-b border-border py-16 sm:py-20">
+        <Container>
+          <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
+            <div
+              className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
+              <div
+                aria-hidden="true"
+                className="core-halo pointer-events-none absolute inset-0"
+              />
+              <VeloraVoicePreview
+                locale={locale}
+                label={t.home.veloraPlay}
+                speakingLabel={t.home.veloraSpeaking}
+                voiceNote={t.home.veloraVoiceNote}
+                unavailableLabel={t.home.veloraUnavailable}
+                welcomedLabel={t.home.veloraWelcomed}
+              />
+            </div>
+            <div className="p-7 sm:p-12">
+              <StatusBadge status="experimental" labels={t.status}/>
+              <div className="mt-7">
+                <SectionHeader
+                  eyebrow={t.home.veloraEyebrow}
+                  title={t.home.veloraTitle}
+                  description={t.home.veloraDescription}
+                />
+              </div>
+              <p className="mt-7 border-l-2 border-accent/40 pl-4 font-mono text-xs leading-6 text-accent">
+                {t.home.veloraRule}
+              </p>
+            </div>
+          </div>
+        </Container>
+      </section>
+      <section className="border-y border-border bg-muted/35 py-16 sm:py-20">
         <Container>
           <SectionHeader
             eyebrow={t.home.localCloudEyebrow}
@@ -218,8 +253,8 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
-      <section className="py-20 sm:py-28">
-        <Container className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20">
+      <section className="py-16 sm:py-20">
+        <Container className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div>
             <SectionHeader
               eyebrow={t.home.permissionsEyebrow}
@@ -268,25 +303,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </aside>
         </Container>
       </section>
-      <section className="border-y border-border bg-muted/35 py-20 sm:py-24">
-        <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div>
-            <SectionHeader
-              eyebrow={t.home.ecosystemEyebrow}
-              title={t.home.ecosystemTitle}
-              description={t.home.ecosystemDescription}
-            />
-            <Button asChild variant="outline" className="mt-8">
-              <Link href={href(locale, "about")}>
-                {t.home.ecosystemLink}
-                <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
-          </div>
-          <Ecosystem t={t.home} />
-        </Container>
-      </section>
-      <section className="py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <Container>
           <SectionHeader
             eyebrow={t.home.integrationsEyebrow}
@@ -337,8 +354,8 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </p>
         </Container>
       </section>
-      <section className="border-t border-border bg-muted/35 py-20 sm:py-28">
-        <Container className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+      <section className="border-t border-border bg-muted/35 py-16 sm:py-20">
+        <Container className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
           <SectionHeader
             eyebrow={t.home.hardwareEyebrow}
             title={t.home.hardwareTitle}
@@ -371,8 +388,8 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
-      <section className="border-t border-border bg-muted/35 py-20 sm:py-24">
-        <Container className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+      <section className="border-t border-border bg-muted/35 py-16 sm:py-20">
+        <Container className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
           <SectionHeader
             eyebrow={t.home.developmentEyebrow}
             title={t.home.developmentTitle}
@@ -383,13 +400,6 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
             <p className="mt-5 text-sm leading-7 text-muted-foreground">
               {t.home.developmentNote}
             </p>
-            <a
-              href={github}
-              className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-medium"
-            >
-              {t.common.follow}
-              <ArrowUpRight aria-hidden="true" className="size-4" />
-            </a>
           </div>
         </Container>
       </section>

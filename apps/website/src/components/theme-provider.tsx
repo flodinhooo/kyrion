@@ -7,7 +7,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <Provider
       attribute="data-theme"
-      defaultTheme="system"
+      defaultTheme="dark"
       enableSystem
       storageKey="kyrion-website-theme"
       disableTransitionOnChange

@@ -21,7 +21,7 @@ export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
 
   return (
     <section
-      className="how-kyrion-works border-y border-border bg-muted/35 py-20 sm:py-28"
+      className="how-kyrion-works border-y border-border bg-muted/35 py-16 sm:py-20"
       aria-labelledby="how-kyrion-works-title"
     >
       <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
@@ -31,7 +31,7 @@ export function HowKyrionWorks({ t }: { t: Dictionary["home"] }) {
           </p>
           <h2
             id="how-kyrion-works-title"
-            className="whitespace-pre-line text-3xl leading-[1.12] font-medium tracking-[-0.045em] sm:text-5xl"
+            className="whitespace-pre-line text-3xl leading-[1.12] font-medium tracking-[-0.045em] sm:text-4xl"
           >
             {t.worksTitle}
           </h2>

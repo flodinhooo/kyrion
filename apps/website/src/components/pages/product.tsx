@@ -29,9 +29,10 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
     ScanLine,
     Server,
     AudioLines,
-    CalendarDays,
     Workflow,
     Cable,
+    CalendarDays,
+    Server,
   ];
   return (
     <>
@@ -47,12 +48,12 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
           <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {t.capabilities
               .filter((item) => item.status === "available")
-              .map((item, i) => (
+              .map((item) => (
                 <FeatureCard
                   key={item.title}
                   title={item.title}
                   description={item.description}
-                  icon={icons[i] ?? CalendarDays}
+                  icon={icons[t.capabilities.indexOf(item)] ?? CalendarDays}
                 >
                   <StatusBadge
                     status={statusOf(item.status)}
@@ -72,12 +73,12 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {t.capabilities
               .filter((item) => item.status !== "available")
-              .map((item, i) => (
+              .map((item) => (
                 <FeatureCard
                   key={item.title}
                   title={item.title}
                   description={item.description}
-                  icon={icons[i + 6] ?? Server}
+                  icon={icons[t.capabilities.indexOf(item)] ?? Server}
                 >
                   <StatusBadge
                     status={statusOf(item.status)}
