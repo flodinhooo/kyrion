@@ -20,6 +20,13 @@ status-refresh errors are distinct from command failures and retain the last
 known display without locking out playback controls.
 Provider-reported action restrictions disable the corresponding controls.
 
+When Spotify has no current playback, an accepted output transfer can still
+return no active device. Lounge retains that explicitly selected, Core-accepted
+output while it remains in the account's device list, enabling resume or a
+playlist start. This is local UI intent, not a claim of active playback. Actual
+playback/active-device observations take precedence; disconnecting or losing the
+device clears the selection. A failed transfer does not replace the prior choice.
+
 Resume uses the existing Spotify playback context. A shelf lists up to six
 recently played playlists and can start one on the selected device. These are
 deduced from playlist contexts in the latest 50 track plays, newest first.
@@ -97,3 +104,25 @@ deployment to the running installation.
 The playlist shelf now fills unused slots with library playlists, up to six
 unique choices. Recently played entries come first. Every entry uses the same
 validated playback command for the selected output device.
+
+## Live control verification (2026-10-22)
+
+Using the account holder's normal browser login, real Core/Spotify reads found
+three Connect devices including Kyrion. The browser issued PAUSE and RESUME on
+the selected Kyrion output; subsequent provider state confirmed both. A one-step
+volume change and restoration of the original volume were likewise accepted and
+confirmed through the device list. The initial playing intent was restored.
+This verifies the Web/Core/provider path, not audible speaker output.
+
+The first idle-device check exposed a separate UI defect: Spotify accepted the
+transfer but returned no track or active device, so Lounge lost the chosen output.
+The player now retains a Core-accepted idle selection as described above. Three
+unit regressions cover idle selection, provider-state precedence and absent
+devices. An isolated browser with intercepted Spotify responses additionally
+verified controls becoming enabled after an accepted idle transfer, preserving
+the prior selection after rejection, clearing a disappeared device and clearing
+selection across disconnect/reconnect. These fixture checks are distinct from
+the real-account control verification.
+
+All 111 Web tests, TypeScript, ESLint, production build and `git diff --check`
+passed. No Core code, credentials or account authorization were changed.

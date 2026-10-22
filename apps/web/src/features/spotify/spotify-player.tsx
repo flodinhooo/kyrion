@@ -10,8 +10,19 @@ import { SpotifyTimeline } from "./spotify-timeline";
 
 export function SpotifyPlayer() {
   const { t } = useWorkspace();
-  const { status, devices, playback, error, syncError, pending, refresh, control, transfer, playPlaylist } = useSpotifyPlayer();
-  const device = devices.find((entry) => entry.id === playback?.deviceId) ?? devices.find((entry) => entry.active);
+  const {
+    status,
+    devices,
+    playback,
+    device,
+    error,
+    syncError,
+    pending,
+    refresh,
+    control,
+    transfer,
+    playPlaylist
+  } = useSpotifyPlayer();
   const disabled = pending || !device || device.restricted;
   const blocked = (action: string) => playback?.disallowed.includes(action) ?? false;
   return <div className="lounge-player" aria-busy={pending}>
