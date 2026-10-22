@@ -51,6 +51,7 @@ data/
 secrets/
 
 # New local runtime outputs; reviewed scripts and historical evidence stay tracked.
+.run/dev-recovery/
 .run/private-evidence/
 .run/**/*.wav
 .run/*.json

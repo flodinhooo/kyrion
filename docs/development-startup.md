@@ -61,8 +61,72 @@ After Web is running, the authenticated `/settings/services` page provides a
 five-second overview of Web, Core, AI, Ollama and STT reachability plus the
 latest Core-confirmed gateway service heartbeat. It intentionally exposes only
 bounded status, host, port and latency metadata. Starting or restarting a
-service is not yet available there; lifecycle controls require a Core-owned,
-audited allowlist and must not become arbitrary browser process execution.
+service is available for Windows development through the separate local recovery
+surface below. Production lifecycle controls remain unavailable.
+
+### Local recovery when Core is unavailable
+
+On Windows, `pnpm dev` in `apps/web` now ensures the independent operator helper
+is running before Web starts. It reuses an authenticated existing helper and
+never replaces an occupied port. To start it separately from the repository root:
+
+```powershell
+# Optional: use the node's trusted DNS name or reserved address.
+$env:KYRION_RECOVERY_PI_HOST = 'kyrion-node.local'
+node infrastructure/dev-recovery.mjs
+```
+
+Open `http://localhost:3000/recovery`, also linked from Login and System services
+in development mode. Enter the locally generated key from
+`.run/dev-recovery/operator.key`. Keep this host administration credential private;
+it is never automatically sent to the browser. The helper must remain running.
+The proxy is disabled in production and accepts same-origin loopback requests
+on port 3000 only. It cannot recover a stopped Web server or start itself.
+
+**Start missing services** starts PostgreSQL using the existing Compose file,
+then Ollama, Core, AI, Parakeet and the existing Chatterbox runtime in
+`/training/chatterbox-venv`. Docker Desktop must already be running.
+Core uses the existing `services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar`
+and Java on PATH (Java 21 or newer); build that jar with `bootJar` after Core
+changes. `JAVA_HOME`, when set, selects its Java runtime instead. An explicit
+`KYRION_RECOVERY_CORE_JAR` operator environment variable can select an existing
+artifact from a recovery worktree. Select an artifact matching the installed
+database; the helper never repairs Flyway history or disables validation.
+For persistent operator settings, create the ignored, local
+`.run/dev-recovery/settings.json` with optional string fields `coreJar` (absolute
+JAR path) and `piHost` (trusted node hostname/address). Environment overrides take
+precedence. These values are never accepted from Web. The helper restricts its
+local state directory and operator-key ACL to the invoking Windows account.
+Core starts from an immutable local copy, so subsequent builds do not replace
+resources beneath a running JVM. This avoids requiring Gradle during startup.
+Existing Spring environment-file loading remains in effect. The helper inherits
+operator environment variables, including any deliberately configured Core bind.
+
+**Restart Windows / Pi services** requires confirmation and restarts only live
+Windows processes launched by the current helper, plus the configured Pi units.
+Externally launched Windows processes, PostgreSQL and running WSL speech services
+are preserved; it is not a full-machine restart. Web remains running. If the
+helper was restarted, older Windows processes are treated as external.
+
+Live testing found WSL/Docker interruptions when terminating speech runtimes,
+including targeted Linux SIGTERM. Therefore WSL speech restart is intentionally
+excluded on this host. Missing STT/TTS runtimes can start, but running ones are
+preserved. The helper never terminates WSL or its Windows process tree. Resolving
+this host runtime problem is separate from these bounded recovery controls.
+
+Results confirm a listening port, not functional health. Use System services
+for validated health probes. Per-service logs and a correlated operator JSONL
+audit live below `.run/dev-recovery/`, separately from the Core activity log.
+When `KYRION_RECOVERY_PI_HOST` is configured in the helper's environment, it also
+starts/restarts the existing Spotify receiver, Voice Satellite and media player
+user units over SSH as `flodinho`. It uses the existing
+`~/.ssh/kyrion_node_ed25519` identity and strictly checks the known
+`kyrion-node.local` host key even when connecting to a reserved IP address.
+It cannot enrol a new host or manage privileged gateway/container services.
+Without this optional setting only Windows services are managed.
+See [ADR 0026](adr/0026-local-development-service-recovery.md).
+The [local acceptance record](status/2026-10-22-local-service-recovery.md)
+documents the installed artifact selection, successful live checks and WSL limit.
 
 ### 3. Start Ollama
 

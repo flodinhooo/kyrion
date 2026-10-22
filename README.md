@@ -226,6 +226,11 @@ existing independent pnpm setup.
 Kyrion is not yet packaged for one-command consumer installation. Local
 development currently requires the Web application, Core, AI service,
 PostgreSQL and selected local providers to be configured independently.
+Windows Web development now starts a bounded local recovery helper alongside
+Web. Login and System services link to an operator-key protected recovery page
+for starting missing services and restarting helper-managed processes, including
+three optional Pi user services. This is a development workflow, not production
+lifecycle management; see the startup guide for its boundaries.
 
 Start with [Local Development Startup](docs/development-startup.md). Hardware
 integrations additionally require owner-controlled devices, private local

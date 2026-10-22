@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.29.3",
   "scripts": {
+    "predev": "node ../../infrastructure/ensure-dev-recovery.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
