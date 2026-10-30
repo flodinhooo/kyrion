@@ -60,7 +60,10 @@ class AiOrchestrationService(
         val policy = settings.effectivePolicy(actor)
         val decision = ModelRouter.select(catalog, settings.repository.preferences(actor), policy, route)
         if (!decision.model.local) cloud.authorize(actor, decision.model.provider, "current_message", request.turnId)
-        val selected = context.generationContext(actor, bounded, request.turnId, !decision.model.local)
+        val limit = decision.model.contextLength?.let { it - decision.model.maxOutputTokens - 512 } ?: 3072
+        if (limit < 128) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
+        val selected =
+            context.generationContext(actor, bounded, request.turnId, !decision.model.local, minOf(3072, limit))
         // UTF-8 bytes plus bounded protocol/system overhead: deliberately conservative,
         // not an exact tokenizer count. Provider counters replace this after success.
         val estimate = aiJson.writeValueAsBytes(selected.messages).size.toLong() +

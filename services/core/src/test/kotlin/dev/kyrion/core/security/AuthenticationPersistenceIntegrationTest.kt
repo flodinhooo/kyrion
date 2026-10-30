@@ -53,6 +53,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val passwordHashing: PasswordHashingService,
     private val jdbc: JdbcClient,
     private val memories: PersonalMemoryRepository,
+    private val contextBuilder: dev.kyrion.core.context.ContextBuilder,
     private val mockMvc: MockMvc,
     private val activity: ActivityService,
     private val haReconciler: dev.kyrion.core.integration.HomeAssistantReconciler,
@@ -1418,6 +1419,128 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         aiOrchestration.stream(prepared(), revoked::add)
         assertThat(aiGateway.payloads.size).isEqualTo(1)
         assertThat(revoked.joinToString()).contains("ROUTE_CHANGED").doesNotContain("routing.fallback")
+    }
+
+    @Test
+    fun `context engine excludes expired disabled unconfirmed and category blocked memories and cloud data`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        memories.updateSettings(actor, true, Instant.now())
+        val conversation = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Orchard telescope planning", "2026-10-30T12:00:00Z")
+        fun memory(text: String): UUID {
+            val id = UUID.randomUUID();
+            val now = Instant.now()
+            memories.create(
+                actor, dev.kyrion.core.memory.PersonalMemory(
+                    id,
+                    dev.kyrion.core.memory.MemoryCategory.project,
+                    text,
+                    dev.kyrion.core.memory.MemorySensitivity.standard,
+                    "explicit",
+                    dev.kyrion.core.memory.MemoryStatus.proposed,
+                    conversation,
+                    turn,
+                    now,
+                    now,
+                    null
+                )
+            )
+            memories.confirm(actor, id, now, false)
+            return id
+        }
+
+        val good = memory("Orchard telescope selected")
+        val expired = memory("Orchard telescope expired")
+        memories.validity(actor, expired, true, Instant.now().minusSeconds(1), Instant.now())
+        val inactive = memory("Orchard telescope inactive")
+        memories.validity(actor, inactive, false, null, Instant.now())
+        val local = contextBuilder.build(actor, conversation, turn, 256)
+        assertThat(local.usedMemories.map { it.id }).containsExactly(good)
+        assertThat(local.estimatedTokens).isLessThanOrEqualTo(256)
+        assertThat(local.sources.any { it.kind == "personal_memory" && it.id == good.toString() }).isTrue()
+        val cloud = contextBuilder.build(actor, conversation, turn, 256, true)
+        assertThat(cloud.messages.map { it.content }).containsExactly("Orchard telescope planning")
+        assertThat(cloud.usedMemories).isEmpty()
+        assertThat(cloud.sources.filter { it.selected }.map { it.kind }).containsExactly("current_message")
+        memories.contextSettings(
+            actor,
+            false,
+            false,
+            listOf(dev.kyrion.core.memory.MemoryCategory.person),
+            Instant.now()
+        )
+        assertThat(contextBuilder.build(actor, conversation, turn).usedMemories).isEmpty()
+        assertThat(memories.find(actor, good)!!.status).isEqualTo(dev.kyrion.core.memory.MemoryStatus.confirmed)
+    }
+
+    @Test
+    fun `context history is opt in personal bounded and unknown voice identity never retrieves`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val old = UUID.randomUUID();
+        val previous = UUID.randomUUID()
+        startHttpTurn(token, old, previous, "Orchard telescope earlier private detail", "2026-10-30T12:00:00Z")
+        val current = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, current, turn, "Orchard telescope query", "2026-10-30T12:01:00Z")
+        assertThat(
+            contextBuilder.build(
+                actor,
+                current,
+                turn
+            ).sources.none { it.kind == "conversation_history" && it.selected }).isTrue()
+        memories.contextSettings(
+            actor,
+            true,
+            true,
+            dev.kyrion.core.memory.MemoryCategory.entries.toList(),
+            Instant.now()
+        )
+        val selected = contextBuilder.build(actor, current, turn, 512)
+        assertThat(selected.sources.any { it.kind == "conversation_history" && it.id == old.toString() }).isTrue()
+        assertThat(selected.messages.joinToString()).contains("earlier private detail")
+        assertThat(selected.estimatedTokens).isLessThanOrEqualTo(512)
+        assertThatThrownBy { contextBuilder.build(null, current, turn) }.hasMessage("UNAUTHENTICATED")
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("MemoryFriend", OTHER_PASSWORD, invite.code)
+        assertThatThrownBy {
+            contextBuilder.build(
+                authentication.authenticate(friend.session.rawToken)!!.id,
+                current,
+                turn
+            )
+        }.isInstanceOf(dev.kyrion.core.conversation.ConversationNotFoundException::class.java)
+    }
+
+    @Test
+    fun `memory validity and rejection APIs retain ownership and require authentication`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        memories.updateSettings(actor, true, Instant.now())
+        val created = mockMvc.perform(
+            post("/v1/memory/proposals").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"category":"project","content":"Orchard telescope","sensitivity":"standard"}""")
+        )
+            .andExpect(status().isCreated).andReturn().response.contentAsString
+        val id = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(created).path("id").asText()
+        mockMvc.perform(
+            patch("/v1/memory/$id/validity").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"active":false,"expiresAt":"2026-01-01T00:00:00Z"}""")
+        )
+            .andExpect(status().isOk).andExpect(jsonPath("$.active").value(false))
+        mockMvc.perform(
+            patch("/v1/memory/$id/validity").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"active":null}""")
+        )
+            .andExpect(status().isBadRequest)
+        mockMvc.perform(post("/v1/memory/$id/reject")).andExpect(status().isUnauthorized)
+        mockMvc.perform(post("/v1/memory/$id/reject").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNoContent)
+        assertThat(memories.find(actor, UUID.fromString(id))).isNull()
     }
 
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {
