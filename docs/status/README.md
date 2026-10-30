@@ -1,11 +1,41 @@
 # Kyrion Development Status
 
-Latest: [2026-10-11 security hardening](2026-10-11-security-hardening.md), with code, regression and additive migration evidence.
+Latest network acceptance: [Sprint 04 LAN activation and Pi-hole protection](2026-10-30-stabilization-sprint-04.md).
+The explicitly approved Core-only restart succeeded; Pi-to-Core and authenticated
+Voice greeting/synthetic stop turn passed. Two scoped Block guards are active.
+Pi-hole was untouched. Shared configuration remains loopback-safe; the LAN bind
+is process-only. IPv6-first client delays, Gateway target verification and real
+microphone/speaker acceptance remain open.
+
+Previous: [Sprint 03 Google and Pi-Core evidence](2026-10-30-stabilization-sprint-03.md).
+Google is working after the user's reauthorization; live marked-event checks
+passed without new OAuth. Its pending LAN approval was superseded by Sprint 04.
+
+Previous checkpoint: [Sprint 02 runtime and demo evidence](2026-10-30-stabilization-sprint-02.md)
+and the [October 31 demo checklist](../demo-readiness-2026-10-31.md).
+That checkpoint repaired local Calendar deletion and restart diagnostics. Its
+Google reauthorization blocker is superseded by Sprint 03; Pi-to-Windows Core
+and host cold-start acceptance remain open.
+
+Latest runtime follow-up: [2026-10-30 stabilization verification](2026-10-30-runtime-verification.md).
+All seven local services were ready at the final probe; Windows reboot and the
+underlying WSL/Docker interruption remain unverified/unresolved respectively.
+
+Current source integration and verification:
+[2026-10-30 stabilization](2026-10-30-stabilization.md), with a separate
+[AI architecture analysis](2026-10-30-ai-architecture-review.md). Recovery code is
+integrated for review; no new production deployment or full-host cold-start
+acceptance is claimed. Dated checkpoints below retain their historical evidence.
+
+Latest: [2026-10-19 Windows integration acceptance](2026-10-19-windows-live-acceptance.md).
+The updated isolated stack runs locally, HA refresh is live-verified through persistence,
+and Google reauthorization/authenticated browser acceptance remain open.
+Core: 217 passing tests; Web: 121 passing tests. No production deployment or merge.
 
 
-Last updated: 2026-10-11
+Last updated: 2026-10-19
 
-## Current handoff - Installer v1 preparation
+## Installer handoff - October 11 security baseline
 
 Read the [security hardening closeout](2026-10-11-security-hardening.md),
 [consolidated TODO](TODO.md) and [Installer v1 plan](../installer-v1-plan.md).

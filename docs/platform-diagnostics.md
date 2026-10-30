@@ -20,6 +20,14 @@ gateway heartbeats use existing persistent evidence. If Core authentication is
 unavailable, the protected page reports its existing error state; this is not an
 out-of-band monitoring system.
 
+Windows development additionally has a separate `/recovery` operator surface
+linked from Login and System services. It requires a running local helper and
+its separately entered operator key; ordinary platform sessions do not grant
+host authority. This works without Core and does not change the authenticated
+diagnostics contract. See [development startup](development-startup.md) and
+[ADR 0026](adr/0026-local-development-service-recovery.md). Production lifecycle
+and privileged Pi service management remain unavailable.
+
 The device catalog adds a diagnostic reason for absent, stale, offline and
 degraded observations. Existing capability names are retained for compatibility:
 `power.set`, `light.setBrightness`, `light.setColour`. Web and Voice share this

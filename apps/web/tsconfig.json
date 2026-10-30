@@ -36,7 +36,19 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-review/types/**/*.ts",
-    ".next-review/dev/types/**/*.ts"
+    ".next-review/dev/types/**/*.ts",
+    ".next-acceptance-build/types/**/*.ts",
+    ".next-acceptance-build/dev/types/**/*.ts",
+    ".next-stabilization-build/types/**/*.ts",
+    ".next-stabilization-build/dev/types/**/*.ts",
+    ".next-kai01-build/types/**/*.ts",
+    ".next-kai01-build/dev/types/**/*.ts",
+    ".next-sprint02-build/types/**/*.ts",
+    ".next-sprint02-build/dev/types/**/*.ts",
+    ".next-kai02-build/types/**/*.ts",
+    ".next-kai02-build/dev/types/**/*.ts",
+    ".next-kai03-build/types/**/*.ts",
+    ".next-kai03-build/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

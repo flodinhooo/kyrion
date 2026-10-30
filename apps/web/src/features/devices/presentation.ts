@@ -42,7 +42,7 @@ export function deriveDevicePresentation(device: RuntimeDevice, state: RuntimeDe
     add(text.lastAction, state?.action, "");
     return { primaryLabel: text.lastAction, primaryValue: state?.action ?? text.unknown, primaryTone: "neutral", secondaryMetrics: batteryMetric(state, text), hasPrimaryValue: state?.action != null };
   }
-  if (capabilities.has("power.set") && state?.on != null) {
+  if ((capabilities.has("power.set") || capabilities.has("power.read")) && state?.on != null) {
     add(text.brightness, state.brightness, "%");
     return { primaryLabel: "", primaryValue: state.on ? text.on : text.off, primaryTone: state.on ? "positive" : "neutral", secondaryMetrics: metrics, hasPrimaryValue: true };
   }

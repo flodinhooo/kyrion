@@ -1,5 +1,5 @@
-import { PlaceholderView } from "@/components/placeholder-view";
+import {KnowledgeView} from "@/components/knowledge-view";
 
 export default function KnowledgePage() {
-  return <PlaceholderView view="knowledge" />;
+  return <KnowledgeView/>;
 }

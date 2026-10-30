@@ -1,5 +1,6 @@
 export const diagnosticsMessages = {
   de: {
+    oldestProviderUpdate: "?lteste enthaltene Provider-Aktualisierung",
     observation: "Letzte Prüfung / Beobachtung", sourceCore: "Von Core geprüft",
     lastError: "Fehler des letzten Abgleichs",
     haOpen: "Home-Assistant-Import öffnen",
@@ -13,9 +14,11 @@ export const diagnosticsMessages = {
     stale_observation: "Beobachtung veraltet", no_observation: "Noch keine Beobachtung",
     dependency_offline: "Gateway offline; Zustand nicht aktuell bestimmbar",
     unknown: "Unbekannt", healthy: "Funktionsfähig", degraded: "Eingeschränkt", offline: "Offline",
+    "provider.unknown": "Provider meldet einen unbekannten Zustand", "integration.disconnected": "Integration getrennt; gespeicherte Werte", "integration.unreachable": "Integration nicht erreichbar; gespeicherte Werte",
     readOnly: "Nur lesend", "device.offline": "Gerät offline", "provider.degraded": "Provider meldet einen eingeschränkten Zustand",
   },
   en: {
+    oldestProviderUpdate: "Oldest included provider update",
     observation: "Last check / observation", sourceCore: "Checked by Core",
     lastError: "Last sync error",
     haOpen: "Open Home Assistant import",
@@ -29,6 +32,7 @@ export const diagnosticsMessages = {
     stale_observation: "Observation is stale", no_observation: "No observation yet",
     dependency_offline: "Gateway offline; current state cannot be determined",
     unknown: "Unknown", healthy: "Healthy", degraded: "Degraded", offline: "Offline",
+    "provider.unknown": "Provider reports unknown state", "integration.disconnected": "Integration disconnected; cached values", "integration.unreachable": "Integration unreachable; cached values",
     readOnly: "Read only", "device.offline": "Device offline", "provider.degraded": "Provider reports degraded state",
   },
 } as const;

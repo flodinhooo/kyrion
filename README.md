@@ -1,6 +1,6 @@
 <p align="center">
 
-Latest implementation: [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
+Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-19-calendar-ha-recovery.md); [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/logo/kyrion-dark.svg">
@@ -10,6 +10,11 @@ Latest implementation: [security hardening closeout](docs/status/2026-10-11-secu
 </p>
 
 # Kyrion
+
+Current engineering checkpoint: [recovery integration and startup stabilization](docs/status/2026-10-30-stabilization.md).
+[K-AI Milestone 01](docs/ai-model-providers.md) implements model profiles and
+Ollama/OpenAI/Anthropic/Gemini adapters with explicit cloud disclosure controls.
+Cloud acceptance is simulated; no paid requests or production deployment are implied.
 
 > A local-first orchestration platform for devices, services, automations and
 > optional AI.
@@ -226,6 +231,11 @@ existing independent pnpm setup.
 Kyrion is not yet packaged for one-command consumer installation. Local
 development currently requires the Web application, Core, AI service,
 PostgreSQL and selected local providers to be configured independently.
+Windows Web development now starts a bounded local recovery helper alongside
+Web. Login and System services link to an operator-key protected recovery page
+for starting missing services and restarting helper-managed processes, including
+three optional Pi user services. This is a development workflow, not production
+lifecycle management; see the startup guide for its boundaries.
 
 Start with [Local Development Startup](docs/development-startup.md). Hardware
 integrations additionally require owner-controlled devices, private local
@@ -256,3 +266,5 @@ between implemented and planned functionality.
 Kyrion is intended to be released as open source, but the licence decision is
 still pending. Until a `LICENSE` file is committed, all rights are reserved.
 Do not assume permission to copy, modify or redistribute the source yet.
+
+AI orchestration: [routing, user preferences, policy and budgets](docs/ai-orchestration.md).

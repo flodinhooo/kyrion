@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, ChevronDown, Search } from "lucide-react";
+import {ArrowUpRight, BookOpen} from "lucide-react";
 import { github, type Dictionary, type Locale } from "@/lib/site";
 import { Container, PageHero, StatusBadge } from "../site-ui";
 import { Button } from "../ui/button";
@@ -14,37 +14,24 @@ export function DocsPage({ t }: { t: Dictionary; locale: Locale }) {
           aria-label={t.docs.sidebar}
           className="lg:border-r lg:border-border lg:pr-7"
         >
-          <div
-            className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-3 text-xs text-muted-foreground"
-            aria-disabled="true"
+          <nav
+            aria-label={t.docs.sidebar}
+            className="flex flex-wrap gap-2 lg:flex-col"
           >
-            {t.docs.version}
-            <ChevronDown aria-hidden="true" className="size-3" />
-          </div>
-          <div
-            className="mt-4 flex items-center gap-2 rounded-lg border border-border px-3 py-3 text-xs text-muted-foreground"
-            aria-disabled="true"
-          >
-            <Search aria-hidden="true" className="size-4" />
-            {t.docs.search}
-          </div>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            {t.docs.searchNote}
-          </p>
-          <ul className="mt-8 flex flex-wrap gap-2 lg:flex-col">
-            {t.docs.sections.map((label, i) => (
-              <li
-                key={label}
-                className={
-                  i === 0
-                    ? "rounded-md bg-muted px-3 py-3 text-sm font-medium"
-                    : "px-3 py-3 text-sm text-muted-foreground"
-                }
+            {t.docs.cards.map((item) => (
+              <a
+                key={item.path}
+                href={`${github}/blob/HEAD/${item.path}`}
+                className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border px-3 py-3 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground"
               >
-                {label}
-              </li>
+                {item.title}
+                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0"/>
+              </a>
             ))}
-          </ul>
+          </nav>
+          <p className="mt-5 text-xs leading-6 text-muted-foreground">
+            {t.docs.note}
+          </p>
         </aside>
         <article className="min-w-0 pb-10">
           <BookOpen
@@ -70,8 +57,19 @@ export function DocsPage({ t }: { t: Dictionary; locale: Locale }) {
                 key={item.title}
                 className="rounded-lg border border-border p-5"
               >
-                <StatusBadge status="planned" labels={t.status} />
-                <h3 className="mt-5 font-medium">{item.title}</h3>
+                <BookOpen aria-hidden="true" className="size-5 text-accent"/>
+                <h3 className="mt-5 font-medium">
+                  <a
+                    href={`${github}/blob/HEAD/${item.path}`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-md hover:text-accent"
+                  >
+                    {item.title}
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
+                  </a>
+                </h3>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   {item.description}
                 </p>

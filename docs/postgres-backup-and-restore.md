@@ -1,5 +1,10 @@
 # PostgreSQL Backup and Restore Verification
 
+K-Data originals live outside PostgreSQL. For knowledge backup/restore, stop Core
+and back up the configured document root together with the matching database.
+See [K-Data operations](k-data.md#backup-restore-and-upgrades); database-only
+backups and personal JSON exports do not include original document files.
+
 Kyrion keeps operational PostgreSQL backups outside the repository. A backup is
 not considered recoverable merely because `pg_dump` completed: the companion
 manifest records its SHA-256 checksum and remains `restoreVerified: false` until

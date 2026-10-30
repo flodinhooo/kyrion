@@ -6,6 +6,16 @@ import java.util.UUID
 interface PersonalMemoryRepository {
     fun settings(ownerId: UUID): MemorySettings
     fun updateSettings(ownerId: UUID, enabled: Boolean, updatedAt: Instant): MemorySettings
+    fun dataSettings(ownerId: UUID, enabled: Boolean)
+    fun contextSettings(
+        ownerId: UUID,
+        history: Boolean,
+        preferences: Boolean,
+        categories: List<MemoryCategory>,
+        now: Instant
+    ): MemorySettings
+
+    fun validity(ownerId: UUID, id: UUID, active: Boolean, expiresAt: Instant?, now: Instant): PersonalMemory?
     fun recent(ownerId: UUID, limit: Int): List<PersonalMemory>
     fun confirmed(ownerId: UUID, limit: Int): List<PersonalMemory>
     fun create(ownerId: UUID, memory: PersonalMemory): PersonalMemory

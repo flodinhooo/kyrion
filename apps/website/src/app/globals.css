@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, :root:not([data-theme]), :root:not([data-theme]) *));
 
 :root {
   color-scheme: light;
@@ -14,21 +14,24 @@
   --primary-foreground: #f7f8fa;
   --accent: #5840c4;
   --ring: #6c43f5;
+  --warm: #925b08;
   --core-gradient: linear-gradient(135deg, #8b4dff, #6c43f5 45%, #168bff);
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+:root:not([data-theme]) {
   color-scheme: dark;
-  --background: #0b1421;
-  --foreground: #f7f8fa;
-  --muted: #101d2e;
-  --muted-foreground: #a3b2c5;
-  --card: #0e1929;
-  --border: #263447;
-  --primary: #f7f8fa;
-  --primary-foreground: #101e2d;
-  --accent: #b6acff;
-  --ring: #a593ff;
+  --background: #0d0d14;
+  --foreground: #f5f3fa;
+  --muted: #15141e;
+  --muted-foreground: #aaa6b8;
+  --card: #191722;
+  --border: #302c3d;
+  --primary: #8250e8;
+  --primary-foreground: #ffffff;
+  --accent: #b9a0ff;
+  --ring: #c0aaff;
+  --warm: #efb65b;
 }
 
 @theme inline {
@@ -42,7 +45,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-warm: var(--warm);
+  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 @layer base {
@@ -50,6 +54,7 @@
     border-color: var(--border);
   }
   body {
+    overflow-wrap: break-word;
     margin: 0;
     background: var(--background);
     color: var(--foreground);
@@ -111,13 +116,9 @@
   grid-template-columns: 1fr 48px 1fr 48px 1.15fr 48px 1.25fr;
   align-items: center;
 }
-.how-kyrion-node,
-.how-kyrion-connector {
-  opacity: 0;
-  transform: translateY(14px);
-  transition:
-    opacity 600ms ease,
-    transform 600ms ease;
+
+.how-kyrion-node {
+  min-width: 0;
 }
 .how-kyrion-connector {
   height: 1px;
@@ -227,32 +228,6 @@
   height: 0.85rem;
   color: var(--accent);
 }
-.how-kyrion-works.is-visible .how-kyrion-node,
-.how-kyrion-works.is-visible .how-kyrion-connector {
-  opacity: 1;
-  transform: translateY(0);
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(1) {
-  transition-delay: 0ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(3) {
-  transition-delay: 100ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(5) {
-  transition-delay: 200ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-node:nth-child(7) {
-  transition-delay: 300ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(2) {
-  transition-delay: 75ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(4) {
-  transition-delay: 175ms;
-}
-.how-kyrion-works.is-visible .how-kyrion-connector:nth-child(6) {
-  transition-delay: 275ms;
-}
 @keyframes velora-wave {
   0% {
     opacity: 0.45;
@@ -281,26 +256,12 @@
   display: block;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --background: #0b1421;
-    --foreground: #f7f8fa;
-    --muted: #101d2e;
-    --muted-foreground: #a3b2c5;
-    --card: #0e1929;
-    --border: #263447;
-    --primary: #f7f8fa;
-    --primary-foreground: #101e2d;
-    --accent: #b6acff;
-    --ring: #a593ff;
-  }
-  :root:not([data-theme]) .brand-light {
-    display: none;
-  }
-  :root:not([data-theme]) .brand-dark {
-    display: block;
-  }
+:root:not([data-theme]) .brand-light {
+  display: none;
+}
+
+:root:not([data-theme]) .brand-dark {
+  display: block;
 }
 
 @media (prefers-reduced-motion: reduce) {

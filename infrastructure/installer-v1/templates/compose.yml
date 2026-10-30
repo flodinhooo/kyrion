@@ -22,6 +22,12 @@ services:
       KYRION_CREDENTIAL_KEY_FILE: /run/secrets/credential-key
       KYRION_AUDIT_INTEGRITY_KEY_FILE: /run/secrets/audit-key
       KYRION_BOOTSTRAP_SECRET_FILE: /run/secrets/bootstrap-secret
+      KYRION_KNOWLEDGE_ROOT: /var/lib/kyrion/knowledge
+      KYRION_KNOWLEDGE_EMBEDDING_URL: ${KYRION_KNOWLEDGE_EMBEDDING_URL:-http://127.0.0.1:11434}
+      KYRION_KNOWLEDGE_EMBEDDING_MODEL: ${KYRION_KNOWLEDGE_EMBEDDING_MODEL:-}
+      KYRION_KNOWLEDGE_EMBEDDING_DIMENSION: ${KYRION_KNOWLEDGE_EMBEDDING_DIMENSION:-768}
+    volumes: [ "${KYRION_DATA_DIR:-/var/lib/kyrion}/knowledge:/var/lib/kyrion/knowledge" ]
+    tmpfs: [ "/tmp:rw,nosuid,nodev,size=128m" ]
     secrets: [ postgres-password, credential-key, audit-key, bootstrap-secret ]
     networks: [ platform ]
     read_only: true

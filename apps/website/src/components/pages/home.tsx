@@ -5,10 +5,8 @@ import {
   AudioLines,
   CalendarDays,
   Cable,
-  Check,
   Cloud,
   CloudOff,
-  ExternalLink,
   House,
   Lightbulb,
   LockKeyhole,
@@ -17,7 +15,6 @@ import {
   Server,
   ShieldCheck,
   Users,
-  X,
 } from "lucide-react";
 import {
   github,
@@ -27,7 +24,6 @@ import {
   type Locale,
 } from "@/lib/site";
 import { Logo } from "../logo";
-import { Ecosystem } from "../ecosystem";
 import { VeloraVoicePreview } from "../velora-voice-preview";
 import { HowKyrionWorks } from "../how-kyrion-works";
 import { Button } from "../ui/button";
@@ -47,7 +43,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
       <section className="relative isolate overflow-hidden border-b border-border pt-14 pb-16 sm:pt-20 sm:pb-24">
         <div
           aria-hidden="true"
-          className="core-grid pointer-events-none absolute inset-0 -z-10 opacity-50"
+          className="core-grid pointer-events-none absolute inset-0 -z-10 opacity-20"
         />
         <div
           aria-hidden="true"
@@ -55,12 +51,12 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
         />
         <Container>
           <DevelopmentBanner t={t} locale={locale} />
-          <div className="mt-10 grid items-center gap-8 lg:grid-cols-[1fr_320px]">
+          <div className="mt-10 grid items-center gap-8 lg:grid-cols-[1.35fr_0.8fr] lg:gap-16">
             <div>
               <p className="mb-6 max-w-lg font-mono text-[10px] tracking-[0.18em] text-muted-foreground sm:text-xs">
                 {t.home.eyebrow}
               </p>
-              <h1 className="max-w-4xl text-[clamp(2.8rem,6.8vw,5.9rem)] leading-[1.04] font-medium tracking-[-0.065em]">
+              <h1 className="max-w-4xl text-[clamp(2.65rem,5.4vw,4.8rem)] leading-[1.08] font-semibold tracking-[-0.05em]">
                 {t.home.title}
                 <br />
                 <span className="text-muted-foreground">
@@ -78,28 +74,72 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link href={href(locale, "development")}>
-                    {t.common.viewDevelopment}
-                  </Link>
+                  <a href={github}>
+                    {t.common.github}
+                    <ArrowUpRight aria-hidden="true" />
+                  </a>
                 </Button>
               </div>
             </div>
-            <div
-              className="relative mx-auto hidden aspect-square w-full max-w-80 items-center justify-center lg:flex"
-              aria-hidden="true"
+            <aside
+              className="relative rounded-2xl border border-border bg-card p-6 sm:p-8"
+              aria-labelledby="prototype-overview-title"
             >
-              <div className="absolute inset-0 rounded-full border border-border/70" />
-              <div className="absolute inset-7 rounded-full border border-border/70" />
-              <div className="absolute inset-14 rounded-full border border-border/70" />
-              <Logo mark className="relative size-60" priority />
-              <span className="absolute right-5 bottom-8 rounded-md border border-border bg-background px-3 py-2 font-mono text-[10px] text-muted-foreground">
-                {t.home.diagramCore}
-              </span>
-            </div>
+              <div className="mb-7 flex items-center justify-between gap-4">
+                <Logo mark className="size-14" />
+                <span className="flex items-center gap-2 text-xs text-warm">
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 rounded-full bg-warm"
+                  />
+                  {t.common.inDevelopment}
+                </span>
+              </div>
+              <p className="mb-3 font-mono text-[10px] tracking-[0.12em] text-muted-foreground">
+                {t.home.overviewLabel}
+              </p>
+              <h2
+                id="prototype-overview-title"
+                className="text-2xl leading-tight font-medium tracking-tight"
+              >
+                {t.home.overviewTitle}
+              </h2>
+              <ul className="mt-6 divide-y divide-border">
+                {t.home.overviewItems.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 py-4 text-sm leading-6"
+                  >
+                    <ShieldCheck
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-accent"
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={href(locale, "product")}
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md text-sm text-accent"
+              >
+                {t.home.overviewLink}
+                <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+              </Link>
+            </aside>
           </div>
-          <p className="mt-12 font-mono text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-10 max-w-2xl border-l-2 border-accent/40 pl-4 text-xs leading-6 text-muted-foreground">
             {t.home.heroNote}
           </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {(["private", "business"] as const).map((audience) => (
+              <Button key={audience} variant="outline" asChild>
+                <Link href={href(locale, audience)}>
+                  {t.nav[audience]}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ))}
+          </div>
         </Container>
       </section>
       <div className="border-b border-border">
@@ -118,11 +158,103 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           })}
         </Container>
       </div>
-      <section className="border-b border-border py-20 sm:py-24">
+      <section className="py-16 sm:py-20">
+        <Container className="grid items-start gap-12 xl:grid-cols-[0.85fr_1.15fr] xl:gap-16">
+          <SectionHeader
+            eyebrow={t.home.connectionEyebrow}
+            title={t.home.connectionTitle}
+            description={t.home.connectionDescription}
+          />
+          <div className="grid gap-4 sm:grid-cols-3">
+            {t.home.connectionCards.map((card, i) => (
+              <FeatureCard
+                key={card.title}
+                title={card.title}
+                description={card.description}
+                icon={[House, Music2, CalendarDays][i]}
+              />
+            ))}
+          </div>
+        </Container>
+      </section>
+      <section className="border-y border-border bg-muted/35 py-16 sm:py-20">
+        <Container>
+          <SectionHeader
+            title={t.home.audiencesTitle}
+            description={t.home.audiencesDescription}
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {(["private", "business"] as const).map((audience) => (
+              <article
+                key={audience}
+                className="rounded-2xl border border-border bg-card p-7 sm:p-9"
+              >
+                <StatusBadge status="development" labels={t.status} />
+                <h3 className="mt-5 text-2xl font-medium">{t.nav[audience]}</h3>
+                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                  {t[audience].description}
+                </p>
+                <Button asChild variant="outline" className="mt-6">
+                  <Link href={href(locale, audience)}>
+                    {t.nav[audience]}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              </article>
+            ))}
+          </div>
+        </Container>
+      </section>
+      <HowKyrionWorks t={t.home} />
+      <section className="border-b border-border py-16 sm:py-20">
+        <Container>
+          <SectionHeader
+            title={t.development.areasTitle}
+            description={t.home.heroNote}
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {[t.capabilities[2], ...t.capabilities.slice(-2)].map((item) => (
+              <FeatureCard
+                key={item.title}
+                title={item.title}
+                description={item.description}
+                icon={ScanLine}
+              >
+                <StatusBadge status={statusOf(item.status)} labels={t.status} />
+              </FeatureCard>
+            ))}
+          </div>
+        </Container>
+      </section>
+      <section className="py-16 sm:py-20">
+        <Container>
+          <SectionHeader
+            eyebrow={t.home.featuresEyebrow}
+            title={t.home.featuresTitle}
+            description={t.home.featuresDescription}
+          />
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {t.features.map((feature, i) => (
+              <FeatureCard key={feature.title} {...feature} icon={icons[i]} />
+            ))}
+          </div>
+          <Link
+            href={href(locale, "product")}
+            className="mt-8 inline-flex min-h-11 items-center gap-2 text-sm font-medium"
+          >
+            {t.common.learnMore}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </Container>
+      </section>
+      <section className="border-b border-border py-16 sm:py-20">
         <Container>
           <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
             <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
-              <div className="core-halo absolute inset-0" />
+              <div
+                aria-hidden="true"
+                className="core-halo pointer-events-none absolute inset-0"
+              />
               <VeloraVoicePreview
                 locale={locale}
                 label={t.home.veloraPlay}
@@ -148,48 +280,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
-      <section className="py-20 sm:py-28">
-        <Container className="grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
-          <SectionHeader
-            eyebrow={t.home.connectionEyebrow}
-            title={t.home.connectionTitle}
-            description={t.home.connectionDescription}
-          />
-          <div className="grid gap-4 sm:grid-cols-3">
-            {t.home.connectionCards.map((card, i) => (
-              <FeatureCard
-                key={card.title}
-                title={card.title}
-                description={card.description}
-                icon={[House, Music2, CalendarDays][i]}
-              />
-            ))}
-          </div>
-        </Container>
-      </section>
-      <HowKyrionWorks t={t.home} />
-      <section className="py-20 sm:py-28">
-        <Container>
-          <SectionHeader
-            eyebrow={t.home.featuresEyebrow}
-            title={t.home.featuresTitle}
-            description={t.home.featuresDescription}
-          />
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {t.features.map((feature, i) => (
-              <FeatureCard key={feature.title} {...feature} icon={icons[i]} />
-            ))}
-          </div>
-          <Link
-            href={href(locale, "product")}
-            className="mt-8 inline-flex min-h-11 items-center gap-2 text-sm font-medium"
-          >
-            {t.common.learnMore}
-            <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        </Container>
-      </section>
-      <section className="border-y border-border bg-muted/35 py-20 sm:py-28">
+      <section className="border-y border-border bg-muted/35 py-16 sm:py-20">
         <Container>
           <SectionHeader
             eyebrow={t.home.localCloudEyebrow}
@@ -218,8 +309,8 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
-      <section className="py-20 sm:py-28">
-        <Container className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20">
+      <section className="py-16 sm:py-20">
+        <Container className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div>
             <SectionHeader
               eyebrow={t.home.permissionsEyebrow}
@@ -236,79 +327,46 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
-              <div>
-                <p className="font-medium">Google</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t.home.pluginMock.account}
-                </p>
-              </div>
-              <span className="rounded-full border border-emerald-700/20 bg-emerald-700/5 px-2.5 py-1 font-mono text-[10px] text-emerald-800 dark:text-emerald-300">
-                {t.home.pluginMock.connected}
-              </span>
-            </div>
-            <div className="divide-y divide-border">
-              {t.home.pluginMock.scopes.map((scope) => (
-                <div
-                  key={scope.name}
-                  className="flex items-center justify-between gap-4 py-4 text-sm"
-                >
-                  <span>{scope.name}</span>
-                  <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      {scope.allowed ? (
-                        <Check className="size-3.5 text-emerald-600" />
-                      ) : (
-                        <X className="size-3.5 text-muted-foreground" />
-                      )}
-                      {scope.access}
-                    </span>
-                  </span>
+          <aside
+            className="rounded-2xl border border-border bg-card p-6 sm:p-8"
+            aria-labelledby="permission-model-title"
+          >
+            <h3
+              id="permission-model-title"
+              className="text-xl font-medium tracking-tight"
+            >
+              {t.home.permissionModel.title}
+            </h3>
+            <dl className="mt-5 divide-y divide-border">
+              {t.home.permissionModel.items.map((item) => (
+                <div key={item.title} className="py-5">
+                  <dt className="flex flex-wrap items-center justify-between gap-3 text-sm font-medium">
+                    {item.title}
+                    <StatusBadge
+                      status={statusOf(item.status)}
+                      labels={t.status}
+                    />
+                  </dt>
+                  <dd className="mt-3 text-sm leading-7 text-muted-foreground">
+                    {item.description}
+                  </dd>
                 </div>
               ))}
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3 border-t border-border pt-5">
-              <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium">
-                {t.home.pluginMock.manage}
-                <ExternalLink className="size-3.5" aria-hidden="true" />
-              </span>
-              <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-muted-foreground">
-                {t.home.pluginMock.disconnect}
-              </span>
-            </div>
-            <p className="mt-5 font-mono text-[10px] leading-5 text-muted-foreground">
-              {t.home.pluginMock.note}
+            </dl>
+            <p className="border-t border-border pt-5 text-xs leading-6 text-muted-foreground">
+              {t.home.permissionModel.note}
             </p>
-          </div>
+          </aside>
         </Container>
       </section>
-      <section className="border-y border-border bg-muted/35 py-20 sm:py-24">
-        <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div>
-            <SectionHeader
-              eyebrow={t.home.ecosystemEyebrow}
-              title={t.home.ecosystemTitle}
-              description={t.home.ecosystemDescription}
-            />
-            <Button asChild variant="outline" className="mt-8">
-              <Link href={href(locale, "about")}>
-                {t.home.ecosystemLink}
-                <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
-          </div>
-          <Ecosystem t={t.home} />
-        </Container>
-      </section>
-      <section className="py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <Container>
           <SectionHeader
             eyebrow={t.home.integrationsEyebrow}
             title={t.home.integrationsTitle}
             description={t.home.integrationsDescription}
           />
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
             {t.home.integrations.map((group, i) => (
               <article
                 key={group.title}
@@ -334,7 +392,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                   {group.items.map((item) => (
                     <div
                       key={item.name}
-                      className="flex items-center justify-between gap-3 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-3 text-sm"
                     >
                       <span>{item.name}</span>
                       <StatusBadge
@@ -347,10 +405,13 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </article>
             ))}
           </div>
+          <p className="mt-6 max-w-3xl text-sm leading-7 text-muted-foreground">
+            {t.home.integrationNote}
+          </p>
         </Container>
       </section>
-      <section className="border-t border-border bg-muted/35 py-20 sm:py-28">
-        <Container className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+      <section className="border-t border-border bg-muted/35 py-16 sm:py-20">
+        <Container className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
           <SectionHeader
             eyebrow={t.home.hardwareEyebrow}
             title={t.home.hardwareTitle}
@@ -373,11 +434,18 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                 </p>
               </details>
             ))}
+            <a
+              href={`${github}/blob/HEAD/docs/development-startup.md`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-accent"
+            >
+              {t.docs.cards[0].title}
+              <ArrowUpRight aria-hidden="true" className="size-4" />
+            </a>
           </div>
         </Container>
       </section>
-      <section className="border-t border-border bg-muted/35 py-20 sm:py-24">
-        <Container className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+      <section className="border-t border-border bg-muted/35 py-16 sm:py-20">
+        <Container className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
           <SectionHeader
             eyebrow={t.home.developmentEyebrow}
             title={t.home.developmentTitle}
@@ -388,13 +456,6 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
             <p className="mt-5 text-sm leading-7 text-muted-foreground">
               {t.home.developmentNote}
             </p>
-            <a
-              href={github}
-              className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-medium"
-            >
-              {t.common.follow}
-              <ArrowUpRight aria-hidden="true" className="size-4" />
-            </a>
           </div>
         </Container>
       </section>

@@ -7,6 +7,7 @@ import { AuthForm } from "@/components/auth-form";
 import { BrandAsset } from "@/components/brand-asset";
 import { messages, type Locale } from "@/lib/messages";
 import { readPreference, writePreference } from "@/lib/browser-preferences";
+import {recoveryMessages} from "@/features/system-services/recovery-messages";
 
 export function LoginScreen({ setupRequired, registration = false }: { setupRequired: boolean | null; registration?: boolean }) {
   const [locale, setLocale] = useState<Locale>("de");
@@ -38,6 +39,8 @@ export function LoginScreen({ setupRequired, registration = false }: { setupRequ
         : <AuthForm setup={setupRequired} registration={registration} locale={locale} />}
       {registration && <p className="auth-footer"><Link href="/login">{t.authBackToLogin}</Link></p>}
       {!registration && setupRequired === false && <p className="auth-footer"><Link href="/signup">{t.authSignupTitle}</Link></p>}
+      {process.env.NODE_ENV === "development" &&
+        <p className="auth-footer"><Link href="/recovery">{recoveryMessages[locale].open}</Link></p>}
     </section>
   </main>;
 }

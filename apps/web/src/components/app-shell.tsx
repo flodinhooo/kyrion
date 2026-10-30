@@ -53,6 +53,7 @@ export type TextSize = "standard" | "comfortable" | "large";
 const navigation = [
   ["home", Icons.home, "/"],
   ["chat", Icons.chat, "/chat"],
+  ["knowledge", Icons.plugins, "/knowledge"],
   ["lounge", Icons.music, "/lounge"],
   ["devices", Icons.power, "/devices"],
   ["calendarTitle", Icons.calendar, "/calendar"],
@@ -195,7 +196,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
         if (!response.ok || !isModelCatalog(catalog)) throw new Error("Invalid model catalog");
 
         const savedModel = readPreference("kyrion-model");
-        const nextModel = savedModel && catalog.models.some((model) => model.id === savedModel)
+        const nextModel = savedModel && (savedModel === "auto" || catalog.models.some((model) => model.id === savedModel))
           ? savedModel
           : catalog.defaultModelId;
         if (!isDisposed) {
@@ -259,7 +260,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
   }
 
   function selectModel(modelId: string) {
-    if (!modelCatalog?.models.some((model) => model.id === modelId)) return;
+    if (modelId !== "auto" && !modelCatalog?.models.some((model) => model.id === modelId && model.available !== false && model.enabled !== false)) return;
     setSelectedModelId(modelId);
     writePreference("kyrion-model", modelId);
   }

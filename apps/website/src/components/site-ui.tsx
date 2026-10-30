@@ -39,15 +39,15 @@ export function SectionHeader({
   return (
     <div className={cn("max-w-2xl", className)}>
       {eyebrow && (
-        <p className="mb-5 font-mono text-[11px] font-medium tracking-[0.16em] text-accent">
+        <p className="mb-4 font-mono text-[11px] font-medium tracking-[0.16em] text-accent">
           {eyebrow}
         </p>
       )}
-      <h2 className="whitespace-pre-line text-3xl leading-[1.12] font-medium tracking-[-0.045em] sm:text-5xl">
+      <h2 className="whitespace-pre-line text-3xl leading-[1.12] font-semibold tracking-[-0.035em] sm:text-4xl">
         {title}
       </h2>
       {description && (
-        <p className="mt-6 text-base leading-7 text-muted-foreground sm:text-lg">
+        <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
           {description}
         </p>
       )}
@@ -85,8 +85,7 @@ export function PageHero({
 }
 
 const statusStyles: Record<Status, string> = {
-  available:
-    "border-emerald-700/20 bg-emerald-700/5 text-emerald-800 dark:text-emerald-300",
+  available: "border-border bg-muted text-foreground",
   experimental:
     "border-amber-700/20 bg-amber-700/5 text-amber-800 dark:text-amber-300",
   development:
@@ -104,7 +103,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[11px]",
+        "inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[11px]",
         statusStyles[status],
       )}
     >
@@ -124,9 +123,9 @@ export function DevelopmentBanner({
   return (
     <Link
       href={href(locale, "development")}
-      className="inline-flex min-h-9 items-center gap-3 rounded-full border border-border bg-background px-3.5 py-2 font-mono text-[11px] text-muted-foreground hover:border-accent"
+      className="inline-flex min-h-11 items-center gap-3 rounded-full border border-border bg-muted/50 px-3.5 py-2 font-mono text-[11px] text-muted-foreground hover:border-accent"
     >
-      <span className="core-line size-1.5 rounded-full" aria-hidden="true" />
+      <span className="size-1.5 rounded-full bg-warm" aria-hidden="true"/>
       {t.common.inDevelopment}
       <ArrowRight className="size-3" aria-hidden="true" />
     </Link>
@@ -145,11 +144,12 @@ export function FeatureCard({
   children?: ReactNode;
 }) {
   return (
-    <article className="group rounded-xl border border-border bg-card p-7 transition-colors hover:border-accent/40 sm:p-8">
+    <article
+      className="group h-full rounded-xl border border-border bg-card p-6 transition-colors duration-200 hover:border-accent/40 sm:p-7">
       <Icon
         aria-hidden="true"
         strokeWidth={1.4}
-        className="mb-9 size-7 text-muted-foreground transition-colors group-hover:text-accent"
+        className="mb-6 size-7 text-muted-foreground transition-colors group-hover:text-accent"
       />
       {children && <div className="mb-4">{children}</div>}
       <h3 className="text-xl font-medium tracking-tight">{title}</h3>
@@ -162,7 +162,7 @@ export function FeatureCard({
 
 export function CTASection({ t, locale }: { t: Dictionary; locale: Locale }) {
   return (
-    <section className="border-t border-border py-20 sm:py-24">
+    <section className="border-t border-border py-16 sm:py-20">
       <Container className="flex flex-col items-start justify-between gap-9 md:flex-row md:items-center">
         <div>
           <p className="mb-4 font-mono text-xs text-accent">
@@ -183,8 +183,8 @@ export function CTASection({ t, locale }: { t: Dictionary; locale: Locale }) {
             </a>
           </Button>
           <Button asChild variant="outline">
-            <Link href={href(locale, "development")}>
-              {t.nav.development}
+            <Link href={href(locale, "docs")}>
+              {t.common.readDocs}
               <ArrowRight aria-hidden="true" />
             </Link>
           </Button>

@@ -37,6 +37,10 @@ services:
       KYRION_AUDIT_INTEGRITY_KEY_FILE: /var/lib/kyrion/secrets/audit-integrity.key
       KYRION_BOOTSTRAP_SECRET_FILE: /var/lib/kyrion/secrets/bootstrap.secret
       KYRION_AI_BASE_URL: ${KYRION_AI_BASE_URL:-http://127.0.0.1:8000}
+      KYRION_KNOWLEDGE_ROOT: /var/lib/kyrion/knowledge
+      KYRION_KNOWLEDGE_EMBEDDING_URL: ${KYRION_KNOWLEDGE_EMBEDDING_URL:-http://127.0.0.1:11434}
+      KYRION_KNOWLEDGE_EMBEDDING_MODEL: ${KYRION_KNOWLEDGE_EMBEDDING_MODEL:-}
+      KYRION_KNOWLEDGE_EMBEDDING_DIMENSION: ${KYRION_KNOWLEDGE_EMBEDDING_DIMENSION:-768}
       KYRION_SPOTIFY_CLIENT_ID: ${KYRION_SPOTIFY_CLIENT_ID:-}
       KYRION_SPOTIFY_CLIENT_SECRET: ${KYRION_SPOTIFY_CLIENT_SECRET:-}
       KYRION_SPOTIFY_REDIRECT_URI: ${KYRION_SPOTIFY_REDIRECT_URI:-}
@@ -48,6 +52,7 @@ services:
       - "127.0.0.1:18080:8080"
     volumes:
       - /var/lib/kyrion/secrets:/var/lib/kyrion/secrets
+      - /var/lib/kyrion/knowledge:/var/lib/kyrion/knowledge
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=128m

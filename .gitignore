@@ -51,7 +51,11 @@ data/
 secrets/
 
 # New local runtime outputs; reviewed scripts and historical evidence stay tracked.
+.run/dev-recovery/
+.run/stabilization/
+.run/kai03/
 .run/private-evidence/
+.run/stabilization/
 .run/**/*.wav
 .run/*.json
 !.run/short_tts_corpus.json
@@ -66,6 +70,8 @@ secrets/
 *.pt
 *.pth
 models/
+!apps/web/src/features/models/
+!apps/web/src/features/models/**
 checkpoints/
 voice-training/
 recordings/

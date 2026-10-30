@@ -77,8 +77,8 @@
     }
   },
   "meta": {
-    "title": "Kyrion — Local-first intelligent home platform",
-    "description": "Kyrion is a local-first platform for intelligent home control, automation and connected devices. Currently in development."
+    "title": "Kyrion — Connect devices, services and knowledge",
+    "description": "A local, modular platform for devices, services, information and optional AI. Explore the home prototype and the developing vision for teams."
   },
   "nav": {
     "contact": "Contact",
@@ -100,10 +100,12 @@
     "dark": "Dark",
     "system": "System",
     "switchLight": "Switch to light mode",
-    "switchDark": "Switch to dark mode"
+    "switchDark": "Switch to dark mode",
+    "private": "For individuals",
+    "business": "For business"
   },
   "status": {
-    "available": "Available",
+    "available": "Implemented in prototype",
     "experimental": "Experimental",
     "development": "In development",
     "planned": "Planned"
@@ -113,7 +115,7 @@
     "core": "Kyrion Core",
     "explore": "Explore Kyrion",
     "viewDevelopment": "View development",
-    "follow": "Follow the development",
+    "follow": "Explore what comes next",
     "readDocs": "Explore the docs",
     "learnMore": "Explore the platform",
     "inDevelopment": "Currently in development",
@@ -122,17 +124,17 @@
     "notFoundDescription": "Explore the platform or return to the Kyrion homepage.",
     "github": "View on GitHub",
     "footer": "Your home. Your infrastructure.",
-    "footerNote": "An independent platform in active development. Not yet generally available.",
+    "footerNote": "A local platform for devices, services, knowledge and optional assistance. Development prototype; not generally available.",
     "footerLinks": "Explore",
     "footerPrinciple": "Local first. Human controlled.",
     "copyright": "© 2026 Kyrion"
   },
   "home": {
-    "eyebrow": "LOCAL-FIRST INTELLIGENT HOME PLATFORM",
-    "title": "Your home. Your services.",
-    "titleAccent": "One platform that connects them.",
-    "description": "Kyrion connects your devices, automations and digital services – local, private and under your control.",
-    "heroNote": "A working prototype. A considered foundation. Built step by step.",
+    "eyebrow": "LOCAL-FIRST HOME OPERATING SYSTEM",
+    "title": "Your home. One system.",
+    "titleAccent": "Your control.",
+    "description": "Kyrion brings devices, services and your information together in a local, modular platform. Explored today through a working home prototype, with a team environment in development. AI assistance is optional.",
+    "heroNote": "Development prototype, not a generally available product. Implemented code, automated tests and real-world acceptance are different kinds of evidence. Business and personal document retrieval have open integration and validation work.",
     "diagramLabel": "The Kyrion ecosystem",
     "diagramTop": "DEVICES & INTEGRATIONS",
     "diagramCore": "ONE TRUSTED CORE",
@@ -146,20 +148,20 @@
       "Your home stays yours"
     ],
     "connectionEyebrow": "LESS SWITCHING, MORE DOING",
-    "connectionTitle": "Your home is full of useful pieces. Kyrion connects them.",
-    "connectionDescription": "Lights, music, rooms and digital services do not have to stay in separate apps. Kyrion creates one understandable layer for the things you already use.",
+    "connectionTitle": "Less switching. More control.",
+    "connectionDescription": "Bring selected devices and services into one understandable place. Start with the controls that work today.",
     "connectionCards": [
       {
-        "title": "Your home",
-        "description": "Understand and control rooms, lights and device state in one place."
+        "title": "Rooms & lighting",
+        "description": "Organise rooms and control selected Nanoleaf, Zigbee and Bluetooth lights."
       },
       {
-        "title": "Your services",
-        "description": "Optional connections to music, calendars and other services – when you want them."
+        "title": "Calendar & media",
+        "description": "Local events, bounded Google Calendar features, Spotify Connect and YouTube links."
       },
       {
-        "title": "Your everyday",
-        "description": "Fewer app switches, clearer state and a platform that can grow with you."
+        "title": "People & access",
+        "description": "Invitations, installation-wide roles and a shared, Core-controlled action path."
       }
     ],
     "worksEyebrow": "HOW KYRION WORKS",
@@ -170,18 +172,18 @@
       "description": "Your request, your decision."
     },
     "worksVelora": {
-      "title": "Velora",
-      "description": "A natural interface for voice and interaction.",
-      "meta": "Voice · Web · Mobile to come"
+      "title": "Web & optional voice",
+      "description": "Use the Web interface today. Velora voice reliability is still being validated.",
+      "meta": "Web available / Voice experimental"
     },
     "worksCore": {
       "title": "Kyrion Core",
-      "description": "The shared center: understand, apply rules and execute with control.",
-      "meta": "Understand · Automate · Control"
+      "description": "Checks identity, permissions and action policy, then records execution results.",
+      "meta": "Validate · Authorise · Execute"
     },
     "worksEnvironment": {
       "title": "Your home",
-      "description": "Lighting, sensors, media, energy and more – through the right integrations.",
+      "description": "Selected lighting, sensors and media through bounded integrations.",
       "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
     },
     "worksCloud": {
@@ -190,7 +192,7 @@
     },
     "worksNote": "Local functions remain independent wherever practical. Individual integration availability is limited in the prototype and shown separately.",
     "localCloudEyebrow": "LOCAL FIRST. CLOUD WHEN YOU WANT IT.",
-    "localCloudTitle": "You decide what stays in your system and what you connect.",
+    "localCloudTitle": "Your infrastructure.\nYour choice of connections.",
     "localCloudDescription": "Kyrion itself does not depend on cloud accounts. Devices, rooms, central settings and local functions stay in your own system wherever practical.",
     "localCard": {
       "label": "YOUR SYSTEM",
@@ -200,80 +202,103 @@
     "cloudCard": {
       "label": "OPTIONAL CONNECTION",
       "title": "Services are added when you need them",
-      "description": "Connect Spotify, Google or YouTube through an explicitly enabled integration. You decide which connection exists and can remove it again."
+      "description": "Spotify uses an explicitly connected account. Google Calendar supports bounded editing and explicit synchronization of selected events; all-day and recurring events remain read-only. YouTube loads a visible link player. External services and optional cloud AI require their providers and network access."
     },
     "permissionsEyebrow": "CONNECTIONS WITH CLEAR BOUNDARIES",
-    "permissionsTitle": "An account extends Kyrion. It does not take over your home.",
-    "permissionsDescription": "Future plugins are intended to connect services through separate, understandable permissions. You only grant access to what you actually want to use.",
-    "permissionsNote": "Permissions stay visible and revocable",
-    "pluginMock": {
-      "account": "Connected as user@example.com",
-      "connected": "Connected",
-      "manage": "Manage permissions",
-      "disconnect": "Disconnect",
-      "note": "Concept illustration – Google sign-in is not available yet.",
-      "scopes": [
-        { "name": "Calendar", "access": "Read · Manage", "allowed": true },
-        { "name": "Gmail", "access": "No access", "allowed": false },
-        { "name": "YouTube", "access": "Connected", "allowed": true }
-      ]
-    },
+    "permissionsTitle": "Every action has a boundary.",
+    "permissionsDescription": "Core enforces installation-wide roles and validates device actions. Optional AI proposes requests through the same controlled path. Room and device permission scopes remain planned.",
+    "permissionsNote": "Core owns authorisation and execution",
     "integrationsEyebrow": "FOR THE THINGS YOU ALREADY USE",
     "integrationsTitle": "Built to connect systems.",
-    "integrationsDescription": "Kyrion is meant to connect your home, not replace it. The platform brings together devices and services from different providers through focused integrations. Status shows what exists in the prototype and what comes next.",
+    "integrationsDescription": "Implemented means present in the development prototype, not a consumer release. Hardware evidence covers selected devices; it does not establish compatibility with every device in an ecosystem.",
     "integrations": [
       {
         "title": "Standards",
         "items": [
-          { "name": "Zigbee", "status": "available" },
-          { "name": "Bluetooth", "status": "available" },
-          { "name": "Matter / Thread", "status": "planned" }
+          {
+            "name": "Zigbee (Zigbee2MQTT)",
+            "status": "available"
+          },
+          {
+            "name": "Bluetooth (MELK-OA20)",
+            "status": "experimental"
+          },
+          {
+            "name": "Matter / Thread",
+            "status": "planned"
+          }
         ]
       },
       {
         "title": "Device ecosystems",
         "items": [
-          { "name": "Nanoleaf", "status": "available" },
-          { "name": "Philips Hue", "status": "available" },
-          { "name": "Aqara / myStrom", "status": "planned" }
+          {
+            "name": "Nanoleaf",
+            "status": "available"
+          },
+          {
+            "name": "Philips Hue (Zigbee)",
+            "status": "available"
+          },
+          {
+            "name": "Aqara / myStrom",
+            "status": "planned"
+          }
         ]
       },
       {
         "title": "Services",
         "items": [
-          { "name": "Spotify", "status": "available" },
-          { "name": "Home Assistant", "status": "available" },
-          { "name": "Google / YouTube / Jellyfin", "status": "planned" }
+          {
+            "name": "Spotify Connect",
+            "status": "available"
+          },
+          {
+            "name": "Home Assistant (read-only)",
+            "status": "experimental"
+          },
+          {
+            "name": "YouTube (link player)",
+            "status": "available"
+          },
+          {
+            "name": "Google Calendar (bounded)",
+            "status": "available"
+          },
+          {
+            "name": "Jellyfin",
+            "status": "planned"
+          }
         ]
       }
     ],
     "hardwareEyebrow": "GETTING STARTED",
     "hardwareTitle": "Do you need your own server?",
-    "hardwareDescription": "Kyrion needs a device to run on. The right size depends on what you want to use it for.",
+    "hardwareDescription": "Core, Web and PostgreSQL need a configured local host. Local AI and speech add separate runtime and hardware requirements.",
     "hardwareFaq": [
       {
-        "question": "Do I need a traditional server or NAS?",
-        "answer": "No. A traditional server or NAS is not required. For early use, a compact local computer may be enough. Dedicated Kyrion hardware is a possible future direction, not an available product today."
+        "question": "Can I install Kyrion with one command?",
+        "answer": "Not yet. Installer v1 has an implemented fresh-install boundary, but its checked-in manifest contains no installable artifacts. Signed release acceptance, certificates, backup/restore verification and a clean Raspberry Pi rehearsal remain open."
       },
       {
         "question": "What already runs on local hardware?",
-        "answer": "The prototype runs Kyrion Core, local storage and a Raspberry Pi gateway for selected device and voice paths. Hardware coverage is still being validated one path at a time."
+        "answer": "Core, Web and PostgreSQL form the local platform. A Raspberry Pi gateway supports selected lighting and voice paths. Local AI and speech use separately configured providers; a Pi-only AI setup is not established."
       },
       {
-        "question": "Can I connect cloud services later?",
-        "answer": "Yes. Cloud services are intended as optional extensions. Kyrion should remain useful for local devices, rooms and configuration without those accounts."
+        "question": "Where can I find setup instructions?",
+        "answer": "The repository contains developer startup instructions and the installer implementation status. These are technical setup documents; a supported consumer installation is still in development."
       }
     ],
     "featuresEyebrow": "A HOME THAT WORKS TOGETHER",
-    "featuresTitle": "Less fragmentation.\nMore connection.",
+    "featuresTitle": "A practical foundation.\nBuilt around your home.",
     "featuresDescription": "One coherent layer above the devices and services you already use. A foundation for everyday control, with room to grow.",
     "ecosystemEyebrow": "CONNECTED THROUGH ONE CORE",
     "ecosystemTitle": "Many systems.\nOne place to bring them together.",
     "ecosystemDescription": "Integrations connect the devices. Core holds the rules. Web, voice and optional intelligence give you different ways to interact—with the same controlled action path.",
     "ecosystemLink": "Understand the architecture",
     "veloraEyebrow": "MEET VELORA",
-    "veloraTitle": "AI that can run at home.",
-    "veloraDescription": "Chat, voice and intelligent functions can run on your own Kyrion hardware, so every sensitive interaction does not have to go to an external AI service. Other providers remain optional; the prototype is still being validated.",
+    "veloraTitle": "Velora, an assistant taking shape.",
+    "veloraDescription": "Velora is the developing intelligent voice interface for Kyrion. Local chat, “Hey Velora” wake detection, transcription and bounded device commands exist. Repeatable voice reliability and natural dialogue still need validation; AI remains optional.",
     "veloraRule": "Intelligence proposes. Core decides.",
     "veloraPlay": "Meet Velora",
     "veloraSpeaking": "Velora is speaking",
@@ -281,9 +306,41 @@
     "veloraUnavailable": "The voice sample is currently unavailable.",
     "veloraWelcomed": "Velora just welcomed you.",
     "developmentEyebrow": "BUILT IN THE OPEN, STEP BY STEP",
-    "developmentTitle": "Real progress.\nA clear development boundary.",
-    "developmentDescription": "Kyrion is a working development prototype moving toward a private alpha. Core control paths exist; wider usability, voice reliability and new capabilities still need validation.",
-    "developmentNote": "No public release date. No general availability. Features and architecture may change."
+    "developmentTitle": "Independent by design.\nTransparent in development.",
+    "developmentDescription": "Current work focuses on reliable operation, integrating AI and knowledge capabilities, and reviewing Spaces. A consumer installer has not been released. Repeatable voice reliability and complete isolation remain open validation work.",
+    "developmentNote": "No public release date. No general availability. Features and architecture may change.",
+    "permissionModel": {
+      "title": "One controlled action path",
+      "note": "Architecture summary, not an application screenshot.",
+      "items": [
+        {
+          "title": "People and roles",
+          "description": "Owner, Admin, User and Viewer roles, custom roles and owner-issued invitations.",
+          "status": "available"
+        },
+        {
+          "title": "Actions and results",
+          "description": "Core validates proposals and records important actions with correlation identifiers.",
+          "status": "available"
+        },
+        {
+          "title": "Room and device scopes",
+          "description": "Finer household permissions and public plugin contracts remain future work.",
+          "status": "planned"
+        }
+      ]
+    },
+    "integrationNote": "Home Assistant import awaits physical verification. Spotify Web controls and repeatable voice reliability still have acceptance gates.",
+    "overviewTitle": "Built on a working foundation",
+    "overviewLabel": "IMPLEMENTED IN THE PROTOTYPE",
+    "overviewItems": [
+      "Rooms and lighting control",
+      "Local Calendar and media services",
+      "Accounts, roles and action history"
+    ],
+    "overviewLink": "See capabilities and limitations",
+    "audiencesTitle": "For home. With a direction for teams.",
+    "audiencesDescription": "One platform approach, different needs. The first applications are being explored at home; business is developing as a separate area."
   },
   "features": [
     {
@@ -304,7 +361,7 @@
     },
     {
       "title": "A home you can share",
-      "description": "Owner-issued invitations enable shared device control today. Richer household roles remain future work."
+      "description": "Owner-issued invitations and installation-wide system/custom roles are implemented. Room and device permission scopes remain planned."
     },
     {
       "title": "Clarity when things change",
@@ -317,8 +374,8 @@
     "description": "Home control, connected services and optional intelligence on one foundation. Explore what the prototype implements today and what remains ahead.",
     "availableTitle": "Implemented in the prototype",
     "availableNote": "“Available” means implemented in the development prototype, not released for general use. Hardware coverage is bounded; individual paths may still need physical validation.",
-    "futureTitle": "What comes next",
-    "futureNote": "These areas are experimental or planned. They are not a promise of release scope or timing."
+    "futureTitle": "Limited, in development or planned",
+    "futureNote": "These areas are not yet fully integrated or validated. A status does not promise release or production readiness."
   },
   "capabilities": [
     {
@@ -332,13 +389,13 @@
       "status": "available"
     },
     {
-      "title": "AI and voice at home",
-      "description": "Local streaming chat and bounded German/English command proposals. Core validates permissions and targets before any action is executed; reliable end-to-end voice remains in development.",
+      "title": "Assistance and model choice (K-AI)",
+      "description": "Local chat, model selection, policies and opt-in personal context are implemented. Ollama has real generation evidence; OpenAI, Anthropic and Gemini requests were simulated. With explicit consent, cloud receives only the current message, without personal context sources.",
       "status": "available"
     },
     {
       "title": "Shared installations",
-      "description": "Owners can invite additional accounts to shared device control. Granular owner/member/guest household roles are not implemented yet.",
+      "description": "Owner-issued invitations and installation-wide system/custom roles are implemented. Room and device permission scopes remain planned.",
       "status": "available"
     },
     {
@@ -365,6 +422,26 @@
       "title": "Broader integrations",
       "description": "Versioned plugin contracts, richer Home Assistant capabilities and more device ecosystems. A public marketplace is not implemented.",
       "status": "planned"
+    },
+    {
+      "title": "Calendar & Lounge",
+      "description": "Local events, bounded editing of ordinary Google events and explicit synchronization of individually linked events are implemented, with live checks using marked test events. All-day and recurring Google events remain read-only. Spotify Web receiver acceptance is open; YouTube uses the visible browser player.",
+      "status": "available"
+    },
+    {
+      "title": "Installer v1",
+      "description": "Not yet. Installer v1 has an implemented fresh-install boundary, but its checked-in manifest contains no installable artifacts. Signed release acceptance, certificates, backup/restore verification and a clean Raspberry Pi rehearsal remain open.",
+      "status": "development"
+    },
+    {
+      "title": "Your documents (K-Data)",
+      "description": "An initial implementation provides personal PDF/text upload and local retrieval with sources. Additional fixes were tested separately and are not fully integrated. Real model answers, installation and recovery still need validation; no team knowledge, OCR or cloud document context.",
+      "status": "experimental"
+    },
+    {
+      "title": "Spaces for home and business",
+      "description": "HOME/BUSINESS, memberships, roles and invitations are being developed separately. Installation-wide roles exist in the shared checkout. BUSINESS domain verification, isolation and integration with personal knowledge are not yet fully integrated and validated.",
+      "status": "development"
     }
   ],
   "about": {
@@ -397,8 +474,8 @@
     "title": "A platform in progress.\nA direction with purpose.",
     "description": "Kyrion is a working prototype moving toward private-alpha validation. It is not a finished consumer product and is not generally available.",
     "checkpoint": "CURRENT CHECKPOINT",
-    "checkpointTitle": "Strengthen the foundation.\nThen make interaction feel natural.",
-    "checkpointDescription": "Recent work consolidates read-only Home Assistant import, service diagnostics and the action inspector. The next dedicated Velora phase focuses on repeatable processing, audio and confirmed device results.",
+    "checkpointTitle": "Integrate the shared foundation.\nValidate it in everyday use.",
+    "checkpointDescription": "Current work focuses on reliable operation, integrating AI and knowledge capabilities, and reviewing Spaces. A consumer installer has not been released. Repeatable voice reliability and complete isolation remain open validation work.",
     "areasTitle": "Where the platform stands",
     "legendTitle": "Reading the status",
     "legend": [
@@ -411,18 +488,18 @@
     "roadmapDescription": "Outcome-oriented direction, without invented deadlines.",
     "roadmap": [
       {
-        "title": "Validate the everyday experience",
-        "description": "Reliable voice feedback, observable outcomes and repeatable behaviour on local hardware.",
+        "title": "Validate Installer v1",
+        "description": "Prove signed artifacts, fresh owner setup, certificates and recovery on a clean Raspberry Pi before a pilot release.",
         "status": "development"
       },
       {
-        "title": "Build deeper home coordination",
-        "description": "Automations, richer household permissions and further integration capabilities.",
-        "status": "planned"
+        "title": "Validate everyday reliability",
+        "description": "Complete repeatable voice and Home Assistant hardware acceptance, then expand automation and scoped household permissions.",
+        "status": "development"
       },
       {
-        "title": "Open up carefully",
-        "description": "Public documentation, broader validation and extension contracts before a public marketplace.",
+        "title": "Extend deliberately",
+        "description": "Mobile, Matter/Thread and versioned plugin contracts remain planned. Prove official plugins before any public marketplace.",
         "status": "planned"
       }
     ],
@@ -444,25 +521,28 @@
       "Integrations",
       "Reference"
     ],
-    "articleTitle": "Documentation, from the foundation up.",
-    "articleDescription": "The public documentation is not published yet. The repository contains the current technical documents, decisions and development evidence.",
+    "articleTitle": "Start with the repository.",
+    "articleDescription": "The repository contains current technical guides, decisions and evidence. These links open the actual documents; a dedicated documentation portal remains planned.",
     "cards": [
       {
-        "title": "Getting started",
-        "description": "Future guides for a supported local setup and first steps."
+        "title": "Developer startup",
+        "description": "Configure Core, Web, PostgreSQL and optional local providers.",
+        "path": "docs/development-startup.md"
       },
       {
-        "title": "Core concepts",
-        "description": "The boundaries between devices, Core, integrations and intelligence."
+        "title": "Installer v1 status",
+        "description": "Implemented boundaries, release blockers and remaining hardware acceptance.",
+        "path": "docs/installer-v1-implementation-status.md"
       },
       {
-        "title": "Integration reference",
-        "description": "Supported capabilities, permission boundaries and verification status."
+        "title": "Architecture & ownership",
+        "description": "Core authority, integration boundaries and optional intelligence.",
+        "path": "docs/architecture.md"
       }
     ],
     "codeTitle": "Where things live",
     "code": "apps/website    → public website\napps/web        → local interface\nservices/core   → platform authority",
-    "note": "This is a layout foundation, not an installation guide. Search, versioned articles and the full reference will arrive with public documentation.",
+    "note": "Developer instructions describe a prototype. A supported consumer installer, documentation search and versioned articles remain in development or planned.",
     "repoLink": "Read the repository docs"
   },
   "legal": {
@@ -557,5 +637,84 @@
         }
       ]
     }
+  },
+  "private": {
+    "eyebrow": "FOR INDIVIDUALS",
+    "title": "Your home.\nMore connected.",
+    "description": "Control lighting, organize events and find information again: Kyrion is bringing these tasks together step by step. You choose which devices, services and AI capabilities to use.",
+    "notice": "Development prototype, not a generally available product. Implemented code, automated tests and real-world acceptance are different kinds of evidence. Business and personal document retrieval have open integration and validation work.",
+    "casesTitle": "Everyday tasks, brought together",
+    "cases": [
+      {
+        "title": "Organize devices and rooms",
+        "description": "Create rooms, assign devices and control selected lights. Nanoleaf and specific Zigbee/Bluetooth lights have physical evidence. This does not establish support for every model. Home Assistant supplies a bounded device/state import; full hardware acceptance remains open.",
+        "status": "available"
+      },
+      {
+        "title": "Bring events and services together",
+        "description": "Local events, bounded editing of ordinary Google events and explicit synchronization of individually linked events are implemented, with live checks using marked test events. All-day and recurring Google events remain read-only. Spotify Web receiver acceptance is open; YouTube uses the visible browser player.",
+        "status": "available"
+      },
+      {
+        "title": "Choose how assistance helps",
+        "description": "K-AI provides local chat and bounded command proposals. Confirmed memories, history and a personal calendar can be enabled as context. Velora adds voice; repeatable dialogue reliability still needs validation. A satellite does not identify its speaker and receives no private context.",
+        "status": "experimental"
+      },
+      {
+        "title": "Find answers in your documents",
+        "description": "An initial implementation provides personal PDF/text upload and local retrieval with sources. Additional fixes were tested separately and are not fully integrated. Real model answers, installation and recovery still need validation; no team knowledge, OCR or cloud document context.",
+        "status": "experimental"
+      }
+    ],
+    "controlTitle": "Local control. Deliberate cloud choices.",
+    "controlDescription": "Core manages permissions and validates actions. Basic device controls do not require AI. Local models and document retrieval need separately configured runtimes and suitable hardware. Local first does not mean every connected service runs locally.",
+    "cloudNote": "Google, Spotify and other external services require their own connections. Cloud AI is optional and needs provider access and explicit consent. The current AI path releases only the current message; personal memories, history, calendar and documents are not released as cloud context. Fully local operation of every feature is not promised.",
+    "setupTitle": "Setup and access today",
+    "setupDescription": "Kyrion currently requires technical experience and your own development environment. Web, Core and PostgreSQL are configured separately; AI and voice need additional local services. Supported devices must be reachable on your network and explicitly enrolled. A Raspberry Pi can serve as a gateway, but is not an established replacement for all AI hardware.",
+    "setupNote": "There is no released consumer installer, general signup or guaranteed alpha/beta access. You can express interest in future testing through the existing contact channel.",
+    "ctaTitle": "What would help in your connected home?",
+    "ctaDescription": "Tell us about your devices, everyday tasks or a question about development.",
+    "cta": "Get in touch",
+    "setupLink": "Read the technical setup guide"
+  },
+  "business": {
+    "eyebrow": "FOR BUSINESS — IN DEVELOPMENT",
+    "title": "Devices, services and team knowledge.\nOne shared direction.",
+    "description": "Kyrion aims to help small businesses and teams connect their digital environment in an understandable way. This area presents the vision and early development, not a production-ready business service.",
+    "notice": "Business is in development. Completed BUSINESS domain verification and fully validated isolation are not established. There is no offering for production multi-tenant operation, hosted team environments or guaranteed support.",
+    "casesTitle": "Possible uses for small teams",
+    "examplesNote": "The following examples describe possible future uses, not available business features.",
+    "cases": [
+      {
+        "title": "Understand the workspace",
+        "description": "For example, manage lighting, rooms and selected device states in a small office through a common interface. Today’s device capabilities are a starting point; business-specific access rules still need validation.",
+        "status": "planned"
+      },
+      {
+        "title": "Connect schedules and services",
+        "description": "For example, bring shared events and connected services into one overview. The current personal calendar and integration capabilities do not establish complete team scheduling or resource booking.",
+        "status": "planned"
+      },
+      {
+        "title": "Make team knowledge easier to find",
+        "description": "For example, search internal guides with source references. K-Data starts with personal documents. Shared knowledge, document-level access rules and their connection to Spaces still need implementation and combined validation.",
+        "status": "planned"
+      },
+      {
+        "title": "Assistance with clear boundaries",
+        "description": "For example, explain information and propose supported actions. Core remains responsible for permissions and execution. General autonomous workflows, cloud team knowledge and industry-specific acceptance are not current offerings.",
+        "status": "planned"
+      }
+    ],
+    "controlTitle": "Access control is a prerequisite, not a promise.",
+    "controlDescription": "The shared prototype has installation-wide roles, custom roles and owner-issued invitations. HOME/BUSINESS Spaces with memberships and additional invitation rules are being developed in a separate checkout. This does not establish integrated business availability.",
+    "cloudNote": "BUSINESS domain verification is not yet fully integrated and validated. Separation of data, background jobs, AI streams and knowledge access also requires combined evidence. Local and optional cloud processing must be explained for each use case. No DSG/GDPR compliance or certified multi-tenancy is claimed.",
+    "setupTitle": "What remains before business use",
+    "setupDescription": "Integration of separate workstreams, conflict-free migrations, identity and permission review, and combined isolation tests for devices, services and documents. Operations, recovery and real model answers need evidence on the intended runtime.",
+    "setupNote": "Subscriptions, billing, a customer portal, managed hosting and privileged remote support are not implemented. No prices or availability dates are announced.",
+    "ctaTitle": "Which use case would you like to connect?",
+    "ctaDescription": "We welcome discussion about concrete needs of small businesses and teams. An inquiry does not establish a service offering or guaranteed access.",
+    "cta": "Discuss a use case",
+    "setupLink": "Explore development status"
   }
 }

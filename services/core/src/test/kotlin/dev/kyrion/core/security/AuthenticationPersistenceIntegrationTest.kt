@@ -43,6 +43,7 @@ import dev.kyrion.core.integration.NanoleafGateway
 import dev.kyrion.core.integration.NanoleafDeviceState
 import dev.kyrion.core.integration.NanoleafIntegrationService
 
+@org.springframework.context.annotation.Import(dev.kyrion.core.ai.AiTestGatewayConfiguration::class)
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -52,6 +53,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val passwordHashing: PasswordHashingService,
     private val jdbc: JdbcClient,
     private val memories: PersonalMemoryRepository,
+    private val contextBuilder: dev.kyrion.core.context.ContextBuilder,
     private val mockMvc: MockMvc,
     private val activity: ActivityService,
     private val haReconciler: dev.kyrion.core.integration.HomeAssistantReconciler,
@@ -61,6 +63,11 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val nanoleaf: NanoleafIntegrationService,
     private val rbac: RbacService,
     private val google: dev.kyrion.core.integration.GoogleIntegrationService,
+    private val scheduler: org.springframework.scheduling.TaskScheduler,
+    private val aiGateway: dev.kyrion.core.ai.AiTestGateway,
+    private val aiSettings: dev.kyrion.core.ai.AiSettingsService,
+    private val aiUsage: dev.kyrion.core.ai.AiUsageService,
+    private val aiOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
 ) {
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
@@ -70,6 +77,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun cleanDatabase() {
+        aiGateway.reset()
         jdbc.sql(
             "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
@@ -169,8 +177,10 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val owner = login.user.id
         var failure: String? = null
+        var snapshots = 0
         val gateway = object : dev.kyrion.core.integration.HomeAssistantGateway {
             override fun snapshot(ownerId: UUID): List<dev.kyrion.core.integration.HomeAssistantDevice> {
+                snapshots++
                 failure?.let { throw dev.kyrion.core.integration.HomeAssistantException(it) }
                 return emptyList()
             }
@@ -185,6 +195,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(success.status).isEqualTo("healthy")
         assertThat(success.lastSuccessAt).isNotNull()
         assertThat(success.correlationId).isEqualTo(result.correlationId)
+        service.refreshIfDue(owner)
+        service.refreshIfDue(owner)
+        assertThat(snapshots).isEqualTo(1)
         for (code in listOf("authentication_failed", "dependency_unreachable", "invalid_response")) {
             failure = code
             assertThat(service.sync(owner).reason).isEqualTo(code)
@@ -197,6 +210,12 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .param("owner", owner).update()
         assertThat(service.status(owner).reason).isEqualTo("stale_observation")
         assertThat(service.status(owner).lastError).isEqualTo("invalid_response")
+        failure = null
+        service.refreshIfDue(owner)
+        assertThat(snapshots).isEqualTo(5)
+        assertThat(service.status(owner).status).isEqualTo("healthy")
+        assertThat(service.status(owner).lastError).isNull()
+        assertThat(activity.recent(owner,100).first { it.correlationId == service.status(owner).correlationId }.actorType).isEqualTo(ActivityActorType.SYSTEM)
         mockMvc.perform(get("/v1/integrations/platform-diagnostics/database").header("Authorization", "Bearer ${login.session.rawToken}"))
             .andExpect(status().isOk).andExpect(jsonPath("$.status").value("healthy"))
     }
@@ -223,7 +242,8 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(updated.id).isEqualTo(imported.id)
         assertThat(updated.displayName).isEqualTo("Renamed")
         assertThat(updated.room).isNull()
-        assertThat(updated.availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.OFFLINE)
+        assertThat(updated.availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.UNKNOWN)
+        assertThat(updated.diagnosticReason).isEqualTo("integration.disconnected")
         assertThat(rooms.all(owner)).hasSize(1)
         val another = insertAdditionalOwner("another")
         assertThat(catalog.devices(another)).isEmpty()
@@ -316,6 +336,11 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(status().isNotFound)
         mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", "Bearer ${other.session.rawToken}"))
             .andExpect(status().isNotFound)
+        mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body.dropLast(1) + ",\"revision\":0}"))
+            .andExpect(status().isConflict).andExpect(jsonPath("$.code").value("CALENDAR_SYNC_CONFLICT"))
+        mockMvc.perform(delete("/v1/calendar/events/$id").param("revision","0").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isConflict)
         mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}")
             .contentType(MediaType.APPLICATION_JSON).content(body.replace("Installer review", "Updated review")))
             .andExpect(status().isOk).andExpect(jsonPath("$.title").value("Updated review"))
@@ -668,6 +693,21 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `HTTP cloud consent cannot bypass server policy and creates no conversation`() {
+        val token = setupToken()
+        val id = UUID.randomUUID()
+        mockMvc.perform(
+            post("/v1/conversations/$id/turns").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"title":"Cloud denial","externalProvider":"openai","externalConsent":"current_message","message":{"id":"${UUID.randomUUID()}","role":"user","content":"Synthetic test","createdAt":"2026-10-30T12:00:00Z"}}""")
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("CLOUD_NOT_ALLOWED"))
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM conversation WHERE id=:id").param("id", id).query(Int::class.java).single()
+        ).isZero()
+    }
+
+    @Test
     fun `Core appends authoritative turns in order and persists deterministic compaction metadata`() {
         val token = setupToken()
         val conversationId = UUID.randomUUID()
@@ -1006,12 +1046,33 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
                 connection.prepareStatement("INSERT INTO rbac_role_permission(role_id, permission_key) VALUES (?, 'devices:read')").use {
                     it.setObject(1, roleId); it.executeUpdate()
                 }
+                val eventId = UUID.randomUUID()
+                connection.prepareStatement("""INSERT INTO local_calendar_event(id,owner_id,title,starts_at,ends_at,time_zone,content_fingerprint,sync_to_google,created_at,updated_at)
+                    VALUES(?,?,'Preserved event','2026-10-19T09:00:00Z','2026-10-19T10:00:00Z','Europe/Zurich','legacy',TRUE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""").use {
+                    it.setObject(1,eventId); it.setObject(2,id); it.executeUpdate()
+                }
+                val deviceId = UUID.randomUUID()
+                connection.prepareStatement("""INSERT INTO integration_connection(id,owner_id,provider,display_name,endpoint_host,credential_ciphertext,credential_nonce,created_at,updated_at)
+                    VALUES(?,?,'home_assistant','Preserved HA','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',decode('0102','hex'),decode('0304','hex'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""").use {
+                    it.setObject(1,deviceId); it.setObject(2,id); it.executeUpdate()
+                }
+                connection.prepareStatement("INSERT INTO home_assistant_device(connection_id,owner_id,hardware_name,battery,capabilities) VALUES(?,?,'Sensor',NULL,'battery.read')").use {
+                    it.setObject(1,deviceId); it.setObject(2,id); it.executeUpdate()
+                }
                 flyway(null).migrate()
                 connection.createStatement().use { statement ->
                     statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
                     statement.executeQuery("SELECT permission_key FROM rbac_role_permission").use { it.next(); assertThat(it.getString(1)).isEqualTo("devices:read"); assertThat(it.next()).isFalse() }
                     statement.executeQuery("SELECT COUNT(*) FROM user_account").use { it.next(); assertThat(it.getInt(1)).isEqualTo(1) }
                     statement.executeQuery("SELECT COUNT(*) FROM rbac_permission WHERE resource='calendar'").use { it.next(); assertThat(it.getInt(1)).isEqualTo(4) }
+                    statement.executeQuery("SELECT title,sync_to_google,sync_status,google_event_id FROM local_calendar_event").use {
+                        it.next(); assertThat(it.getString(1)).isEqualTo("Preserved event"); assertThat(it.getBoolean(2)).isTrue()
+                        assertThat(it.getString(3)).isEqualTo("configuration_required"); assertThat(it.getString(4)).isNull()
+                    }
+                    statement.executeQuery("SELECT battery,brightness FROM home_assistant_device").use {
+                        it.next(); assertThat(it.getObject(1)).isNull(); assertThat(it.getObject(2)).isNull()
+                    }
+                    statement.executeQuery("SELECT encode(credential_ciphertext,'hex') FROM integration_connection").use { it.next(); assertThat(it.getString(1)).isEqualTo("0102") }
                     statement.executeUpdate("DELETE FROM user_account")
                     statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
                 }
@@ -1037,7 +1098,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
         mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer ${owner.session.rawToken}"))
             .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
-        `when`(googleClient.events("temporary-access")).thenReturn(dev.kyrion.core.integration.GoogleCalendarEvents(emptyList()))
+        `when`(googleClient.rangedEvents((org.mockito.ArgumentMatchers.eq("temporary-access") ?: "temporary-access"), (org.mockito.ArgumentMatchers.eq("primary") ?: "primary"), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(dev.kyrion.core.integration.GoogleCalendarEvents(emptyList()))
         mockMvc.perform(get("/v1/integrations/google/calendar/events").header("Authorization", "Bearer ${member.session.rawToken}"))
             .andExpect(status().isConflict).andExpect(jsonPath("$.code").value("GOOGLE_DISCONNECTED"))
         mockMvc.perform(get("/v1/integrations/google").header("Authorization", "Bearer ${member.session.rawToken}"))
@@ -1053,6 +1114,94 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(events.map { it.status }).containsExactlyInAnyOrder(ActivityStatus.PROPOSED, ActivityStatus.SUCCEEDED)
         assertThat(events.map { it.correlationId }.distinct()).hasSize(1)
         assertThat(events).allMatch { it.actorId == owner.user.id.toString() && !it.summaryCode.contains("Private") }
+    }
+
+    @Test
+    fun `calendar synchronization persists remote identity imports changes and confirms deletion through HTTP`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val header = "Bearer ${owner.session.rawToken}"
+        val authorization = google.authorize(owner.user.id)
+        val state = java.net.URI(authorization.authorizationUrl).rawQuery.split("&").single { it.startsWith("state=") }.substringAfter("=")
+        `when`(googleClient.exchange("fixture-code", "http://localhost.test/callback", "test-only-client", "test-only-secret"))
+            .thenReturn(dev.kyrion.core.integration.GoogleToken("fixture-access", "fixture-refresh", Instant.now().plusSeconds(3600), "fixture@test.invalid"))
+        google.complete(owner.user.id, "fixture-code", state)
+        `when`(googleClient.calendars("fixture-access")).thenReturn(dev.kyrion.core.integration.GoogleCalendars(listOf(
+            dev.kyrion.core.integration.GoogleCalendar("fixture-calendar", "Fixture", "Europe/Zurich", "writer"))))
+        val payload = """{"title":"Local appointment","startsAt":"2026-10-19T09:00:00Z","endsAt":"2026-10-19T10:00:00Z","timeZone":"Europe/Zurich","syncToGoogle":true,"googleCalendarId":"fixture-calendar"}"""
+        val created = mockMvc.perform(post("/v1/calendar/events").header("Authorization", header).contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isOk).andExpect(jsonPath("$.syncStatus").value("pending")).andReturn()
+        val id = UUID.fromString(com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(created.response.contentAsString).path("id").asText())
+        val remoteId = id.toString().replace("-", "")
+        var remote: dev.kyrion.core.integration.GoogleCalendarEvent? = null
+        `when`(googleClient.getEvent("fixture-access", "fixture-calendar", remoteId)).thenAnswer {
+            remote ?: throw dev.kyrion.core.integration.GoogleProviderException(404)
+        }
+        val write = dev.kyrion.core.integration.GoogleCalendarEventRequest("fixture-calendar", "Local appointment", "2026-10-19T09:00:00Z", "2026-10-19T10:00:00Z", id = remoteId)
+        `when`(googleClient.createEvent("fixture-access", write)).thenAnswer {
+            dev.kyrion.core.integration.GoogleCalendarEvent(remoteId, "Local appointment", write.start, write.end, "v1", kyrionId = remoteId).also { remote = it }
+        }
+        fun synchronize() = mockMvc.perform(post("/v1/calendar/sync").header("Authorization", header))
+            .andExpect(status().isOk).andExpect(jsonPath("$.failed").value(0)).andExpect(jsonPath("$.conflicts").value(0))
+        synchronize().andExpect(jsonPath("$.synchronized").value(1))
+        synchronize()
+        verify(googleClient, org.mockito.Mockito.times(1)).createEvent("fixture-access", write)
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].googleEventId").value(remoteId)).andExpect(jsonPath("$[0].syncStatus").value("synced"))
+        remote = remote!!.copy(summary = "Remote change", etag = "v2")
+        synchronize()
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].title").value("Remote change"))
+            .andExpect(jsonPath("$[0].startsAt").value("2026-10-19T09:00:00Z"))
+        mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", header)).andExpect(status().isOk)
+        assertThat(jdbc.sql("SELECT pending_deletion FROM local_calendar_event WHERE id=:id").param("id",id).query(Boolean::class.java).single()).isTrue()
+        synchronize()
+        verify(googleClient).removeEvent("fixture-access", "fixture-calendar", remoteId, "v2")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM local_calendar_event WHERE id=:id").param("id",id).query(Int::class.java).single()).isZero()
+        assertThat(activity.recent(owner.user.id,100).filter { it.eventType == "calendar.event.synchronized" }).isNotEmpty
+    }
+
+    @Test
+    fun `calendar schedule is opt in durable leased and preserves rate limit backoff`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val actor = owner.user.id
+        val repository = dev.kyrion.core.calendar.CalendarScheduleRepository(jdbc)
+        assertThat(repository.get(actor).enabled).isFalse()
+        assertThat(repository.claim(actor,true)).isNull()
+        val lease = repository.claim(actor,false)!!
+        assertThat(repository.claim(actor,false)).isNull()
+        assertThat(repository.renew(actor,UUID.randomUUID())).isFalse()
+        repository.finish(actor,lease,"GOOGLE_RATE_LIMITED",120)
+        val failed = repository.get(actor)
+        assertThat(failed.failureCount).isEqualTo(1)
+        assertThat(failed.nextAttemptAt).isAfter(Instant.now().plusSeconds(110))
+        repository.configure(actor,dev.kyrion.core.calendar.CalendarScheduleRequest(true,60))
+        assertThat(repository.claim(actor,false)).isNull()
+        assertThat(repository.due()).doesNotContain(actor)
+        jdbc.sql("UPDATE calendar_sync_schedule SET next_attempt_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE actor_id=:actor").param("actor",actor).update()
+        val next = repository.claim(actor,true)!!
+        assertThat(repository.renew(actor,next)).isTrue()
+        repository.finish(actor,lease,null)
+        assertThat(repository.get(actor).running).isTrue()
+        repository.finish(actor,next,null)
+        assertThat(repository.get(actor).lastError).isNull()
+        assertThat(repository.get(actor).lastSuccessAt).isNotNull()
+        repository.suspend(actor)
+        assertThat(repository.get(actor).enabled).isFalse()
+        assertThat(repository.get(actor).lastError).isEqualTo("FORBIDDEN")
+    }
+
+    @Test
+    fun `a blocked scheduled provider does not starve independent state refresh work`() {
+        val entered=java.util.concurrent.CountDownLatch(1)
+        val release=java.util.concurrent.CountDownLatch(1)
+        val independent=java.util.concurrent.CountDownLatch(1)
+        val slow=scheduler.schedule(Runnable { entered.countDown(); release.await(5,java.util.concurrent.TimeUnit.SECONDS) },Instant.now())
+        try {
+            assertThat(entered.await(2,java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+            val other=scheduler.schedule(Runnable { independent.countDown() },Instant.now())
+            try { assertThat(independent.await(2,java.util.concurrent.TimeUnit.SECONDS)).isTrue() }
+            finally { other?.cancel(true) }
+        } finally { release.countDown(); slow?.cancel(true) }
     }
 
     @Test
@@ -1090,6 +1239,385 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(jdbc.sql("SELECT COUNT(*) FROM auth_session").query(Int::class.java).single()).isZero()
         assertThat(jdbc.sql("SELECT COUNT(*) FROM rbac_role").query(Int::class.java).single()).isZero()
         assertThat(authentication.setup("retry", OLD_PASSWORD, setupSecret).user.username).isEqualTo("retry")
+    }
+
+    @Test
+    fun `AI preferences remain personal and policy administration requires existing RBAC`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("AiFriend", OTHER_PASSWORD, invite.code)
+        mockMvc.perform(
+            put("/v1/ai/preferences").header("Authorization", "Bearer ${friend.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"chatProfileId":"test-local","monthlyTokenLimit":1000}""")
+        )
+            .andExpect(status().isOk).andExpect(jsonPath("$.localOnly").value(true))
+        mockMvc.perform(get("/v1/ai/preferences").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.preferences.chatProfileId").isEmpty)
+        mockMvc.perform(
+            put("/v1/ai/policy").header("Authorization", "Bearer ${friend.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"allowCloud":true}""")
+        )
+            .andExpect(status().isForbidden)
+        mockMvc.perform(
+            put("/v1/ai/policy").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"monthlyTokenLimit":500,"allowUserSelection":false}""")
+        )
+            .andExpect(status().isOk)
+        assertThat(aiSettings.effectivePolicy(actor).monthlyTokenLimit).isEqualTo(500)
+        mockMvc.perform(get("/v1/ai/usage")).andExpect(status().isUnauthorized)
+        mockMvc.perform(
+            put("/v1/ai/preferences").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"localOnly":"false"}""")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `AI token reservations serialize concurrent requests and unknown prices fail closed`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy(monthlyTokenLimit = 200))
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val jobs = (1..2).map {
+                pool.submit<String> {
+                    ready.await()
+                    try {
+                        aiUsage.reserve(
+                            actor,
+                            UUID.randomUUID(),
+                            0,
+                            aiGateway.model,
+                            dev.kyrion.core.ai.AiRouteRequest(),
+                            aiGateway.catalog(),
+                            100
+                        ); "reserved"
+                    } catch (error: dev.kyrion.core.ai.AiFailure) {
+                        error.code
+                    }
+                }
+            }
+            ready.countDown()
+            assertThat(jobs.map {
+                it.get(
+                    20,
+                    java.util.concurrent.TimeUnit.SECONDS
+                )
+            }).containsExactlyInAnyOrder("reserved", "TOKEN_BUDGET_EXCEEDED")
+            assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+        } finally {
+            pool.shutdownNow()
+        }
+        aiSettings.savePolicy(
+            actor,
+            dev.kyrion.core.ai.AiPolicy(monthlyCostLimit = java.math.BigDecimal.ONE, currency = "CHF")
+        )
+        assertThatThrownBy {
+            aiUsage.reserve(
+                actor,
+                UUID.randomUUID(),
+                0,
+                aiGateway.model,
+                dev.kyrion.core.ai.AiRouteRequest(),
+                aiGateway.catalog(),
+                10
+            )
+        }
+            .isInstanceOf(dev.kyrion.core.ai.AiFailure::class.java).hasMessage("COST_ESTIMATE_UNAVAILABLE")
+    }
+
+    @Test
+    fun `AI generation observes usage server side prevents replay and uses actual local voice preference`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val conversation = UUID.randomUUID();
+        val message = UUID.randomUUID()
+        startHttpTurn(token, conversation, message, "Synthetic question", "2026-10-30T12:00:00Z")
+        val alternate = aiGateway.model.copy(id = "voice-local")
+        aiGateway.catalogValue = dev.kyrion.core.ai.AiCatalog(aiGateway.model.id, listOf(aiGateway.model, alternate))
+        aiSettings.savePreferences(actor, dev.kyrion.core.ai.AiPreferences(voiceProfileId = alternate.id))
+        val output = aiOrchestration.voice(actor, conversation, message, "en")
+        assertThat(output).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).contains("voice-local").doesNotContain("gemma3:1b")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
+        assertThatThrownBy {
+            aiOrchestration.voice(
+                actor,
+                conversation,
+                message,
+                "en"
+            )
+        }.hasMessage("REQUEST_ALREADY_STARTED")
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `AI fallback is audited and charged separately but partial output is never repeated`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val alternate = aiGateway.model.copy(id = "fallback-local")
+        aiGateway.catalogValue = dev.kyrion.core.ai.AiCatalog(aiGateway.model.id, listOf(aiGateway.model, alternate))
+        aiSettings.savePolicy(
+            actor,
+            dev.kyrion.core.ai.AiPolicy(allowFallback = true, fallbackProfiles = listOf(alternate.id))
+        )
+        aiSettings.savePreferences(actor, dev.kyrion.core.ai.AiPreferences(allowFallback = true))
+        fun prepared(): dev.kyrion.core.ai.PreparedAiGeneration {
+            val conversation = UUID.randomUUID();
+            val message = UUID.randomUUID()
+            startHttpTurn(token, conversation, message, "Synthetic request", "2026-10-30T12:00:00Z")
+            return aiOrchestration.prepare(actor, dev.kyrion.core.ai.AiGenerationRequest(conversation, message))
+        }
+        aiGateway.behavior = { attempt, receive ->
+            if (attempt == 1) receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+            else {
+                receive("""{"type":"message.started","messageId":"m"}"""); receive("""{"type":"message.delta","messageId":"m","delta":"OK"}"""); receive(
+                    """{"type":"message.completed","messageId":"m"}"""
+                )
+            }
+        }
+        val output = mutableListOf<String>(); aiOrchestration.stream(prepared(), output::add)
+        assertThat(aiGateway.payloads.size).isEqualTo(2)
+        assertThat(output.joinToString()).contains("routing.fallback")
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM ai_usage_attempt WHERE actor_id=:id").param("id", actor)
+                .query(Int::class.java).single()
+        ).isEqualTo(2)
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, receive ->
+            receive("""{"type":"message.delta","messageId":"m","delta":"Partial"}""")
+            receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+        }
+        aiOrchestration.stream(prepared()) {}
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.route.fallback'").query(Int::class.java)
+                .single()
+        ).isEqualTo(1)
+        for (code in listOf("REQUEST_TIMEOUT", "STREAM_FAILED", "TOOL_CALL_INVALID")) {
+            aiGateway.payloads.clear()
+            aiGateway.behavior = { _, receive -> receive("""{"type":"error","code":"$code"}""") }
+            val events = mutableListOf<String>()
+            aiOrchestration.stream(prepared(), events::add)
+            assertThat(aiGateway.payloads.size).isEqualTo(1)
+            assertThat(events.joinToString()).contains(code).doesNotContain("routing.fallback")
+        }
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, _ -> throw java.io.IOException("synthetic cancellation") }
+        assertThatThrownBy { aiOrchestration.stream(prepared()) {} }.isInstanceOf(java.io.IOException::class.java)
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, receive ->
+            aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy())
+            receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+        }
+        val revoked = mutableListOf<String>()
+        aiOrchestration.stream(prepared(), revoked::add)
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        assertThat(revoked.joinToString()).contains("ROUTE_CHANGED").doesNotContain("routing.fallback")
+    }
+
+    @Test
+    fun `context engine excludes expired disabled unconfirmed and category blocked memories and cloud data`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        memories.updateSettings(actor, true, Instant.now())
+        val conversation = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Orchard telescope planning", "2026-10-30T12:00:00Z")
+        fun memory(text: String): UUID {
+            val id = UUID.randomUUID();
+            val now = Instant.now()
+            memories.create(
+                actor, dev.kyrion.core.memory.PersonalMemory(
+                    id,
+                    dev.kyrion.core.memory.MemoryCategory.project,
+                    text,
+                    dev.kyrion.core.memory.MemorySensitivity.standard,
+                    "explicit",
+                    dev.kyrion.core.memory.MemoryStatus.proposed,
+                    conversation,
+                    turn,
+                    now,
+                    now,
+                    null
+                )
+            )
+            memories.confirm(actor, id, now, false)
+            return id
+        }
+
+        val good = memory("Orchard telescope selected")
+        val expired = memory("Orchard telescope expired")
+        memories.validity(actor, expired, true, Instant.now().minusSeconds(1), Instant.now())
+        val inactive = memory("Orchard telescope inactive")
+        memories.validity(actor, inactive, false, null, Instant.now())
+        val local = contextBuilder.build(actor, conversation, turn, 256)
+        assertThat(local.usedMemories.map { it.id }).containsExactly(good)
+        assertThat(local.estimatedTokens).isLessThanOrEqualTo(256)
+        assertThat(local.sources.any { it.kind == "personal_memory" && it.id == good.toString() }).isTrue()
+        val cloud = contextBuilder.build(actor, conversation, turn, 256, true)
+        assertThat(cloud.messages.map { it.content }).containsExactly("Orchard telescope planning")
+        assertThat(cloud.usedMemories).isEmpty()
+        assertThat(cloud.sources.filter { it.selected }.map { it.kind }).containsExactly("current_message")
+        memories.contextSettings(
+            actor,
+            false,
+            false,
+            listOf(dev.kyrion.core.memory.MemoryCategory.person),
+            Instant.now()
+        )
+        assertThat(contextBuilder.build(actor, conversation, turn).usedMemories).isEmpty()
+        assertThat(memories.find(actor, good)!!.status).isEqualTo(dev.kyrion.core.memory.MemoryStatus.confirmed)
+    }
+
+    @Test
+    fun `context history is opt in personal bounded and unknown voice identity never retrieves`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val old = UUID.randomUUID();
+        val previous = UUID.randomUUID()
+        startHttpTurn(token, old, previous, "Orchard telescope earlier private detail", "2026-10-30T12:00:00Z")
+        val current = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, current, turn, "Orchard telescope query", "2026-10-30T12:01:00Z")
+        assertThat(
+            contextBuilder.build(
+                actor,
+                current,
+                turn
+            ).sources.none { it.kind == "conversation_history" && it.selected }).isTrue()
+        memories.contextSettings(
+            actor,
+            true,
+            true,
+            dev.kyrion.core.memory.MemoryCategory.entries.toList(),
+            Instant.now()
+        )
+        val selected = contextBuilder.build(actor, current, turn, 512)
+        assertThat(selected.sources.any { it.kind == "conversation_history" && it.id == old.toString() }).isTrue()
+        assertThat(selected.messages.joinToString()).contains("earlier private detail")
+        assertThat(selected.estimatedTokens).isLessThanOrEqualTo(512)
+        assertThatThrownBy { contextBuilder.build(null, current, turn) }.hasMessage("UNAUTHENTICATED")
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("MemoryFriend", OTHER_PASSWORD, invite.code)
+        assertThatThrownBy {
+            contextBuilder.build(
+                authentication.authenticate(friend.session.rawToken)!!.id,
+                current,
+                turn
+            )
+        }.isInstanceOf(dev.kyrion.core.conversation.ConversationNotFoundException::class.java)
+    }
+
+    @Test
+    fun `memory validity and rejection APIs retain ownership and require authentication`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        memories.updateSettings(actor, true, Instant.now())
+        val created = mockMvc.perform(
+            post("/v1/memory/proposals").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"category":"project","content":"Orchard telescope","sensitivity":"standard"}""")
+        )
+            .andExpect(status().isCreated).andReturn().response.contentAsString
+        val id = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(created).path("id").asText()
+        mockMvc.perform(
+            patch("/v1/memory/$id/validity").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"active":false,"expiresAt":"2026-01-01T00:00:00Z"}""")
+        )
+            .andExpect(status().isOk).andExpect(jsonPath("$.active").value(false))
+        mockMvc.perform(
+            patch("/v1/memory/$id/validity").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"active":null}""")
+        )
+            .andExpect(status().isBadRequest)
+        mockMvc.perform(post("/v1/memory/$id/reject")).andExpect(status().isUnauthorized)
+        mockMvc.perform(post("/v1/memory/$id/reject").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNoContent)
+        assertThat(memories.find(actor, UUID.fromString(id))).isNull()
+    }
+
+    @Test
+    fun `voice uses the central personal context and calendar adapter never crosses account boundaries`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("CalendarContextFriend", OTHER_PASSWORD, invite.code)
+        val other = authentication.authenticate(friend.session.rawToken)!!.id
+        fun event(owner: UUID, title: String) {
+            val now = Instant.now()
+            jdbc.sql(
+                """INSERT INTO local_calendar_event(id,owner_id,title,starts_at,ends_at,time_zone,content_fingerprint,sync_to_google,created_at,updated_at)
+                VALUES(:id,:owner,:title,:start,:end,'UTC','synthetic',FALSE,:now,:now)"""
+            )
+                .param("id", UUID.randomUUID()).param("owner", owner).param("title", title)
+                .param("start", Timestamp.from(now.plusSeconds(3600)))
+                .param("end", Timestamp.from(now.plusSeconds(7200)))
+                .param("now", Timestamp.from(now)).update()
+        }
+        event(actor, "Owned calendar appointment")
+        event(other, "OTHER ACCOUNT SECRET")
+        val conversation = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Orchard telescope calendar", "2026-10-30T12:00:00Z")
+        memories.updateSettings(actor, true, Instant.now())
+        val id = UUID.randomUUID();
+        val now = Instant.now()
+        memories.create(
+            actor, dev.kyrion.core.memory.PersonalMemory(
+                id, dev.kyrion.core.memory.MemoryCategory.project,
+                "Orchard telescope confirmed preference", dev.kyrion.core.memory.MemorySensitivity.standard, "explicit",
+                dev.kyrion.core.memory.MemoryStatus.proposed, conversation, turn, now, now, null
+            )
+        )
+        memories.confirm(actor, id, now, false)
+        memories.contextSettings(actor, false, false, dev.kyrion.core.memory.MemoryCategory.entries.toList(), now)
+        assertThat(
+            contextBuilder.build(
+                actor,
+                conversation,
+                turn
+            ).messages.joinToString()
+        ).doesNotContain("Owned calendar appointment")
+        memories.dataSettings(actor, true)
+        val cloud = contextBuilder.build(actor, conversation, turn, 3072, true)
+        assertThat(cloud.messages.joinToString()).doesNotContain("Owned calendar appointment", "confirmed preference")
+        assertThat(
+            aiOrchestration.voice(
+                actor,
+                conversation,
+                turn,
+                "en",
+                personalContextAllowed = true
+            )
+        ).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).contains("Owned calendar appointment", "confirmed preference")
+            .doesNotContain("OTHER ACCOUNT SECRET")
+        val anonymousConversation = UUID.randomUUID();
+        val anonymousTurn = UUID.randomUUID()
+        startHttpTurn(token, anonymousConversation, anonymousTurn, "Orchard telescope calendar", "2026-10-30T12:01:00Z")
+        aiGateway.payloads.clear()
+        assertThat(
+            aiOrchestration.voice(
+                actor,
+                anonymousConversation,
+                anonymousTurn,
+                "en",
+                personalContextAllowed = false
+            )
+        ).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).doesNotContain(
+            "Owned calendar appointment",
+            "confirmed preference",
+            "OTHER ACCOUNT SECRET"
+        )
+
     }
 
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {
@@ -1142,6 +1670,8 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         @DynamicPropertySource
         @JvmStatic
         fun databaseProperties(registry: DynamicPropertyRegistry) {
+            registry.add("kyrion.calendar.sync.scheduler-enabled") { "false" }
+            registry.add("kyrion.home-assistant.refresh-enabled") { "false" }
             registry.add("kyrion.google.client-id") { "test-only-client" }
             registry.add("kyrion.google.client-secret") { "test-only-secret" }
             registry.add("kyrion.google.redirect-uri") { "http://localhost.test/callback" }

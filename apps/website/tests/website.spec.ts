@@ -3,12 +3,17 @@ import { expect, test } from "@playwright/test";
 test("all public pages and translations render with metadata and no runtime errors", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("kyrion-website-theme", "light"),
+  );
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   for (const prefix of ["", "/en"]) {
     for (const route of [
       "",
       "/product",
+      "/private",
+      "/business",
       "/about",
       "/development",
       "/docs",
@@ -49,6 +54,10 @@ test("all public pages and translations render with metadata and no runtime erro
 test("theme follows the system, persists overrides and uses matching brand assets", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("kyrion-website-theme"))
+      localStorage.setItem("kyrion-website-theme", "system");
+  });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/en");
   const html = page.locator("html");
@@ -119,10 +128,17 @@ test("Velora voice preview follows the page language and stops on language chang
   await expect(audio).toHaveAttribute("src", "/audio/velora-intro-de.mp3");
   const control = page.getByRole("button", { name: "Velora kennenlernen" });
   await expect(control).toBeVisible();
+  await control.hover();
+  await control.focus();
+  await expect(audio).toHaveJSProperty("paused", true);
   await control.press("Enter");
   await expect(
     page.getByRole("button", { name: "Velora spricht" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Velora spricht" }).click();
+  await expect(audio).toHaveJSProperty("paused", true);
+  await control.click();
+  await expect(audio).toHaveJSProperty("paused", false);
   await page.locator("audio").evaluate((element) => {
     element.dispatchEvent(new Event("ended"));
   });
@@ -211,12 +227,16 @@ test("small screens, reduced motion and generated assets remain usable", async (
   for (const route of [
     "/",
     "/product",
+    "/private",
+    "/business",
     "/about",
     "/development",
     "/docs",
     "/contact",
     "/en",
     "/en/product",
+    "/en/private",
+    "/en/business",
     "/en/about",
     "/en/development",
     "/en/docs",
@@ -254,6 +274,8 @@ test("German is canonical, legacy URLs redirect and language links retain the pa
   for (const suffix of [
     "",
     "/product",
+    "/private",
+    "/business",
     "/about",
     "/development",
     "/docs",
@@ -282,4 +304,165 @@ test("German is canonical, legacy URLs redirect and language links retain the pa
   const sitemap = await request.get("/sitemap.xml");
   expect(await sitemap.text()).toContain("https://kyrion.ch/en/product");
   expect(await sitemap.text()).not.toContain("https://kyrion.ch/de/");
+});
+
+test("prototype claims and real documentation stay explicit", async ({
+  page,
+}) => {
+  for (const path of ["/", "/en"]) {
+    await page.goto(path);
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(page.locator("main")).toContainText(
+      path === "/en"
+        ? "local, modular platform"
+        : "lokalen, modularen Plattform",
+    );
+    await expect(page.locator("main")).not.toContainText("user@example.com");
+    await expect(
+      page.locator('a[href$="docs/development-startup.md"]'),
+    ).toBeVisible();
+    const integrations = page
+      .locator("article")
+      .filter({ hasText: "Bluetooth (MELK-OA20)" });
+    await expect(integrations).toContainText(
+      path === "/en" ? "Experimental" : "Experimentell",
+    );
+    await page.goto(`${path === "/en" ? "/en" : ""}/product`);
+    const installer = page.locator("article").filter({
+      has: page.getByRole("heading", { name: "Installer v1", exact: true }),
+    });
+    await expect(installer).toContainText(
+      path === "/en" ? "In development" : "In Entwicklung",
+    );
+    await expect(
+      page.locator("article").filter({ hasText: "Calendar & Lounge" }),
+    ).toHaveCount(path === "/en" ? 1 : 0);
+    await page.goto(`${path === "/en" ? "/en" : ""}/docs`);
+    for (const doc of [
+      "development-startup",
+      "installer-v1-implementation-status",
+      "architecture",
+    ]) {
+      await expect(
+        page.locator(`article a[href$="docs/${doc}.md"]`),
+      ).toBeVisible();
+    }
+  }
+});
+
+test("architecture content remains visible without JavaScript", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/en");
+  const node = page.locator(".how-kyrion-core");
+  await expect(node).toBeVisible();
+  await expect(node).toHaveCSS("opacity", "1");
+  for (const connector of await page.locator(".how-kyrion-connector").all()) {
+    await expect(connector).toHaveCSS("opacity", "1");
+  }
+  await context.close();
+});
+
+test("tablet layouts and internal links remain usable", async ({
+  page,
+  request,
+}) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const paths = new Set<string>();
+  for (const prefix of ["", "/en"]) {
+    for (const suffix of [
+      "",
+      "/product",
+      "/development",
+      "/docs",
+      "/privacy",
+      "/terms",
+    ]) {
+      await page.goto(`${prefix}${suffix}` || "/");
+      expect(
+        await page
+          .locator("body")
+          .evaluate((body) => body.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      for (const href of await page
+        .locator('a[href^="/"]')
+        .evaluateAll((links) =>
+          links.map((link) => link.getAttribute("href")!),
+        ))
+        paths.add(href);
+    }
+  }
+  for (const path of paths)
+    expect((await request.get(path)).status(), path).toBe(200);
+});
+
+test("dark-first product presentation has readable contrast and real hero destinations", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const hero = page.locator("main > section").first();
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText(
+    "Your home. One system.Your control.",
+  );
+  await expect(
+    hero.getByRole("link", { name: "Explore Kyrion", exact: true }),
+  ).toHaveAttribute("href", "/en/product");
+  await expect(
+    hero.getByRole("link", { name: "View on GitHub", exact: true }),
+  ).toHaveAttribute("href", "https://github.com/flodinhooo/kyrion");
+  for (const selector of [
+    "--foreground",
+    "--muted-foreground",
+    "--accent",
+    "--warm",
+    "--primary",
+  ]) {
+    const contrast = await page.locator("html").evaluate((element, token) => {
+      const style = getComputedStyle(element);
+
+      function luminance(hex: string) {
+        hex = hex.trim().replace("#", "");
+        if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
+        const rgb = hex
+          .trim()
+          .replace("#", "")
+          .match(/../g)!
+          .map((channel) => {
+            const v = parseInt(channel, 16) / 255;
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          });
+        return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+      }
+
+      const a = luminance(
+        style.getPropertyValue(
+          token === "--primary" ? "--primary-foreground" : token,
+        ),
+      );
+      const b = luminance(
+        style.getPropertyValue(token === "--primary" ? token : "--card"),
+      );
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }, selector);
+    expect(contrast, selector).toBeGreaterThanOrEqual(4.5);
+  }
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page
+        .locator("body")
+        .evaluate((body) => body.scrollWidth <= innerWidth),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`premium-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isSpotifyDeviceList, isSpotifyPlayback, isSpotifyStatus, type SpotifyDevice, type SpotifyPlayback, type SpotifyPlaybackCommand, type SpotifyStatus } from "./contracts";
+import {resolveSpotifyOutput} from "./output-device";
 
 class SpotifyReadError extends Error {
   constructor(readonly status: number) { super("Playback unavailable"); }
@@ -18,6 +19,7 @@ export function useSpotifyPlayer() {
   const [status, setStatus] = useState<SpotifyStatus | null>(null);
   const [devices, setDevices] = useState<SpotifyDevice[]>([]);
   const [playback, setPlayback] = useState<SpotifyPlayback | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [syncError, setSyncError] = useState(false);
   const [pending, setPending] = useState(false);
@@ -51,9 +53,11 @@ export function useSpotifyPlayer() {
           if (afterCommand && attempt < 2 && (!nextPlayback.title || (previousTrack !== null && previousTrack === (nextPlayback.trackUrl ?? nextPlayback.title)))) continue;
           setDevices(nextDevices);
           setPlayback(nextPlayback);
+          setSelectedDeviceId((previous) => nextDevices.some((device) => device.id === previous) ? previous : null);
         } else {
           setDevices([]);
           setPlayback(null);
+          setSelectedDeviceId(null);
         }
         setSyncError(false);
         return;
@@ -93,13 +97,23 @@ export function useSpotifyPlayer() {
         body: JSON.stringify(body), signal: AbortSignal.timeout(15000),
       });
       if (!response.ok) throw new Error("Playback command failed");
+      // An accepted idle transfer may still have no active playback snapshot.
+      // Retain the user's output intent without claiming the device is active.
+      if (path === "/device" && mounted.current) setSelectedDeviceId(body.deviceId);
       const skipped = "action" in body && (body.action === "NEXT" || body.action === "PREVIOUS");
       if (mounted.current) await refresh(true, skipped ? playback?.trackUrl ?? playback?.title ?? null : null);
     } catch { if (mounted.current) setError(true); }
     finally { busy.current = false; if (mounted.current) setPending(false); }
   }
 
-  return { status, devices, playback, error, syncError, pending,
+  return {
+    status,
+    devices,
+    playback,
+    device: resolveSpotifyOutput(devices, playback?.deviceId ?? null, selectedDeviceId),
+    error,
+    syncError,
+    pending,
     refresh: () => { setError(false); return refresh(); },
     control: (command: SpotifyPlaybackCommand) => send("", command),
     transfer: (deviceId: string) => send("/device", { deviceId, play: playback?.playing ?? false }),

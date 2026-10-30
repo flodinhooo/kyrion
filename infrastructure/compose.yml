@@ -3,6 +3,8 @@ services:
     image: postgres:17-alpine
     container_name: kyrion-postgres
     restart: unless-stopped
+    # Allow PostgreSQL to flush its Windows bind mount before Docker sends KILL.
+    stop_grace_period: 120s
     environment:
       POSTGRES_DB: ${KYRION_POSTGRES_DB:-kyrion}
       POSTGRES_USER: ${KYRION_POSTGRES_USER:-kyrion}
@@ -18,4 +20,5 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      # Cold crash recovery on the existing Windows bind mount can exceed 4 min.
+      start_period: 5m

@@ -34,14 +34,14 @@ export function SiteHeader({
     return () => media.removeEventListener("change", close);
   }, []);
   const links = (
-    ["product", "about", "development", "docs", "contact"] as const
+    ["product", "private", "business", "development", "contact"] as const
   ).map((item) => (
     <Link
       key={item}
       href={href(locale, item)}
       aria-current={page === item ? "page" : undefined}
       onClick={() => setOpen(false)}
-      className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
+      className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
     >
       {t[item]}
     </Link>

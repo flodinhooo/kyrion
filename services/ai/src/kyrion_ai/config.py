@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import gettempdir
 
@@ -34,10 +34,14 @@ class Settings:
     openrouter_api_key: str | None = None
     openrouter_model: str = "openrouter/free"
     openrouter_explicit_free_model: str = "openai/gpt-oss-120b:free"
-    gemini_api_key: str | None = None
+    gemini_api_key: str | None = field(default=None, repr=False)
     gemini_live_model: str = "gemini-3.1-flash-live-preview"
     cloud_session_timeout_seconds: float = 300.0
     cloud_history_max_messages: int = 12
+    model_profiles_file: Path | None = None
+    model_cloud_enabled: bool = False
+    openai_api_key: str | None = field(default=None, repr=False)
+    anthropic_api_key: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -52,6 +56,12 @@ class Settings:
         )
         allowed_models = tuple(dict.fromkeys((default_model, *configured_models)))
         return cls(
+            model_profiles_file=Path(os.environ["KYRION_MODEL_PROFILES_FILE"])
+            if os.getenv("KYRION_MODEL_PROFILES_FILE")
+            else None,
+            model_cloud_enabled=os.getenv("KYRION_AI_CLOUD_ENABLED", "false").lower() == "true",
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
             ollama_model=default_model,
             ollama_allowed_models=allowed_models,

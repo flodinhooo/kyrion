@@ -7,7 +7,11 @@ enum class MemoryCategory { preference, person, project, value, other }
 enum class MemorySensitivity { standard, sensitive }
 enum class MemoryStatus { proposed, confirmed, superseded }
 
-data class MemorySettings(val enabled: Boolean, val updatedAt: Instant?)
+data class MemorySettings(
+    val enabled: Boolean, val updatedAt: Instant?,
+    val historyEnabled: Boolean = false, val preferencesEnabled: Boolean = false,
+    val categories: List<MemoryCategory> = MemoryCategory.entries.toList(), val kyrionDataEnabled: Boolean = false
+)
 
 data class PersonalMemory(
     val id: UUID,
@@ -22,6 +26,10 @@ data class PersonalMemory(
     val updatedAt: Instant,
     val confirmedAt: Instant?,
     val conflictsWithMemoryId: UUID? = null,
+    val active: Boolean = true,
+    val expiresAt: Instant? = null,
+    val ownerId: UUID? = null,
+    val expired: Boolean = expiresAt?.isAfter(Instant.now()) == false,
 )
 
 data class MemoryProfile(val settings: MemorySettings, val items: List<PersonalMemory>)

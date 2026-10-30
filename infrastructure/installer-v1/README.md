@@ -19,6 +19,13 @@ Compose v2 plugin, curl, OpenSSL and Python 3:
 KYRION_RELEASE=1.0.0 KYRION_HOSTNAME=kyrion.local ./install.sh
 ```
 
+The complete non-secret variable template is in `.env.example`. The installer
+accepts `KYRION_RELEASE`, `KYRION_HOSTNAME`, `KYRION_INSTALL_DIR`,
+`KYRION_DATA_DIR`, `KYRION_SECRETS_DIR`, `KYRION_RELEASE_SIGNATURE` and
+`KYRION_RELEASE_PUBLIC_KEY`. Passwords, bootstrap values and cryptographic
+keys are generated or supplied through protected files and must never be put in
+`.env`.
+
 The same variables can be supplied from an approved automation environment for
 non-interactive operation. `preflight.py` is read-only. `install.sh` refuses
 non-empty or symlinked targets, creates 0700 secrets and writes a redacted

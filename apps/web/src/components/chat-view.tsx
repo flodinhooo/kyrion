@@ -22,6 +22,10 @@ import { csrfHeader } from "@/features/auth/csrf";
 import type { PersonalMemory } from "@/features/memory/contracts";
 import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
+import {orchestrationMessages} from "@/features/models/orchestration-messages";
+import {modelMessages} from "@/features/models/messages";
+import {knowledgeMessages} from "@/features/knowledge/messages";
+import {isKnowledgeSource, type KnowledgeSource} from "@/features/knowledge/contracts";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
@@ -48,7 +52,16 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
 
 export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
   const router = useRouter();
-  const { locale, selectedModelId, selectedVoiceUri, speechRate, t } = useWorkspace();
+  const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
+  const mt = modelMessages[locale];
+  const ot = orchestrationMessages[locale];
+  const kt = knowledgeMessages[locale];
+  const [knowledgeEnabled, setKnowledgeEnabled] = useState(false);
+  const [knowledgeSources, setKnowledgeSources] = useState<Record<string, KnowledgeSource[]>>({});
+  const [task, setTask] = useState<"chat" | "analysis" | "code">("chat");
+  const [actualModel, setActualModel] = useState<string | null>(null);
+  const [fallbackModel, setFallbackModel] = useState<string | null>(null);
+  const selectedModel = modelCatalog?.models.find(model => model.id === (selectedModelId ?? modelCatalog.defaultModelId));
   const [conversationId] = useState(() => initialConversation?.id ?? crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialConversation?.messages ?? []);
@@ -67,6 +80,26 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const shouldFollowConversation = useRef(true);
   const previousScrollTop = useRef(0);
   const hasPersisted = useRef(Boolean(initialConversation));
+  useEffect(() => {
+    if (!initialConversation) return;
+    let active = true;
+    void fetch(`/api/knowledge/answers/${initialConversation.id}`, {cache: "no-store"}).then(async response => {
+      if (!response.ok) return;
+      const value: unknown = await response.json();
+      if (!Array.isArray(value) || !active) return;
+      const grouped: Record<string, KnowledgeSource[]> = {};
+      for (const item of value) {
+        if (!item || typeof item !== "object" || !("messageId" in item) || typeof item.messageId !== "string"
+          || !("source" in item) || !isKnowledgeSource(item.source)) continue;
+        (grouped[item.messageId] ??= []).push(item.source);
+      }
+      setKnowledgeSources(grouped);
+    }).catch(() => {
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialConversation]);
 
   useEffect(() => {
     function updateRenamedTitle(event: Event) {
@@ -100,6 +133,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   async function submitMessage(rawContent: string): Promise<void> {
     const content = rawContent.trim();
     if (!content || isStreaming) return;
+    const cloud = !isVoiceModeOpen && selectedModel?.local === false;
+    if (cloud && !window.confirm(mt.cloudConfirm.replace("{provider}", selectedModel.provider ?? ""))) return;
 
     const userMessage = createMessage("user", content);
     const title = conversationTitle ?? createConversationTitle(
@@ -109,7 +144,10 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     const request: ChatRequest = {
       conversationId,
       title,
-      modelId: selectedModelId ?? undefined,
+      modelId: isVoiceModeOpen ? "auto" : selectedModelId ?? undefined,
+      task: isVoiceModeOpen ? "voice" : task,
+      cloudConsent: cloud,
+      knowledgeEnabled,
       locale,
       message: {
         id: userMessage.id,
@@ -123,6 +161,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     setChatMessages((current) => [...current, userMessage]);
     setInput("");
     setStreamError(null);
+    setActualModel(null);
+    setFallbackModel(null);
     setWasStopped(false);
     setSaveError(false);
     setContextCompacted(false);
@@ -138,8 +178,14 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
           memoryWasProposed = true;
           void proposeExplicitMemory(content, userMessage);
         }
+        if (chatEvent.type === "model.selected") setActualModel(`${chatEvent.provider} / ${chatEvent.modelId}`);
+        if (chatEvent.type === "routing.fallback") setFallbackModel(chatEvent.profileId);
         if (chatEvent.type === "context.compacted") setContextCompacted(true);
         if (chatEvent.type === "memory.used") setUsedMemories(chatEvent.items);
+        if (chatEvent.type === "knowledge.sources") setKnowledgeSources(current => ({
+          ...current,
+          [chatEvent.messageId]: chatEvent.items
+        }));
         if (chatEvent.type === "message.started") {
           assistantMessage = createMessage("assistant", "", chatEvent.messageId);
           setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
@@ -274,10 +320,22 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
                 ) : (
                   <p className="message-plain-text">{message.content}</p>
                 )}
+                {knowledgeSources[message.id]?.length > 0 && <details>
+                  <summary>{kt.sources}</summary>
+                  <ul>
+                    {knowledgeSources[message.id].map(source => <li key={source.reference}>
+                      <a
+                        href={`/api/knowledge/documents/${source.documentId}/content`}>{source.filename}{source.page ? ` · ${source.page}` : ""}</a>
+                      <small> [{source.reference}]</small>
+                    </li>)}
+                  </ul>
+                </details>}
               </div>
             </article>
           ))}
-          {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
+          {streamError && <p className="stream-error" role="alert">{streamError in mt.errors
+            ? mt.errors[streamError as keyof typeof mt.errors]
+            : t[errorMessageKeys[streamError as keyof typeof errorMessageKeys]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
           {contextCompacted && <p className="stream-notice" role="status">{t.contextCompacted}</p>}
           {memoryProposal && <div className="memory-proposal" role="status"><p>{t.chatMemoryProposed}: {memoryProposal.content}</p>{memoryProposal.conflictsWithMemoryId && <p>{t.memoryConflict}</p>}<div>{memoryProposal.conflictsWithMemoryId ? <><button type="button" onClick={() => void resolveMemoryProposal("replace")}>{t.memoryReplace}</button><button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryKeepBoth}</button></> : <button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryConfirm}</button>}<button type="button" onClick={() => void resolveMemoryProposal("forget")}>{t.memoryForget}</button></div></div>}
@@ -288,6 +346,19 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       )}
 
       <div className="composer-wrap">
+        <label><input type="checkbox" checked={knowledgeEnabled}
+                      disabled={isStreaming || selectedModel?.local === false}
+                      onChange={event => setKnowledgeEnabled(event.target.checked)}/>{kt.toggle}</label>
+        <label>{ot.task}<select value={task}
+                                onChange={e => setTask(e.target.value === "analysis" ? "analysis" : e.target.value === "code" ? "code" : "chat")}
+                                disabled={isStreaming}>{(["chat", "analysis", "code"] as const).map(id => <option
+          key={id} value={id}>{ot.taskNames[id]}</option>)}</select></label>
+        {selectedModelId === "auto" && <p>{ot.automatic}</p>}
+        {actualModel && <p>{ot.actual}: {actualModel}</p>}
+        {fallbackModel && <p role="status">{ot.fallbackOccurred}: {fallbackModel}</p>}
+        {selectedModel &&
+          <p>{mt.selected}: {selectedModel.provider ?? "ollama"} / {selectedModel.label} · {selectedModel.local === false ? mt.cloud : mt.local}</p>}
+        {selectedModel?.local === false && <p role="status">{mt.cloudNotice}</p>}
         <form className="composer" onSubmit={sendMessage}>
           <textarea aria-label={t.inputPlaceholder} placeholder={t.inputPlaceholder} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleInputKeyDown} rows={1} disabled={isStreaming} />
           {isStreaming ? (

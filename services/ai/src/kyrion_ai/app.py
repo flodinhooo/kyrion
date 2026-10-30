@@ -23,7 +23,8 @@ from kyrion_ai.contracts import (
     VoiceResponsePlan,
 )
 from kyrion_ai.device_commands import propose_device_command
-from kyrion_ai.prompts import prepare_chat_request
+from kyrion_ai.models import ModelRegistry
+from kyrion_ai.providers.http_stream import ProviderFailure
 from kyrion_ai.providers.ollama import OllamaProvider
 from kyrion_ai.speech import InvalidAudioError, SpeechService, SpeechUnavailableError
 from kyrion_ai.voice_responses import (
@@ -35,6 +36,7 @@ from kyrion_ai.voice_responses import (
 
 settings = Settings.from_environment()
 provider = OllamaProvider(settings)
+models = ModelRegistry(settings, provider)
 speech = SpeechService(settings)
 short_response_fallback = SpeechService(replace(settings, tts_provider="http_batch"))
 voice_responses = VoiceResponseAudioResolver(
@@ -65,7 +67,14 @@ class CloudSessionRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "provider": "ollama", "model": provider.model}
+    selected = models.profiles[models.default_id]
+    return {
+        "status": "ok",
+        "provider": selected.provider,
+        "model": selected.model_id,
+        "profileId": selected.id,
+        "voiceProfileId": models.voice_id,
+    }
 
 
 @app.post("/v1/cloud-conversations/sessions")
@@ -178,7 +187,7 @@ async def voices() -> Response:
 
 @app.get("/v1/models", response_model=ModelCatalog, response_model_by_alias=True)
 async def list_models() -> ModelCatalog:
-    return await provider.list_models()
+    return await models.catalog()
 
 
 @app.post(
@@ -187,20 +196,23 @@ async def list_models() -> ModelCatalog:
     response_model_by_alias=True,
 )
 async def benchmark_model(request: ModelBenchmarkRequest) -> ModelBenchmarkResult | Response:
-    if not provider.supports_model(request.model_id):
+    profile = models.profiles.get(request.model_id)
+    if profile is None or not profile.local or not profile.enabled:
         return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
-    return await provider.benchmark_model(request)
+    return await provider.benchmark_model(request.model_copy(update={"model_id": profile.model_id}))
 
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
 async def stream_chat(request: ChatRequest) -> Response:
-    if request.model_id is not None and not provider.supports_model(request.model_id):
-        return JSONResponse({"code": "INVALID_REQUEST"}, status_code=400)
-
-    prepared_request = prepare_chat_request(request)
+    if request.knowledge_context and request.cloud_consent:
+        return JSONResponse({"code": "CONTEXT_NOT_ALLOWED"}, status_code=403)
+    try:
+        models.resolve(request)
+    except ProviderFailure as error:
+        return JSONResponse({"code": error.code}, status_code=400)
 
     async def events() -> AsyncIterator[bytes]:
-        async for event in provider.stream_chat(prepared_request):
+        async for event in models.stream_chat(request):
             yield event.to_ndjson()
 
     return StreamingResponse(

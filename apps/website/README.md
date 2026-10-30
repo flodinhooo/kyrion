@@ -2,11 +2,13 @@
 
 Standalone public Next.js App Router website for kyrion.ch. It presents the
 Kyrion development prototype without authentication, device APIs, databases,
-analytics, private installation data or a dependency on `apps/web`.
+private installation data or a dependency on `apps/web`.
 
 ## Pages and content
 
 - `/`: platform introduction and ecosystem overview;
+- `/private`: home use cases, local/cloud boundaries, setup and current access;
+- `/business`: planned team use cases and explicit integration/isolation limits;
 - `/product`: implemented prototype capabilities versus experimental/planned work;
 - `/about`: purpose, ownership and local-first principles;
 - `/development`: status definitions, current focus and outcome-oriented direction;
@@ -20,12 +22,20 @@ implementations and resolves the correct HTML language and metadata on the
 server. Unknown paths return 404. Content lives in `src/locales/{en,de}.json`.
 The header language link retains the current page.
 
-Capability statements follow the root README, `docs/roadmap.md` and the
-2026-09-06 consolidation report. Shared invitations follow the implemented
-README status rather than the broader, still-planned household-role roadmap.
-“Available” means implemented in the prototype, not a general release. Voice
-acceptance, HA physical verification and planned automation boundaries remain
-explicit. Update both locales when development claims change.
+Capability statements are synchronized with repository code, the root README,
+`docs/rbac.md`, the security hardening closeout, integration documents and
+`docs/installer-v1-implementation-status.md`. See [refresh review](REFRESH.md)
+for evidence and known documentation conflicts. "Available" means implemented
+in the prototype, not a general release. Installation-wide roles and Calendar
+are implemented; resource scopes, general automations, mobile and public plugins
+remain planned. Voice reliability and physical HA acceptance remain open.
+Update both locales when development claims change.
+
+The [current product review](PRODUCT-STATUS.md) records the October 30 handover
+sources, separate-worktree limits and the follow-up after the final Spaces handover.
+Current labels say “Implemented in prototype”; they do not establish a public
+release. Google Calendar now includes bounded editing and explicit synchronization
+of selected events; earlier blanket read-only descriptions are superseded.
 
 ## Development
 
@@ -66,11 +76,10 @@ effects. `components/ui/button.tsx` uses the shadcn/ui Button pattern with Radix
 Slot, CVA and the local `cn` helper. `components.json` supports future additions.
 The site uses a local system font stack; it makes no runtime font requests.
 
-The brand guide's Dark Ink, Light Ink, white/navy surfaces and Core gradient
-are authoritative. The local application's current gold/cyan surface accents
-differ from the guide; this website deliberately follows the guide rather than
-copying the application's stylesheet. Its theme-aware logo selection follows
-the same light-on-light-surface/dark-on-dark-surface asset naming convention.
+The public site retains Kyrion's logos and Core gradient, with a dark-first
+charcoal/violet presentation and restrained amber status details. The palette
+is local to the website; root branding and the local application's styling
+remain unchanged. System fonts avoid runtime font requests.
 
 `scripts/prepare-branding.mjs` runs before `dev` and `build`:
 
@@ -89,13 +98,17 @@ listing social assets as pending. The generated wordmark card is a baseline
 until a reviewed social master exists; it does not claim to reuse a finished
 social design. Root brand files and `apps/web` remain unchanged.
 
-`next-themes` applies the saved/system theme before hydration using `data-theme`.
-The site uses its own `kyrion-website-theme` localStorage key, follows system
-changes, until the visitor chooses an explicit theme. A labeled sun/moon button switches
-directly between light and dark and persists that choice. The language link
-shows a flag and DE/EN for its destination language, retaining the current page. A CSS system fallback supports
-visits without JavaScript. If a CSP is added, allow the theme initialization
-script through an appropriate nonce/hash to retain flash prevention.
+`next-themes` applies the saved theme before hydration using `data-theme`.
+New visitors start in dark mode. Saved light, dark or system preferences remain
+respected through `kyrion-website-theme`; the sun/moon button persists explicit
+choices. Without JavaScript the CSS defaults to dark, including theme-specific
+brand assets and status colors. Reduced-motion preferences disable animations
+and transitions. If a CSP is added, allow the theme initialization script
+through an appropriate nonce/hash to retain flash prevention.
+The language link retains the current page.
+
+The [product credibility review](PREMIUM.md) records the visual rationale,
+audience audit, implemented capability evidence and verification limits.
 
 ## Publication boundaries
 
@@ -111,8 +124,10 @@ The Velora voice preview on the home page uses the optional static assets
 `public/audio/velora-intro-de.mp3` and `public/audio/velora-intro-en.mp3`.
 `VeloraVoicePreview` selects the asset from the active page locale, starts only
 after an explicit click or keyboard activation, and fails softly when an asset
-is missing. The audio is intentionally not included in the repository until
-reviewed DE/EN recordings are available.
+is missing. The repository includes both DE/EN voice samples. Playback requires explicit
+click or keyboard activation; hover and focus alone do not start audio.
+Vercel Analytics is included by the existing root layout. It remains separate
+from the local platform; this website does not claim to be analytics-free.
 No real delivery is attempted by tests. Full public docs, search, version
 selection and signup handling are intentionally not implemented. No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no
@@ -121,3 +136,4 @@ software reuse or commercial-availability promise.
 The root pnpm workspace currently includes only `apps/website`. The pre-existing
 `apps/web` workspace and lockfile remain independent and unchanged; continue
 running its pnpm commands from that directory.
+

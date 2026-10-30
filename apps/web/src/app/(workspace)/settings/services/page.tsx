@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons";
 import { isSystemServicesStatus, type SystemService } from "@/features/system-services/contracts";
 import { diagnosticsMessages } from "@/features/system-services/messages";
 import { csrfHeader } from "@/features/auth/csrf";
+import {recoveryMessages} from "@/features/system-services/recovery-messages";
 
 const gatewayLabels: Record<string, "gatewayService_home_assistant" | "gatewayService_matter" | "gatewayService_mqtt" | "gatewayService_otbr" | "gatewayService_voice" | "gatewayService_zigbee"> = {
   "home-assistant": "gatewayService_home_assistant", matter: "gatewayService_matter", mqtt: "gatewayService_mqtt",
@@ -79,6 +80,8 @@ export default function SystemServicesPage() {
     </div>}
     {observedAt && <p className="gateway-observed">{t.systemServicesObservedAt}: {new Intl.DateTimeFormat(locale, { timeStyle: "medium" }).format(new Date(observedAt))}</p>}
     <p className="system-services-note">{t.systemServicesControlNote}</p>
+    {process.env.NODE_ENV === "development" &&
+      <Link className="placeholder-action" href="/recovery">{recoveryMessages[locale].open}</Link>}
     <Link className="placeholder-action" href="/settings"><Icons.settings />{t.backToSettings}</Link>
   </section>;
 }

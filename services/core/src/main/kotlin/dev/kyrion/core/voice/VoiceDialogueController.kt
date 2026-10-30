@@ -60,6 +60,7 @@ class VoiceDialogueService(
     private val pendingActions: PendingVoiceActions,
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
+    private val modelOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
 ) {
     private val aiBaseUrl = aiUrl.trimEnd('/')
     private val ai = RestTemplate()
@@ -182,7 +183,13 @@ class VoiceDialogueService(
             actionAttempt.outcome
         } else {
             DynamicDialogueOutcome(
-                chat(session.conversationId, locale, conversation.messages.takeLast(12), turnId),
+                chat(
+                    session.ownerId,
+                    session.conversationId,
+                    userMessage.id,
+                    locale,
+                    turnId
+                ) { satellites.activeSession(satelliteId, credential, sessionId) },
             )
         }
         val responsePlan = responsePolicies.resolve(
@@ -236,51 +243,27 @@ class VoiceDialogueService(
     }
 
     private fun chat(
+        actor: UUID,
         conversationId: UUID,
+        userMessageId: UUID,
         locale: String,
-        messages: List<ConversationMessage>,
         turnId: String,
+        validateActive: () -> Unit,
     ): String {
-        val body = mapOf(
-            "conversationId" to conversationId.toString(),
-            "locale" to locale,
-            "messages" to messages.map { mapOf("role" to it.role, "content" to it.content) },
-            "memoryContext" to emptyList<Any>(),
-            "interactionMode" to "voice",
-            "modelId" to "gemma3:1b",
-            "voiceTurnId" to turnId,
-        )
-        val response = StringBuilder()
-        var firstTokenSeen = false
         voiceEvent(turnId, "llm_request")
-        ai.execute(
-            "$aiBaseUrl/v1/chat/stream",
-            org.springframework.http.HttpMethod.POST,
-            { request ->
-                request.headers.contentType = MediaType.APPLICATION_JSON
-                objectMapper.writeValue(request.body, body)
-            },
-            { result ->
-                result.body.bufferedReader().useLines { lines ->
-                    lines.filter { it.isNotBlank() }.forEach { line ->
-                        val event = objectMapper.readTree(line)
-                        if (event.path("type").asText() == "error") throw VoiceSpeechUnavailableException()
-                        if (event.path("type").asText() == "message.delta") {
-                            if (!firstTokenSeen) {
-                                firstTokenSeen = true
-                                voiceEvent(turnId, "llm_first_token")
-                            }
-                            val delta = event.path("delta").asText()
-                            response.append(delta)
-                        }
-                    }
-                }
-            },
-        )
-        voiceEvent(turnId, "llm_complete")
-        val complete = response.toString().trim().takeIf { it.isNotEmpty() }
-            ?: throw VoiceSpeechUnavailableException()
-        return complete
+        return try {
+            modelOrchestration.voice(
+                actor,
+                conversationId,
+                userMessageId,
+                locale,
+                personalContextAllowed = false,
+                validateActive = validateActive
+            )
+                .also { voiceEvent(turnId, "llm_complete") }
+        } catch (_: dev.kyrion.core.ai.AiFailure) {
+            throw VoiceSpeechUnavailableException()
+        }
     }
 
     private fun emitAudio(

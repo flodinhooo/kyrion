@@ -8,6 +8,7 @@ import {
   siteUrl,
   type Locale,
 } from "@/lib/site";
+import { PrivatePage, BusinessPage } from "@/components/pages/audience";
 import { HomePage } from "@/components/pages/home";
 import { ProductPage } from "@/components/pages/product";
 import { AboutPage } from "@/components/pages/about";
@@ -83,6 +84,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const components = {
   home: HomePage,
+  private: PrivatePage,
+  business: BusinessPage,
   product: ProductPage,
   about: AboutPage,
   development: DevelopmentPage,
