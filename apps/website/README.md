@@ -136,3 +136,4 @@ software reuse or commercial-availability promise.
 The root pnpm workspace currently includes only `apps/website`. The pre-existing
 `apps/web` workspace and lockfile remain independent and unchanged; continue
 running its pnpm commands from that directory.
+
