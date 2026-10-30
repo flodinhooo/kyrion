@@ -45,6 +45,12 @@ class AuthenticatedRouteInterceptor(
 }
 
 internal fun permissionFor(path: String, method: String): String? = when {
+    path.startsWith("/v1/knowledge/") -> when (method) {
+        "GET" -> "knowledge:read"
+        "POST" -> if (path == "/v1/knowledge/search") "knowledge:read" else "knowledge:create"
+        "DELETE" -> "knowledge:delete"
+        else -> null
+    }
     path == "/v1/ai/policy" -> when (method) {
         "GET" -> "system_settings:read"; "PUT" -> "system_settings:update"; else -> null
     }
@@ -93,6 +99,7 @@ class AuthenticatedRouteConfiguration(
             "/v1/backups/**",
             "/v1/rbac/**",
             "/v1/ai/**",
+            "/v1/knowledge/**",
         )
     }
 }
