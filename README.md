@@ -266,3 +266,5 @@ between implemented and planned functionality.
 Kyrion is intended to be released as open source, but the licence decision is
 still pending. Until a `LICENSE` file is committed, all rights are reserved.
 Do not assume permission to copy, modify or redistribute the source yet.
+
+AI orchestration: [routing, user preferences, policy and budgets](docs/ai-orchestration.md).

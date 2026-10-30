@@ -189,3 +189,8 @@ Final stream corrections are captured in `ecf1a38`; 163 AI tests passed immediat
 before that commit. Core completed 222 tests with zero failures/skips; Web completed
 140 tests, lint and the production build. The original dirty recovery worktree
 was preserved. Concurrent runtime changes were outside this milestone?s review.
+
+Milestone 02 adds [Core-owned routing, personal preferences, administrator policy,
+usage reservations and controlled fallback](ai-orchestration.md). The verification
+and follow-up notes above describe Milestone 01 historically; Voice selection
+and persisted usage now follow the newer orchestration document.
