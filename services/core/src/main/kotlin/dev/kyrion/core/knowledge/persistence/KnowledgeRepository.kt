@@ -113,6 +113,12 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
             .param("doc", job.documentId).param("rev", job.revision).param("job", job.id).param("lease", job.lease)
             .query(Boolean::class.java).single()
 
+    fun renew(job: KnowledgeJob): Boolean {
+        if (!alive(job)) return false
+        return jdbc.sql("UPDATE knowledge_ingestion_jobs SET lease_expires_at=CURRENT_TIMESTAMP+INTERVAL '10 minutes' WHERE id=:id AND lease_owner=:lease AND status='PROCESSING' AND lease_expires_at>CURRENT_TIMESTAMP")
+            .param("id", job.id).param("lease", job.lease).update() == 1
+    }
+
     fun publish(
         job: KnowledgeJob,
         chunks: List<KnowledgeChunk>,
