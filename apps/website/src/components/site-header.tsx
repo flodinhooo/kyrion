@@ -34,7 +34,7 @@ export function SiteHeader({
     return () => media.removeEventListener("change", close);
   }, []);
   const links = (
-    ["product", "about", "development", "docs", "contact"] as const
+    ["product", "private", "business", "development", "contact"] as const
   ).map((item) => (
     <Link
       key={item}

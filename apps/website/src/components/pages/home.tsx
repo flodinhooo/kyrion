@@ -56,8 +56,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               <p className="mb-6 max-w-lg font-mono text-[10px] tracking-[0.18em] text-muted-foreground sm:text-xs">
                 {t.home.eyebrow}
               </p>
-              <h1
-                className="max-w-4xl text-[clamp(2.65rem,5.4vw,4.8rem)] leading-[1.08] font-semibold tracking-[-0.05em]">
+              <h1 className="max-w-4xl text-[clamp(2.65rem,5.4vw,4.8rem)] leading-[1.08] font-semibold tracking-[-0.05em]">
                 {t.home.title}
                 <br />
                 <span className="text-muted-foreground">
@@ -77,7 +76,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                 <Button variant="outline" asChild>
                   <a href={github}>
                     {t.common.github}
-                    <ArrowUpRight aria-hidden="true"/>
+                    <ArrowUpRight aria-hidden="true" />
                   </a>
                 </Button>
               </div>
@@ -87,7 +86,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               aria-labelledby="prototype-overview-title"
             >
               <div className="mb-7 flex items-center justify-between gap-4">
-                <Logo mark className="size-14"/>
+                <Logo mark className="size-14" />
                 <span className="flex items-center gap-2 text-xs text-warm">
                   <span
                     aria-hidden="true"
@@ -124,13 +123,23 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
                 className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md text-sm text-accent"
               >
                 {t.home.overviewLink}
-                <ArrowRight aria-hidden="true" className="size-4 shrink-0"/>
+                <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
               </Link>
             </aside>
           </div>
           <p className="mt-10 max-w-2xl border-l-2 border-accent/40 pl-4 text-xs leading-6 text-muted-foreground">
             {t.home.heroNote}
           </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {(["private", "business"] as const).map((audience) => (
+              <Button key={audience} variant="outline" asChild>
+                <Link href={href(locale, audience)}>
+                  {t.nav[audience]}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ))}
+          </div>
         </Container>
       </section>
       <div className="border-b border-border">
@@ -168,7 +177,55 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </div>
         </Container>
       </section>
+      <section className="border-y border-border bg-muted/35 py-16 sm:py-20">
+        <Container>
+          <SectionHeader
+            title={t.home.audiencesTitle}
+            description={t.home.audiencesDescription}
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {(["private", "business"] as const).map((audience) => (
+              <article
+                key={audience}
+                className="rounded-2xl border border-border bg-card p-7 sm:p-9"
+              >
+                <StatusBadge status="development" labels={t.status} />
+                <h3 className="mt-5 text-2xl font-medium">{t.nav[audience]}</h3>
+                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                  {t[audience].description}
+                </p>
+                <Button asChild variant="outline" className="mt-6">
+                  <Link href={href(locale, audience)}>
+                    {t.nav[audience]}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              </article>
+            ))}
+          </div>
+        </Container>
+      </section>
       <HowKyrionWorks t={t.home} />
+      <section className="border-b border-border py-16 sm:py-20">
+        <Container>
+          <SectionHeader
+            title={t.development.areasTitle}
+            description={t.home.heroNote}
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {[t.capabilities[2], ...t.capabilities.slice(-2)].map((item) => (
+              <FeatureCard
+                key={item.title}
+                title={item.title}
+                description={item.description}
+                icon={ScanLine}
+              >
+                <StatusBadge status={statusOf(item.status)} labels={t.status} />
+              </FeatureCard>
+            ))}
+          </div>
+        </Container>
+      </section>
       <section className="py-16 sm:py-20">
         <Container>
           <SectionHeader
@@ -193,8 +250,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
       <section className="border-b border-border py-16 sm:py-20">
         <Container>
           <div className="grid overflow-hidden rounded-2xl border border-border lg:grid-cols-[0.8fr_1.2fr]">
-            <div
-              className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
+            <div className="relative flex min-h-64 items-center justify-center overflow-hidden border-b border-border bg-muted/30 p-6 lg:border-r lg:border-b-0">
               <div
                 aria-hidden="true"
                 className="core-halo pointer-events-none absolute inset-0"
@@ -209,7 +265,7 @@ export function HomePage({ t, locale }: { t: Dictionary; locale: Locale }) {
               />
             </div>
             <div className="p-7 sm:p-12">
-              <StatusBadge status="experimental" labels={t.status}/>
+              <StatusBadge status="experimental" labels={t.status} />
               <div className="mt-7">
                 <SectionHeader
                   eyebrow={t.home.veloraEyebrow}

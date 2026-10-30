@@ -23,7 +23,15 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dictionary }) {
             className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm"
           >
             {(
-              ["product", "about", "development", "docs", "contact"] as const
+              [
+                "product",
+                "private",
+                "business",
+                "about",
+                "development",
+                "docs",
+                "contact",
+              ] as const
             ).map((page) => (
               <Link
                 className="flex min-h-11 items-center text-muted-foreground hover:text-foreground"

@@ -7,6 +7,8 @@ private installation data or a dependency on `apps/web`.
 ## Pages and content
 
 - `/`: platform introduction and ecosystem overview;
+- `/private`: home use cases, local/cloud boundaries, setup and current access;
+- `/business`: planned team use cases and explicit integration/isolation limits;
 - `/product`: implemented prototype capabilities versus experimental/planned work;
 - `/about`: purpose, ownership and local-first principles;
 - `/development`: status definitions, current focus and outcome-oriented direction;
@@ -28,6 +30,12 @@ in the prototype, not a general release. Installation-wide roles and Calendar
 are implemented; resource scopes, general automations, mobile and public plugins
 remain planned. Voice reliability and physical HA acceptance remain open.
 Update both locales when development claims change.
+
+The [current product review](PRODUCT-STATUS.md) records the October 30 handover
+sources, separate-worktree limits and the follow-up after the final Spaces handover.
+Current labels say “Implemented in prototype”; they do not establish a public
+release. Google Calendar now includes bounded editing and explicit synchronization
+of selected events; earlier blanket read-only descriptions are superseded.
 
 ## Development
 

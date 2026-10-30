@@ -77,8 +77,8 @@
     }
   },
   "meta": {
-    "title": "Kyrion — Local-First Home Operating System",
-    "description": "Ein Local-First Home Operating System für Geräte, Dienste und optionale KI. Entdecke den Prototyp, belegte Integrationen und die nächsten Entwicklungsschritte."
+    "title": "Kyrion — Geräte, Dienste und Wissen verbinden",
+    "description": "Eine lokale, modulare Plattform für Geräte, Dienste, Informationen und optionale KI. Entdecke den Prototyp für zuhause und das Zielbild für Teams."
   },
   "nav": {
     "contact": "Kontakt",
@@ -100,10 +100,12 @@
     "dark": "Dunkel",
     "system": "System",
     "switchLight": "Zum hellen Modus wechseln",
-    "switchDark": "Zum dunklen Modus wechseln"
+    "switchDark": "Zum dunklen Modus wechseln",
+    "private": "Für Privatkunden",
+    "business": "Für Unternehmen"
   },
   "status": {
-    "available": "Implementiert",
+    "available": "Im Prototyp umgesetzt",
     "experimental": "Experimentell",
     "development": "In Entwicklung",
     "planned": "Geplant"
@@ -122,7 +124,7 @@
     "notFoundDescription": "Entdecke die Plattform oder kehre zur Kyrion-Startseite zurück.",
     "github": "Auf GitHub ansehen",
     "footer": "Dein Zuhause. Deine Infrastruktur.",
-    "footerNote": "Ein unabhängig entwickeltes Home Operating System. Funktionierender Prototyp; noch nicht allgemein verfügbar.",
+    "footerNote": "Eine lokale Plattform für Geräte, Dienste, Wissen und optionale Assistenz. Entwicklungsprototyp; noch nicht allgemein verfügbar.",
     "footerLinks": "Entdecken",
     "footerPrinciple": "Lokal gedacht. Vom Menschen gesteuert.",
     "copyright": "© 2026 Kyrion"
@@ -131,8 +133,8 @@
     "eyebrow": "LOCAL-FIRST HOME OPERATING SYSTEM",
     "title": "Dein Zuhause. Ein System.",
     "titleAccent": "Deine Kontrolle.",
-    "description": "Ein Local-First Home Operating System für deine Geräte, Räume und digitalen Dienste. Die tägliche Steuerung bleibt auf deiner Infrastruktur. Intelligenz ist optional.",
-    "heroNote": "Funktionierender Entwicklungsprototyp. Allgemeine Automationen und eine unterstützte Endkundeninstallation sind noch in Entwicklung oder geplant.",
+    "description": "Kyrion verbindet Geräte, Dienste und eigene Informationen in einer lokalen, modularen Plattform. Für ein vernetztes Zuhause heute im Prototyp erprobt; für kleine Unternehmen und Teams im Aufbau. KI unterstützt auf Wunsch.",
+    "heroNote": "Entwicklungsprototyp, kein allgemein verfügbares Produkt. Implementierter Code, automatisierte Tests und reale Erprobung sind unterschiedliche Nachweise. Business und persönliche Dokumentensuche haben offene Integrations- und Prüfaufgaben.",
     "diagramLabel": "Das Kyrion-Ökosystem",
     "diagramTop": "GERÄTE & INTEGRATIONEN",
     "diagramCore": "EIN VERTRAUENSWÜRDIGER CORE",
@@ -155,7 +157,7 @@
       },
       {
         "title": "Kalender & Medien",
-        "description": "Lokale Termine, lesender Google Calendar, Spotify Connect und YouTube-Links."
+        "description": "Lokale Termine, begrenzte Google-Kalenderfunktionen, Spotify Connect und YouTube-Links."
       },
       {
         "title": "Personen & Zugriff",
@@ -200,7 +202,7 @@
     "cloudCard": {
       "label": "OPTIONALE VERBINDUNG",
       "title": "Dienste kommen nur dazu, wenn du sie brauchst",
-      "description": "Spotify nutzt ein ausdrücklich verbundenes Konto. Google Calendar wird nur lesend angezeigt; YouTube lädt einen sichtbaren Link-Player ohne Kontoverbindung. Diese Dienste benötigen ihre Anbieter und Netzwerkzugriff."
+      "description": "Spotify nutzt ein ausdrücklich verbundenes Konto. Google Calendar bietet begrenztes Bearbeiten und explizites Synchronisieren ausgewählter Termine; ganztägige und wiederkehrende Termine bleiben schreibgeschützt. YouTube lädt einen sichtbaren Link-Player. Externe Dienste und optionale Cloud-KI benötigen ihre Anbieter und Netzwerkzugriff."
     },
     "permissionsEyebrow": "VERBINDUNGEN MIT KLAREN GRENZEN",
     "permissionsTitle": "Jede Aktion hat klare Grenzen.",
@@ -260,7 +262,7 @@
             "status": "available"
           },
           {
-            "name": "Google Calendar (lesend)",
+            "name": "Google Calendar (begrenzt)",
             "status": "available"
           },
           {
@@ -305,7 +307,7 @@
     "veloraWelcomed": "Velora hat dich gerade begrüßt.",
     "developmentEyebrow": "TRANSPARENT, SCHRITT FÜR SCHRITT",
     "developmentTitle": "Unabhängig entwickelt.\nTransparent im Aufbau.",
-    "developmentDescription": "Aktuell wird eine erste frische Installation mit Installer v1 vorbereitet. Sicherheitsarbeit, installationsweite Rollen und lokale Kalenderfunktionen sind implementiert. Sprach- und Home-Assistant-Hardwareabnahmen bleiben separat offen.",
+    "developmentDescription": "Aktuell geht es um verlässlichen Betrieb, die Integration der KI- und Wissensfunktionen sowie die Prüfung von Spaces. Ein Installer für Endkunden ist noch nicht veröffentlicht. Sprachzuverlässigkeit und vollständige Isolation bleiben offene Prüfaufgaben.",
     "developmentNote": "Kein öffentliches Erscheinungsdatum. Noch nicht allgemein verfügbar. Funktionen und Architektur können sich ändern.",
     "permissionModel": {
       "title": "Ein kontrollierter Aktionspfad",
@@ -336,7 +338,9 @@
       "Lokaler Kalender und Mediendienste",
       "Konten, Rollen und Aktionsverlauf"
     ],
-    "overviewLink": "Funktionen und Grenzen ansehen"
+    "overviewLink": "Funktionen und Grenzen ansehen",
+    "audiencesTitle": "Für zuhause. Mit Perspektive für Teams.",
+    "audiencesDescription": "Ein gemeinsamer Plattformansatz, unterschiedliche Anforderungen. Die ersten Anwendungen entstehen zuhause; Business wird als eigener Bereich entwickelt."
   },
   "features": [
     {
@@ -370,8 +374,8 @@
     "description": "Haussteuerung, vernetzte Dienste und optionale Intelligenz auf einem Fundament. Was der Prototyp heute implementiert – und was noch vor uns liegt.",
     "availableTitle": "Im Prototyp implementiert",
     "availableNote": "„Implementiert“ bezeichnet Funktionen im Entwicklungsprototyp, keine allgemeine Veröffentlichung. Die Hardware-Abdeckung ist begrenzt; einzelne Pfade benötigen noch physische Prüfung.",
-    "futureTitle": "Die nächsten Schritte",
-    "futureNote": "Diese Bereiche sind experimentell oder geplant. Sie sind keine Zusage für Umfang oder Zeitpunkt einer Veröffentlichung."
+    "futureTitle": "Eingeschränkt, in Entwicklung oder geplant",
+    "futureNote": "Diese Bereiche sind noch nicht vollständig integriert oder geprüft. Ein Status ist keine Zusage für Veröffentlichung oder Produktionsbetrieb."
   },
   "capabilities": [
     {
@@ -385,8 +389,8 @@
       "status": "available"
     },
     {
-      "title": "Lokaler Chat & Vorschläge",
-      "description": "Lokaler Streaming-Chat und begrenzte Befehlsvorschläge auf Deutsch und Englisch. Core prüft Berechtigungen und Ziele vor jeder Ausführung; zuverlässige Ende-zu-Ende-Sprache bleibt in Entwicklung.",
+      "title": "Assistenz und Modellwahl (K-AI)",
+      "description": "Lokaler Chat, Modellwahl, Richtlinien und gezielt aktivierbarer persönlicher Kontext sind implementiert. Ollama wurde real geprüft; OpenAI, Anthropic und Gemini nur mit simulierten Anfragen. Cloud erhält nach Freigabe nur die aktuelle Nachricht, keine persönlichen Kontextquellen.",
       "status": "available"
     },
     {
@@ -421,12 +425,22 @@
     },
     {
       "title": "Kalender & Lounge",
-      "description": "Lokale Kalenderverwaltung, lesende Google-Calendar-Anzeige, Spotify-Connect-Steuerung und ein sichtbarer YouTube-Link-Player sind implementiert. Die Spotify-Webabnahme am Empfänger steht aus.",
+      "description": "Lokale Termine, begrenztes Bearbeiten normaler Google-Termine und explizite Synchronisierung einzelner verknüpfter Termine sind implementiert und mit markierten Testterminen live geprüft. Ganztägige und wiederkehrende Google-Termine bleiben schreibgeschützt. Spotify-Web-Empfang bleibt zu prüfen; YouTube nutzt den sichtbaren Browserplayer.",
       "status": "available"
     },
     {
       "title": "Installer v1",
       "description": "Noch nicht. Installer v1 besitzt eine implementierte Grenze für Neuinstallationen, aber das eingecheckte Manifest enthält keine installierbaren Artefakte. Signierte Release-Abnahme, Zertifikate, Backup-/Restore-Prüfung und ein Durchlauf auf einem frischen Raspberry Pi stehen aus.",
+      "status": "development"
+    },
+    {
+      "title": "Eigene Dokumente (K-Data)",
+      "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind als erste Implementierung vorhanden. Zusätzliche Korrekturen wurden separat getestet und sind noch nicht vollständig integriert. Reale Modellantworten, Installation und Wiederherstellung sind noch zu prüfen; kein Teamwissen, OCR oder Cloud-Dokumentenkontext.",
+      "status": "experimental"
+    },
+    {
+      "title": "Spaces für Zuhause und Business",
+      "description": "HOME/BUSINESS, Mitgliedschaften, Rollen und Einladungen werden separat entwickelt. Im gemeinsamen Stand sind installationsweite Rollen vorhanden. BUSINESS-Domainprüfung, Isolation und Zusammenführung mit persönlichem Wissen sind noch nicht abschliessend integriert und geprüft.",
       "status": "development"
     }
   ],
@@ -460,8 +474,8 @@
     "title": "Eine Plattform im Aufbau.\nEine Richtung mit Substanz.",
     "description": "Kyrion ist ein funktionierender Prototyp auf dem Weg zur privaten Alpha-Validierung. Es ist kein fertiges Endkundenprodukt und noch nicht allgemein verfügbar.",
     "checkpoint": "AKTUELLER STAND",
-    "checkpointTitle": "Eine sichere Neuinstallation vorbereiten.\nAuf echter Hardware belegen.",
-    "checkpointDescription": "Installationsweite Rollen, lokale Kalenderverwaltung und die lesende Google-Calendar-Anzeige sind implementiert. Installer v1 prüft Neuinstallationsgrenzen und signierte Manifeste, hat aber noch kein veröffentlichtes Artefaktpaket. ARM64-Abnahme, Zertifikate, Backup-/Restore-Prüfung und ein frischer Pi-Durchlauf stehen aus.",
+    "checkpointTitle": "Gemeinsamen Stand integrieren.\nGrenzen im Alltag prüfen.",
+    "checkpointDescription": "Aktuell geht es um verlässlichen Betrieb, die Integration der KI- und Wissensfunktionen sowie die Prüfung von Spaces. Ein Installer für Endkunden ist noch nicht veröffentlicht. Sprachzuverlässigkeit und vollständige Isolation bleiben offene Prüfaufgaben.",
     "areasTitle": "Wo die Plattform steht",
     "legendTitle": "Was die Status bedeuten",
     "legend": [
@@ -623,5 +637,84 @@
         }
       ]
     }
+  },
+  "private": {
+    "eyebrow": "FÜR PRIVATKUNDEN",
+    "title": "Dein Zuhause.\nMehr Zusammenhang.",
+    "description": "Licht steuern, Termine organisieren, Informationen wiederfinden: Kyrion führt diese Aufgaben Schritt für Schritt zusammen. Du entscheidest, welche Geräte, Dienste und KI-Funktionen du nutzt.",
+    "notice": "Entwicklungsprototyp, kein allgemein verfügbares Produkt. Implementierter Code, automatisierte Tests und reale Erprobung sind unterschiedliche Nachweise. Business und persönliche Dokumentensuche haben offene Integrations- und Prüfaufgaben.",
+    "casesTitle": "Was im Alltag zusammenkommt",
+    "cases": [
+      {
+        "title": "Geräte und Räume ordnen",
+        "description": "Räume anlegen, Geräte zuordnen und ausgewählte Leuchten steuern. Nanoleaf und bestimmte Zigbee-/Bluetooth-Leuchten wurden physisch erprobt. Das belegt keine Unterstützung jedes Modells. Home Assistant liefert einen begrenzten Import von Geräten und Zuständen; vollständige Hardwareabnahme ist offen.",
+        "status": "available"
+      },
+      {
+        "title": "Termine und Dienste bündeln",
+        "description": "Lokale Termine, begrenztes Bearbeiten normaler Google-Termine und explizite Synchronisierung einzelner verknüpfter Termine sind implementiert und mit markierten Testterminen live geprüft. Ganztägige und wiederkehrende Google-Termine bleiben schreibgeschützt. Spotify-Web-Empfang bleibt zu prüfen; YouTube nutzt den sichtbaren Browserplayer.",
+        "status": "available"
+      },
+      {
+        "title": "Assistenz bewusst nutzen",
+        "description": "K-AI bietet lokalen Chat und begrenzte Befehlsvorschläge. Bestätigte Erinnerungen, Verlauf und persönlicher Kalender lassen sich gezielt als Kontext aktivieren. Velora ergänzt Sprache; wiederholbar zuverlässige Dialoge sind weiter zu prüfen. Ein Sprachsatellit erkennt keine Person und erhält keinen privaten Kontext.",
+        "status": "experimental"
+      },
+      {
+        "title": "In eigenen Unterlagen suchen",
+        "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind als erste Implementierung vorhanden. Zusätzliche Korrekturen wurden separat getestet und sind noch nicht vollständig integriert. Reale Modellantworten, Installation und Wiederherstellung sind noch zu prüfen; kein Teamwissen, OCR oder Cloud-Dokumentenkontext.",
+        "status": "experimental"
+      }
+    ],
+    "controlTitle": "Lokal entscheiden. Cloud bewusst wählen.",
+    "controlDescription": "Core verwaltet Berechtigungen und prüft Aktionen. Grundlegende Gerätebedienung benötigt keine KI. Lokale Modelle und Dokumentensuche brauchen separat eingerichtete Laufzeiten und passende Hardware. „Local first“ bedeutet nicht, dass jeder verbundene Dienst lokal arbeitet.",
+    "cloudNote": "Google, Spotify und andere externe Dienste benötigen ihre jeweiligen Verbindungen. Cloud-KI ist optional, braucht Anbieterzugang und ausdrückliche Freigabe. Der aktuelle KI-Pfad gibt nur die aktuelle Nachricht weiter; persönliche Erinnerungen, Verlauf, Kalender und Dokumente werden nicht als Cloud-Kontext freigegeben. Ein vollständig lokaler Betrieb aller Funktionen ist nicht zugesichert.",
+    "setupTitle": "Einrichtung und Zugang heute",
+    "setupDescription": "Kyrion richtet sich derzeit an technisch erfahrene Menschen mit eigener Entwicklungsumgebung. Web, Core und PostgreSQL werden separat eingerichtet; KI und Sprache benötigen zusätzliche lokale Dienste. Unterstützte Geräte müssen im eigenen Netzwerk erreichbar und ausdrücklich eingebunden sein. Ein Raspberry Pi kann als Gateway dienen, ist aber kein belegter Ersatz für die gesamte KI-Hardware.",
+    "setupNote": "Es gibt noch keinen veröffentlichten Endkundeninstaller, keine allgemeine Registrierung und keinen zugesicherten Alpha-/Beta-Zugang. Interesse an künftigen Tests kannst du über den bestehenden Kontaktkanal mitteilen.",
+    "ctaTitle": "Wie sieht dein vernetztes Zuhause aus?",
+    "ctaDescription": "Beschreibe deine Geräte, deinen Alltag oder eine Frage zum Entwicklungsstand.",
+    "cta": "Kontakt aufnehmen",
+    "setupLink": "Technische Einrichtung lesen"
+  },
+  "business": {
+    "eyebrow": "FÜR UNTERNEHMEN — IM AUFBAU",
+    "title": "Geräte, Dienste und Teamwissen.\nEine gemeinsame Richtung.",
+    "description": "Kyrion soll kleinen Unternehmen und Teams helfen, ihre digitale Umgebung verständlich zu verbinden. Dieser Bereich beschreibt das Zielbild und erste Entwicklungsarbeiten, keinen produktionsreifen Business-Service.",
+    "notice": "Business ist im Aufbau. Eine abgeschlossene BUSINESS-Domainprüfung und vollständig geprüfte Isolation sind nicht belegt. Es gibt kein Angebot für produktiven Mandantenbetrieb, gehostete Teamumgebungen oder garantierten Support.",
+    "casesTitle": "Mögliche Anwendungen für kleine Teams",
+    "examplesNote": "Die folgenden Beispiele sind Zielbilder, keine bereits verfügbaren Business-Funktionen.",
+    "cases": [
+      {
+        "title": "Arbeitsumgebung im Blick",
+        "description": "Zum Beispiel Licht, Räume und ausgewählte Gerätezustände in einem kleinen Büro über eine gemeinsame Oberfläche verwalten. Die heutigen Gerätefunktionen sind der Ausgangspunkt; betriebsspezifische Freigaben müssen noch geprüft werden.",
+        "status": "planned"
+      },
+      {
+        "title": "Abläufe und Termine verbinden",
+        "description": "Zum Beispiel gemeinsame Termine und verbundene Dienste übersichtlich darstellen. Der persönliche Kalender- und Integrationsstand ist keine vollständige Teamplanung oder Ressourcenbuchung.",
+        "status": "planned"
+      },
+      {
+        "title": "Teamwissen auffindbar machen",
+        "description": "Zum Beispiel interne Anleitungen mit Quellenhinweisen durchsuchen. K-Data startet mit persönlichen Dokumenten. Gemeinsame Wissensbestände, dokumentbezogene Zugriffsregeln und deren Verbindung mit Spaces sind noch umzusetzen und zusammen zu prüfen.",
+        "status": "planned"
+      },
+      {
+        "title": "Assistenz mit klaren Grenzen",
+        "description": "Zum Beispiel Informationen erklären und unterstützte Aktionen vorschlagen. Core soll Berechtigungen und Ausführung weiter kontrollieren. Allgemeine autonome Arbeitsabläufe, Cloud-Teamwissen und branchenspezifische Freigaben sind kein aktuelles Angebot.",
+        "status": "planned"
+      }
+    ],
+    "controlTitle": "Zugriff ist eine Voraussetzung, kein Versprechen.",
+    "controlDescription": "Im gemeinsamen Prototyp existieren installationsweite Rollen, eigene Rollen und vom Eigentümer ausgestellte Einladungen. HOME-/BUSINESS-Spaces mit Mitgliedschaften und weiteren Einladungsregeln werden in einem separaten Arbeitsstand entwickelt. Das ist noch keine integrierte Business-Verfügbarkeit.",
+    "cloudNote": "Die BUSINESS-Domainprüfung ist noch nicht abschliessend integriert und geprüft. Auch die Trennung von Daten, Hintergrundaufgaben, KI-Streams und Wissenszugriff benötigt gemeinsame Nachweise. Lokale und optionale Cloud-Verarbeitung müssen für jeden Anwendungsfall ausgewiesen werden. Es wird keine DSG-/DSGVO-Konformität oder zertifizierte Mandantenfähigkeit behauptet.",
+    "setupTitle": "Was vor einem Business-Einsatz noch fehlt",
+    "setupDescription": "Zusammenführung der getrennten Arbeitsstände, konfliktfreie Migrationen, Prüfung von Identitäten und Berechtigungen sowie gemeinsame Isolationstests für Geräte, Dienste und Dokumente. Betrieb, Wiederherstellung und reale Modellantworten müssen auf der Zielumgebung belegt werden.",
+    "setupNote": "Abonnements, Abrechnung, Kundenportal, verwaltetes Hosting und privilegierter Fernsupport sind nicht implementiert. Es werden keine Preise oder Verfügbarkeitsdaten angekündigt.",
+    "ctaTitle": "Welchen Anwendungsfall möchtest du verbinden?",
+    "ctaDescription": "Wir suchen den Austausch über konkrete Anforderungen kleiner Unternehmen und Teams. Eine Anfrage begründet weder ein Serviceangebot noch einen zugesicherten Zugang.",
+    "cta": "Anwendungsfall besprechen",
+    "setupLink": "Entwicklungsstand ansehen"
   }
 }

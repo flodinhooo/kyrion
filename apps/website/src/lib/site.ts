@@ -7,6 +7,8 @@ export type Status = keyof Dictionary["status"];
 export const pages = [
   "home",
   "product",
+  "private",
+  "business",
   "about",
   "development",
   "docs",
