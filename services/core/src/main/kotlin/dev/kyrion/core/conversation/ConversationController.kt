@@ -29,7 +29,7 @@ data class RenameConversationRequest(@field:NotBlank @field:Size(max = 160) val 
 data class StartConversationTurnRequest(
     @field:NotBlank @field:Size(max = 160) val title: String,
     @field:Valid val message: ConversationMessageRequest,
-    val tokenBudget: Int = 4096,
+    val tokenBudget: Int? = null,
     @field:Pattern(regexp = "openai|anthropic|gemini") val externalProvider: String? = null,
     @field:Pattern(regexp = "current_message") val externalConsent: String? = null,
 )
@@ -81,7 +81,8 @@ class ConversationController(
         @Valid @RequestBody body: StartConversationTurnRequest,
         request: HttpServletRequest,
     ): ConversationContext {
-        if (body.message.role != "user" || body.tokenBudget !in 256..32_768) throw ConversationInvalidRequestException()
+        val tokenBudget = body.tokenBudget ?: 4096
+        if (body.message.role != "user" || tokenBudget !in 256..32_768) throw ConversationInvalidRequestException()
         cloudPolicy.authorize(request.ownerId(), body.externalProvider, body.externalConsent, body.message.id)
         val conversation = repository.startTurn(
             request.ownerId(), id, body.title.trim(),
@@ -92,11 +93,11 @@ class ConversationController(
             return ConversationContext(
                 conversation.id, body.message.id,
                 listOf(ConversationContextMessage("user", body.message.content.trim())),
-                estimateTokens(body.message.content), body.tokenBudget, false, emptyList(),
+                estimateTokens(body.message.content), tokenBudget, false, emptyList(),
             )
         }
         val memories = memorySelector.select(request.ownerId(), body.message.content)
-        return assembleContext(conversation, body.message.id, body.tokenBudget, memories)
+        return assembleContext(conversation, body.message.id, tokenBudget, memories)
     }
 
     @PostMapping("/{id}/turns/complete")

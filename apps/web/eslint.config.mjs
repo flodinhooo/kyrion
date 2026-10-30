@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     ".next-review/**",
     ".next-acceptance-build/**",
     ".next-stabilization-build/**",
+    ".next-kai01-build/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
