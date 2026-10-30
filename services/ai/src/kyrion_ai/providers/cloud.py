@@ -86,7 +86,9 @@ def finish(reason: str, message_id: str) -> ChatEvent:
 class OpenAIProvider(CloudProvider):
   provider_id = "openai"
 
-  def request(self, request: ChatRequest, profile: ModelProfile):
+  def request(
+    self, request: ChatRequest, profile: ModelProfile
+  ) -> tuple[str, dict[str, str], dict[str, JsonValue]]:
     inputs: list[JsonValue] = []
     seen_reasoning: set[str] = set()
     for message in request.messages:
@@ -142,7 +144,9 @@ class OpenAIProvider(CloudProvider):
       payload,
     )
 
-  async def decode(self, records, request, message_id):
+  async def decode(
+    self, records: AsyncIterator[dict[str, JsonValue]], request: ChatRequest, message_id: str
+  ) -> AsyncIterator[ChatEvent]:
     reasoning: list[JsonValue] = []
     calls: set[str] = set()
     async for record in records:
@@ -180,6 +184,11 @@ class OpenAIProvider(CloudProvider):
             inputTokens=count(usage.get("input_tokens")),
             outputTokens=count(usage.get("output_tokens")),
             totalTokens=count(usage.get("total_tokens")),
+            cachedInputTokens=count(
+              object_value(usage.get("input_tokens_details") or {}).get(
+                "cached_tokens"
+              )
+            ),
           ),
         )
         reason = "tool_calls" if calls else "stop"
@@ -195,7 +204,9 @@ class OpenAIProvider(CloudProvider):
 class AnthropicProvider(CloudProvider):
   provider_id = "anthropic"
 
-  def request(self, request: ChatRequest, profile: ModelProfile):
+  def request(
+    self, request: ChatRequest, profile: ModelProfile
+  ) -> tuple[str, dict[str, str], dict[str, JsonValue]]:
     messages: list[JsonValue] = []
     for message in request.messages:
       if message.role == "system":
@@ -244,7 +255,9 @@ class AnthropicProvider(CloudProvider):
       payload,
     )
 
-  async def decode(self, records, request, message_id):
+  async def decode(
+    self, records: AsyncIterator[dict[str, JsonValue]], request: ChatRequest, message_id: str
+  ) -> AsyncIterator[ChatEvent]:
     blocks: dict[int, dict[str, JsonValue]] = {}
     arguments: dict[int, str] = {}
     usage = TokenUsage()
@@ -311,7 +324,9 @@ class AnthropicProvider(CloudProvider):
 class GeminiProvider(CloudProvider):
   provider_id = "gemini"
 
-  def request(self, request: ChatRequest, profile: ModelProfile):
+  def request(
+    self, request: ChatRequest, profile: ModelProfile
+  ) -> tuple[str, dict[str, str], dict[str, JsonValue]]:
     import re
 
     model = profile.model_id.removeprefix("models/")
@@ -331,14 +346,22 @@ class GeminiProvider(CloudProvider):
           part["thoughtSignature"] = call.provider_state["geminiThoughtSignature"]
         parts.append(part)
       if result := message.tool_result:
-        parts.append(
-          {
-            "functionResponse": {
-              "name": result.name,
-              "response": {"error" if result.is_error else "result": result.result},
-            }
-          }
+        response: dict[str, JsonValue] = {
+          "name": result.name,
+          "response": {"error" if result.is_error else "result": result.result},
+        }
+        original = next(
+          (
+            call
+            for prior in request.messages
+            for call in prior.tool_calls
+            if call.id == result.call_id
+          ),
+          None,
         )
+        if original and original.provider_state.get("geminiCallId"):
+          response["id"] = original.provider_state["geminiCallId"]
+        parts.append({"functionResponse": response})
       contents.append(
         {"role": "model" if message.role == "assistant" else "user", "parts": parts}
       )
@@ -372,7 +395,9 @@ class GeminiProvider(CloudProvider):
       payload,
     )
 
-  async def decode(self, records, request, message_id):
+  async def decode(
+    self, records: AsyncIterator[dict[str, JsonValue]], request: ChatRequest, message_id: str
+  ) -> AsyncIterator[ChatEvent]:
     reason = None
     calls: set[str] = set()
     async for record in records:
