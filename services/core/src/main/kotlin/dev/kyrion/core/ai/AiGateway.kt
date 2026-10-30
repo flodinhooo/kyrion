@@ -48,23 +48,35 @@ class HttpAiGateway(@Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") url: 
     }
 
     override fun stream(payload: String, timeoutSeconds: Int, receive: (String) -> Unit) {
-        val response = client.send(
-            HttpRequest.newBuilder(URI("$base/v1/chat/stream")).timeout(Duration.ofSeconds(timeoutSeconds.toLong()))
-                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(payload)).build(),
-            HttpResponse.BodyHandlers.ofInputStream()
-        )
+        val expires = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds.toLong())
+        val response = try {
+            client.send(
+                HttpRequest.newBuilder(URI("$base/v1/chat/stream")).timeout(Duration.ofSeconds(timeoutSeconds.toLong()))
+                    .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build(),
+                HttpResponse.BodyHandlers.ofInputStream()
+            )
+        } catch (_: java.net.http.HttpTimeoutException) {
+            throw AiFailure("REQUEST_TIMEOUT", 504)
+        }
         response.body().use { input ->
-            if (response.statusCode() != 200) {
-                val code = runCatching { aiJson.readTree(input.readNBytes(4096)).path("code").asText() }.getOrNull()
-                throw AiFailure(code?.takeIf { it in safeAiErrors } ?: "MODEL_UNAVAILABLE", 503)
-            }
-            val timer = deadline.schedule({ runCatching { input.close() } }, timeoutSeconds.toLong(), TimeUnit.SECONDS)
+            val timedOut = java.util.concurrent.atomic.AtomicBoolean(false)
+            val timer = deadline.schedule(
+                { timedOut.set(true); runCatching { input.close() } },
+                (expires - System.nanoTime()).coerceAtLeast(1), TimeUnit.NANOSECONDS
+            )
             try {
+                if (response.statusCode() != 200) {
+                    val code = runCatching { aiJson.readTree(input.readNBytes(4096)).path("code").asText() }.getOrNull()
+                    if (timedOut.get()) throw AiFailure("REQUEST_TIMEOUT", 504)
+                    throw AiFailure(code?.takeIf { it in safeAiErrors } ?: "MODEL_UNAVAILABLE", 503)
+                }
                 // Bound each line before allocating an untrusted whole upstream frame.
                 val reader = BufferedReader(input.reader(Charsets.UTF_8))
                 val line = StringBuilder()
                 while (true) {
                     val ch = reader.read()
+                    if (timedOut.get()) throw AiFailure("REQUEST_TIMEOUT", 504)
                     if (ch == -1) {
                         if (line.isNotEmpty()) receive(line.toString()); break
                     }
@@ -74,6 +86,9 @@ class HttpAiGateway(@Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") url: 
                         line.append(ch.toChar()); if (line.length > 1_000_000) throw AiFailure("STREAM_FAILED", 502)
                     }
                 }
+            } catch (error: java.io.IOException) {
+                if (timedOut.get()) throw AiFailure("REQUEST_TIMEOUT", 504)
+                throw error
             } finally {
                 timer.cancel(false)
             }

@@ -43,6 +43,8 @@ class AiController(
     fun stream(@RequestBody body: String, request: HttpServletRequest): ResponseEntity<StreamingResponseBody> {
         val prepared =
             orchestration.prepare(request.authenticatedUserId(), parse(body, AiGenerationRequest::class.java))
+        org.springframework.web.context.request.async.WebAsyncUtils.getAsyncManager(request)
+            .asyncWebRequest?.setTimeout((prepared.timeoutSeconds + 10L) * 1000)
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/x-ndjson"))
             .header("Cache-Control", "no-store").body(StreamingResponseBody { output ->
                 orchestration.stream(prepared) { line -> output.write((line + "\n").toByteArray(Charsets.UTF_8)); output.flush() }

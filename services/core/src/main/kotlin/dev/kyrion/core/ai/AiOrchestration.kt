@@ -92,6 +92,8 @@ class AiOrchestrationService(
 
     fun stream(prepared: PreparedAiGeneration, emit: (String) -> Unit) {
         var reservation = prepared.reservation
+        val expires =
+            System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(prepared.timeoutSeconds.toLong())
         val candidates = listOf(prepared.decision.model) + prepared.decision.alternatives
         candidates.forEachIndexed { attempt, model ->
             if (attempt > 0) {
@@ -151,7 +153,9 @@ class AiOrchestrationService(
                         "memoryContext" to prepared.context.usedMemories
                     )
                 )
-                gateway.stream(payload, prepared.timeoutSeconds) { raw ->
+                val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
+                if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
+                gateway.stream(payload, remaining) { raw ->
                     val event = aiJson.readTree(raw)
                     if (completed || error != null || buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502)
                     when (event.path("type").asText()) {
