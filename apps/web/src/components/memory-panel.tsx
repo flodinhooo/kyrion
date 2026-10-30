@@ -2,12 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
+import {ContextSourceInspector} from "@/components/context-source-inspector";
+import {contextMessages} from "@/features/memory/context-messages";
 import { csrfHeader } from "@/features/auth/csrf";
 import type { MemoryCategory, MemoryProfile, MemorySensitivity, PersonalMemory } from "@/features/memory/contracts";
 import { isMemoryProfile } from "@/features/memory/contracts";
 
 export function MemoryPanel() {
-  const { t } = useWorkspace();
+  const {t, locale} = useWorkspace();
+  const c = contextMessages[locale];
   const [profile, setProfile] = useState<MemoryProfile | null>(null);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
@@ -57,12 +60,16 @@ export function MemoryPanel() {
   }
 
   async function confirm(id: string, resolution: "keep" | "replace" = "keep") { await mutate(`/api/memory/${id}/confirm?resolution=${resolution}`, "POST"); }
-  async function forget(id: string) { await mutate(`/api/memory/${id}`, "DELETE"); }
+
+  async function forget(id: string) {
+    const proposed = profile?.items.find(item => item.id === id)?.status === "proposed";
+    await mutate(`/api/memory/${id}${proposed ? "/reject" : ""}`, proposed ? "POST" : "DELETE");
+  }
   async function update(id: string, category: MemoryCategory, content: string, sensitivity: MemorySensitivity) {
     await mutate(`/api/memory/${id}`, "PATCH", { category, content, sensitivity });
   }
 
-  async function mutate(url: string, method: "POST" | "PATCH" | "DELETE", body?: object) {
+  async function mutate(url: string, method: "POST" | "PATCH" | "DELETE" | "PUT", body?: object) {
     setPending(true);
     try {
       const response = await fetch(url, {
@@ -91,9 +98,47 @@ export function MemoryPanel() {
           <button type="submit" disabled={pending}>{t.memoryPropose}</button>
         </form>
       )}
+      {profile && <fieldset>
+        <legend>{c.title}</legend>
+        <p>{c.privacy}</p>
+        {(["historyEnabled", "preferencesEnabled", "kyrionDataEnabled"] as const).map(key => <label key={key}>
+          <input type="checkbox" disabled={pending} checked={profile.settings[key] ?? false}
+                 onChange={e => void mutate("/api/memory/context-settings", "PUT", {
+                   kyrionDataEnabled: profile.settings.kyrionDataEnabled ?? false,
+                   historyEnabled: profile.settings.historyEnabled ?? false,
+                   preferencesEnabled: profile.settings.preferencesEnabled ?? false,
+                   categories: profile.settings.categories ?? ["preference", "person", "project", "value", "other"],
+                   [key]: e.target.checked,
+                 })}/>{key === "historyEnabled" ? c.history : key === "preferencesEnabled" ? c.preferences : c.data}
+        </label>)}
+        <p>{c.categories}</p>{(["preference", "person", "project", "value", "other"] as const).map(category => <label
+        key={category}>
+        <input type="checkbox" disabled={pending}
+               checked={(profile.settings.categories ?? ["preference", "person", "project", "value", "other"]).includes(category)}
+               onChange={e => {
+                 const current = profile.settings.categories ?? ["preference", "person", "project", "value", "other"];
+                 void mutate("/api/memory/context-settings", "PUT", {
+                   kyrionDataEnabled: profile.settings.kyrionDataEnabled ?? false,
+                   historyEnabled: profile.settings.historyEnabled ?? false,
+                   preferencesEnabled: profile.settings.preferencesEnabled ?? false,
+                   categories: e.target.checked ? [...current, category] : current.filter(value => value !== category),
+                 });
+               }}/>{({
+        preference: t.memoryPreference,
+        person: t.memoryPerson,
+        project: t.memoryProject,
+        value: t.memoryValue,
+        other: t.memoryOther
+      })[category]}</label>)}</fieldset>}
       <div className="memory-list">
         {profile && profile.items.length === 0 && <p className="placeholder-copy">{t.memoryEmpty}</p>}
-        {profile?.items.map((item) => <MemoryItem key={item.id} item={item} conflict={profile.items.find((candidate) => candidate.id === item.conflictsWithMemoryId) ?? null} pending={pending} onConfirm={confirm} onForget={forget} onUpdate={update} />)}
+        {profile?.items.map((item) => <MemoryItem key={item.id} item={item}
+                                                  conflict={profile.items.find((candidate) => candidate.id === item.conflictsWithMemoryId) ?? null}
+                                                  pending={pending}
+                                                  onValidity={async (id, active, expiresAt) => mutate(`/api/memory/${id}/validity`, "PATCH", {
+                                                    active,
+                                                    expiresAt
+                                                  })} onConfirm={confirm} onForget={forget} onUpdate={update}/>)}
       </div>
     </div>
   );
@@ -103,18 +148,31 @@ function CategoryOptions({ t }: { t: ReturnType<typeof useWorkspace>["t"] }) {
   return <><option value="preference">{t.memoryPreference}</option><option value="person">{t.memoryPerson}</option><option value="project">{t.memoryProject}</option><option value="value">{t.memoryValue}</option><option value="other">{t.memoryOther}</option></>;
 }
 
-function MemoryItem({ item, conflict, pending, onConfirm, onForget, onUpdate }: {
+function MemoryItem({item, conflict, pending, onValidity, onConfirm, onForget, onUpdate}: {
+  onValidity: (id: string, active: boolean, expiresAt: string | null) => Promise<void>;
   item: PersonalMemory; conflict: PersonalMemory | null; pending: boolean;
   onConfirm: (id: string, resolution?: "keep" | "replace") => Promise<void>; onForget: (id: string) => Promise<void>;
   onUpdate: (id: string, category: MemoryCategory, content: string, sensitivity: MemorySensitivity) => Promise<void>;
 }) {
-  const { t } = useWorkspace();
+  const {t, locale} = useWorkspace();
+  const c = contextMessages[locale];
+  const [expiry, setExpiry] = useState(item.expiresAt?.slice(0, 16) ?? "");
   const [content, setContent] = useState(item.content);
   const [category, setCategory] = useState(item.category);
   const [sensitivity, setSensitivity] = useState(item.sensitivity);
   return <article className="memory-item">
     <div className="memory-badges"><span>{item.status === "proposed" ? t.memoryProposed : item.status === "superseded" ? t.memorySuperseded : t.memoryConfirmed}</span><span className={sensitivity === "sensitive" ? "sensitive" : ""}>{sensitivity === "sensitive" ? t.memorySensitive : t.memoryStandard}</span></div>
     {conflict && item.status === "proposed" && <p className="memory-conflict">{t.memoryConflict}: “{conflict.content}”</p>}
+    <p>{c.source}: {c.explicit} {item.sourceConversationId ?? ""} / {item.sourceMessageId ?? ""}</p>
+    {item.sourceConversationId && item.sourceMessageId &&
+      <ContextSourceInspector conversationId={item.sourceConversationId} turnId={item.sourceMessageId}/>}
+    <p>{c.created}: {item.createdAt} / {c.updated}: {item.updatedAt}</p>
+    <label><input type="checkbox" checked={item.active ?? true} disabled={pending}
+                  onChange={e => void onValidity(item.id, e.target.checked, item.expiresAt ?? null)}/>{item.active === false ? c.inactive : item.expiresAt && Date.parse(item.expiresAt) <= Date.now() ? c.expired : c.active}
+    </label>
+    <label>{c.expiry}<input type="datetime-local" value={expiry} onChange={e => setExpiry(e.target.value)}/></label>
+    <button type="button" disabled={pending}
+            onClick={() => void onValidity(item.id, item.active ?? true, expiry ? `${expiry}:00Z` : null)}>{t.memorySave}</button>
     <textarea value={content} maxLength={1000} onChange={(event) => setContent(event.target.value)} />
     <div className="memory-item-controls">
       <select value={category} onChange={(event) => setCategory(event.target.value as MemoryCategory)}><CategoryOptions t={t} /></select>
@@ -122,7 +180,8 @@ function MemoryItem({ item, conflict, pending, onConfirm, onForget, onUpdate }: 
       <button type="button" disabled={pending || !content.trim()} onClick={() => void onUpdate(item.id, category, content, sensitivity)}>{t.memorySave}</button>
       {item.status === "proposed" && !conflict && <button type="button" disabled={pending} onClick={() => void onConfirm(item.id)}>{t.memoryConfirm}</button>}
       {item.status === "proposed" && conflict && <><button type="button" disabled={pending} onClick={() => void onConfirm(item.id, "replace")}>{t.memoryReplace}</button><button type="button" disabled={pending} onClick={() => void onConfirm(item.id, "keep")}>{t.memoryKeepBoth}</button></>}
-      <button className="danger" type="button" disabled={pending} onClick={() => void onForget(item.id)}>{t.memoryForget}</button>
+      <button className="danger" type="button" disabled={pending}
+              onClick={() => void onForget(item.id)}>{item.status === "proposed" ? c.reject : t.memoryForget}</button>
     </div>
   </article>;
 }

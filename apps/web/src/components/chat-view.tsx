@@ -24,6 +24,8 @@ import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
 import {orchestrationMessages} from "@/features/models/orchestration-messages";
 import {modelMessages} from "@/features/models/messages";
+import {knowledgeMessages} from "@/features/knowledge/messages";
+import {isKnowledgeSource, type KnowledgeSource} from "@/features/knowledge/contracts";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
@@ -53,6 +55,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
   const mt = modelMessages[locale];
   const ot = orchestrationMessages[locale];
+  const kt = knowledgeMessages[locale];
+  const [knowledgeEnabled, setKnowledgeEnabled] = useState(false);
+  const [knowledgeSources, setKnowledgeSources] = useState<Record<string, KnowledgeSource[]>>({});
   const [task, setTask] = useState<"chat" | "analysis" | "code">("chat");
   const [actualModel, setActualModel] = useState<string | null>(null);
   const [fallbackModel, setFallbackModel] = useState<string | null>(null);
@@ -75,6 +80,26 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const shouldFollowConversation = useRef(true);
   const previousScrollTop = useRef(0);
   const hasPersisted = useRef(Boolean(initialConversation));
+  useEffect(() => {
+    if (!initialConversation) return;
+    let active = true;
+    void fetch(`/api/knowledge/answers/${initialConversation.id}`, {cache: "no-store"}).then(async response => {
+      if (!response.ok) return;
+      const value: unknown = await response.json();
+      if (!Array.isArray(value) || !active) return;
+      const grouped: Record<string, KnowledgeSource[]> = {};
+      for (const item of value) {
+        if (!item || typeof item !== "object" || !("messageId" in item) || typeof item.messageId !== "string"
+          || !("source" in item) || !isKnowledgeSource(item.source)) continue;
+        (grouped[item.messageId] ??= []).push(item.source);
+      }
+      setKnowledgeSources(grouped);
+    }).catch(() => {
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialConversation]);
 
   useEffect(() => {
     function updateRenamedTitle(event: Event) {
@@ -122,6 +147,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       modelId: isVoiceModeOpen ? "auto" : selectedModelId ?? undefined,
       task: isVoiceModeOpen ? "voice" : task,
       cloudConsent: cloud,
+      knowledgeEnabled,
       locale,
       message: {
         id: userMessage.id,
@@ -156,6 +182,10 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
         if (chatEvent.type === "routing.fallback") setFallbackModel(chatEvent.profileId);
         if (chatEvent.type === "context.compacted") setContextCompacted(true);
         if (chatEvent.type === "memory.used") setUsedMemories(chatEvent.items);
+        if (chatEvent.type === "knowledge.sources") setKnowledgeSources(current => ({
+          ...current,
+          [chatEvent.messageId]: chatEvent.items
+        }));
         if (chatEvent.type === "message.started") {
           assistantMessage = createMessage("assistant", "", chatEvent.messageId);
           setChatMessages((current) => [...current, createMessage("assistant", "", chatEvent.messageId)]);
@@ -290,6 +320,16 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
                 ) : (
                   <p className="message-plain-text">{message.content}</p>
                 )}
+                {knowledgeSources[message.id]?.length > 0 && <details>
+                  <summary>{kt.sources}</summary>
+                  <ul>
+                    {knowledgeSources[message.id].map(source => <li key={source.reference}>
+                      <a
+                        href={`/api/knowledge/documents/${source.documentId}/content`}>{source.filename}{source.page ? ` · ${source.page}` : ""}</a>
+                      <small> [{source.reference}]</small>
+                    </li>)}
+                  </ul>
+                </details>}
               </div>
             </article>
           ))}
@@ -306,6 +346,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       )}
 
       <div className="composer-wrap">
+        <label><input type="checkbox" checked={knowledgeEnabled}
+                      disabled={isStreaming || selectedModel?.local === false}
+                      onChange={event => setKnowledgeEnabled(event.target.checked)}/>{kt.toggle}</label>
         <label>{ot.task}<select value={task}
                                 onChange={e => setTask(e.target.value === "analysis" ? "analysis" : e.target.value === "code" ? "code" : "chat")}
                                 disabled={isStreaming}>{(["chat", "analysis", "code"] as const).map(id => <option

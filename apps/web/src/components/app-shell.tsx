@@ -53,6 +53,7 @@ export type TextSize = "standard" | "comfortable" | "large";
 const navigation = [
   ["home", Icons.home, "/"],
   ["chat", Icons.chat, "/chat"],
+  ["knowledge", Icons.plugins, "/knowledge"],
   ["lounge", Icons.music, "/lounge"],
   ["devices", Icons.power, "/devices"],
   ["calendarTitle", Icons.calendar, "/calendar"],
