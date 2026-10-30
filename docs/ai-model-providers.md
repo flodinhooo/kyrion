@@ -184,3 +184,8 @@ Official wire-format references used during implementation:
 [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming),
 [Gemini GenerateContent](https://ai.google.dev/api/generate-content),
 [Gemini thought signatures](https://ai.google.dev/gemini-api/docs/generate-content/thought-signatures).
+
+Final stream corrections are captured in `ecf1a38`; 163 AI tests passed immediately
+before that commit. Core completed 222 tests with zero failures/skips; Web completed
+140 tests, lint and the production build. The original dirty recovery worktree
+was preserved. Concurrent runtime changes were outside this milestone?s review.

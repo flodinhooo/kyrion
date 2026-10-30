@@ -12,9 +12,9 @@ Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-1
 # Kyrion
 
 Current engineering checkpoint: [recovery integration and startup stabilization](docs/status/2026-10-30-stabilization.md).
-The [AI architecture review](docs/status/2026-10-30-ai-architecture-review.md)
-describes current model coupling and a proposed multi-provider path; no new
-providers or deployment are implied.
+[K-AI Milestone 01](docs/ai-model-providers.md) implements model profiles and
+Ollama/OpenAI/Anthropic/Gemini adapters with explicit cloud disclosure controls.
+Cloud acceptance is simulated; no paid requests or production deployment are implied.
 
 > A local-first orchestration platform for devices, services, automations and
 > optional AI.
