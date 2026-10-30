@@ -1,6 +1,6 @@
 import {writeFile, mkdir} from 'node:fs/promises';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-import {serviceReady} from './dev-readiness.mjs';
+import {inspectService} from './dev-readiness.mjs';
 import {commandSucceeded} from './dev-command.mjs';
 import {collectDiagnostics} from './dev-diagnostics.mjs';
 
@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 async function snapshot() {
   const rows = await Promise.all([{id: 'core', port: 8080}, {id: 'ai', port: 8000},
     {id: 'ollama', port: 11434}, {id: 'stt', port: 8040}, {id: 'tts', port: 8020}]
-    .map(async (service) => ({id: service.id, ready: await serviceReady(service)})));
+    .map(async (service) => ({id: service.id, ...await inspectService(service)})));
   let web = false;
   try {
     web = (await fetch('http://localhost:3000/recovery', {signal: AbortSignal.timeout(5000)})).ok;
@@ -39,7 +39,10 @@ export async function observeServices({
     result.samples++;
     for (const row of rows) if (!row.ready) {
       result.failureCount++;
-      if (result.failures.length < 100) result.failures.push({service: row.id, offsetMs: Math.round(now() - started)});
+      if (result.failures.length < 100) result.failures.push({
+        service: row.id, offsetMs: Math.round(now() - started),
+        ...(row.code ? {code: row.code, latencyMs: row.latencyMs} : {})
+      });
     }
     result.elapsedMs = Math.round(now() - started);
     onSample(result.samples, result.failureCount);

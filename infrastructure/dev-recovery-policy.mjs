@@ -9,7 +9,7 @@ export function validAction(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)
     || !['start', 'restart'].includes(value.action)) return false;
   const fields = Object.keys(value);
-  return fields.length === 1 || (fields.length === 2 && fields.includes('service')
+  return (fields.length === 1 && fields[0] === 'action') || (fields.length === 2 && fields.includes('action') && fields.includes('service')
     && value.action === 'restart' && ['core', 'ai', 'ollama'].includes(value.service));
 }
 

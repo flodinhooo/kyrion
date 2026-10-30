@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 
 export function disposableEvent(event, id, marker) {
   return typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id) && event?.id === id
-    && event.source === 'local' && event.title.startsWith(marker)
+    && event.source === 'local' && typeof event.title === 'string' && event.title.startsWith(marker)
     && event.syncToGoogle === false && !event.googleEventId && !event.googleCalendarId;
 }
 

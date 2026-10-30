@@ -1,11 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {waitUntilReady, serviceReady, startDatabase} from './dev-readiness.mjs';
+import {waitUntilReady, serviceReady, inspectService, startDatabase} from './dev-readiness.mjs';
 
 function clock() {
   let time = 0;
   return {now: () => time, sleep: async (ms) => { time += ms; }, timeoutMs: 600_000};
 }
+
+test('probe diagnostics distinguish timeout, HTTP failure and invalid bodies without logging payloads', async () => {
+  const service = {id: 'core', port: 8080};
+  assert.equal((await inspectService(service, async () => {
+    throw new DOMException('private', 'TimeoutError');
+  })).code, 'PROBE_TIMEOUT');
+  assert.equal((await inspectService(service, async () => new Response('private', {status: 503}))).code, 'HTTP_503');
+  assert.equal((await inspectService(service, async () => new Response('not JSON'))).code, 'INVALID_RESPONSE');
+  const result = await inspectService(service, async () => {
+    throw new Error('secret credential');
+  });
+  assert.equal(result.code, 'UNREACHABLE');
+  assert.ok(!JSON.stringify(result).includes('secret'));
+  assert.equal((await inspectService(service, async () => Response.json({status: 'UP'}))).ready, true);
+});
 
 test('cold database recovery can exceed Compose health retries without starting Core early', async () => {
   let attempts = 0;

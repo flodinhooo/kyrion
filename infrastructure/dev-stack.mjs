@@ -5,7 +5,7 @@ import {readFile, mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {promisify} from 'node:util';
-import {serviceReady, waitUntilReady, startDatabase} from './dev-readiness.mjs';
+import {serviceReady, inspectService, waitUntilReady, startDatabase} from './dev-readiness.mjs';
 import {commandSucceeded} from './dev-command.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -27,9 +27,10 @@ async function webReady() {
 }
 
 async function status() {
-  const rows = await Promise.all(services.map(async (service) => ({
-    service: service.id, port: service.port, ready: await serviceReady(service),
-  })));
+  const rows = await Promise.all(services.map(async (service) => {
+    const probe = await inspectService(service);
+    return {service: service.id, port: service.port, ready: probe.ready, code: probe.code, latencyMs: probe.latencyMs};
+  }));
   rows.unshift({service: 'web', port: 3000, ready: await webReady()});
   let databaseReady = false;
   try {

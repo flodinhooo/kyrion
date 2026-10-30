@@ -22,15 +22,27 @@ const endpoints = {
 };
 
 export async function serviceReady(service, fetcher = fetch) {
-  const [pathname, valid] = endpoints[service.id];
+  return (await inspectService(service, fetcher)).ready;
+}
+
+export async function inspectService(service, fetcher = fetch) {
+  const started = performance.now();
+  const result = (ready, code) => ({ready, code, latencyMs: Math.round(performance.now() - started)});
+  const endpoint = endpoints[service.id];
+  if (!endpoint) return result(false, 'UNSUPPORTED_SERVICE');
+  const [pathname, valid] = endpoint;
   try {
     const response = await fetcher(`http://127.0.0.1:${service.port}${pathname}`, {
       signal: AbortSignal.timeout(2000), redirect: 'error',
     });
-    if (!response.ok) return false;
+    if (!response.ok) return result(false, `HTTP_${response.status}`);
     const body = await response.json();
-    return body !== null && typeof body === 'object' && valid(body);
-  } catch { return false; }
+    if (body !== null && typeof body === 'object' && valid(body)) return result(true, 'READY');
+    return result(false, body && typeof body.status === 'string' ? 'NOT_READY' : 'INVALID_RESPONSE');
+  } catch (error) {
+    return result(false, ['AbortError', 'TimeoutError'].includes(error.name) ? 'PROBE_TIMEOUT'
+      : error instanceof SyntaxError ? 'INVALID_RESPONSE' : 'UNREACHABLE');
+  }
 }
 
 export async function startDatabase(command, options = {}) {
