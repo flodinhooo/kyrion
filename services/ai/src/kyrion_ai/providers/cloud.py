@@ -88,6 +88,7 @@ class OpenAIProvider(CloudProvider):
 
   def request(self, request: ChatRequest, profile: ModelProfile):
     inputs: list[JsonValue] = []
+    seen_reasoning: set[str] = set()
     for message in request.messages:
       if message.role == "system":
         continue
@@ -95,7 +96,10 @@ class OpenAIProvider(CloudProvider):
         inputs.append({"role": message.role, "content": message.content})
       for call in message.tool_calls:
         for reasoning in call.provider_state.get("openaiReasoning", []):
-          inputs.append(reasoning)
+          identity = encoded(reasoning)
+          if identity not in seen_reasoning:
+            inputs.append(reasoning)
+            seen_reasoning.add(identity)
         inputs.append(
           {
             "type": "function_call",

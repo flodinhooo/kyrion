@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import gettempdir
 
@@ -34,14 +34,14 @@ class Settings:
     openrouter_api_key: str | None = None
     openrouter_model: str = "openrouter/free"
     openrouter_explicit_free_model: str = "openai/gpt-oss-120b:free"
-    gemini_api_key: str | None = None
+    gemini_api_key: str | None = field(default=None, repr=False)
     gemini_live_model: str = "gemini-3.1-flash-live-preview"
     cloud_session_timeout_seconds: float = 300.0
     cloud_history_max_messages: int = 12
     model_profiles_file: Path | None = None
     model_cloud_enabled: bool = False
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
+    openai_api_key: str | None = field(default=None, repr=False)
+    anthropic_api_key: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_environment(cls) -> "Settings":

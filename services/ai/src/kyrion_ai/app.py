@@ -67,7 +67,9 @@ class CloudSessionRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "provider": "ollama", "model": provider.model}
+  selected = models.profiles[models.default_id]
+  return {"status": "ok", "provider": selected.provider, "model": selected.model_id,
+          "profileId": selected.id, "voiceProfileId": models.voice_id}
 
 
 @app.post("/v1/cloud-conversations/sessions")

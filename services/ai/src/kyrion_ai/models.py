@@ -46,6 +46,7 @@ class ModelRegistry:
         modelId=model,
         label=model,
         capabilities=["chat", "streaming"],
+        contextLength=4096,
       )
       for model in settings.ollama_allowed_models
     }
@@ -115,6 +116,8 @@ class ModelRegistry:
     if len({tool.name for tool in request.tools}) != len(request.tools):
       raise ProviderFailure("TOOL_CALL_INVALID")
     for tool in request.tools:
+      if tool.parameters.get("type") != "object":
+        raise ProviderFailure("TOOL_CALL_INVALID")
       validate_schema(tool.parameters)
     calls = {}
     results = set()
@@ -136,7 +139,9 @@ class ModelRegistry:
   async def catalog(self) -> ModelCatalog:
     try:
       local_ids = tuple(p.model_id for p in self.profiles.values() if p.local)
-      installed = {model.id: model for model in (await self.ollama.list_models(local_ids)).models}
+      installed = {
+        model.id: model for model in (await self.ollama.list_models(local_ids)).models
+      }
       local_ready = True
     except (httpx.HTTPError, ValueError):
       installed, local_ready = {}, False
@@ -145,8 +150,12 @@ class ModelRegistry:
     for profile in self.profiles.values():
       observed = installed.get(profile.model_id) if profile.local else None
       if observed and profile.id not in self.explicit_profiles:
-        # Only known Ollama metadata capabilities are promoted; unknown flags stay unsupported.
-        detected = [capability for capability in ("tools", "vision", "audio") if capability in observed.capabilities]
+        # Promote known Ollama metadata only; unknown flags stay unsupported.
+        detected = [
+          capability
+          for capability in ("tools", "vision", "audio")
+          if capability in observed.capabilities
+        ]
         profile.capabilities = ["chat", "streaming", *detected]
       available = profile.enabled and (
         bool(observed)
