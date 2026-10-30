@@ -114,6 +114,15 @@ explicitly simulated. Web tests cover session/CSRF and Core routing/generation
 boundaries. The real local `gemma3:4b` provider produced `OK.` with model, text,
 usage and completion events. No paid cloud acceptance was performed.
 
+Final verification on 2026-10-30: Core **236 tests**, zero failures/errors/skips,
+and `bootJar` passed; AI **164 tests**, Ruff lint, changed-file formatting and
+Python compilation passed; Web **152 tests**, TypeScript, ESLint and the Next.js
+production build passed. Web build output used `.next-kai02-build` to preserve
+the running development output. Cloud cases used synthetic transports only.
+EditorConfig now specifies four-space Python indentation to agree with Ruff.
+Known non-failing warnings include Jackson/Spring deprecations and the existing
+Starlette TestClient/httpx deprecation.
+
 Run Core tests/bootJar, AI pytest/Ruff and Web tests/typecheck/lint/build before
 release. See [ADR 0028](adr/0028-core-owned-ai-orchestration.md). Operational
 rollout, physical Voice acceptance, uncertain-reservation reconciliation and

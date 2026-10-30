@@ -19,6 +19,8 @@ internal val aiJson = jacksonObjectMapper().findAndRegisterModules()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 internal val strictAiJson = jacksonObjectMapper().findAndRegisterModules()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+    .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
+    .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, true)
     .configure(MapperFeature.ALLOW_COERCION_OF_SCALARS, false)
 
 @Repository

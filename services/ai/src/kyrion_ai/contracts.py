@@ -3,12 +3,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from kyrion_ai.model_contracts import (
-  ModelTimeouts,
-  ProviderStatus,
-  TokenUsage,
-  ToolCall,
-  ToolDefinition,
-  ToolResult,
+    ModelTimeouts,
+    ProviderStatus,
+    TokenUsage,
+    ToolCall,
+    ToolDefinition,
+    ToolResult,
 )
 
 
@@ -22,14 +22,14 @@ class ChatMessage(BaseModel):
 
     @model_validator(mode="after")
     def valid_content(self) -> "ChatMessage":
-      if self.role == "tool":
-        if self.tool_result is None or self.tool_calls or self.content:
-          raise ValueError("tool messages require only a tool result")
-      elif self.tool_result or (self.tool_calls and self.role != "assistant"):
-        raise ValueError("tool calls require assistant role")
-      elif not self.content and not self.tool_calls:
-        raise ValueError("message content required")
-      return self
+        if self.role == "tool":
+            if self.tool_result is None or self.tool_calls or self.content:
+                raise ValueError("tool messages require only a tool result")
+        elif self.tool_result or (self.tool_calls and self.role != "assistant"):
+            raise ValueError("tool calls require assistant role")
+        elif not self.content and not self.tool_calls:
+            raise ValueError("message content required")
+        return self
 
 
 class MemoryContextItem(BaseModel):
@@ -158,10 +158,10 @@ class ModelInfo(BaseModel):
     max_output_tokens: int | None = Field(default=None, serialization_alias="maxOutputTokens")
     timeouts: ModelTimeouts | None = None
     input_cost_per_million: float | None = Field(
-      default=None, serialization_alias="inputCostPerMillion"
+        default=None, serialization_alias="inputCostPerMillion"
     )
     output_cost_per_million: float | None = Field(
-      default=None, serialization_alias="outputCostPerMillion"
+        default=None, serialization_alias="outputCostPerMillion"
     )
     currency: str | None = None
 
@@ -231,14 +231,14 @@ class ChatEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal[
-      "message.started",
-      "message.delta",
-      "message.completed",
-      "error",
-      "tool.call",
-      "tool.result",
-      "usage",
-      "model.selected",
+        "message.started",
+        "message.delta",
+        "message.completed",
+        "error",
+        "tool.call",
+        "tool.result",
+        "usage",
+        "model.selected",
     ]
     message_id: str | None = Field(default=None, serialization_alias="messageId")
     delta: str | None = None
