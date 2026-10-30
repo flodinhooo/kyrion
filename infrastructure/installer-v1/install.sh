@@ -20,6 +20,9 @@ die(){ log "ERROR $1" >&2; exit 2; }
 mkdir "$INSTALL_DIR" || die "E_CONCURRENT: another installer owns the target"
 mkdir -p "$DATA_DIR" "$SECRETS_DIR"
 chmod 700 "$INSTALL_DIR" "$SECRETS_DIR"; chmod 750 "$DATA_DIR"
+mkdir "$DATA_DIR/knowledge"
+chown 10001:10001 "$DATA_DIR/knowledge"
+chmod 700 "$DATA_DIR/knowledge"
 trap 'printf "{\n  \"stage\": \"failed\",\n  \"release\": "%s"\n}\n" "$RELEASE" > "$JOURNAL"' EXIT INT TERM
 python3 "$ROOT/preflight.py" --install-dir "$INSTALL_DIR" --data-dir "$DATA_DIR" --secrets-dir "$SECRETS_DIR" --hostname "$HOSTNAME" > "$INSTALL_DIR/preflight.json" || die "E_PREFLIGHT: host does not satisfy requirements"
 python3 "$ROOT/bundle.py" "$ROOT/release" "$ROOT/release/manifest.json" > "$INSTALL_DIR/bundle.json" || die "E_BUNDLE: release bundle verification failed"

@@ -18,14 +18,17 @@ public final class PdfParserMain {
                 var stripper = new PDFTextStripper();
                 stripper.setStartPage(page);
                 stripper.setEndPage(page);
-                var writer = new StringWriter() {
-                    @Override public void write(String text, int off, int len) {
-                        if (getBuffer().length() + len > 1_000_000) throw new IllegalStateException();
-                        super.write(text, off, len);
+                var result = new StringBuilder();
+                var writer = new Writer() {
+                    @Override public void write(char[] chars, int off, int len) {
+                        if (result.length() + len > 1_000_000) throw new IllegalStateException();
+                        result.append(chars, off, len);
                     }
+                    @Override public void flush() {}
+                    @Override public void close() {}
                 };
                 stripper.writeText(document, writer);
-                byte[] text = writer.toString().getBytes(StandardCharsets.UTF_8);
+                byte[] text = result.toString().getBytes(StandardCharsets.UTF_8);
                 total += text.length;
                 if (total > 4_000_000) { System.exit(22); }
                 output.writeInt(text.length);

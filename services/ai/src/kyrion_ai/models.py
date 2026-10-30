@@ -106,6 +106,7 @@ class ModelRegistry:
                 raise ProviderFailure("PROVIDER_NOT_CONFIGURED")
             if (
                 request.memory_context
+                or request.knowledge_context
                 or len(request.messages) != 1
                 or request.messages[0].role != "user"
             ):
