@@ -3,6 +3,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
 import {serviceReady, waitUntilReady} from './dev-readiness.mjs';
+import {localCalendarSmoke} from './demo-calendar.mjs';
 
 export const demoPages = ['/', '/home', '/devices', '/calendar', '/plugins', '/lounge',
   '/chat', '/settings/services', '/users', '/roles'];
@@ -137,6 +138,11 @@ async function browserSmoke() {
             async () => (await context.request.get('/api/integrations/home-assistant', {timeout: 10000})).json())
         });
       }
+    }
+    if (process.argv.includes('--local-calendar')) {
+      const csrf = (await context.cookies()).find((cookie) => cookie.name === 'kyrion_csrf')?.value;
+      if (csrf) rows.push(...await localCalendarSmoke(context.request, csrf));
+      else rows.push({check: 'local-calendar', passed: false, code: 'CSRF_REQUIRED'});
     }
     return rows;
   } finally {

@@ -36,7 +36,7 @@ export function parseEvent(line: string): ChatEvent {
     return {type: value.type, estimatedTokens: value.estimatedTokens, tokenBudget: value.tokenBudget};
   }
   if (value.type === "memory.used" && "items" in value && Array.isArray(value.items) && value.items.length <= 3) {
-    const items = value.items.map((item: unknown) => {
+    const items = value.items.map<Extract<ChatEvent, { type: "memory.used" }>["items"][number]>((item: unknown) => {
       if (!item || typeof item !== "object" || !("id" in item) || typeof item.id !== "string"
         || !("category" in item) || typeof item.category !== "string" || !("content" in item) || typeof item.content !== "string"
         || !("sensitivity" in item) || (item.sensitivity !== "standard" && item.sensitivity !== "sensitive")) throw new Error("Invalid memory event");

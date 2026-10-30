@@ -93,6 +93,8 @@ async function start(recoveryAction = 'start', target) {
 }
 
 async function restartDatabase() {
+  const core = {id: 'core', port: 8080};
+  const coreWasReady = await serviceReady(core);
   // Explicit operator action, preserving this existing container and its data.
   console.log('Restarting only kyrion-postgres with a 120-second graceful stop.');
   const stopped = await commandSucceeded('docker.exe', ['stop', '--time', '120', 'kyrion-postgres'],
@@ -102,6 +104,9 @@ async function restartDatabase() {
     if (!await commandSucceeded(file, args, {cwd: root, timeoutMs})) throw new Error('DATABASE_COMMAND_FAILED');
   });
   if (!stopped || !ready) throw new Error('DATABASE_RESTART_INCOMPLETE: inspect database logs and readiness.');
+  if (coreWasReady && !await waitUntilReady(() => serviceReady(core), {
+    timeoutMs: 30000, intervalMs: 500,
+  })) throw new Error('CORE_RECONNECT_FAILED: SQL is ready but Core has not recovered.');
   if (!await status()) process.exitCode = 1;
 }
 

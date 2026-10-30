@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /.next-acceptance-build/
 /.next-stabilization-build/
 /.next-kai01-build/
