@@ -34,6 +34,12 @@ describe("multi-provider chat disclosure boundary (simulated upstreams)", () => 
         defaultModelId: "local",
         models: [model(false), model(true)]
       });
+      if (input.endsWith("/v1/ai/route")) return Response.json({
+        model: model(cloud),
+        reason: "explicit_profile",
+        alternatives: [],
+        rejected: {}
+      });
       if (input.endsWith("/actions/interpret")) return Response.json({kind: "none"});
       if (input.endsWith("/turns/complete")) return Response.json({});
       if (input.endsWith("/turns")) return Response.json({
@@ -86,12 +92,8 @@ describe("multi-provider chat disclosure boundary (simulated upstreams)", () => 
       externalConsent: "current_message"
     });
     const chatCall = fetcher.mock.calls.find(([url]) => url.endsWith("/chat/stream"));
-    expect(JSON.parse(String(chatCall?.[1]?.body))).toMatchObject({
-      messages: [{
-        role: "user",
-        content: "Current prompt"
-      }], memoryContext: []
-    });
+    expect(JSON.parse(String(chatCall?.[1]?.body))).toMatchObject({turnId});
+    expect(String(chatCall?.[1]?.body)).not.toContain("memoryContext");
     expect(fetcher.mock.calls.some(([url]) => url.endsWith("/turns/complete"))).toBe(true);
   });
 
@@ -126,7 +128,8 @@ describe("multi-provider chat disclosure boundary (simulated upstreams)", () => 
     await response.text();
     expect(response.status).toBe(200);
     const chatCall = fetcher.mock.calls.find(([url]) => url.endsWith("/chat/stream"));
-    expect(String(chatCall?.[1]?.body)).toContain("PRIVATE MEMORY");
+    expect(String(chatCall?.[1]?.body)).not.toContain("PRIVATE MEMORY");
+    expect(String(chatCall?.[1]?.body)).not.toContain("messages");
     const coreCall = fetcher.mock.calls.find(([url]) => url.endsWith("/turns"));
     expect(String(coreCall?.[1]?.body)).not.toContain("externalProvider");
   });

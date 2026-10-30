@@ -88,17 +88,17 @@ class ModelRegistry:
     ]
 
   def resolve(self, request: ChatRequest) -> ModelProfile:
-    # Bridge the legacy Core voice caller without editing its parallel-owned file.
-    selected = (
-      self.voice_id
-      if request.interaction_mode == "voice"
-      else request.model_id or self.default_id
+    # Core-selected profiles take precedence; direct voice requests use the local voice default.
+    selected = request.model_id or (
+      self.voice_id if request.interaction_mode == "voice" else self.default_id
     )
     profile = self.profiles.get(selected)
     if profile is None:
       raise ProviderFailure("INVALID_REQUEST")
     if not profile.enabled:
       raise ProviderFailure("MODEL_DISABLED")
+    if request.interaction_mode == "voice" and not profile.local:
+      raise ProviderFailure("CLOUD_NOT_ALLOWED")
     if not profile.local:
       if not self.settings.model_cloud_enabled or not request.cloud_consent:
         raise ProviderFailure("CLOUD_NOT_ALLOWED")
@@ -199,7 +199,12 @@ class ModelRegistry:
     providers = self.provider_status()
     if not local_ready:
       providers[0].code = "MODEL_UNAVAILABLE"
-    return ModelCatalog(default_model_id=self.default_id, models=models, providers=providers)
+    return ModelCatalog(
+      default_model_id=self.default_id,
+      models=models,
+      providers=providers,
+      voice_profile_id=self.voice_id,
+    )
 
   async def stream_chat(self, request: ChatRequest) -> AsyncIterator[ChatEvent]:
     try:

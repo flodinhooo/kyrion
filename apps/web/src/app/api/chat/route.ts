@@ -3,7 +3,6 @@ import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-a
 import {resolveChatModel} from "@/features/models/server-policy";
 import {modelMessages} from "@/features/models/messages";
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 const CONTEXT_TOKEN_BUDGET = 3072;
 const modelErrorCodes = new Set(["MODEL_UNAVAILABLE", "INVALID_REQUEST", ...Object.keys(modelMessages.en.errors)]);
 
@@ -51,6 +50,7 @@ function isChatRequest(value: unknown): value is ChatRequest {
     && typeof request.title === "string"
     && request.title.trim().length > 0
     && request.title.length <= 160
+    && (request.task === undefined || ["chat", "analysis", "code", "voice"].includes(request.task))
     && (request.cloudConsent === undefined || typeof request.cloudConsent === "boolean")
     && (request.modelId === undefined
       || (typeof request.modelId === "string"
@@ -85,7 +85,7 @@ export async function POST(incomingRequest: Request) {
   try {
     let selected;
     try {
-      selected = await resolveChatModel(body.modelId, body.cloudConsent === true, incomingRequest.signal);
+      selected = await resolveChatModel(body.modelId, body.cloudConsent === true, incomingRequest.signal, auth.token, body.task ?? "chat");
     } catch (error) {
       const code = error instanceof Error && modelErrorCodes.has(error.message) ? error.message : "MODEL_UNAVAILABLE";
       return Response.json({code}, {status: code === "CLOUD_NOT_ALLOWED" ? 403 : 400});
@@ -155,27 +155,28 @@ export async function POST(incomingRequest: Request) {
       });
     }
 
-    const response = await fetch(`${AI_SERVICE_URL}/v1/chat/stream`, {
+    const response = await fetch(`${CORE_SERVICE_URL}/v1/ai/chat/stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type": "application/json", Authorization: `Bearer ${auth.token}`},
       body: JSON.stringify({
         conversationId: body.conversationId,
-        modelId: selected.model.id,
+        modelId: body.modelId ?? null,
         cloudConsent: selected.cloud && body.cloudConsent === true,
         locale: body.locale,
-        messages: contextValue.messages,
-        memoryContext: contextValue.usedMemories,
+        turnId: contextValue.turnId,
+        task: body.task ?? "chat",
+        consentProvider: selected.cloud ? selected.model.provider : null,
       }),
       cache: "no-store",
       signal: incomingRequest.signal,
     });
 
-    if (response.status === 400) {
+    if (!response.ok) {
       const failure: unknown = await response.json().catch(() => null);
       const code = failure && typeof failure === "object" && "code" in failure
       && typeof failure.code === "string" && modelErrorCodes.has(failure.code) ? failure.code : "INVALID_REQUEST";
       await failTurn(startedTurn, code);
-      return Response.json({code}, {status: 400});
+      return Response.json({code}, {status: response.status});
     }
 
     if (!response.ok || !response.body) {

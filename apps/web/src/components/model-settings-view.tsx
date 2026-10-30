@@ -9,6 +9,7 @@ import {
   type ModelBenchmarkResult,
 } from "@/features/models/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import {AiOrchestrationSettings} from "@/components/ai-orchestration-settings";
 import {modelMessages} from "@/features/models/messages";
 
 function formatBytes(bytes: number, locale: string): string {
@@ -93,6 +94,7 @@ export function ModelSettingsView() {
         <Link className="placeholder-action" href="/settings">{t.backToSettings}</Link>
       </div>
 
+      <AiOrchestrationSettings/>
       {!modelCatalog ? (
         <p className="stream-error" role="alert">{t.modelsUnavailable}</p>
       ) : (
