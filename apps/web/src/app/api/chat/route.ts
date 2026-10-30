@@ -1,8 +1,11 @@
 import type { ChatRequest } from "@/features/chat/contracts";
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
+import {resolveChatModel} from "@/features/models/server-policy";
+import {modelMessages} from "@/features/models/messages";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 const CONTEXT_TOKEN_BUDGET = 3072;
+const modelErrorCodes = new Set(["MODEL_UNAVAILABLE", "INVALID_REQUEST", ...Object.keys(modelMessages.en.errors)]);
 
 type CoreContext = {
   conversationId: string;
@@ -48,6 +51,7 @@ function isChatRequest(value: unknown): value is ChatRequest {
     && typeof request.title === "string"
     && request.title.trim().length > 0
     && request.title.length <= 160
+    && (request.cloudConsent === undefined || typeof request.cloudConsent === "boolean")
     && (request.modelId === undefined
       || (typeof request.modelId === "string"
         && request.modelId.trim().length > 0
@@ -79,6 +83,13 @@ export async function POST(incomingRequest: Request) {
   }
 
   try {
+    let selected;
+    try {
+      selected = await resolveChatModel(body.modelId, body.cloudConsent === true, incomingRequest.signal);
+    } catch (error) {
+      const code = error instanceof Error && modelErrorCodes.has(error.message) ? error.message : "MODEL_UNAVAILABLE";
+      return Response.json({code}, {status: code === "CLOUD_NOT_ALLOWED" ? 403 : 400});
+    }
     const contextResponse = await fetch(`${CORE_SERVICE_URL}/v1/conversations/${body.conversationId}/turns`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` },
@@ -86,11 +97,16 @@ export async function POST(incomingRequest: Request) {
         title: body.title,
         tokenBudget: CONTEXT_TOKEN_BUDGET,
         message: { ...body.message, role: "user" },
+        ...(selected.cloud ? {externalProvider: selected.model.provider, externalConsent: "current_message"} : {}),
       }),
       cache: "no-store",
       signal: incomingRequest.signal,
     });
     if (!contextResponse.ok) {
+      const failure: unknown = await contextResponse.json().catch(() => null);
+      if (failure && typeof failure === "object" && "code" in failure && failure.code === "CLOUD_NOT_ALLOWED") {
+        return Response.json({code: "CLOUD_NOT_ALLOWED"}, {status: 403});
+      }
       const code = contextResponse.status === 404
         ? "CONVERSATION_NOT_FOUND"
         : contextResponse.status === 409 ? "CONVERSATION_CONFLICT" : "INVALID_REQUEST";
@@ -101,6 +117,11 @@ export async function POST(incomingRequest: Request) {
       return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 502 });
     }
     startedTurn = { conversationId: body.conversationId, turnId: contextValue.turnId, token: auth.token };
+    if (selected.cloud && (contextValue.usedMemories.length !== 0 || contextValue.messages.length !== 1
+      || contextValue.messages[0].role !== "user" || contextValue.messages[0].content !== body.message.content.trim())) {
+      await failTurn(startedTurn, "CONTEXT_NOT_ALLOWED");
+      return Response.json({code: "CONTEXT_NOT_ALLOWED"}, {status: 403});
+    }
 
     const action = await interpretAction(
       body.message.content,
@@ -139,7 +160,8 @@ export async function POST(incomingRequest: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         conversationId: body.conversationId,
-        modelId: body.modelId,
+        modelId: selected.model.id,
+        cloudConsent: selected.cloud && body.cloudConsent === true,
         locale: body.locale,
         messages: contextValue.messages,
         memoryContext: contextValue.usedMemories,
@@ -149,8 +171,11 @@ export async function POST(incomingRequest: Request) {
     });
 
     if (response.status === 400) {
-      await failTurn(startedTurn, "INVALID_REQUEST");
-      return Response.json({ code: "INVALID_REQUEST" }, { status: 400 });
+      const failure: unknown = await response.json().catch(() => null);
+      const code = failure && typeof failure === "object" && "code" in failure
+      && typeof failure.code === "string" && modelErrorCodes.has(failure.code) ? failure.code : "INVALID_REQUEST";
+      await failTurn(startedTurn, code);
+      return Response.json({code}, {status: 400});
     }
 
     if (!response.ok || !response.body) {

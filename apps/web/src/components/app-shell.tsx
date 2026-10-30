@@ -259,7 +259,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
   }
 
   function selectModel(modelId: string) {
-    if (!modelCatalog?.models.some((model) => model.id === modelId)) return;
+    if (!modelCatalog?.models.some((model) => model.id === modelId && model.available !== false && model.enabled !== false)) return;
     setSelectedModelId(modelId);
     writePreference("kyrion-model", modelId);
   }

@@ -9,6 +9,7 @@ import {
   type ModelBenchmarkResult,
 } from "@/features/models/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import {modelMessages} from "@/features/models/messages";
 
 function formatBytes(bytes: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
@@ -20,6 +21,7 @@ function formatBytes(bytes: number, locale: string): string {
 
 export function ModelSettingsView() {
   const { locale, modelCatalog, selectedModelId, selectModel, t } = useWorkspace();
+  const mt = modelMessages[locale];
   const [benchmarkResults, setBenchmarkResults] = useState<Record<string, ModelBenchmarkResult>>({});
   const [benchmarkErrors, setBenchmarkErrors] = useState<string[]>([]);
   const [benchmarkingModelId, setBenchmarkingModelId] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function ModelSettingsView() {
     setBenchmarkResults({});
     setBenchmarkErrors([]);
 
-    for (const model of modelCatalog.models) {
+    for (const model of modelCatalog.models.filter(model => model.local !== false && model.available !== false && model.enabled !== false)) {
       if (controller.signal.aborted) break;
       setBenchmarkingModelId(model.id);
       try {
@@ -121,6 +123,11 @@ export function ModelSettingsView() {
             )}
           </section>
 
+          <div className="capability-list">
+            {modelCatalog.providers?.map(provider => <span key={provider.id}>
+              {provider.id}: {provider.local ? mt.local : mt.cloud} · {provider.configured ? provider.enabled ? "✓" : mt.disabled : mt.unconfigured}
+            </span>)}
+          </div>
           <div className="model-grid">
           {modelCatalog.models.map((model) => {
             const isSelected = model.id === selectedModelId;
@@ -138,6 +145,9 @@ export function ModelSettingsView() {
                     {isRecommended && <span>{t.benchmarkRecommended}</span>}
                   </div>
                 </div>
+                <p>{mt.provider}: {model.provider ?? "ollama"} · {model.local === false ? mt.cloud : mt.local}</p>
+                {model.available === false && <p
+                  role="status">{mt.unavailable}: {model.statusCode && model.statusCode in mt.errors ? mt.errors[model.statusCode as keyof typeof mt.errors] : mt.unavailable}</p>}
                 <dl>
                   <div><dt>{t.modelParameters}</dt><dd>{model.parameterSize}</dd></div>
                   <div><dt>{t.modelQuantization}</dt><dd>{model.quantization}</dd></div>
@@ -161,7 +171,8 @@ export function ModelSettingsView() {
                   </dl>
                 )}
                 {benchmarkFailed && <p className="stream-error" role="alert">{t.benchmarkError}</p>}
-                <button type="button" disabled={isSelected} onClick={() => selectModel(model.id)}>
+                <button type="button" disabled={isSelected || model.available === false || model.enabled === false}
+                        onClick={() => selectModel(model.id)}>
                   {isSelected ? t.modelSelected : t.selectModel}
                 </button>
               </article>

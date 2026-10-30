@@ -686,6 +686,21 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `HTTP cloud consent cannot bypass server policy and creates no conversation`() {
+        val token = setupToken()
+        val id = UUID.randomUUID()
+        mockMvc.perform(
+            post("/v1/conversations/$id/turns").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"title":"Cloud denial","externalProvider":"openai","externalConsent":"current_message","message":{"id":"${UUID.randomUUID()}","role":"user","content":"Synthetic test","createdAt":"2026-10-30T12:00:00Z"}}""")
+        )
+            .andExpect(status().isForbidden).andExpect(jsonPath("$.code").value("CLOUD_NOT_ALLOWED"))
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM conversation WHERE id=:id").param("id", id).query(Int::class.java).single()
+        ).isZero()
+    }
+
+    @Test
     fun `Core appends authoritative turns in order and persists deterministic compaction metadata`() {
         val token = setupToken()
         val conversationId = UUID.randomUUID()

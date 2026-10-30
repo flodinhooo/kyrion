@@ -30,6 +30,8 @@ data class StartConversationTurnRequest(
     @field:NotBlank @field:Size(max = 160) val title: String,
     @field:Valid val message: ConversationMessageRequest,
     val tokenBudget: Int = 4096,
+    @field:Pattern(regexp = "openai|anthropic|gemini") val externalProvider: String? = null,
+    @field:Pattern(regexp = "current_message") val externalConsent: String? = null,
 )
 data class CompleteConversationTurnRequest(
     val turnId: UUID,
@@ -44,6 +46,7 @@ class ConversationController(
     private val repository: ConversationRepository,
     private val memorySelector: MemoryContextSelector,
     private val clock: Clock = Clock.systemUTC(),
+    private val cloudPolicy: CloudContextPolicy,
 ) {
     @GetMapping fun recent(request: HttpServletRequest) = ConversationListResponse(repository.recent(request.ownerId(), 30))
 
@@ -72,17 +75,26 @@ class ConversationController(
     }
 
     @PostMapping("/{id}/turns")
+    @org.springframework.transaction.annotation.Transactional
     fun startTurn(
         @PathVariable id: UUID,
         @Valid @RequestBody body: StartConversationTurnRequest,
         request: HttpServletRequest,
     ): ConversationContext {
         if (body.message.role != "user" || body.tokenBudget !in 256..32_768) throw ConversationInvalidRequestException()
+        cloudPolicy.authorize(request.ownerId(), body.externalProvider, body.externalConsent, body.message.id)
         val conversation = repository.startTurn(
             request.ownerId(), id, body.title.trim(),
             ConversationMessage(body.message.id, "user", body.message.content.trim(), body.message.createdAt),
             startedAt = clock.instant(),
         )
+        if (body.externalProvider != null) {
+            return ConversationContext(
+                conversation.id, body.message.id,
+                listOf(ConversationContextMessage("user", body.message.content.trim())),
+                estimateTokens(body.message.content), body.tokenBudget, false, emptyList(),
+            )
+        }
         val memories = memorySelector.select(request.ownerId(), body.message.content)
         return assembleContext(conversation, body.message.id, body.tokenBudget, memories)
     }

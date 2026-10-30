@@ -38,6 +38,10 @@ class Settings:
     gemini_live_model: str = "gemini-3.1-flash-live-preview"
     cloud_session_timeout_seconds: float = 300.0
     cloud_history_max_messages: int = 12
+    model_profiles_file: Path | None = None
+    model_cloud_enabled: bool = False
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -52,6 +56,12 @@ class Settings:
         )
         allowed_models = tuple(dict.fromkeys((default_model, *configured_models)))
         return cls(
+          model_profiles_file=Path(os.environ["KYRION_MODEL_PROFILES_FILE"])
+          if os.getenv("KYRION_MODEL_PROFILES_FILE")
+          else None,
+          model_cloud_enabled=os.getenv("KYRION_AI_CLOUD_ENABLED", "false").lower() == "true",
+          openai_api_key=os.getenv("OPENAI_API_KEY"),
+          anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
             ollama_model=default_model,
             ollama_allowed_models=allowed_models,

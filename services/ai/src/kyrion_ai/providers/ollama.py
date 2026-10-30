@@ -17,6 +17,9 @@ from kyrion_ai.contracts import (
     ModelCatalog,
     ModelInfo,
 )
+from kyrion_ai.model_contracts import ModelProfile, TokenUsage, ToolCall
+from kyrion_ai.providers.http_stream import ProviderFailure, count, object_value, text
+from kyrion_ai.tools import validate_call
 
 
 class _OllamaModelDetails(BaseModel):
@@ -45,9 +48,7 @@ class _OllamaModelShow(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     capabilities: list[str] = Field(default_factory=list)
-    model_info: dict[str, int | float | str | bool | None] = Field(
-        default_factory=dict
-    )
+    model_info: dict[str, int | float | str | bool | None] = Field(default_factory=dict)
 
 
 class _OllamaChatMessage(BaseModel):
@@ -81,7 +82,7 @@ class OllamaProvider:
     def supports_model(self, model_id: str) -> bool:
         return model_id in self.models
 
-    async def list_models(self) -> ModelCatalog:
+    async def list_models(self, model_ids: tuple[str, ...] | None = None) -> ModelCatalog:
         timeout = httpx.Timeout(self._settings.ollama_connect_timeout_seconds)
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(f"{self._settings.ollama_base_url}/api/tags")
@@ -90,7 +91,7 @@ class OllamaProvider:
 
             allowed = [
                 model
-                for model_id in self.models
+              for model_id in (model_ids or self.models)
                 for model in installed.models
                 if model.model == model_id or model.name == model_id
             ]
@@ -168,9 +169,7 @@ class OllamaProvider:
             model_id=request.model_id,
             warmup_load_ms=_nanoseconds_to_milliseconds(warmup.load_duration),
             average_duration_ms=_average([metric.duration_ms for metric in metrics]),
-            average_tokens_per_second=_average(
-                [metric.tokens_per_second for metric in metrics]
-            ),
+          average_tokens_per_second=_average([metric.tokens_per_second for metric in metrics]),
             checks_passed=sum(metric.passed for metric in metrics),
             prompt_count=len(metrics),
             prompts=metrics,
@@ -202,25 +201,38 @@ class OllamaProvider:
         response.raise_for_status()
         return _OllamaChatResult.model_validate(response.json())
 
-    async def stream_chat(self, request: ChatRequest) -> AsyncIterator[ChatEvent]:
+    async def stream_chat(
+      self, request: ChatRequest, profile: ModelProfile | None = None
+    ) -> AsyncIterator[ChatEvent]:
         message_id = str(uuid4())
         timeout = httpx.Timeout(
-            connect=self._settings.ollama_connect_timeout_seconds,
-            read=None,
+          connect=profile.timeouts.connect_seconds
+          if profile
+          else self._settings.ollama_connect_timeout_seconds,
+          read=profile.timeouts.read_seconds if profile else 120.0,
             write=30.0,
             pool=5.0,
         )
         payload = _chat_payload(request, self._settings.ollama_model)
+        if profile:
+          payload["model"] = profile.model_id
+          payload["options"]["num_predict"] = profile.max_output_tokens
+          if profile.context_length:
+            payload["options"]["num_ctx"] = profile.context_length
 
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client, client.stream(
-                "POST",
-                f"{self._settings.ollama_base_url}/api/chat",
-                json=payload,
-            ) as response:
+          async with (
+            httpx.AsyncClient(timeout=timeout) as client,
+            client.stream(
+              "POST",
+              f"{self._settings.ollama_base_url}/api/chat",
+              json=payload,
+            ) as response,
+          ):
                 response.raise_for_status()
                 yield ChatEvent(type="message.started", message_id=message_id)
 
+                seen_calls: set[str] = set()
                 async for line in response.aiter_lines():
                     if not line:
                         continue
@@ -235,12 +247,42 @@ class OllamaProvider:
                             message_id=message_id,
                             delta=content,
                         )
+                    for raw_call in chunk.get("message", {}).get("tool_calls", []):
+                      function = object_value(raw_call.get("function"))
+                      call = validate_call(
+                        ToolCall(
+                          id=raw_call.get("id") or str(uuid4()),
+                          name=text(function.get("name")),
+                          arguments=object_value(function.get("arguments")),
+                        ),
+                        request.tools,
+                      )
+                      if call.id in seen_calls:
+                        raise ProviderFailure("TOOL_CALL_INVALID")
+                      seen_calls.add(call.id)
+                      yield ChatEvent(type="tool.call", tool_call=call)
                     if chunk.get("done"):
+                      if "prompt_eval_count" in chunk or "eval_count" in chunk:
+                        yield ChatEvent(
+                          type="usage",
+                          usage=TokenUsage(
+                            inputTokens=count(chunk.get("prompt_eval_count")),
+                            outputTokens=count(chunk.get("eval_count")),
+                          ),
+                        )
+                      if chunk.get("done_reason") == "length":
+                        yield ChatEvent(type="error", code="OUTPUT_LIMIT_REACHED")
+                        return
                         yield ChatEvent(type="message.completed", message_id=message_id)
                         return
+                yield ChatEvent(type="error", code="STREAM_FAILED")
+        except ProviderFailure as error:
+          yield ChatEvent(type="error", code=error.code)
+        except httpx.TimeoutException:
+          yield ChatEvent(type="error", code="REQUEST_TIMEOUT")
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.HTTPStatusError):
             yield ChatEvent(type="error", code="MODEL_UNAVAILABLE")
-        except (httpx.HTTPError, json.JSONDecodeError):
+        except (httpx.HTTPError, ValueError, TypeError, AttributeError):
             yield ChatEvent(type="error", code="STREAM_FAILED")
 
 
@@ -248,7 +290,24 @@ def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]
     voice_mode = request.interaction_mode == "voice"
     return {
         "model": request.model_id or default_model,
-        "messages": [message.model_dump() for message in request.messages],
+      "messages": [_ollama_message(message) for message in request.messages],
+      **(
+        {
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.parameters,
+              },
+            }
+            for tool in request.tools
+          ]
+        }
+        if request.tools
+        else {}
+      ),
         "stream": True,
         # Reasoning-capable models otherwise finish an invisible thinking pass
         # before emitting their user-facing answer.
@@ -258,6 +317,19 @@ def _chat_payload(request: ChatRequest, default_model: str) -> dict[str, object]
         # remain only as a safety bound for unusually detailed spoken answers.
         "options": {"num_ctx": 4096, **({"num_predict": 256} if voice_mode else {})},
     }
+
+
+def _ollama_message(message):
+  result = {"role": message.role, "content": message.content}
+  if message.tool_calls:
+    result["tool_calls"] = [
+      {"id": call.id, "function": {"name": call.name, "arguments": call.arguments}}
+      for call in message.tool_calls
+    ]
+  if message.tool_result:
+    result["content"] = json.dumps(message.tool_result.result, ensure_ascii=False)
+    result["tool_name"] = message.tool_result.name
+  return result
 
 
 def _context_length(model_info: dict[str, int | float | str | bool | None]) -> int | None:

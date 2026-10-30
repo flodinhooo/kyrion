@@ -35,6 +35,7 @@ kyrion:
     bootstrap-secret-file: ${KYRION_BOOTSTRAP_SECRET_FILE:}
   ai:
     base-url: ${KYRION_AI_BASE_URL:http://127.0.0.1:8000}
+    cloud-enabled: ${KYRION_AI_CLOUD_ENABLED:false}
   credentials:
     key-file: ${KYRION_CREDENTIAL_KEY_FILE:E:/Kyrion/Data/secrets/credential.key}
     allow-generation: ${KYRION_ALLOW_KEY_GENERATION:false}

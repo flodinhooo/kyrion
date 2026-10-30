@@ -2,12 +2,34 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from kyrion_ai.model_contracts import (
+  ModelTimeouts,
+  ProviderStatus,
+  TokenUsage,
+  ToolCall,
+  ToolDefinition,
+  ToolResult,
+)
+
 
 class ChatMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    role: Literal["user", "assistant", "system"]
-    content: str = Field(min_length=1, max_length=100_000)
+    role: Literal["user", "assistant", "system", "tool"]
+    content: str = Field(default="", max_length=100_000)
+    tool_calls: list[ToolCall] = Field(default_factory=list, alias="toolCalls", max_length=16)
+    tool_result: ToolResult | None = Field(default=None, alias="toolResult")
+
+    @model_validator(mode="after")
+    def valid_content(self) -> "ChatMessage":
+      if self.role == "tool":
+        if self.tool_result is None or self.tool_calls or self.content:
+          raise ValueError("tool messages require only a tool result")
+      elif self.tool_result or (self.tool_calls and self.role != "assistant"):
+        raise ValueError("tool calls require assistant role")
+      elif not self.content and not self.tool_calls:
+        raise ValueError("message content required")
+      return self
 
 
 class MemoryContextItem(BaseModel):
@@ -38,6 +60,8 @@ class ChatRequest(BaseModel):
     locale: Literal["de", "en"]
     interaction_mode: Literal["chat", "voice"] = Field(default="chat", alias="interactionMode")
     voice_turn_id: str | None = Field(default=None, alias="voiceTurnId", max_length=64)
+    cloud_consent: bool = Field(default=False, alias="cloudConsent", strict=True)
+    tools: list[ToolDefinition] = Field(default_factory=list, max_length=16)
 
 
 class RuntimeDeviceCapability(BaseModel):
@@ -125,6 +149,21 @@ class ModelInfo(BaseModel):
     quantization: str
     capabilities: list[str]
     context_length: int | None = Field(default=None, serialization_alias="contextLength")
+    provider: str = "ollama"
+    model_id: str | None = Field(default=None, serialization_alias="modelId")
+    local: bool = True
+    enabled: bool = True
+    available: bool = True
+    status_code: str | None = Field(default=None, serialization_alias="statusCode")
+    max_output_tokens: int | None = Field(default=None, serialization_alias="maxOutputTokens")
+    timeouts: ModelTimeouts | None = None
+    input_cost_per_million: float | None = Field(
+      default=None, serialization_alias="inputCostPerMillion"
+    )
+    output_cost_per_million: float | None = Field(
+      default=None, serialization_alias="outputCostPerMillion"
+    )
+    currency: str | None = None
 
 
 class ModelCatalog(BaseModel):
@@ -132,6 +171,7 @@ class ModelCatalog(BaseModel):
 
     default_model_id: str = Field(serialization_alias="defaultModelId")
     models: list[ModelInfo]
+    providers: list[ProviderStatus] = Field(default_factory=list)
 
 
 class ModelBenchmarkRequest(BaseModel):
@@ -171,16 +211,44 @@ ChatErrorCode = Literal[
     "REQUEST_ABORTED",
     "INVALID_REQUEST",
     "STREAM_FAILED",
+    "PROVIDER_NOT_CONFIGURED",
+    "CLOUD_NOT_ALLOWED",
+    "MODEL_DISABLED",
+    "CAPABILITY_UNSUPPORTED",
+    "PROVIDER_AUTH_FAILED",
+    "RATE_LIMITED",
+    "REQUEST_TIMEOUT",
+    "CONTEXT_NOT_ALLOWED",
+    "CONTEXT_LIMIT_EXCEEDED",
+    "TOOL_CALL_INVALID",
+    "PROVIDER_REFUSED",
+    "OUTPUT_LIMIT_REACHED",
 ]
 
 
 class ChatEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["message.started", "message.delta", "message.completed", "error"]
+    type: Literal[
+      "message.started",
+      "message.delta",
+      "message.completed",
+      "error",
+      "tool.call",
+      "tool.result",
+      "usage",
+      "model.selected",
+    ]
     message_id: str | None = Field(default=None, serialization_alias="messageId")
     delta: str | None = None
     code: ChatErrorCode | None = None
+    provider: str | None = None
+    model_id: str | None = Field(default=None, serialization_alias="modelId")
+    profile_id: str | None = Field(default=None, serialization_alias="profileId")
+    tool_call: ToolCall | None = Field(default=None, serialization_alias="toolCall")
+    tool_result: ToolResult | None = Field(default=None, serialization_alias="toolResult")
+    usage: TokenUsage | None = None
+    finish_reason: str | None = Field(default=None, serialization_alias="finishReason")
 
     def to_ndjson(self) -> bytes:
         return self.model_dump_json(by_alias=True, exclude_none=True).encode() + b"\n"
@@ -202,9 +270,7 @@ class VoiceResponsePlanBase(BaseModel):
     voice_profile_revision: str = Field(
         alias="voiceProfileRevision", pattern="^[a-zA-Z0-9._:-]{1,128}$"
     )
-    catalog_revision: str = Field(
-        alias="catalogRevision", pattern="^[a-zA-Z0-9._-]{1,80}$"
-    )
+    catalog_revision: str = Field(alias="catalogRevision", pattern="^[a-zA-Z0-9._-]{1,80}$")
     rendered_text: str = Field(alias="renderedText", min_length=1, max_length=4_000)
 
 

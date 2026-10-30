@@ -75,6 +75,7 @@ def test_model_catalog_serialises_web_contract() -> None:
 
     assert catalog.model_dump(by_alias=True) == {
         "defaultModelId": "gemma3:4b",
+      "providers": [],
         "models": [
             {
                 "id": "gemma3:4b",
@@ -84,6 +85,17 @@ def test_model_catalog_serialises_web_contract() -> None:
                 "quantization": "Q4_K_M",
                 "capabilities": ["completion", "vision"],
                 "contextLength": 131_072,
+              "provider": "ollama",
+              "modelId": None,
+              "local": True,
+              "enabled": True,
+              "available": True,
+              "statusCode": None,
+              "maxOutputTokens": None,
+              "timeouts": None,
+              "inputCostPerMillion": None,
+              "outputCostPerMillion": None,
+              "currency": None,
             }
         ],
     }

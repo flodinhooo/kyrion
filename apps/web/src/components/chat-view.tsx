@@ -22,6 +22,7 @@ import { csrfHeader } from "@/features/auth/csrf";
 import type { PersonalMemory } from "@/features/memory/contracts";
 import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
+import {modelMessages} from "@/features/models/messages";
 
 const chatTransport = new ApiChatTransport();
 const bottomThreshold = 80;
@@ -48,7 +49,9 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
 
 export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
   const router = useRouter();
-  const { locale, selectedModelId, selectedVoiceUri, speechRate, t } = useWorkspace();
+  const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
+  const mt = modelMessages[locale];
+  const selectedModel = modelCatalog?.models.find(model => model.id === (selectedModelId ?? modelCatalog.defaultModelId));
   const [conversationId] = useState(() => initialConversation?.id ?? crypto.randomUUID());
   const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialConversation?.messages ?? []);
@@ -100,6 +103,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   async function submitMessage(rawContent: string): Promise<void> {
     const content = rawContent.trim();
     if (!content || isStreaming) return;
+    const cloud = selectedModel?.local === false;
+    if (cloud && !window.confirm(mt.cloudConfirm.replace("{provider}", selectedModel.provider ?? ""))) return;
 
     const userMessage = createMessage("user", content);
     const title = conversationTitle ?? createConversationTitle(
@@ -110,6 +115,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       conversationId,
       title,
       modelId: selectedModelId ?? undefined,
+      cloudConsent: cloud,
       locale,
       message: {
         id: userMessage.id,
@@ -277,7 +283,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
               </div>
             </article>
           ))}
-          {streamError && <p className="stream-error" role="alert">{t[errorMessageKeys[streamError]]}</p>}
+          {streamError && <p className="stream-error" role="alert">{streamError in mt.errors
+            ? mt.errors[streamError as keyof typeof mt.errors]
+            : t[errorMessageKeys[streamError as keyof typeof errorMessageKeys]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
           {contextCompacted && <p className="stream-notice" role="status">{t.contextCompacted}</p>}
           {memoryProposal && <div className="memory-proposal" role="status"><p>{t.chatMemoryProposed}: {memoryProposal.content}</p>{memoryProposal.conflictsWithMemoryId && <p>{t.memoryConflict}</p>}<div>{memoryProposal.conflictsWithMemoryId ? <><button type="button" onClick={() => void resolveMemoryProposal("replace")}>{t.memoryReplace}</button><button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryKeepBoth}</button></> : <button type="button" onClick={() => void resolveMemoryProposal("confirm")}>{t.memoryConfirm}</button>}<button type="button" onClick={() => void resolveMemoryProposal("forget")}>{t.memoryForget}</button></div></div>}
@@ -288,6 +296,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       )}
 
       <div className="composer-wrap">
+        {selectedModel &&
+          <p>{mt.selected}: {selectedModel.provider ?? "ollama"} / {selectedModel.label} · {selectedModel.local === false ? mt.cloud : mt.local}</p>}
+        {selectedModel?.local === false && <p role="status">{mt.cloudNotice}</p>}
         <form className="composer" onSubmit={sendMessage}>
           <textarea aria-label={t.inputPlaceholder} placeholder={t.inputPlaceholder} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleInputKeyDown} rows={1} disabled={isStreaming} />
           {isStreaming ? (

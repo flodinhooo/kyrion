@@ -69,6 +69,8 @@ secrets/
 *.pt
 *.pth
 models/
+!apps/web/src/features/models/
+!apps/web/src/features/models/**
 checkpoints/
 voice-training/
 recordings/

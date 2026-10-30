@@ -6,11 +6,18 @@ export type ModelOption = {
   quantization: string;
   capabilities: string[];
   contextLength?: number | null;
+  provider?: "ollama" | "openai" | "anthropic" | "gemini";
+  modelId?: string | null;
+  local?: boolean;
+  enabled?: boolean;
+  available?: boolean;
+  statusCode?: string | null;
 };
 
 export type ModelCatalog = {
   defaultModelId: string;
   models: ModelOption[];
+  providers?: Array<{ id: string; configured: boolean; enabled: boolean; local: boolean; code?: string | null }>;
 };
 
 export type ModelBenchmarkResult = {
@@ -48,11 +55,18 @@ export function isModelCatalog(value: unknown): value is ModelCatalog {
       && typeof model.quantization === "string"
       && Array.isArray(model.capabilities)
       && model.capabilities.every((capability) => typeof capability === "string")
+      && (model.provider === undefined || ["ollama", "openai", "anthropic", "gemini"].includes(model.provider))
+      && (model.local === undefined || typeof model.local === "boolean")
+      && (model.available === undefined || typeof model.available === "boolean")
+      && (model.enabled === undefined || typeof model.enabled === "boolean")
       && (model.contextLength === undefined
         || model.contextLength === null
         || (typeof model.contextLength === "number" && model.contextLength > 0)),
     )
-    && catalog.models.some((model) => model.id === catalog.defaultModelId);
+    && catalog.models.some((model) => model.id === catalog.defaultModelId)
+    && (catalog.providers === undefined || (Array.isArray(catalog.providers) && catalog.providers.every(provider =>
+      !!provider && typeof provider.id === "string" && typeof provider.configured === "boolean"
+      && typeof provider.enabled === "boolean" && typeof provider.local === "boolean")));
 }
 
 export function isModelBenchmarkResult(value: unknown): value is ModelBenchmarkResult {

@@ -1,12 +1,14 @@
 import type { ChatTransport, ChatStreamOptions } from "@/features/chat/client/chat-transport";
 import type { ChatEvent, ChatRequest } from "@/features/chat/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import {modelMessages} from "@/features/models/messages";
 
 function parseEvent(line: string): ChatEvent {
   return JSON.parse(line) as ChatEvent;
 }
 
 const responseErrorCodes = new Set([
+  ...Object.keys(modelMessages.en.errors),
   "MODEL_UNAVAILABLE",
   "INVALID_REQUEST",
   "CONVERSATION_NOT_FOUND",
