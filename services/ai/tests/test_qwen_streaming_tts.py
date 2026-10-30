@@ -44,15 +44,19 @@ def test_discovers_capabilities_and_maps_qwen_pcm_stream():
         if http_request.method == "GET":
             return httpx.Response(200, json=CAPABILITIES)
         captured["payload"] = json.loads(http_request.read())
-        body = b"\n".join([
-            json.dumps({
-                "type": "audio",
-                "sequence": 0,
-                "audioBase64": base64.b64encode(pcm).decode(),
-                "producedAtEpochMillis": 1_000,
-            }).encode(),
-            b'{"type":"complete"}',
-        ])
+        body = b"\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "audio",
+                        "sequence": 0,
+                        "audioBase64": base64.b64encode(pcm).decode(),
+                        "producedAtEpochMillis": 1_000,
+                    }
+                ).encode(),
+                b'{"type":"complete"}',
+            ]
+        )
         return httpx.Response(200, content=body)
 
     adapter = QwenStreamingTtsAdapter.discover("http://qwen", client(handler))
@@ -96,17 +100,27 @@ def test_cancellation_closes_stream_without_forwarding_later_audio():
         if http_request.url.path.endswith("/cancel"):
             cancelled_turns.append(http_request.url.path)
             return httpx.Response(204)
-        body = "\n".join([
-            json.dumps({
-                "type": "audio", "sequence": 0, "audioBase64": pcm,
-                "producedAtEpochMillis": 1_000,
-            }),
-            json.dumps({
-                "type": "audio", "sequence": 1, "audioBase64": pcm,
-                "producedAtEpochMillis": 1_160,
-            }),
-            '{"type":"complete"}',
-        ])
+        body = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "audio",
+                        "sequence": 0,
+                        "audioBase64": pcm,
+                        "producedAtEpochMillis": 1_000,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "audio",
+                        "sequence": 1,
+                        "audioBase64": pcm,
+                        "producedAtEpochMillis": 1_160,
+                    }
+                ),
+                '{"type":"complete"}',
+            ]
+        )
         return httpx.Response(200, content=body)
 
     adapter = QwenStreamingTtsAdapter.discover("http://qwen", client(handler))
@@ -128,13 +142,19 @@ def test_rejects_audio_after_terminal_event():
     def handler(http_request):
         if http_request.method == "GET":
             return httpx.Response(200, json=CAPABILITIES)
-        body = "\n".join([
-            '{"type":"complete"}',
-            json.dumps({
-                "type": "audio", "sequence": 0, "audioBase64": pcm,
-                "producedAtEpochMillis": 1_000,
-            }),
-        ])
+        body = "\n".join(
+            [
+                '{"type":"complete"}',
+                json.dumps(
+                    {
+                        "type": "audio",
+                        "sequence": 0,
+                        "audioBase64": pcm,
+                        "producedAtEpochMillis": 1_000,
+                    }
+                ),
+            ]
+        )
         return httpx.Response(200, content=body)
 
     adapter = QwenStreamingTtsAdapter.discover("http://qwen", client(handler))

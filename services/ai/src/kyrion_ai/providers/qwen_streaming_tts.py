@@ -47,9 +47,7 @@ class QwenStreamingTtsAdapter:
                 minimum_text_granularity=value["minimumTextGranularity"],
                 maximum_text_characters=int(value["maximumTextCharacters"]),
                 maximum_chunk_milliseconds=int(value["maximumChunkMilliseconds"]),
-                cancellation_deadline_milliseconds=int(
-                    value["cancellationDeadlineMilliseconds"]
-                ),
+                cancellation_deadline_milliseconds=int(value["cancellationDeadlineMilliseconds"]),
             )
         except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
             raise StreamingTtsContractError("QWEN_TTS_CAPABILITIES_INVALID") from error

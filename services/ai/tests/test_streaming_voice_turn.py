@@ -46,10 +46,14 @@ def test_composes_ordered_phrases_and_audio() -> None:
 
     audio = [event for event in events if event.type == "audio"]
     assert [(event.phrase_index, event.sequence) for event in audio] == [
-        (0, 0), (0, 1), (1, 0), (1, 1)
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (1, 1),
     ]
     assert [request.text for request in provider.requests] == [
-        "Guten Morgen.", "Die desk lamp ist an."
+        "Guten Morgen.",
+        "Die desk lamp ist an.",
     ]
     assert events[-1].type == "complete"
     assert events[-1].phrases == 2

@@ -53,9 +53,7 @@ class FixedAudioManifest:
             if isinstance(item, dict)
         }
         self._assets = {
-            self._key(item): item
-            for item in payload.get("assets", ())
-            if isinstance(item, dict)
+            self._key(item): item for item in payload.get("assets", ()) if isinstance(item, dict)
         }
 
     def resolve(self, plan: FixedVoiceResponsePlan) -> bytes | None:
@@ -173,9 +171,7 @@ class VoiceResponseAudioResolver:
         if isinstance(plan, TemplateVoiceResponsePlan):
             return self._resolve_template(plan)
         if isinstance(plan, DynamicVoiceResponsePlan):
-            return ResolvedVoiceAudio(
-                self._synthesize(plan), "normal_tts", False, None
-            )
+            return ResolvedVoiceAudio(self._synthesize(plan), "normal_tts", False, None)
         raise VoiceResponseResolutionError("VOICE_RESPONSE_PLAN_UNSUPPORTED")
 
     def _resolve_fixed(self, plan: FixedVoiceResponsePlan) -> ResolvedVoiceAudio:

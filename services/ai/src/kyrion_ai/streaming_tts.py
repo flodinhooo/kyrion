@@ -104,9 +104,7 @@ class ValidatedStreamingTts:
     def capabilities(self) -> StreamingTtsCapabilities:
         return self._provider.capabilities
 
-    def stream(
-        self, request: StreamingTtsRequest, cancelled: Event
-    ) -> Iterator[TtsStreamEvent]:
+    def stream(self, request: StreamingTtsRequest, cancelled: Event) -> Iterator[TtsStreamEvent]:
         capabilities = self.capabilities
         text = request.text.strip()
         if not text or len(text) > capabilities.maximum_text_characters:
@@ -133,9 +131,7 @@ class ValidatedStreamingTts:
         )
         maximum_turn_bytes = capabilities.sample_rate * bytes_per_sample_frame * 120
 
-        for expected_sequence, chunk in enumerate(
-            self._provider.synthesize(request, cancelled)
-        ):
+        for expected_sequence, chunk in enumerate(self._provider.synthesize(request, cancelled)):
             if cancelled.is_set():
                 yield TtsStreamCancelled("cancelled", request.turn_id, chunks, pcm_bytes)
                 return
