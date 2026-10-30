@@ -88,6 +88,14 @@ server rendering. Private Next.js API routes repeat that check. Core separately
 requires a bearer session on protected `/v1` resources, so bypassing the Web UI
 does not bypass the authority boundary.
 
+## Optional Business identity
+
+[Business identity and local recovery](business-identity-and-recovery.md) adds
+pending/SMTP-verified email, domain-control proof and exact-domain enrollment
+policy. Existing accounts are not auto-verified. Strict policy requires verified
+members and recovery; personal membership/session ownership remains unchanged.
+Recovery is an interactive host-local CLI, never an HTTP owner-creation flow.
+
 ## Endpoints
 
 Public Core endpoints:
@@ -95,7 +103,8 @@ Public Core endpoints:
 - `GET /v1/auth/setup/status`
 - `POST /v1/auth/setup`
 - `POST /v1/auth/login`
-- `POST /v1/auth/register` (requires a valid invitation code)
+- `POST /v1/auth/register` (requires a valid invitation and policy-required email proof)
+- `POST /v1/auth/registration-email` (generic accepted response; requires invitation to deliver mail)
 
 Authenticated Core endpoints:
 

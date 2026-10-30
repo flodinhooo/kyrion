@@ -13,3 +13,5 @@
 .space-page li { padding: 18px; border: 1px solid var(--border); border-radius: 14px; overflow-wrap: anywhere; }
 .space-page li p { color: var(--text-muted); }
 @media (max-width: 600px) { .space-page fieldset { padding: 14px; } }
+
+.space-page .auth-form input[type="checkbox"] { width: auto; min-height: 0; margin-right: .5rem; vertical-align: middle; }

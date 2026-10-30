@@ -82,6 +82,7 @@ class ZigbeeButtonBindingService(
     private val taskExecutor: TaskExecutor,
     private val clock: Clock = Clock.systemUTC(),
     private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> {
         requireButton(ownerId, buttonId)
@@ -117,6 +118,7 @@ class ZigbeeButtonBindingService(
     }
 
     private fun execute(node: GatewayNode, buttonId: UUID, binding: ZigbeeButtonBinding) {
+        boundary?.workspace(node.ownerId)
         val allDevices = catalog.devices(node.ownerId)
         val targets = if (binding.targetDeviceId != null) {
             allDevices.filter { it.id == binding.targetDeviceId }

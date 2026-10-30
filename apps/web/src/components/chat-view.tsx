@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { identityMessages } from "@/features/spaces/identity-messages";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { MarkdownMessage } from "@/components/markdown-message";
@@ -50,7 +51,7 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
 
 export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
   const router = useRouter();
-  const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
+  const {browserVoiceAllowed, locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
   const mt = modelMessages[locale];
   const ot = orchestrationMessages[locale];
   const [task, setTask] = useState<"chat" | "analysis" | "code">("chat");
@@ -108,7 +109,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   async function submitMessage(rawContent: string): Promise<void> {
     const content = rawContent.trim();
     if (!content || isStreaming) return;
-    const cloud = !isVoiceModeOpen && selectedModel?.local === false;
+    const cloud = !(isVoiceModeOpen && browserVoiceAllowed) && selectedModel?.local === false;
     if (cloud && !window.confirm(mt.cloudConfirm.replace("{provider}", selectedModel.provider ?? ""))) return;
 
     const userMessage = createMessage("user", content);
@@ -119,8 +120,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     const request: ChatRequest = {
       conversationId,
       title,
-      modelId: isVoiceModeOpen ? "auto" : selectedModelId ?? undefined,
-      task: isVoiceModeOpen ? "voice" : task,
+      modelId: isVoiceModeOpen && browserVoiceAllowed ? "auto" : selectedModelId ?? undefined,
+      task: isVoiceModeOpen && browserVoiceAllowed ? "voice" : task,
       cloudConsent: cloud,
       locale,
       message: {
@@ -257,8 +258,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
             className="velora-orb"
             type="button"
             aria-label={t.voiceOpen}
-            title={t.voiceOpen}
-            onClick={() => setIsVoiceModeOpen(true)}
+            title={browserVoiceAllowed ? t.voiceOpen : identityMessages[locale].voiceBlocked}
+            disabled={!browserVoiceAllowed}
+            onClick={() => { if (browserVoiceAllowed) setIsVoiceModeOpen(true); }}
           >
             <div className="orb-core" /><div className="orb-ring" />
           </button>
@@ -326,7 +328,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
         </form>
         <p>{t.inputHint}</p>
       </div>
-      {isVoiceModeOpen && (
+      {isVoiceModeOpen && browserVoiceAllowed && (
         <VoiceMode
           isStreaming={isStreaming}
           latestAssistantMessage={latestAssistant(chatMessages)}

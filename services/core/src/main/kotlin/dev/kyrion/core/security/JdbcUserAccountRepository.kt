@@ -11,6 +11,7 @@ import java.util.UUID
 class JdbcUserAccountRepository(
     private val jdbcClient: JdbcClient,
     private val transactions: TransactionTemplate,
+    private val identities: BusinessIdentityService? = null,
 ) : UserAccountRepository {
     override fun exists(): Boolean = jdbcClient.sql("SELECT EXISTS (SELECT 1 FROM user_account)")
         .query(Boolean::class.java).single()
@@ -57,7 +58,10 @@ class JdbcUserAccountRepository(
             .param("owner", invitation.workspaceOwnerId).param("expires", Timestamp.from(invitation.expiresAt)).update()
     }
 
-    override fun register(account: UserAccount, invitationHash: String, now: java.time.Instant): UserAccount? = transactions.execute {
+    override fun register(account: UserAccount, invitationHash: String, now: java.time.Instant): UserAccount? =
+        registerVerified(account, invitationHash, now, null, null)
+
+    override fun registerVerified(account: UserAccount, invitationHash: String, now: java.time.Instant, email: String?, proof: String?): UserAccount? = transactions.execute {
         val ownerId = jdbcClient.sql("SELECT workspace_owner_id FROM registration_invitation WHERE token_hash=:hash")
             .param("hash", invitationHash).query(UUID::class.java).optional().orElse(null) ?: return@execute null
         jdbcClient.sql("SELECT pg_advisory_xact_lock(hashtextextended(CAST(:owner AS text),23))")
@@ -82,6 +86,7 @@ class JdbcUserAccountRepository(
                  )) FOR UPDATE OF i""",
         ).param("hash", invitationHash).param("now", Timestamp.from(now))
             .query(UUID::class.java).optional().orElse(null) ?: return@execute null
+        val verifiedEmail = identities?.enrollment(ownerId, invitationHash, email, proof)
         val created = account.copy(workspaceOwnerId = ownerId)
         val inserted = jdbcClient.sql(
             """INSERT INTO user_account (id, username, password_hash, enabled, created_at, updated_at, workspace_owner_id)
@@ -100,6 +105,7 @@ class JdbcUserAccountRepository(
             .param("user", created.id).param("role", roleId).update()
         jdbcClient.sql("UPDATE registration_invitation SET use_count=use_count+1, redeemed_at=CASE WHEN use_count+1>=max_uses THEN CAST(:now AS timestamptz) ELSE NULL END WHERE token_hash=:hash")
             .param("now", Timestamp.from(now)).param("hash", invitationHash).update()
+        if (verifiedEmail != null) identities?.attachVerified(created, verifiedEmail)
         created
     }
 

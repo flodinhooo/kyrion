@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 let initialized = false;
 let space = { id: "fixture-space", name: "Kyrion", type: "HOME", status: "ACTIVE", defaultRoleKey: "USER" };
 let invitations = [];
+let emailIdentity = { email: null, pendingEmail: null, status: "MISSING", smtpAvailable: true };
+let domainProof = null;
 const code = "I".repeat(43);
 const permissions = ["devices:read", "system_settings:update", "users:read", "roles:read", "invitations:create"];
 const user = { id: "fixture-owner", username: "owner", canInvite: true, roles: ["OWNER"], permissions };
@@ -22,7 +24,7 @@ const core = createServer(async (request, response) => {
   for await (const chunk of request) raw += chunk;
   const body = raw ? JSON.parse(raw) : {};
   if (request.url === "/fixture/reset") {
-    initialized = false; invitations = []; return reply(200, {});
+    initialized = false; invitations = []; emailIdentity = { email: null, pendingEmail: null, status: "MISSING", smtpAvailable: true }; domainProof = null; return reply(200, {});
   }
   if (request.url === "/v1/auth/setup/status") return reply(200, { setupRequired: !initialized });
   if (request.url === "/v1/auth/setup") {
@@ -41,6 +43,23 @@ const core = createServer(async (request, response) => {
   if (request.url === "/v1/space") {
     if (request.method === "PUT") space = { ...space, ...body };
     return reply(200, space);
+  }
+  if (request.url === "/v1/identity/email") {
+    if (request.method === "POST") { emailIdentity.pendingEmail = body.email; emailIdentity.status = emailIdentity.email ? "VERIFIED" : "PENDING"; return reply(202, {}); }
+    return reply(200, emailIdentity);
+  }
+  if (request.url === "/v1/identity/email/verify") {
+    if (body.code !== "V".repeat(43)) return reply(400, { code: "EMAIL_PROOF_INVALID" });
+    emailIdentity = { ...emailIdentity, email: emailIdentity.pendingEmail, pendingEmail: null, status: "VERIFIED" };
+    response.statusCode=204; return response.end();
+  }
+  if (request.url === "/v1/identity/business") {
+    if (request.method === "PUT" && body.mode === "STRICT") return reply(400,{ code: "RECOVERY_REQUIRED" });
+    return reply(200,{ mode: "OFF", recoveryConfigured: false, domains: domainProof ? [{ domain: "company.ch", allowed: false, status: "PENDING", verifiedUntil: null }] : [] });
+  }
+  if (request.url === "/v1/identity/business/challenge") {
+    domainProof = { name: "_kyrion-verification.company.ch", value: "fixture-public-dns-proof", expiresAt: "2099-01-01T00:00:00Z" };
+    return reply(200,domainProof);
   }
   if (request.url === "/v1/rbac/roles") return reply(200, roles);
   if (request.url === "/v1/rbac/users") return reply(200, [{ ...user, enabled: true }]);

@@ -31,6 +31,7 @@ type WorkspaceContextValue = {
   userId: string;
   username: string;
   canInvite: boolean;
+  browserVoiceAllowed: boolean;
   permissions: string[];
   roles: string[];
   hasPermission: (permission: string) => boolean;
@@ -392,6 +393,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
       userId,
       username,
       canInvite,
+      browserVoiceAllowed: space?.type === "HOME",
       permissions,
       roles,
       hasPermission,

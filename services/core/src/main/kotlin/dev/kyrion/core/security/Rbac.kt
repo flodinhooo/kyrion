@@ -30,7 +30,7 @@ class SystemRoleProtectedException : RuntimeException()
 class UserDisabledException : RuntimeException()
 
 @Service
-class RbacService(private val jdbc: JdbcClient, private val activity: ActivityService, private val clock: Clock = Clock.systemUTC()) {
+class RbacService(private val jdbc: JdbcClient, private val activity: ActivityService, private val clock: Clock = Clock.systemUTC(), private val boundary: TenantBoundary? = null) {
     @Transactional
     fun initializeUser(userId: UUID, ownerId: UUID, owner: Boolean) {
         lockWorkspace(ownerId)
@@ -58,9 +58,9 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
         if ("ADMIN" in created) adminExcluded.forEach { key -> jdbc.sql("INSERT INTO rbac_role_permission(role_id,permission_key) SELECT id,:key FROM rbac_role WHERE installation_owner_id=:owner AND role_key='ADMIN' ON CONFLICT DO NOTHING").param("key",key).param("owner",ownerId).update() }
         if ("USER" in created) "rooms:read,rooms:create,rooms:update,rooms:delete,devices:read,devices:execute,automations:read,automations:create,automations:update,automations:delete,automations:execute,conversations:read,conversations:create,conversations:update,conversations:delete,personal_memories:read,personal_memories:create,personal_memories:update,personal_memories:delete,integrations:read,integrations:execute".split(',').forEach { key -> jdbc.sql("INSERT INTO rbac_role_permission(role_id,permission_key) SELECT id,:key FROM rbac_role WHERE installation_owner_id=:owner AND role_key='USER' ON CONFLICT DO NOTHING").param("key",key).param("owner",ownerId).update() }
     }
-    fun permissions(userId: UUID): Set<String> = jdbc.sql("SELECT DISTINCT rp.permission_key FROM rbac_user_role ur JOIN rbac_role_permission rp ON rp.role_id=ur.role_id JOIN rbac_role r ON r.id=ur.role_id WHERE ur.user_id=:id AND r.role_key<>'OWNER'").param("id", userId).query(String::class.java).list().mapNotNull { it }.toSet().let { keys -> if (isOwner(userId)) permissionCatalog().map { it.key }.toSet() else keys }
-    fun isOwner(userId: UUID) = jdbc.sql("SELECT EXISTS(SELECT 1 FROM user_account u LEFT JOIN rbac_user_role ur ON ur.user_id=u.id LEFT JOIN rbac_role r ON r.id=ur.role_id AND r.role_key='OWNER' WHERE u.id=:id AND (r.role_key='OWNER' OR u.workspace_owner_id IS NULL))").param("id", userId).query(Boolean::class.java).single()
-    fun require(userId: UUID, permission: String) { if (!jdbc.sql("SELECT EXISTS(SELECT 1 FROM user_account WHERE id=:id AND enabled)").param("id", userId).query(Boolean::class.java).single()) throw ForbiddenException(); if (permission !in permissionCatalog().map { it.key } || permission !in permissions(userId)) throw ForbiddenException() }
+    fun permissions(userId: UUID): Set<String> = jdbc.sql("SELECT DISTINCT rp.permission_key FROM rbac_user_role ur JOIN rbac_role_permission rp ON rp.role_id=ur.role_id JOIN rbac_role r ON r.id=ur.role_id JOIN user_account u ON u.id=ur.user_id AND u.space_id=r.installation_owner_id WHERE ur.user_id=:id AND r.role_key<>'OWNER'").param("id", userId).query(String::class.java).list().mapNotNull { it }.toSet().let { keys -> if (isOwner(userId)) permissionCatalog().map { it.key }.toSet() else keys }
+    fun isOwner(userId: UUID) = jdbc.sql("SELECT EXISTS(SELECT 1 FROM user_account u LEFT JOIN rbac_user_role ur ON ur.user_id=u.id LEFT JOIN rbac_role r ON r.id=ur.role_id AND r.role_key='OWNER' AND r.installation_owner_id=u.space_id WHERE u.id=:id AND (r.role_key='OWNER' OR u.workspace_owner_id IS NULL))").param("id", userId).query(Boolean::class.java).single()
+    fun require(userId: UUID, permission: String) { boundary?.actor(userId); if (!jdbc.sql("SELECT EXISTS(SELECT 1 FROM user_account WHERE id=:id AND enabled)").param("id", userId).query(Boolean::class.java).single()) throw ForbiddenException(); if (permission !in permissionCatalog().map { it.key } || permission !in permissions(userId)) throw ForbiddenException() }
     fun permissionCatalog(): List<PermissionDefinition> = jdbc.sql("SELECT permission_key, resource, operation FROM rbac_permission ORDER BY resource, operation").query { rs, _ -> PermissionDefinition(rs.getString(1), rs.getString(2), PermissionOperation.valueOf(rs.getString(3))) }.list()
     fun roles(ownerId: UUID): List<RoleView> = jdbc.sql("SELECT id, role_key, display_name, system_role FROM rbac_role WHERE installation_owner_id=:owner ORDER BY system_role DESC, role_key").param("owner", ownerId).query { rs, _ -> role(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getBoolean(4), ownerId) }.list()
     fun users(ownerId: UUID): List<UserView> = jdbc.sql("SELECT id, username, enabled FROM user_account WHERE id=:owner OR workspace_owner_id=:owner ORDER BY username").param("owner", ownerId).query { rs, _ -> user(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getBoolean(3)) }.list()
@@ -132,6 +132,7 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
         val now = Timestamp.from(clock.instant())
         jdbc.sql("UPDATE user_account SET enabled=:enabled, updated_at=:now WHERE id=:id AND (id=:owner OR workspace_owner_id=:owner)")
             .param("enabled", enabled).param("now", now).param("id", id).param("owner", owner).update()
+        if (enabled) boundary?.reactivated(id)
         if (!enabled) {
             jdbc.sql("UPDATE auth_session SET revoked_at=:now WHERE user_id=:id AND revoked_at IS NULL")
                 .param("now", now).param("id", id).update()
@@ -171,6 +172,7 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
     fun lockIdentity(actor: UUID): UUID {
         val owner = workspace(actor)
         lockWorkspace(owner)
+        boundary?.actor(actor)
         if (!jdbc.sql("SELECT enabled FROM user_account WHERE id=:id").param("id", actor).query(Boolean::class.java).single()) throw ForbiddenException()
         return owner
     }

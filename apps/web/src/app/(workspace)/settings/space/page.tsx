@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isRole, type Role } from "@/features/auth/permissions";
 import { isInvitation, isSpace, type Space, type Invitation, type IssuedInvitation } from "@/features/spaces/contracts";
+import { identityMessages } from "@/features/spaces/identity-messages";
 import { spaceMessages } from "@/features/spaces/messages";
 import "./space.css";
 
 export default function SpacePage() {
+  const router = useRouter();
   const { locale, roles: myRoles, hasPermission } = useWorkspace();
   const t = spaceMessages[locale];
   const [space, setSpace] = useState<Space | null>(null);
@@ -68,7 +71,7 @@ export default function SpacePage() {
         setIssued({ id: value.id, code: value.code, expiresAt: value.expiresAt, roleKey: value.roleKey, maxUses: value.maxUses });
         // Fragment avoids sending invitation credentials to servers or Referer headers.
         setLink(`${window.location.origin}/signup#invitation=${value.code}`);
-      } else if (method === "PUT") setNotice(t.saved);
+      } else if (method === "PUT") { setNotice(t.saved); router.refresh(); }
       await refresh();
     } catch { setError(true); }
     finally { setPending(false); }
@@ -82,7 +85,7 @@ export default function SpacePage() {
   function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    void mutate("/api/space/invitations", "POST", { roleId: data.get("role") || null,
+    void mutate("/api/space/invitations", "POST", { roleId: data.get("role") || null, email: data.get("email") || null,
       expiresInHours: Number(data.get("hours")), maxUses: Number(data.get("uses")) });
   }
 
@@ -104,10 +107,11 @@ export default function SpacePage() {
         </fieldset>
       </form>
       {hasPermission("users:read") && <p><Link href="/users">{t.members}</Link></p>}
-      {space.type === "BUSINESS" && <aside><h2>{t.domain}</h2><p>{t.domainUnavailable}</p></aside>}
+      {space.type === "BUSINESS" && <aside><h2>{t.domain}</h2><Link href="/settings/identity">{identityMessages[locale].title}</Link></aside>}
     </>}
     {canInvite && <section><h2>{t.invitations}</h2>
       <form className="auth-form" onSubmit={invite}>
+        <label>{identityMessages[locale].email}<input name="email" type="email" maxLength={254} /></label>
         <label>{t.assignedRole}<select name="role"><option value="">{t.defaultRole}</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
         <label>{t.hours}<input name="hours" type="number" min={1} max={168} defaultValue={24} required /></label>
         <label>{t.uses}<input name="uses" type="number" min={1} max={20} defaultValue={1} required /></label>

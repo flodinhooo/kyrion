@@ -24,7 +24,7 @@ data class SpaceSettingsRequest(
     val type: SpaceType,
     @field:Size(min = 1, max = 80) val defaultRoleKey: String = "USER",
 )
-data class InvitationOptions(val roleId: UUID? = null, val expiresInHours: Int? = null, val maxUses: Int? = null)
+data class InvitationOptions(val roleId: UUID? = null, val expiresInHours: Int? = null, val maxUses: Int? = null, val email: String? = null)
 data class SpaceInvitationView(
     val id: UUID, val createdBy: UUID, val createdAt: Instant, val expiresAt: Instant,
     val roleKey: String, val maxUses: Int, val useCount: Int, val status: String,
@@ -39,6 +39,7 @@ class SpaceService(
     private val rbac: RbacService,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val identities: BusinessIdentityService? = null,
     private val creationLimiter: InvitationCreationLimiter = InvitationCreationLimiter(clock),
 ) {
     fun current(actor: UUID): SpaceView = jdbc.sql(
@@ -53,6 +54,8 @@ class SpaceService(
     fun update(actor: UUID, request: SpaceSettingsRequest): SpaceView {
         val owner = rbac.lockIdentity(actor)
         if (!rbac.isOwner(actor)) throw ForbiddenException()
+        if (request.type == SpaceType.HOME && jdbc.sql("SELECT EXISTS(SELECT 1 FROM business_identity_policy WHERE space_id=:owner AND mode='STRICT')")
+                .param("owner", owner).query(Boolean::class.java).single()) throw IdentityPolicyException("POLICY_DISABLE_REQUIRED")
         val name = request.name.trim()
         if (name.isEmpty() || name.length > 120 || name.any { it.isISOControl() } || request.defaultRoleKey == "OWNER")
             throw InvalidSpaceSettingsException()
@@ -74,15 +77,16 @@ class SpaceService(
             if (options.roleId == null) it.key == space.defaultRoleKey else it.id == options.roleId
         } ?: throw RoleNotFoundException()
         if (role.key == "OWNER" || !rbac.permissions(actor).containsAll(role.permissions)) throw ForbiddenException()
+        val email = identities?.invitationEmail(actor, options.email)
         creationLimiter.check(actor)
         // Serialize issuance with role edits; redemption revalidates the grant as well.
         val token = SessionTokenService().create()
         val id = UUID.randomUUID()
         val expiry = clock.instant().plusSeconds(hours * 3600L)
-        jdbc.sql("""INSERT INTO registration_invitation(id,token_hash,created_by,workspace_owner_id,expires_at,role_id,max_uses)
-                    VALUES(:id,:hash,:actor,:owner,:expires,:role,:uses)""")
+        jdbc.sql("""INSERT INTO registration_invitation(id,token_hash,created_by,workspace_owner_id,expires_at,role_id,max_uses,email_constraint)
+                    VALUES(:id,:hash,:actor,:owner,:expires,:role,:uses,:email)""")
             .param("id", id).param("hash", token.tokenHash).param("actor", actor).param("owner", owner)
-            .param("expires", Timestamp.from(expiry)).param("role", role.id).param("uses", uses).update()
+            .param("expires", Timestamp.from(expiry)).param("role", role.id).param("uses", uses).param("email", email, java.sql.Types.VARCHAR).update()
         audit("space.invitation.created", actor, id)
         return IssuedSpaceInvitation(id, token.rawToken, expiry, role.key, uses)
     }

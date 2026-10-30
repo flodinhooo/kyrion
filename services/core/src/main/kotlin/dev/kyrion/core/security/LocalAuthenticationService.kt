@@ -30,6 +30,7 @@ class LocalAuthenticationService(
     private val rbac: RbacService? = null,
     private val bootstrap: FirstOwnerBootstrap? = null,
     private val spaces: SpaceService? = null,
+    private val boundary: TenantBoundary? = null,
     private val registrationAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
 ) {
     fun setupRequired() = !users.setupCompleted()
@@ -52,12 +53,12 @@ class LocalAuthenticationService(
     }
 
     @Transactional
-    fun register(username: String, password: String, invitationCode: String): AuthenticatedOwner {
+    fun register(username: String, password: String, invitationCode: String, email: String? = null, emailProof: String? = null): AuthenticatedOwner {
         val normalized = normalizeUsername(username)
         registrationAttempts.backoffFor(normalized)?.let { throw LoginRateLimitedException(it.retryAfter(clock.instant())) }
         val now = clock.instant()
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
-        val created = users.register(account, invitationTokens.hash(invitationCode), now) ?: run {
+        val created = users.registerVerified(account, invitationTokens.hash(invitationCode), now, email, emailProof) ?: run {
             registrationAttempts.recordFailure(normalized)
             throw InvalidInvitationException()
         }
@@ -93,6 +94,7 @@ class LocalAuthenticationService(
             loginAttempts.recordFailure(normalized)
             throw InvalidCredentialsException()
         }
+        boundary?.actor(account.id)
         loginAttempts.recordSuccess(normalized)
         record("auth.login", ActivityStatus.SUCCEEDED, "activity.auth.loginSucceeded", account.id)
         return AuthenticatedOwner(account, sessions.create(account.id))
@@ -145,6 +147,7 @@ class LocalAuthenticationService(
     private fun authenticatedSession(rawToken: String, touch: Boolean = true): Pair<UserAccount, AuthSession>? {
         val session = sessions.authenticate(rawToken, touch) ?: return null
         val user = users.findById(session.userId)?.takeIf { it.enabled } ?: return null
+        boundary?.let { check -> if (runCatching { check.actor(user.id) }.isFailure) return null }
         return user to session
     }
 

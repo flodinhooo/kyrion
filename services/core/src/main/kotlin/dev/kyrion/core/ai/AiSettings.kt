@@ -262,6 +262,14 @@ class AiUsageService(
     }
 
     @Transactional
+    fun releaseUninvoked(actor: UUID, reservation: AiReservation, error: String) {
+        jdbc.sql("UPDATE ai_usage_attempt SET charged_tokens=0,estimated_cost=0,state='rejected',error_code=:error,settled_at=CURRENT_TIMESTAMP WHERE id=:id AND actor_id=:actor AND state='pending'")
+            .param("id",reservation.id).param("actor",actor).param("error",error).update()
+        activity.record(ActivityCategory.INTEGRATION,"ai.usage.rejected",ActivityStatus.DENIED,ActivityActorType.USER,
+            "kyrion-core",error,actor.toString(),ownerId=actor)
+    }
+
+    @Transactional
     fun settle(
         actor: UUID,
         reservation: AiReservation,

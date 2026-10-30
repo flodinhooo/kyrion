@@ -4,11 +4,14 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { messages, type Locale } from "@/lib/messages";
 
+import { identityMessages } from "@/features/spaces/identity-messages";
 import { spaceMessages } from "@/features/spaces/messages";
 
 export function AuthForm({ setup, locale, registration = false }: { setup: boolean; locale: Locale; registration?: boolean }) {
   const t = messages[locale];
   const st = spaceMessages[locale];
+  const it = identityMessages[locale];
+  const [verificationSent, setVerificationSent] = useState(false);
   const invitationInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!registration) return;
@@ -38,7 +41,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: data.get("username"), password: data.get("password"),
           ...(setup ? { setupSecret: data.get("setupSecret"), spaceName: data.get("spaceName"), spaceType: data.get("spaceType") } : {}),
-          ...(registration && !setup ? { invitationCode: data.get("invitationCode") } : {}) }),
+          ...(registration && !setup ? { invitationCode: data.get("invitationCode"), ...(data.get("email") ? { email: data.get("email"), emailProof: data.get("emailProof") } : {}) } : {}) }),
         signal: AbortSignal.timeout(15_000),
       });
       if (!response.ok) {
@@ -74,6 +77,22 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
       </>}
       {setup && <label>{t.authSetupSecret}<input name="setupSecret" type="password" autoComplete="off" minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
       {registration && !setup && <label>{t.authInvitationCode}<input name="invitationCode" ref={invitationInput} autoComplete="off" autoCapitalize="none" spellCheck={false} minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
+      {registration && !setup && <>
+        <label>{it.email}<input type="email" name="email" maxLength={254} autoComplete="email" /></label>
+        <button type="button" disabled={pending} onClick={async (event) => {
+          const form = event.currentTarget.form;
+          if (!form) return;
+          const data = new FormData(form);
+          setPending(true); setError(null); setVerificationSent(false);
+          try {
+            const response = await fetch("/api/auth/registration-email", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ invitationCode: data.get("invitationCode"), email: data.get("email") }), signal: AbortSignal.timeout(20_000) });
+            if (!response.ok) setError("authNetworkError"); else setVerificationSent(true);
+          } catch { setError("authNetworkError"); } finally { setPending(false); }
+        }}>{it.send}</button>
+        <label>{it.code}<input name="emailProof" minLength={43} maxLength={43} autoComplete="off" /></label>
+        {verificationSent && <p role="status">{it.sent}</p>}
+      </>}
       {error && <p className="auth-error" role="alert">{t[error]}</p>}
       <button disabled={pending} type="submit">{pending ? t.authPending : setup ? t.authSetup : registration ? t.authSignupTitle : t.authLogin}</button>
     </form>

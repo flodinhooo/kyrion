@@ -16,7 +16,7 @@ class AuthenticatedRouteInterceptor(
     private val activity: ActivityService,
 ) : HandlerInterceptor {
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
-        if (request.requestURI.startsWith("/v1/space")) response.setHeader("Cache-Control", "no-store")
+        if ((request.requestURI.startsWith("/v1/space") || request.requestURI.startsWith("/v1/identity"))) response.setHeader("Cache-Control", "no-store")
         val header = request.getHeader("Authorization")
         val token = header?.takeIf { it.startsWith("Bearer ") }?.substring(7)
         val user = token?.let(authentication::authenticate)
@@ -26,7 +26,7 @@ class AuthenticatedRouteInterceptor(
             val permission = permissionFor(request.requestURI, if (request.method == "HEAD") "GET" else request.method)
             try {
                 if (permission == null) throw ForbiddenException()
-                rbac.require(user.id, permission)
+                if (permission != "identity:self") rbac.require(user.id, permission)
             } catch (_: ForbiddenException) {
                     activity.record(ActivityCategory.SECURITY, "security.permission.denied", ActivityStatus.DENIED,
                         ActivityActorType.USER, "kyrion-core", permission ?: "route.unmapped", user.id.toString(), ownerId = user.resourceOwnerId)
@@ -46,6 +46,10 @@ class AuthenticatedRouteInterceptor(
 }
 
 internal fun permissionFor(path: String, method: String): String? = when {
+    path == "/v1/identity/email" && method in setOf("GET", "POST") -> "identity:self"
+    path == "/v1/identity/email/verify" && method == "POST" -> "identity:self"
+    path == "/v1/identity/business" && method in setOf("GET", "PUT") -> "system_settings:update"
+    path in setOf("/v1/identity/business/challenge", "/v1/identity/business/verify", "/v1/identity/business/suspend") && method == "POST" -> "system_settings:update"
     path == "/v1/space" -> when (method) { "GET" -> "devices:read"; "PUT" -> "system_settings:update"; else -> null }
     path.startsWith("/v1/space/invitations") -> when (method) {
         "GET", "POST", "DELETE" -> "invitations:create"; else -> null
@@ -98,6 +102,7 @@ class AuthenticatedRouteConfiguration(
             "/v1/backups/**",
             "/v1/rbac/**",
             "/v1/space/**",
+            "/v1/identity/**",
             "/v1/ai/**",
         )
     }

@@ -90,7 +90,9 @@ class AiOrchestrationService(
         )
     }
 
-    fun stream(prepared: PreparedAiGeneration, emit: (String) -> Unit) {
+    fun stream(prepared: PreparedAiGeneration, emit: (String) -> Unit) = stream(prepared, {}, emit)
+
+    fun stream(prepared: PreparedAiGeneration, validateActive: () -> Unit, emit: (String) -> Unit) {
         var reservation = prepared.reservation
         val expires =
             System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(prepared.timeoutSeconds.toLong())
@@ -132,6 +134,7 @@ class AiOrchestrationService(
                     )
                 )
             }
+            var invoked = false
             var visible = false
             var completed = false
             var completion: String? = null
@@ -142,6 +145,11 @@ class AiOrchestrationService(
             var explicitError = false
             val buffered = mutableListOf<String>()
             try {
+                validateActive()
+                rbac.require(prepared.actor, "conversations:create")
+                if (conversations.find(prepared.actor, prepared.request.conversationId) == null) throw AiFailure("CONVERSATION_NOT_FOUND",404)
+                val current = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor), settings.effectivePolicy(prepared.actor), prepared.route)
+                if ((listOf(current.model) + current.alternatives).none { it.id == model.id }) throw AiFailure("PROVIDER_BLOCKED",403)
                 val payload = aiJson.writeValueAsString(
                     mapOf(
                         "conversationId" to prepared.request.conversationId.toString(),
@@ -155,7 +163,10 @@ class AiOrchestrationService(
                 )
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
+                invoked = true
                 gateway.stream(payload, remaining) { raw ->
+                    validateActive()
+                    rbac.require(prepared.actor, "conversations:create")
                     val event = aiJson.readTree(raw)
                     if (completed || error != null || buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502)
                     when (event.path("type").asText()) {
@@ -209,7 +220,8 @@ class AiOrchestrationService(
             } catch (_: Exception) {
                 error = "STREAM_FAILED"
             } finally {
-                usage.settle(prepared.actor, reservation, input, output, total, completed && error == null, error)
+                if (invoked) usage.settle(prepared.actor, reservation, input, output, total, completed && error == null, error)
+                else usage.releaseUninvoked(prepared.actor, reservation, error ?: "STREAM_FAILED")
             }
             if (completed && error == null) {
                 buffered.forEach(emit); completion?.let(emit); return
@@ -235,7 +247,7 @@ class AiOrchestrationService(
     ): String {
         val prepared = prepare(actor, AiGenerationRequest(conversationId, turnId, locale, task = "voice"))
         val result = StringBuilder()
-        stream(prepared) { raw ->
+        stream(prepared, validateActive) { raw ->
             validateActive()
             val event = aiJson.readTree(raw)
             if (event.path("type").asText() == "error") throw AiFailure(event.path("code").asText(), 503)

@@ -2,6 +2,8 @@
 
 Status: Accepted for the single-Space MVP; multi-Space runtime remains gated.
 
+Milestone 02 adds identity proof and recovery under [ADR 0032](0032-business-identity-and-local-recovery.md); its tenant audit supersedes the initial coverage statement.
+
 A Space is HOME or BUSINESS product configuration. Ordinary identities belong
 to exactly one Space. Home and company identities remain separate. Core owns
 membership, invitations and authorization; the public website has no authority.

@@ -89,19 +89,19 @@ running instance. Multi-Space runtime requires a separate audited implementation
 Space suspension has no public endpoint; worker suspension semantics remain future
 work. Database administrators remain trusted operators.
 
-## Business domain restrictions: unavailable
+## Business identity and recovery
 
-Business configuration is implemented; domain enforcement is not. The current
-identity model has usernames and no verified-email or domain-verification flow.
-The Business UI explicitly shows domain restrictions as disabled/unavailable. It
-does not offer an ineffective toggle. Never treat a supplied email string as proof.
+Milestone 02 adds optional SMTP mailbox proof, DNS TXT ownership challenges,
+strict exact-domain policy with lockout prevention, and protected host-local OWNER
+recovery. Local attestation is explicitly distinct from mailbox proof and cannot
+satisfy strict policy. HOME stays unchanged unless an identity workflow is chosen.
+See [Business identity and recovery](business-identity-and-recovery.md) for setup,
+SMTP, expiry/re-verification and Linux/Docker/Windows procedures.
 
-Before enabling enforcement, implement expiring email-ownership challenges,
-verified domain ownership, normalized IDNA domains, explicit enrollment policy,
-and a protected local OWNER recovery procedure. Policy activation must preview
-existing members and preserve existing sessions/recovery until reviewed; it must
-not retroactively disable owners. This remains required follow-up for the full
-requested Business policy capability. No SSO is implemented.
+Business voice and unrouted AI proposals remain disabled pending per-person voice
+principals and K-AI policy/budget integration. Multi-Space runtime remains guarded.
+The [Milestone 02 tenant audit](spaces-tenant-audit.md) is the current coverage
+statement; the initial matrix above describes the Milestone 01 baseline.
 
 ## Future portal and support: design only
 

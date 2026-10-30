@@ -4,6 +4,8 @@ plugins {
     id("org.springframework.boot") version "4.1.0"
 }
 
+springBoot { mainClass.set("dev.kyrion.core.KyrionCoreApplicationKt") }
+
 group = "dev.kyrion"
 version = "0.1.0-SNAPSHOT"
 
@@ -22,6 +24,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

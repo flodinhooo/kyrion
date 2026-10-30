@@ -366,7 +366,7 @@
   ],
   "spaces": {
     "title": "Home, Business und Kyrion Spaces",
-    "description": "Kyrion Home und Kyrion Business teilen eine lokale Plattform. Ein Space organisiert die lokale Installation, Mitglieder und Rollen. Private und gesch?ftliche Konten sind getrennte Identit?ten. Mitgliederverwaltung und Einladungsannahme erfolgen auf deiner erreichbaren Kyrion-Instanz; diese Website bietet keinen Cloud-Login und keine Fernverbindung."
+    "description": "Kyrion Home und Kyrion Business teilen eine lokale Plattform. Ein Space organisiert die lokale Installation, Mitglieder und Rollen. Private und geschäftliche Konten sind getrennte Identitäten. Mitgliederverwaltung und Einladungsannahme erfolgen auf deiner erreichbaren Kyrion-Instanz; diese Website bietet keinen Cloud-Login und keine Fernverbindung. Postfach-/Domainnachweise und lokale Owner-Wiederherstellung sind Instanzfunktionen des Prototyps. Verwaltetes Mandanten-Hosting und privilegierter Fernsupport sind nicht verfügbar."
   },
   "product": {
     "eyebrow": "DIE KYRION-PLATTFORM",

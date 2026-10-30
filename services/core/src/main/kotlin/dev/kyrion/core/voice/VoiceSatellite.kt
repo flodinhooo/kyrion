@@ -155,6 +155,7 @@ class VoiceSatelliteService(
     private val tokens: SessionTokenService,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     fun createEnrollment(ownerId: UUID, displayName: String): CreatedVoiceEnrollment {
         val now = clock.instant()
@@ -205,9 +206,10 @@ class VoiceSatelliteService(
     }
 
     fun activeSession(satelliteId: UUID, credential: String, sessionId: UUID): VoiceDialogueSession {
-        authenticate(satelliteId, credential)
+        val satellite = authenticate(satelliteId, credential)
         val session = repository.findSession(sessionId, satelliteId)
             ?: throw VoiceSessionNotFoundException()
+        if (session.ownerId != satellite.ownerId) throw VoiceSessionNotFoundException()
         if (session.status != "active" || session.expiresAt <= clock.instant()) {
             throw VoiceSessionInactiveException()
         }
@@ -215,7 +217,7 @@ class VoiceSatelliteService(
     }
 
     fun authenticate(id: UUID, credential: String): VoiceSatellite =
-        repository.findSatellite(id)?.takeIf { it.credentialHash == tokens.hash(credential) }
+        repository.findSatellite(id)?.takeIf { it.credentialHash == tokens.hash(credential) }?.also { boundary?.voice(it.ownerId) }
             ?: throw VoiceSatelliteUnauthenticatedException()
 
     private fun register(

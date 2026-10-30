@@ -36,7 +36,7 @@ for (const type of ["HOME", "BUSINESS"] as const) {
     await expect(page.getByRole("status")).toContainText("Settings saved");
     if (type === "BUSINESS")
       await expect(
-        page.getByText("Disabled. Verified email", { exact: false }),
+        page.getByRole("link", { name: "Identity and recovery" }),
       ).toBeVisible();
   });
 }
@@ -85,4 +85,69 @@ test("invitation acceptance keeps the credential out of the URL and requires acc
     .fill("test-only-password");
   await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL("/");
+});
+
+test("email status changes only after submitting the verification code", async ({
+  page,
+}) => {
+  await setup(page, "BUSINESS");
+  await page.goto("/settings/identity");
+  await expect(
+    page.getByText("No email identity", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Email address", { exact: true })
+    .fill("member@company.ch");
+  await page
+    .getByRole("button", { name: "Send verification code", exact: true })
+    .click();
+  await expect(
+    page.getByText("Awaiting mailbox verification", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Mailbox verified", { exact: true })).toHaveCount(
+    0,
+  );
+  await page
+    .getByLabel("Email verification code", { exact: true })
+    .fill("V".repeat(43));
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  await expect(
+    page.getByText("Mailbox verified", { exact: true }),
+  ).toBeVisible();
+});
+
+test("Business policy explains DNS proof and rejects activation without recovery", async ({
+  page,
+}) => {
+  await setup(page, "BUSINESS");
+  await page.goto("/settings/identity");
+  await page.goto("/chat");
+  await expect(
+    page.getByRole("button", {
+      name: "Start Voice Mode with Velora",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await page.goto("/settings/identity");
+  await page.getByLabel("Domain", { exact: true }).first().fill("company.ch");
+  await page
+    .getByRole("button", {
+      name: "Create or rotate DNS challenge",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByLabel("DNS TXT record name")).toHaveValue(
+    "_kyrion-verification.company.ch",
+  );
+  await page.getByLabel("Enrollment policy").selectOption("STRICT");
+  await page.getByRole("button", { name: "Save policy", exact: true }).click();
+  await expect(page.locator(".auth-error[role=alert]")).toHaveText(
+    "Provision local OWNER recovery first.",
+  );
+  await expect(
+    page.getByText(
+      "Host recovery must be provisioned before strict policy activation",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });

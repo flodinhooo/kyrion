@@ -35,6 +35,8 @@ data class RegistrationRequest(
     @field:Pattern(regexp = "^[A-Za-z0-9._-]+$") val username: String,
     @field:Size(min = 12, max = 200) val password: String,
     @field:Pattern(regexp = "^[A-Za-z0-9_-]{43}$") val invitationCode: String,
+    @field:Size(max = 254) val email: String? = null,
+    @field:Size(min = 43, max = 43) val emailProof: String? = null,
 )
 data class ChangePasswordRequest(
     @field:Size(min = 12, max = 200) val currentPassword: String,
@@ -67,7 +69,7 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
 
     @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody body: RegistrationRequest) =
-        authentication.register(body.username, body.password, body.invitationCode).response()
+        authentication.register(body.username, body.password, body.invitationCode, body.email, body.emailProof).response()
 
     @GetMapping("/me")
     fun me(request: HttpServletRequest): UserResponse {

@@ -153,7 +153,7 @@ class VoiceDialogueService(
                 ActionProcessingOutcome,
                 VoiceResponseContext(session.ownerId, sessionId, voiceTurnId, locale),
             )
-            emitAudio(processing, turnId, emit) {
+            emitAudio(processing, turnId, emit, playbackScope = sessionId.toString()) {
                 satellites.activeSession(satelliteId, credential, sessionId)
             }
             pendingActions.put(
@@ -173,7 +173,7 @@ class VoiceDialogueService(
                     locale,
                 ),
             )
-            emitAudio(acknowledgement, turnId, emit)
+            emitAudio(acknowledgement, turnId, emit, playbackScope = sessionId.toString())
         }
         val outcome = if (gratitudeEnd) {
             SessionGratitudeOutcome
@@ -201,7 +201,7 @@ class VoiceDialogueService(
                 locale,
             ),
         )
-        emitAudio(responsePlan, turnId, emit) {
+        emitAudio(responsePlan, turnId, emit, playbackScope = sessionId.toString()) {
             satellites.activeSession(satelliteId, credential, sessionId)
         }
         val responseText = responsePlan.renderedText
@@ -220,8 +220,8 @@ class VoiceDialogueService(
         sessionId: UUID,
         turnId: UUID,
     ): VoiceActionCompletionResponse {
-        satellites.activeSession(satelliteId, credential, sessionId)
-        val pending = pendingActions.take(turnId.toString())
+        val session = satellites.activeSession(satelliteId, credential, sessionId)
+        val pending = pendingActions.take(turnId.toString(), session.ownerId, sessionId, satelliteId)
         if (pending.attempt.context.sessionId != sessionId || pending.attempt.context.actorId != satelliteId.toString()) {
             throw VoicePlaybackAcknowledgementInvalidException()
         }
@@ -264,11 +264,12 @@ class VoiceDialogueService(
         turnId: String,
         emit: (VoiceTurnEvent) -> Unit,
         awaitPlayback: Boolean = false,
+        playbackScope: String,
         validateBeforeEmit: () -> Unit = {},
     ) {
         val audio = resolveAudio(plan, turnId)
         validateBeforeEmit()
-        if (awaitPlayback) playbackAcknowledgements.expect(turnId)
+        if (awaitPlayback) playbackAcknowledgements.expect("$playbackScope:$turnId")
         emit(VoiceTurnEvent(
             type = "audio.chunk",
             audioBase64 = Base64.getEncoder().encodeToString(audio),
@@ -276,7 +277,7 @@ class VoiceDialogueService(
         ))
         voiceEvent(turnId, "satellite_first_chunk_sent")
         if (awaitPlayback) {
-            playbackAcknowledgements.await(turnId)
+            playbackAcknowledgements.await("$playbackScope:$turnId")
             voiceEvent(turnId, "satellite_playback_completed")
         }
     }
@@ -325,11 +326,14 @@ class PendingVoiceActions {
     private val pending = ConcurrentHashMap<String, PendingVoiceAction>()
 
     fun put(turnId: String, action: PendingVoiceAction) {
-        check(pending.putIfAbsent(turnId, action) == null)
+        val key = key(turnId, action.ownerId, action.attempt.context.sessionId, action.attempt.context.actorId)
+        check(pending.putIfAbsent(key, action) == null)
     }
 
-    fun take(turnId: String): PendingVoiceAction = pending.remove(turnId)
-        ?: throw VoicePlaybackAcknowledgementInvalidException()
+    fun take(turnId: String, owner: UUID, session: UUID, satellite: UUID): PendingVoiceAction =
+        pending.remove(key(turnId, owner, session, satellite.toString())) ?: throw VoicePlaybackAcknowledgementInvalidException()
+
+    private fun key(turn: String, owner: UUID, session: UUID?, satellite: String?) = "$owner:$session:$satellite:$turn"
 }
 
 @Service
@@ -464,7 +468,7 @@ class VoiceDialogueController(
         val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
             ?: throw VoiceSatelliteUnauthenticatedException()
         satellites.activeSession(satelliteId, credential, sessionId)
-        playbackAcknowledgements.acknowledge(turnId.toString())
+        playbackAcknowledgements.acknowledge("$sessionId:$turnId")
         return mapOf("status" to "acknowledged")
     }
 
