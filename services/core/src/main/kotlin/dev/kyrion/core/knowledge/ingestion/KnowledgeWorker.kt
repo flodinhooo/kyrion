@@ -31,6 +31,7 @@ class KnowledgeWorker(
     fun runOnce() {
         cleanup()
         val job = repository.claim() ?: return
+        if (!repository.markProcessing(job)) return
         try {
             val chunks = knowledgeChunks(extractor.extract(store.path(job.storageKey), job.mediaType))
             val vectors = mutableListOf<List<Float>>()

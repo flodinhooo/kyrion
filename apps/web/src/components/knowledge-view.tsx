@@ -46,9 +46,9 @@ export function KnowledgeView() {
     }
   }, [offset]);
   useEffect(() => {
-    void load();
+    const initial = setTimeout(() => void load(), 0);
     const timer = setInterval(() => void load(), 5000);
-    return () => clearInterval(timer);
+    return () => { clearTimeout(initial); clearInterval(timer); };
   }, [load]);
 
   async function mutate(path: string, method: string, body?: FormData) {

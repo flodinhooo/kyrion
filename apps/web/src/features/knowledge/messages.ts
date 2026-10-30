@@ -31,6 +31,7 @@ export const knowledgeMessages = {
       KNOWLEDGE_EMPTY: "The file is empty.", KNOWLEDGE_INVALID_TEXT: "The file must contain valid UTF-8 text.",
       KNOWLEDGE_UNSUPPORTED_TYPE: "Upload a PDF (.pdf) or UTF-8 text (.txt) file.",
       KNOWLEDGE_PARSER_UNAVAILABLE: "The local PDF parser is missing. Ask the installation operator to rebuild Core.",
+      KNOWLEDGE_PARSER_BUSY: "The local PDF parser is busy. Try again shortly.",
       KNOWLEDGE_QUOTA: "The personal space limit of 100 documents has been reached.",
       KNOWLEDGE_NOT_FOUND: "This document or space is unavailable.",
       KNOWLEDGE_FILE_UNAVAILABLE: "The original file is unavailable. Check the document volume.",
@@ -80,6 +81,7 @@ export const knowledgeMessages = {
       KNOWLEDGE_EMPTY: "Die Datei ist leer.", KNOWLEDGE_INVALID_TEXT: "Die Datei muss gültigen UTF-8-Text enthalten.",
       KNOWLEDGE_UNSUPPORTED_TYPE: "Lade eine PDF-Datei (.pdf) oder UTF-8-Textdatei (.txt) hoch.",
       KNOWLEDGE_PARSER_UNAVAILABLE: "Der lokale PDF-Parser fehlt. Die Installation muss Core neu erstellen.",
+      KNOWLEDGE_PARSER_BUSY: "Der lokale PDF-Parser ist beschäftigt. Versuche es gleich erneut.",
       KNOWLEDGE_QUOTA: "Die Grenze von 100 Dokumenten im persönlichen Bereich ist erreicht.",
       KNOWLEDGE_NOT_FOUND: "Dieses Dokument oder dieser Bereich ist nicht verfügbar.",
       KNOWLEDGE_FILE_UNAVAILABLE: "Die Originaldatei ist nicht verfügbar. Prüfe den Dokumentenspeicher.",
@@ -97,3 +99,5 @@ export function knowledgeError(locale: "en" | "de", code: string) {
   const errors = knowledgeMessages[locale].errors;
   return code in errors ? errors[code as keyof typeof errors] : errors.UNKNOWN;
 }
+
+export type KnowledgeErrorCode = keyof typeof knowledgeMessages.en.errors;

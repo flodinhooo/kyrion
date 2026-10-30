@@ -19,6 +19,7 @@ export type ChatRequest = {
 };
 
 export type ChatErrorCode =
+  | import("@/features/knowledge/messages").KnowledgeErrorCode
   | "MODEL_UNAVAILABLE"
   | "REQUEST_ABORTED"
   | "INVALID_REQUEST"

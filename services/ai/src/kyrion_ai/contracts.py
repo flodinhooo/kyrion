@@ -75,7 +75,9 @@ class ChatRequest(BaseModel):
     cloud_consent: bool = Field(default=False, alias="cloudConsent", strict=True)
     tools: list[ToolDefinition] = Field(default_factory=list, max_length=16)
     knowledge_context: list[KnowledgeContextItem] = Field(
-        default_factory=list, alias="knowledgeContext", max_length=3,
+        default_factory=list,
+        alias="knowledgeContext",
+        max_length=3,
     )
 
 

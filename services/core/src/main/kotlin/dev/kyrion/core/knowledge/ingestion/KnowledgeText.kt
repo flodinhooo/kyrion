@@ -12,9 +12,11 @@ import java.util.concurrent.TimeUnit
 
 @Component
 class KnowledgeText(@Value("\${kyrion.knowledge.parser-jar:build/libs/knowledge-parser.jar}") private val parserJar: String) {
+    private val permit = java.util.concurrent.Semaphore(1)
     fun extract(path: Path, mediaType: String): List<Pair<Int?, String>> {
         val pages = if (mediaType == "text/plain") {
             try {
+                if (Files.size(path) > 4_000_000) throw KnowledgeFailure("KNOWLEDGE_TEXT_LIMIT")
                 val decoded = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(Files.readAllBytes(path)))
                     .toString()
@@ -40,6 +42,10 @@ class KnowledgeText(@Value("\${kyrion.knowledge.parser-jar:build/libs/knowledge-
         if (!header.contentEquals("%PDF-".toByteArray())) throw KnowledgeFailure("KNOWLEDGE_INVALID_PDF")
         if (!Files.isRegularFile(Path.of(parserJar))) throw KnowledgeFailure("KNOWLEDGE_PARSER_UNAVAILABLE", 503)
         val output = Files.createTempFile("knowledge-parser-", ".bin")
+        if (!permit.tryAcquire()) {
+            Files.deleteIfExists(output)
+            throw KnowledgeFailure("KNOWLEDGE_PARSER_BUSY", 503)
+        }
         try {
             val executable = Path.of(
                 System.getProperty("java.home"),
@@ -75,6 +81,7 @@ class KnowledgeText(@Value("\${kyrion.knowledge.parser-jar:build/libs/knowledge-
                 }
             }
         } finally {
+            permit.release()
             Files.deleteIfExists(output)
         }
     }
@@ -86,11 +93,13 @@ fun knowledgeChunks(pages: List<Pair<Int?, String>>): List<KnowledgeChunk> {
     pages.forEach { (page, text) ->
         var start = 0
         while (start < text.length) {
-            val end = minOf(start + 2000, text.length)
+            var end = minOf(start + 2000, text.length)
+            if (end < text.length && text[end - 1].isHighSurrogate()) end--
             val content = text.substring(start, end)
             if (content.isNotBlank()) result.add(KnowledgeChunk(result.size, content, page, start, end))
             if (end == text.length) break
             start = end - 200
+            if (start > 0 && text[start].isLowSurrogate()) start++
         }
     }
     if (result.size > 600) throw KnowledgeFailure("KNOWLEDGE_TEXT_LIMIT")

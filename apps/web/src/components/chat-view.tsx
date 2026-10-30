@@ -24,7 +24,7 @@ import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
 import {orchestrationMessages} from "@/features/models/orchestration-messages";
 import {modelMessages} from "@/features/models/messages";
-import {knowledgeMessages} from "@/features/knowledge/messages";
+import {knowledgeMessages, knowledgeError} from "@/features/knowledge/messages";
 import {isKnowledgeSource, type KnowledgeSource} from "@/features/knowledge/contracts";
 
 const chatTransport = new ApiChatTransport();
@@ -333,7 +333,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
               </div>
             </article>
           ))}
-          {streamError && <p className="stream-error" role="alert">{streamError in mt.errors
+          {streamError && <p className="stream-error" role="alert">{streamError in kt.errors
+            ? knowledgeError(locale, streamError)
+            : streamError in mt.errors
             ? mt.errors[streamError as keyof typeof mt.errors]
             : t[errorMessageKeys[streamError as keyof typeof errorMessageKeys]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}

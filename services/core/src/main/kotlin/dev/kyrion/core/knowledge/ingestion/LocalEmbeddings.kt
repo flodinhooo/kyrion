@@ -59,6 +59,9 @@ class LocalEmbeddings(
                 ).build()
             val response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
             response.body().use { input ->
+                val deadline =
+                    deadlines.schedule({ runCatching { input.close() } }, 30, java.util.concurrent.TimeUnit.SECONDS)
+                try {
                 val bytes = input.readNBytes(1_000_001)
                 if (response.statusCode() != 200 || bytes.size > 1_000_000) throw KnowledgeFailure(
                     "KNOWLEDGE_EMBEDDING_UNAVAILABLE",
@@ -81,6 +84,9 @@ class LocalEmbeddings(
                         value.floatValue()
                     }.also { if (it.all { n -> n == 0f }) throw KnowledgeFailure("KNOWLEDGE_EMBEDDING_INVALID", 503) }
                 }
+                } finally {
+                    deadline.cancel(false)
+                }
             }
         } catch (failure: KnowledgeFailure) {
             throw failure
@@ -88,6 +94,12 @@ class LocalEmbeddings(
             throw KnowledgeFailure("KNOWLEDGE_EMBEDDING_UNAVAILABLE", 503)
         } finally {
             permit.release()
+        }
+    }
+
+    companion object {
+        private val deadlines = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task, "knowledge-embedding-deadline").apply { isDaemon = true }
         }
     }
 }
