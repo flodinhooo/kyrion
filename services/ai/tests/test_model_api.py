@@ -40,7 +40,8 @@ def test_simulated_api_routes_switch_to_configured_cloud_and_reject_memory(tmp_p
     return httpx.Response(
       200,
       text='data: {"type":"response.output_text.delta","delta":"OK"}\n\n'
-           'data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output_tokens":1,"total_tokens":5}}}\n\n',
+           'data: {"type":"response.completed","response":'
+           '{"usage":{"input_tokens":4,"output_tokens":1,"total_tokens":5}}}\n\n',
     )
 
   settings = Settings(
