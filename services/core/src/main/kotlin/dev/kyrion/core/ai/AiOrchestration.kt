@@ -50,7 +50,11 @@ class AiOrchestrationService(
         )
     }
 
-    fun prepare(actor: UUID, request: AiGenerationRequest): PreparedAiGeneration {
+    fun prepare(
+        actor: UUID,
+        request: AiGenerationRequest,
+        personalContextAllowed: Boolean = true
+    ): PreparedAiGeneration {
         rbac.require(actor, "conversations:create")
         if (request.locale !in setOf("de", "en")) throw AiFailure("INVALID_REQUEST")
         val conversation =
@@ -69,11 +73,11 @@ class AiOrchestrationService(
         val limit = decision.model.contextLength?.let { it - decision.model.maxOutputTokens - 512 } ?: 3072
         if (limit < 128) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
         val knowledgeBudget = if (request.knowledgeEnabled) minOf(1024, limit / 3) else 0
-        val sources = if (request.knowledgeEnabled)
+        val sources = if (request.knowledgeEnabled && personalContextAllowed)
             knowledgeContext.assemble(actor, bounded.messages.last().content, knowledgeBudget) else emptyList()
         val selected = context.generationContext(
             actor, bounded, request.turnId, !decision.model.local,
-            minOf(3072, limit - knowledgeBudget)
+            minOf(3072, limit - knowledgeBudget), personalContextAllowed
         )
         // UTF-8 bytes plus bounded protocol/system overhead: deliberately conservative,
         // not an exact tokenizer count. Provider counters replace this after success.
@@ -282,11 +286,13 @@ class AiOrchestrationService(
         turnId: UUID,
         locale: String,
         knowledgeEnabled: Boolean = false,
+        personalContextAllowed: Boolean = false,
         validateActive: () -> Unit = {}
     ): String {
         val prepared = prepare(
             actor,
-            AiGenerationRequest(conversationId, turnId, locale, task = "voice", knowledgeEnabled = knowledgeEnabled)
+            AiGenerationRequest(conversationId, turnId, locale, task = "voice", knowledgeEnabled = knowledgeEnabled),
+            personalContextAllowed
         )
         val result = StringBuilder()
         stream(prepared) { raw ->

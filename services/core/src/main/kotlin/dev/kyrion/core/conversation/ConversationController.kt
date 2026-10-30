@@ -125,8 +125,8 @@ class ConversationController(
 
     fun generationContext(
         actor: UUID, conversation: Conversation, turnId: UUID, cloud: Boolean,
-        budget: Int = 3072
-    ): ConversationContext = contextBuilder.build(actor, conversation.id, turnId, budget, cloud)
+        budget: Int = 3072, personalContextAllowed: Boolean = true
+    ): ConversationContext = contextBuilder.build(actor, conversation.id, turnId, budget, cloud, personalContextAllowed)
 
     private fun HttpServletRequest.ownerId(): UUID =
         getAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE) as? UUID ?: throw ConversationUnauthenticatedException()

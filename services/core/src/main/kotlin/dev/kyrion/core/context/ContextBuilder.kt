@@ -22,7 +22,7 @@ class ContextBuilder(
 
     fun build(
         actor: UUID?, conversationId: UUID, turnId: UUID, budget: Int = 3072,
-        cloud: Boolean = false
+        cloud: Boolean = false, personalContextAllowed: Boolean = true
     ): ConversationContext {
         if (actor == null) throw AiFailure("UNAUTHENTICATED", 401)
         rbac.require(actor, "conversations:read")
@@ -35,6 +35,14 @@ class ContextBuilder(
         if (estimateTokens(query) > budget) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
         val sources = mutableListOf<ContextSource>()
         if (cloud) return currentOnly(conversationId, turnId, query, budget)
+        if (!personalContextAllowed) {
+            val minimal = currentOnly(conversationId, turnId, query, budget)
+            return minimal.copy(sources = minimal.sources.map {
+                if (it.selected) it.copy(privacy = "local_only", reason = "unverified_voice_identity") else it.copy(
+                    reason = "unverified_voice_identity"
+                )
+            })
+        }
         val options = memories.settings(actor)
         val optionalBudget = (budget - estimateTokens(query)).coerceAtLeast(0).coerceAtMost(budget / 3)
         val selected = mutableListOf<PersonalMemory>()

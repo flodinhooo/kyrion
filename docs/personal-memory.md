@@ -65,3 +65,8 @@ budget and makes every selected item visible in the chat. Flyway V7 adds linked
 conflicts and an explicit replace/keep-both/forget decision. Superseded records
 remain inspectable but no longer influence responses. Automatic inference and
 retention expiry remain deliberately unimplemented.
+
+Milestone 03 adds [central personal context assembly](personal-context-engine.md),
+active/expiry controls, source inspection and explicit local retrieval settings.
+The retention-expiry limitation above describes the original first slice; expiry
+is now enforced during selection without deleting existing records.

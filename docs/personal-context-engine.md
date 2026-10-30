@@ -8,6 +8,14 @@ maintain another history, memory database or vector store. Both the existing
 turn API and the Core generation path use this builder; Velora already uses that
 same generation path. Wake word, STT, TTS and playback were not changed.
 
+Satellite credentials identify an enrolled device, not the speaker. Consequently
+satellite dialogue explicitly disables all personal context and uses only the
+current utterance. It does not inherit the owner's history, memory, calendar,
+preferences or document context. Authenticated browser Voice requests can use
+personal context for their logged-in account. A verified-speaker path may opt in
+server-side in future; the Voice service defaults to no personal context. There
+is no browser/body switch for overriding satellite identity verification.
+
 The builder reloads the conversation for the authenticated account and truncates
 it at the requested user turn. A workspace owner is never substituted for the
 personal account. Missing identity fails closed with `UNAUTHENTICATED`; a missing
@@ -116,3 +124,27 @@ No production deployment, live database migration, destructive user-data action
 or paid cloud request was performed. Physical Velora acceptance, exact model
 tokenizers, immutable per-generation source snapshots, deeper retrieval quality
 evaluation and integration with authoritative platform Spaces remain follow-up.
+
+## Delivery verification (2026-10-30)
+
+- Targeted Core regression run: 18 tests passed, including PostgreSQL-backed
+  memory/context/Voice checks, cloud policy, router and transport contracts;
+  `bootJar` passed using isolated output under `.run/kai03/core-build`.
+- AI: 166 tests passed, Ruff lint and compilation passed. This count includes
+  concurrent Knowledge tests; no paid/live cloud acceptance was used.
+- Web: 159 tests and TypeScript passed; production build passed. Lint restricted
+  to changed Memory/Context components, contracts and routes passed.
+- Full Core runs were attempted. One isolated run completed 239 tests with one
+  failure in the existing V30-upgrade preservation test: parallel V36 grants
+  additional Knowledge permissions to existing roles. A later full run had a
+  PostgreSQL testcontainer startup timeout and two new Knowledge integration
+  failures. These external changes were preserved rather than changing their
+  permission policy or weakening the regression assertion.
+- Full Web lint still reports a React `set-state-in-effect` error in the parallel
+  `knowledge-view.tsx`. The Memory/Context files have no lint errors.
+
+The entire concurrently changing repository is therefore not claimed fully
+validated. Resolve the parallel Knowledge migration/test/lint issues and rerun
+all suites on a coordinated revision before rollout. This work made no live
+migration or deployment. Source snapshots and physical satellite acceptance
+remain follow-up work.

@@ -16,3 +16,8 @@ opt-in. Memories remain opt-in, confirmed, active, unexpired and category-filter
 Source descriptors contain identifiers/reasons/token estimates, not source text.
 Unknown identities receive no personal context. Use bounded deterministic lexical
 retrieval and existing persistence, no embeddings or new database dependencies.
+
+Satellite enrollment proves device identity only. Until a trusted speaker identity
+exists, satellite generation uses the current utterance only. Personal context
+is available to authenticated browser requests; the internal Voice API defaults
+to denying personal context and requires explicit server-side verification.

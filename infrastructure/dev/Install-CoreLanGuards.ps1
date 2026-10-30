@@ -1,6 +1,17 @@
 [CmdletBinding()]
 param([switch]$Apply)
 $ErrorActionPreference = 'Stop'
+function ConvertTo-CoreFirewallAddress([string]$Address) {
+    if ($Address -notmatch '^([0-9.]+)/([0-9]+)$') { return $Address }
+    $network = $Matches[1]
+    $prefix = [int]$Matches[2]
+    if ($prefix -eq 32) { return $network }
+    $mask = for ($index = 0; $index -lt 4; $index++) {
+        $bits = [Math]::Min(8, [Math]::Max(0, $prefix - 8 * $index))
+        [int](256 - [Math]::Pow(2, 8 - $bits))
+    }
+    return $network + '/' + ($mask -join '.')
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $java = (Resolve-Path (Join-Path $root '.run/dev-recovery/toolchain/jdk-21.0.13.0.2+1/bin/java.exe')).Path
 $ranges = (Get-Content (Join-Path $PSScriptRoot 'core-lan-guard-addresses.json') -Raw | ConvertFrom-Json)
@@ -31,11 +42,13 @@ try {
         $application = $rule | Get-NetFirewallApplicationFilter
         $port = $rule | Get-NetFirewallPortFilter
         $address = $rule | Get-NetFirewallAddressFilter
+        @{name=$spec.Name; profile=$rule.Profile.ToString(); enabled=$rule.Enabled.ToString(); action=$rule.Action.ToString(); direction=$rule.Direction.ToString(); program=$application.Program; protocol=$port.Protocol; localPort=$port.LocalPort; remoteAddresses=$address.RemoteAddress; expectedAddresses=$spec.RemoteAddress} |
+            ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root ('.run/dev-recovery/sprint04/guard-scope-' + $spec.Name + '.json')) -Encoding UTF8
         $expectedProfile = if ($spec.Profile -eq 'Any') { 'Any' } else { 'Domain, Public' }
         if ($rule.Enabled.ToString() -ne 'True' -or $rule.Action.ToString() -ne 'Block' -or
             $rule.Direction.ToString() -ne 'Inbound' -or $rule.Profile.ToString() -ne $expectedProfile -or
             $application.Program -ine $java -or $port.Protocol -ne 'TCP' -or $port.LocalPort -ne '8080' -or
-            (Compare-Object @($address.RemoteAddress | ForEach-Object { $_ -replace '/32$', '' } | Sort-Object) @($spec.RemoteAddress | ForEach-Object { $_ -replace '/32$', '' } | Sort-Object))) {
+            (Compare-Object @($address.RemoteAddress | ForEach-Object { ConvertTo-CoreFirewallAddress $_ } | Sort-Object) @($spec.RemoteAddress | ForEach-Object { ConvertTo-CoreFirewallAddress $_ } | Sort-Object))) {
             throw 'EFFECTIVE_GUARD_SCOPE_MISMATCH'
         }
     }

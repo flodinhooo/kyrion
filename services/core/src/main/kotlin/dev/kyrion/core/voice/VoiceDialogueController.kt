@@ -252,7 +252,14 @@ class VoiceDialogueService(
     ): String {
         voiceEvent(turnId, "llm_request")
         return try {
-            modelOrchestration.voice(actor, conversationId, userMessageId, locale, validateActive = validateActive)
+            modelOrchestration.voice(
+                actor,
+                conversationId,
+                userMessageId,
+                locale,
+                personalContextAllowed = false,
+                validateActive = validateActive
+            )
                 .also { voiceEvent(turnId, "llm_complete") }
         } catch (_: dev.kyrion.core.ai.AiFailure) {
             throw VoiceSpeechUnavailableException()

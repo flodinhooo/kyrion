@@ -1588,9 +1588,36 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         memories.dataSettings(actor, true)
         val cloud = contextBuilder.build(actor, conversation, turn, 3072, true)
         assertThat(cloud.messages.joinToString()).doesNotContain("Owned calendar appointment", "confirmed preference")
-        assertThat(aiOrchestration.voice(actor, conversation, turn, "en")).isEqualTo("Synthetic answer")
+        assertThat(
+            aiOrchestration.voice(
+                actor,
+                conversation,
+                turn,
+                "en",
+                personalContextAllowed = true
+            )
+        ).isEqualTo("Synthetic answer")
         assertThat(aiGateway.payloads.single()).contains("Owned calendar appointment", "confirmed preference")
             .doesNotContain("OTHER ACCOUNT SECRET")
+        val anonymousConversation = UUID.randomUUID();
+        val anonymousTurn = UUID.randomUUID()
+        startHttpTurn(token, anonymousConversation, anonymousTurn, "Orchard telescope calendar", "2026-10-30T12:01:00Z")
+        aiGateway.payloads.clear()
+        assertThat(
+            aiOrchestration.voice(
+                actor,
+                anonymousConversation,
+                anonymousTurn,
+                "en",
+                personalContextAllowed = false
+            )
+        ).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).doesNotContain(
+            "Owned calendar appointment",
+            "confirmed preference",
+            "OTHER ACCOUNT SECRET"
+        )
+
     }
 
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {
