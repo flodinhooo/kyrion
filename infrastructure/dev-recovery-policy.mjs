@@ -6,8 +6,15 @@ export function authorisedKey(value, expected) {
 }
 
 export function validAction(value) {
-  return value !== null && typeof value === 'object'
-    && Object.keys(value).length === 1 && ['start', 'restart'].includes(value.action);
+  if (value === null || typeof value !== 'object' || Array.isArray(value)
+    || !['start', 'restart'].includes(value.action)) return false;
+  const fields = Object.keys(value);
+  return fields.length === 1 || (fields.length === 2 && fields.includes('service')
+    && value.action === 'restart' && ['core', 'ai', 'ollama'].includes(value.service));
+}
+
+export function selectedServices(services, target) {
+  return target === undefined ? services : services.filter((service) => service.id === target);
 }
 
 export function canRestartManagedProcess(action, executable, child) {

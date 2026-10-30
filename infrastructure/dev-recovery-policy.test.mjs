@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {authorisedKey, validAction, canRestartManagedProcess} from './dev-recovery-policy.mjs';
+import {authorisedKey, validAction, canRestartManagedProcess, selectedServices} from './dev-recovery-policy.mjs';
 
 test('operator authentication requires the complete exact ASCII key', () => {
   const key = 'a'.repeat(64);
@@ -8,6 +8,19 @@ test('operator authentication requires the complete exact ASCII key', () => {
   for (const input of [undefined, '', 'a', 'b'.repeat(64), 'é'.repeat(64)]) {
     assert.equal(authorisedKey(input, key), false);
   }
+});
+
+test('scoped restart accepts only existing Windows services and excludes WSL/DB/Pi/commands', () => {
+  for (const service of ['core', 'ai', 'ollama']) assert.equal(validAction({action: 'restart', service}), true);
+  for (const service of ['postgres', 'tts', 'stt', 'web', 'voice-satellite', '../core', 'core;whoami']) {
+    assert.equal(validAction({action: 'restart', service}), false);
+  }
+  assert.equal(validAction({action: 'start', service: 'core'}), false);
+  assert.equal(validAction({action: 'restart', service: 'core', command: 'whoami'}), false);
+  const services = [{id: 'core'}, {id: 'ai'}, {id: 'tts'}];
+  assert.deepEqual(selectedServices(services, 'core'), [{id: 'core'}]);
+  assert.deepEqual(selectedServices(services, 'invalid'), []);
+  assert.equal(selectedServices(services), services);
 });
 test('only fixed start and restart actions are accepted', () => {
   assert.equal(validAction({action: 'start'}), true);

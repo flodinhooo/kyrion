@@ -2,7 +2,7 @@
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
-import {serviceReady} from './dev-readiness.mjs';
+import {serviceReady, waitUntilReady} from './dev-readiness.mjs';
 
 export const demoPages = ['/', '/home', '/devices', '/calendar', '/plugins', '/lounge',
   '/chat', '/settings/services', '/users', '/roles'];
@@ -19,6 +19,16 @@ export function apiSummary(route, http, body) {
   if (result.connected === false || result.configured === false || result.reauthorizationRequired
     || ['degraded', 'offline', 'unknown'].includes(result.state)) result.passed = false;
   return result;
+}
+
+export async function waitForHaRefresh(before, readStatus, options = {}) {
+  const baseline = Date.parse(before.lastSuccessAt);
+  if (!Number.isFinite(baseline)) return false;
+  // Manual sync resets the 30s throttle; one scheduled tick can be skipped.
+  return waitUntilReady(async () => {
+    const after = await readStatus();
+    return after.status === 'healthy' && Date.parse(after.lastSuccessAt) > baseline;
+  }, {timeoutMs: 75000, intervalMs: 5000, ...options});
 }
 
 export async function publicSmoke(fetcher = fetch) {
@@ -121,13 +131,10 @@ async function browserSmoke() {
           http: response.status(), imported: Number.isInteger(body.imported) ? body.imported : null
         });
         const before = await (await context.request.get('/api/integrations/home-assistant')).json();
-        console.log('HA_AUTOMATIC_REFRESH: waiting one existing scheduler interval (35 seconds).');
-        await new Promise((resolve) => setTimeout(resolve, 35000));
-        const after = await (await context.request.get('/api/integrations/home-assistant')).json();
+        console.log('HA_AUTOMATIC_REFRESH: observing scheduler ticks without on-demand device reads.');
         rows.push({
-          check: 'ha-automatic-refresh', passed: after.status === 'healthy'
-            && Number.isFinite(Date.parse(before.lastSuccessAt))
-            && Date.parse(after.lastSuccessAt) > Date.parse(before.lastSuccessAt)
+          check: 'ha-automatic-refresh', passed: await waitForHaRefresh(before,
+            async () => (await context.request.get('/api/integrations/home-assistant', {timeout: 10000})).json())
         });
       }
     }

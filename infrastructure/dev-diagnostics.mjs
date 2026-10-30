@@ -91,7 +91,8 @@ export async function collectDiagnostics() {
     kernel: null, windows: null, unavailable: []
   };
   const jobs = await Promise.allSettled([
-    capture('docker.exe', ['inspect', 'kyrion-postgres']),
+    capture('docker.exe', ['inspect', '--format',
+      '[{"Name":{{json .Name}},"State":{{json .State}},"RestartCount":{{json .RestartCount}}}]', 'kyrion-postgres']),
     capture('wsl.exe', ['-d', 'Kyrion-Voice-Training', '--', '/usr/bin/python3', '-c', wslProbe]),
     capture('wsl.exe', ['-d', 'Kyrion-Voice-Training', '--', 'dmesg']),
     capture('powershell.exe', ['-NoProfile', '-Command',

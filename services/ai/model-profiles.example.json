@@ -1,0 +1,60 @@
+{
+  "defaultProfileId": "gemma3:4b",
+  "voiceProfileId": "gemma3:4b",
+  "profiles": [
+    {
+      "id": "openai:chat",
+      "provider": "openai",
+      "modelId": "REPLACE_WITH_OFFICIAL_OPENAI_MODEL_ID",
+      "label": "OpenAI GPT",
+      "enabled": false,
+      "capabilities": [
+        "chat",
+        "streaming"
+      ],
+      "contextLength": null,
+      "maxOutputTokens": 1024,
+      "timeouts": {
+        "connectSeconds": 5,
+        "readSeconds": 60,
+        "totalSeconds": 180
+      }
+    },
+    {
+      "id": "anthropic:chat",
+      "provider": "anthropic",
+      "modelId": "REPLACE_WITH_OFFICIAL_CLAUDE_MODEL_ID",
+      "label": "Anthropic Claude",
+      "enabled": false,
+      "capabilities": [
+        "chat",
+        "streaming"
+      ],
+      "contextLength": null,
+      "maxOutputTokens": 1024,
+      "timeouts": {
+        "connectSeconds": 5,
+        "readSeconds": 60,
+        "totalSeconds": 180
+      }
+    },
+    {
+      "id": "gemini:chat",
+      "provider": "gemini",
+      "modelId": "models/REPLACE_WITH_OFFICIAL_GEMINI_MODEL_ID",
+      "label": "Google Gemini",
+      "enabled": false,
+      "capabilities": [
+        "chat",
+        "streaming"
+      ],
+      "contextLength": null,
+      "maxOutputTokens": 1024,
+      "timeouts": {
+        "connectSeconds": 5,
+        "readSeconds": 60,
+        "totalSeconds": 180
+      }
+    }
+  ]
+}

@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {apiSummary, publicSmoke} from './demo-smoke.mjs';
+import {apiSummary, publicSmoke, waitForHaRefresh} from './demo-smoke.mjs';
+
+test('HA manual-sync throttle can skip a scheduler tick without implying a broken scheduler', async () => {
+  let time = 0;
+  const before = {lastSuccessAt: '2026-10-30T18:00:00Z'};
+  assert.equal(await waitForHaRefresh(before, async () => ({
+    status: 'healthy',
+    lastSuccessAt: time < 59000 ? before.lastSuccessAt : '2026-10-30T18:01:00Z'
+  }), {
+    now: () => time, sleep: async (ms) => {
+      time += ms;
+    },
+  }), true);
+  assert.equal(time, 60000);
+  assert.equal(await waitForHaRefresh({lastSuccessAt: null}, async () => ({})), false);
+});
 
 test('stored integration connection with revoked OAuth is a demo blocker even with HTTP 200', () => {
   const result = apiSummary('/google', 200, {

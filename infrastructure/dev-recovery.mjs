@@ -8,7 +8,7 @@ import {createConnection} from 'node:net';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {homedir} from 'node:os';
-import {authorisedKey, validAction, canRestartManagedProcess} from './dev-recovery-policy.mjs';
+import {authorisedKey, validAction, canRestartManagedProcess, selectedServices} from './dev-recovery-policy.mjs';
 import {serviceReady, startDatabase, waitUntilReady} from './dev-readiness.mjs';
 
 if (process.platform !== 'win32') throw new Error('Windows development helper only');
@@ -110,25 +110,29 @@ async function audit(event) {
   }) + '\n');
 }
 
-async function run(action, correlationId) {
+async function run(action, correlationId, target) {
   try {
-    await audit({event: 'requested', action, correlationId});
+    await audit({event: 'requested', action, correlationId, ...(target ? {service: target} : {})});
     // Database start is idempotent; never restart a database automatically.
     let databaseReady = false;
-    try {
+    if (!target || target === 'core') try {
       databaseReady = await startDatabase(command);
       if (!databaseReady) throw new Error('DATABASE_NOT_READY');
       job.results.push({id: 'postgresql', result: 'started'});
     } catch {
       job.results.push({id: 'postgresql', result: 'failed'});
     }
-    for (const service of services) {
+    for (const service of selectedServices(services, target)) {
       try {
         if (service.id === 'core' && !databaseReady) {
           job.results.push({id: service.id, result: 'failed'});
           continue;
         }
         const child = managed.get(service.id);
+        if (target && await listening(service.port) && !canRestartManagedProcess(action, service.file, child)) {
+          job.results.push({id: service.id, result: 'failed', code: 'EXTERNAL_PROCESS_PRESERVED'});
+          continue;
+        }
         if (canRestartManagedProcess(action, service.file, child)) {
           await audit({
             event: 'service_stop_requested', correlationId, service: service.id,
@@ -172,6 +176,8 @@ async function run(action, correlationId) {
         let failed = false;
         launched.once('error', () => {
           failed = true;
+          // Failed spawns have a null exitCode too. Never reuse them as loading processes.
+          if (managed.get(service.id) === launched) managed.delete(service.id);
         });
         const ready = await waitUntilReady(() => serviceReady(service), {
           timeoutMs: service.id === 'tts' ? 900_000 : 180_000,
@@ -182,7 +188,7 @@ async function run(action, correlationId) {
         job.results.push({id: service.id, result: 'failed'});
       }
     }
-    if (piHost) {
+    if (piHost && !target) {
       for (const [id, unit] of [['spotify-receiver', 'kyrion-spotify-receiver.service'], ['voice-satellite', 'kyrion-voice-satellite.service'], ['media-player', 'kyrion-media-player.service']]) {
         try {
           await command('ssh.exe', ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HostKeyAlias=kyrion-node.local', '-i', path.join(homedir(), '.ssh/kyrion_node_ed25519'), `flodinho@${piHost}`, `systemctl --user ${action} ${unit} && systemctl --user is-active --quiet ${unit}`], 20_000);
@@ -206,7 +212,7 @@ const server = createServer(async (request, response) => {
   };
   if (!authorisedKey(request.headers.authorization?.replace(/^Bearer /, ''), key)) return reply(401, {code: 'UNAUTHORISED'});
   if (request.url !== '/') return reply(404, {code: 'NOT_FOUND'});
-  if (request.method === 'GET') return reply(200, {...job, helperVersion: '2026-10-30-readiness-v4'});
+  if (request.method === 'GET') return reply(200, {...job, helperVersion: '2026-10-30-scoped-v5'});
   if (request.method !== 'POST') return reply(405, {code: 'METHOD_NOT_ALLOWED'});
   if (job.state === 'running' || Date.now() - lastAttempt < 5000) return reply(409, {code: 'RECOVERY_BUSY'});
   let raw = '';
@@ -219,11 +225,13 @@ const server = createServer(async (request, response) => {
     if (!validAction(value)) return reply(400, {code: 'INVALID_REQUEST'});
     lastAttempt = Date.now();
     job = {state: 'running', correlationId: randomUUID(), results: []};
-    void run(value.action, job.correlationId);
+    void run(value.action, job.correlationId, value.service);
     reply(202, job);
   } catch {
     reply(400, {code: 'INVALID_REQUEST'});
   }
 });
 server.requestTimeout = 5000;
-server.listen(17654, '127.0.0.1', () => console.log(`Local recovery ready. Operator key: ${keyPath}`));
+const helperPort = Number(process.env.KYRION_RECOVERY_PORT ?? 17654);
+if (!Number.isInteger(helperPort) || helperPort < 1024 || helperPort > 65535) throw new Error('INVALID_HELPER_PORT');
+server.listen(helperPort, '127.0.0.1', () => console.log(`Local recovery ready on ${helperPort}. Operator key: ${keyPath}`));
