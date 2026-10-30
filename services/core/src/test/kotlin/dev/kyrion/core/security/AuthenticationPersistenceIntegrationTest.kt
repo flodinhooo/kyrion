@@ -43,6 +43,7 @@ import dev.kyrion.core.integration.NanoleafGateway
 import dev.kyrion.core.integration.NanoleafDeviceState
 import dev.kyrion.core.integration.NanoleafIntegrationService
 
+@org.springframework.context.annotation.Import(dev.kyrion.core.ai.AiTestGatewayConfiguration::class)
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -62,6 +63,10 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val rbac: RbacService,
     private val google: dev.kyrion.core.integration.GoogleIntegrationService,
     private val scheduler: org.springframework.scheduling.TaskScheduler,
+    private val aiGateway: dev.kyrion.core.ai.AiTestGateway,
+    private val aiSettings: dev.kyrion.core.ai.AiSettingsService,
+    private val aiUsage: dev.kyrion.core.ai.AiUsageService,
+    private val aiOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
 ) {
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
@@ -71,6 +76,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
     @BeforeEach
     fun cleanDatabase() {
+        aiGateway.reset()
         jdbc.sql(
             "TRUNCATE TABLE gateway_node, gateway_enrollment, personal_memory, owner_memory_settings, conversation_turn, conversation_context_summary, conversation_message, conversation, auth_session, user_account, activity_event, activity_integrity_chain CASCADE",
         ).update()
@@ -1232,6 +1238,186 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(jdbc.sql("SELECT COUNT(*) FROM auth_session").query(Int::class.java).single()).isZero()
         assertThat(jdbc.sql("SELECT COUNT(*) FROM rbac_role").query(Int::class.java).single()).isZero()
         assertThat(authentication.setup("retry", OLD_PASSWORD, setupSecret).user.username).isEqualTo("retry")
+    }
+
+    @Test
+    fun `AI preferences remain personal and policy administration requires existing RBAC`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("AiFriend", OTHER_PASSWORD, invite.code)
+        mockMvc.perform(
+            put("/v1/ai/preferences").header("Authorization", "Bearer ${friend.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"chatProfileId":"test-local","monthlyTokenLimit":1000}""")
+        )
+            .andExpect(status().isOk).andExpect(jsonPath("$.localOnly").value(true))
+        mockMvc.perform(get("/v1/ai/preferences").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.preferences.chatProfileId").isEmpty)
+        mockMvc.perform(
+            put("/v1/ai/policy").header("Authorization", "Bearer ${friend.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"allowCloud":true}""")
+        )
+            .andExpect(status().isForbidden)
+        mockMvc.perform(
+            put("/v1/ai/policy").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"monthlyTokenLimit":500,"allowUserSelection":false}""")
+        )
+            .andExpect(status().isOk)
+        assertThat(aiSettings.effectivePolicy(actor).monthlyTokenLimit).isEqualTo(500)
+        mockMvc.perform(get("/v1/ai/usage")).andExpect(status().isUnauthorized)
+        mockMvc.perform(
+            put("/v1/ai/preferences").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"localOnly":"false"}""")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `AI token reservations serialize concurrent requests and unknown prices fail closed`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy(monthlyTokenLimit = 200))
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val jobs = (1..2).map {
+                pool.submit<String> {
+                    ready.await()
+                    try {
+                        aiUsage.reserve(
+                            actor,
+                            UUID.randomUUID(),
+                            0,
+                            aiGateway.model,
+                            dev.kyrion.core.ai.AiRouteRequest(),
+                            aiGateway.catalog(),
+                            100
+                        ); "reserved"
+                    } catch (error: dev.kyrion.core.ai.AiFailure) {
+                        error.code
+                    }
+                }
+            }
+            ready.countDown()
+            assertThat(jobs.map {
+                it.get(
+                    20,
+                    java.util.concurrent.TimeUnit.SECONDS
+                )
+            }).containsExactlyInAnyOrder("reserved", "TOKEN_BUDGET_EXCEEDED")
+            assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+        } finally {
+            pool.shutdownNow()
+        }
+        aiSettings.savePolicy(
+            actor,
+            dev.kyrion.core.ai.AiPolicy(monthlyCostLimit = java.math.BigDecimal.ONE, currency = "CHF")
+        )
+        assertThatThrownBy {
+            aiUsage.reserve(
+                actor,
+                UUID.randomUUID(),
+                0,
+                aiGateway.model,
+                dev.kyrion.core.ai.AiRouteRequest(),
+                aiGateway.catalog(),
+                10
+            )
+        }
+            .isInstanceOf(dev.kyrion.core.ai.AiFailure::class.java).hasMessage("COST_ESTIMATE_UNAVAILABLE")
+    }
+
+    @Test
+    fun `AI generation observes usage server side prevents replay and uses actual local voice preference`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val conversation = UUID.randomUUID();
+        val message = UUID.randomUUID()
+        startHttpTurn(token, conversation, message, "Synthetic question", "2026-10-30T12:00:00Z")
+        val alternate = aiGateway.model.copy(id = "voice-local")
+        aiGateway.catalogValue = dev.kyrion.core.ai.AiCatalog(aiGateway.model.id, listOf(aiGateway.model, alternate))
+        aiSettings.savePreferences(actor, dev.kyrion.core.ai.AiPreferences(voiceProfileId = alternate.id))
+        val output = aiOrchestration.voice(actor, conversation, message, "en")
+        assertThat(output).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).contains("voice-local").doesNotContain("gemma3:1b")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
+        assertThatThrownBy {
+            aiOrchestration.voice(
+                actor,
+                conversation,
+                message,
+                "en"
+            )
+        }.hasMessage("REQUEST_ALREADY_STARTED")
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `AI fallback is audited and charged separately but partial output is never repeated`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val alternate = aiGateway.model.copy(id = "fallback-local")
+        aiGateway.catalogValue = dev.kyrion.core.ai.AiCatalog(aiGateway.model.id, listOf(aiGateway.model, alternate))
+        aiSettings.savePolicy(
+            actor,
+            dev.kyrion.core.ai.AiPolicy(allowFallback = true, fallbackProfiles = listOf(alternate.id))
+        )
+        aiSettings.savePreferences(actor, dev.kyrion.core.ai.AiPreferences(allowFallback = true))
+        fun prepared(): dev.kyrion.core.ai.PreparedAiGeneration {
+            val conversation = UUID.randomUUID();
+            val message = UUID.randomUUID()
+            startHttpTurn(token, conversation, message, "Synthetic request", "2026-10-30T12:00:00Z")
+            return aiOrchestration.prepare(actor, dev.kyrion.core.ai.AiGenerationRequest(conversation, message))
+        }
+        aiGateway.behavior = { attempt, receive ->
+            if (attempt == 1) receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+            else {
+                receive("""{"type":"message.started","messageId":"m"}"""); receive("""{"type":"message.delta","messageId":"m","delta":"OK"}"""); receive(
+                    """{"type":"message.completed","messageId":"m"}"""
+                )
+            }
+        }
+        val output = mutableListOf<String>(); aiOrchestration.stream(prepared(), output::add)
+        assertThat(aiGateway.payloads.size).isEqualTo(2)
+        assertThat(output.joinToString()).contains("routing.fallback")
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM ai_usage_attempt WHERE actor_id=:id").param("id", actor)
+                .query(Int::class.java).single()
+        ).isEqualTo(2)
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, receive ->
+            receive("""{"type":"message.delta","messageId":"m","delta":"Partial"}""")
+            receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+        }
+        aiOrchestration.stream(prepared()) {}
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        assertThat(
+            jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.route.fallback'").query(Int::class.java)
+                .single()
+        ).isEqualTo(1)
+        for (code in listOf("REQUEST_TIMEOUT", "STREAM_FAILED", "TOOL_CALL_INVALID")) {
+            aiGateway.payloads.clear()
+            aiGateway.behavior = { _, receive -> receive("""{"type":"error","code":"$code"}""") }
+            val events = mutableListOf<String>()
+            aiOrchestration.stream(prepared(), events::add)
+            assertThat(aiGateway.payloads.size).isEqualTo(1)
+            assertThat(events.joinToString()).contains(code).doesNotContain("routing.fallback")
+        }
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, _ -> throw java.io.IOException("synthetic cancellation") }
+        assertThatThrownBy { aiOrchestration.stream(prepared()) {} }.isInstanceOf(java.io.IOException::class.java)
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        aiGateway.payloads.clear()
+        aiGateway.behavior = { _, receive ->
+            aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy())
+            receive("""{"type":"error","code":"MODEL_UNAVAILABLE"}""")
+        }
+        val revoked = mutableListOf<String>()
+        aiOrchestration.stream(prepared(), revoked::add)
+        assertThat(aiGateway.payloads.size).isEqualTo(1)
+        assertThat(revoked.joinToString()).contains("ROUTE_CHANGED").doesNotContain("routing.fallback")
     }
 
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {

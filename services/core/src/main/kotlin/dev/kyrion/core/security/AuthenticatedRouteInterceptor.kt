@@ -45,6 +45,16 @@ class AuthenticatedRouteInterceptor(
 }
 
 internal fun permissionFor(path: String, method: String): String? = when {
+    path == "/v1/ai/policy" -> when (method) {
+        "GET" -> "system_settings:read"; "PUT" -> "system_settings:update"; else -> null
+    }
+
+    path == "/v1/ai/preferences" -> when (method) {
+        "GET" -> "conversations:read"; "PUT" -> "conversations:update"; else -> null
+    }
+
+    path == "/v1/ai/usage" && method == "GET" -> "conversations:read"
+    path in setOf("/v1/ai/route", "/v1/ai/chat/stream") && method == "POST" -> "conversations:create"
     path.startsWith("/v1/rbac/permissions") -> "permissions:read"
     path.startsWith("/v1/rbac/roles") -> when (method) { "GET" -> "roles:read"; "POST" -> "roles:create"; "PUT", "PATCH" -> "roles:update"; "DELETE" -> "roles:delete"; else -> null }
     path.startsWith("/v1/rbac/users") -> when (method) { "GET" -> "users:read"; "PUT", "PATCH" -> "users:update"; else -> null }
@@ -82,6 +92,7 @@ class AuthenticatedRouteConfiguration(
             "/v1/retention/**",
             "/v1/backups/**",
             "/v1/rbac/**",
+            "/v1/ai/**",
         )
     }
 }
