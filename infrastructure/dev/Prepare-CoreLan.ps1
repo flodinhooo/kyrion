@@ -25,7 +25,8 @@ $rule = Get-NetFirewallRule -DisplayName 'Kyrion Core from kyrion-node'
 $ports = $rule | Get-NetFirewallPortFilter
 $addresses = $rule | Get-NetFirewallAddressFilter
 $profiles = @(Get-NetFirewallProfile -PolicyStore ActiveStore |
-    Select-Object Name,Enabled,DefaultInboundAction)
+    Select-Object Name,@{Name='Enabled';Expression={$_.Enabled.ToString()}},@{Name='DefaultInboundAction';Expression={$_.DefaultInboundAction.ToString()}})
+$javaCandidate = Join-Path $root '.run/dev-recovery/toolchain/jdk-21.0.13.0.2+1/bin/java.exe'
 $plan = [ordered]@{
     preparedAt = (Get-Date).ToString('o')
     activated = $false
@@ -42,6 +43,13 @@ $plan = [ordered]@{
     }
     firewallProfiles = $profiles
     candidateBind = '0.0.0.0'
+    candidateJava = $javaCandidate
+    candidateJavaPresent = (Test-Path -LiteralPath $javaCandidate)
+    currentJavaRuleWarning = 'The existing JDK22 Allow rule permits any source/port in Private; do not reuse that executable for LAN activation'
+    proposedFirewallGuards = @(
+        @{action='Block'; program=$javaCandidate; protocol='TCP'; localPort=8080; profile='Any'; remoteAddresses=@('0.0.0.0-126.255.255.255','128.0.0.0-192.168.1.114','192.168.1.117-255.255.255.255','::/0')},
+        @{action='Block'; program=$javaCandidate; protocol='TCP'; localPort=8080; profile='Public,Domain'; remoteAddresses=@('Any')}
+    )
     reason = 'Retains existing 127.0.0.1 clients and adds IPv4 LAN; single Spring listener cannot bind two individual addresses'
     activationBlocked = @(
         'Explicit operator approval required',

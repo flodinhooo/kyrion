@@ -4,6 +4,11 @@ param(
     [switch]$Apply
 )
 $ErrorActionPreference = 'Stop'
+if ($Apply) {
+    # The old check validated one narrow Allow rule, not overlapping Java rules.
+    # Sprint 04 requires a fresh review before any active network change.
+    throw 'CORE_LAN_APPLY_BLOCKED_USE_SPRINT04_REVIEW'
+}
 $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $process = Get-CimInstance Win32_Process -Filter "ProcessId=$CoreProcessId"
 if (!$process -or $process.Name -ne 'java.exe') { throw 'CORE_PROCESS_IDENTITY_MISMATCH' }

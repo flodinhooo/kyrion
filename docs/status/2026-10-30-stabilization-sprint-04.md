@@ -70,6 +70,28 @@ then test with an available unauthorized peer. Do not claim that peer test ran.
 
 ## Rollback and acceptance after approval
 
+### Concrete firewall guards proposed for approval
+
+Generic application rules cannot be dismissed by display name or an empty
+`Package` field alone. For a boundary independent of overlapping Allow rules,
+propose two new Block guards scoped **only** to the dedicated Java 21 executable
+and TCP local port 8080. Existing firewall rules remain untouched:
+
+- Guard A, all profiles: remote IPv4 ranges `0.0.0.0-126.255.255.255`,
+  `128.0.0.0-192.168.1.114`, `192.168.1.117-255.255.255.255`, plus IPv6 `::/0`.
+  This leaves IPv4 loopback and the two approved Pi addresses outside that block.
+- Guard B, Public/Domain profiles: all remote addresses. Private Pi traffic
+  remains permitted by the existing Kyrion rule. Block precedence prevents
+  broader Allow rules from overriding these guards.
+
+Neither guard has been created. Explicit approval must include both guards,
+the listener change and the Core interruption. Verify guard scope before
+starting a broader listener. On rollback restore and verify the original
+loopback Core first, then remove only these two guards by recorded unique names.
+Do not remove or rewrite existing firewall rules. This is the hardened proposal
+if generic Allow rule isolation cannot be proven; do not activate the earlier
+no-firewall-change candidate merely on the strength of its narrow Allow rule.
+
 Before applying, revalidate PID/JAR identity, installed migration checksums,
 active sync leases and configuration hash. Keep original process command,
 runtime path and backup locally. Stop only the newly started Core if a critical
@@ -93,7 +115,8 @@ playback was invoked during this preparation.
 
 ## Verification in this sprint
 
-- 30 infrastructure/demo Node tests passed.
+- 32 infrastructure/demo Node tests passed, including two new fail-closed LAN
+  preparation/activation regressions.
 - Preparation script executed successfully; backup hash matches, `.env`
   unchanged, `activated=false` in saved plan.
 - PowerShell parser check passed; old Apply guard rejected execution before
