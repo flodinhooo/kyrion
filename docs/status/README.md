@@ -1,5 +1,9 @@
 # Kyrion Development Status
 
+Latest runtime follow-up: [2026-10-30 stabilization verification](2026-10-30-runtime-verification.md).
+All seven local services were ready at the final probe; Windows reboot and the
+underlying WSL/Docker interruption remain unverified/unresolved respectively.
+
 Current source integration and verification:
 [2026-10-30 stabilization](2026-10-30-stabilization.md), with a separate
 [AI architecture analysis](2026-10-30-ai-architecture-review.md). Recovery code is

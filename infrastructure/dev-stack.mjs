@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {promisify} from 'node:util';
 import {serviceReady, waitUntilReady} from './dev-readiness.mjs';
+import {commandSucceeded} from './dev-command.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const state = path.join(root, '.run/dev-recovery');
@@ -32,18 +33,8 @@ async function status() {
   rows.unshift({service: 'web', port: 3000, ready: await webReady()});
   let databaseReady = false;
   try {
-    databaseReady = await new Promise((resolve) => {
-      const child = spawn('docker.exe', ['exec', 'kyrion-postgres', 'sh', '-c',
-        'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -Atqc "SELECT 1"'],
-      {cwd: root, windowsHide: true, stdio: 'ignore'});
-      const timer = setTimeout(() => {
-        child.kill(); // Only the timed-out CLI client; never the database container.
-        child.unref();
-        resolve(false);
-      }, 5000);
-      child.once('error', () => { clearTimeout(timer); resolve(false); });
-      child.once('exit', (code) => { clearTimeout(timer); resolve(code === 0); });
-    });
+    databaseReady = await commandSucceeded('docker.exe', ['exec', 'kyrion-postgres', 'sh', '-c',
+      'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -Atqc "SELECT 1"'], {cwd: root});
   } catch { /* report database failure alongside all other services */ }
   rows.unshift({service: 'postgresql', port: 5432, ready: databaseReady});
   console.table(rows);
