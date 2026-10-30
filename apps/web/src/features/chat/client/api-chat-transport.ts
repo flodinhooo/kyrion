@@ -7,6 +7,10 @@ export function parseEvent(line: string): ChatEvent {
   if (line.length > 1_000_000) throw new Error("Invalid stream event");
   const value: unknown = JSON.parse(line);
   if (!value || typeof value !== "object" || !("type" in value)) throw new Error("Invalid stream event");
+  if (value.type === "routing.fallback" && "profileId" in value && typeof value.profileId === "string"
+    && "attempt" in value && typeof value.attempt === "number" && Number.isInteger(value.attempt) && value.attempt > 0) {
+    return {type: "routing.fallback", profileId: value.profileId, attempt: value.attempt};
+  }
   const hasMessageId = "messageId" in value && typeof value.messageId === "string" && value.messageId.length > 0;
   if (value.type === "message.started" && hasMessageId) return {type: value.type, messageId: String(value.messageId)};
   if (value.type === "message.completed" && hasMessageId) return {type: value.type, messageId: String(value.messageId)};

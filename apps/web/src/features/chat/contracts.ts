@@ -11,6 +11,7 @@ export type ChatRequest = {
   conversationId: string;
   title: string;
   modelId?: string;
+  task?: "chat" | "analysis" | "code" | "voice";
   cloudConsent?: boolean;
   message: Pick<ChatMessage, "id" | "content" | "createdAt">;
   locale: "de" | "en";
@@ -27,9 +28,13 @@ export type ChatErrorCode =
   | "CLOUD_NOT_ALLOWED" | "PROVIDER_NOT_CONFIGURED" | "MODEL_DISABLED"
   | "CAPABILITY_UNSUPPORTED" | "PROVIDER_AUTH_FAILED" | "RATE_LIMITED" | "REQUEST_TIMEOUT"
   | "CONTEXT_NOT_ALLOWED" | "CONTEXT_LIMIT_EXCEEDED" | "TOOL_CALL_INVALID" | "PROVIDER_REFUSED"
-  | "OUTPUT_LIMIT_REACHED";
+  | "OUTPUT_LIMIT_REACHED"
+  | "PROVIDER_BLOCKED" | "MODEL_BLOCKED" | "MODEL_INVALID" | "CLOUD_CONSENT_REQUIRED" | "NO_ELIGIBLE_MODEL"
+  | "ROUTE_CHANGED" | "REQUEST_ALREADY_STARTED" | "REQUEST_BUDGET_EXCEEDED" | "TOKEN_BUDGET_EXCEEDED"
+  | "COST_BUDGET_EXCEEDED" | "COST_ESTIMATE_UNAVAILABLE";
 
 export type ChatEvent =
+  | { type: "routing.fallback"; profileId: string; attempt: number }
   | { type: "model.selected"; provider: string; modelId: string; profileId: string }
   | { type: "usage"; usage: { inputTokens?: number | null; outputTokens?: number | null; totalTokens?: number | null } }
   | { type: "context.compacted"; estimatedTokens: number; tokenBudget: number }

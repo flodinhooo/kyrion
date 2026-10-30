@@ -22,6 +22,7 @@ import { csrfHeader } from "@/features/auth/csrf";
 import type { PersonalMemory } from "@/features/memory/contracts";
 import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
+import {orchestrationMessages} from "@/features/models/orchestration-messages";
 import {modelMessages} from "@/features/models/messages";
 
 const chatTransport = new ApiChatTransport();
@@ -51,6 +52,10 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   const router = useRouter();
   const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
   const mt = modelMessages[locale];
+  const ot = orchestrationMessages[locale];
+  const [task, setTask] = useState<"chat" | "analysis" | "code">("chat");
+  const [actualModel, setActualModel] = useState<string | null>(null);
+  const [fallbackModel, setFallbackModel] = useState<string | null>(null);
   const selectedModel = modelCatalog?.models.find(model => model.id === (selectedModelId ?? modelCatalog.defaultModelId));
   const [conversationId] = useState(() => initialConversation?.id ?? crypto.randomUUID());
   const [input, setInput] = useState("");
@@ -103,7 +108,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   async function submitMessage(rawContent: string): Promise<void> {
     const content = rawContent.trim();
     if (!content || isStreaming) return;
-    const cloud = selectedModel?.local === false;
+    const cloud = !isVoiceModeOpen && selectedModel?.local === false;
     if (cloud && !window.confirm(mt.cloudConfirm.replace("{provider}", selectedModel.provider ?? ""))) return;
 
     const userMessage = createMessage("user", content);
@@ -114,7 +119,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     const request: ChatRequest = {
       conversationId,
       title,
-      modelId: selectedModelId ?? undefined,
+      modelId: isVoiceModeOpen ? "auto" : selectedModelId ?? undefined,
+      task: isVoiceModeOpen ? "voice" : task,
       cloudConsent: cloud,
       locale,
       message: {
@@ -129,6 +135,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     setChatMessages((current) => [...current, userMessage]);
     setInput("");
     setStreamError(null);
+    setActualModel(null);
+    setFallbackModel(null);
     setWasStopped(false);
     setSaveError(false);
     setContextCompacted(false);
@@ -144,6 +152,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
           memoryWasProposed = true;
           void proposeExplicitMemory(content, userMessage);
         }
+        if (chatEvent.type === "model.selected") setActualModel(`${chatEvent.provider} / ${chatEvent.modelId}`);
+        if (chatEvent.type === "routing.fallback") setFallbackModel(chatEvent.profileId);
         if (chatEvent.type === "context.compacted") setContextCompacted(true);
         if (chatEvent.type === "memory.used") setUsedMemories(chatEvent.items);
         if (chatEvent.type === "message.started") {
@@ -296,6 +306,13 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
       )}
 
       <div className="composer-wrap">
+        <label>{ot.task}<select value={task}
+                                onChange={e => setTask(e.target.value === "analysis" ? "analysis" : e.target.value === "code" ? "code" : "chat")}
+                                disabled={isStreaming}>{(["chat", "analysis", "code"] as const).map(id => <option
+          key={id} value={id}>{ot.taskNames[id]}</option>)}</select></label>
+        {selectedModelId === "auto" && <p>{ot.automatic}</p>}
+        {actualModel && <p>{ot.actual}: {actualModel}</p>}
+        {fallbackModel && <p role="status">{ot.fallbackOccurred}: {fallbackModel}</p>}
         {selectedModel &&
           <p>{mt.selected}: {selectedModel.provider ?? "ollama"} / {selectedModel.label} · {selectedModel.local === false ? mt.cloud : mt.local}</p>}
         {selectedModel?.local === false && <p role="status">{mt.cloudNotice}</p>}

@@ -172,6 +172,7 @@ class ModelCatalog(BaseModel):
     default_model_id: str = Field(serialization_alias="defaultModelId")
     models: list[ModelInfo]
     providers: list[ProviderStatus] = Field(default_factory=list)
+    voice_profile_id: str | None = Field(default=None, serialization_alias="voiceProfileId")
 
 
 class ModelBenchmarkRequest(BaseModel):

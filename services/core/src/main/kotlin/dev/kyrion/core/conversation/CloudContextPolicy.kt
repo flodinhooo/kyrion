@@ -14,12 +14,14 @@ import java.util.UUID
 class CloudContextPolicy(
     private val activity: ActivityService,
     @Value("\${kyrion.ai.cloud-enabled:false}") private val enabled: Boolean = false,
+    private val aiSettings: dev.kyrion.core.ai.AiSettingsService? = null,
 ) {
     fun authorize(actor: UUID, provider: String?, consent: String?, correlation: UUID) {
         if (provider == null && consent == null) return
         if (!enabled || provider !in setOf("openai", "anthropic", "gemini") || consent != "current_message") {
             throw CloudProcessingDenied()
         }
+        aiSettings?.validateCloud(actor, provider!!)
         activity.record(
             ActivityCategory.INTEGRATION, "ai.cloud.context.authorized", ActivityStatus.CONFIRMED,
             ActivityActorType.USER, "kyrion-core", "ai.cloud.current_message.$provider",
