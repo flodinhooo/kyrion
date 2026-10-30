@@ -14,8 +14,16 @@ class JdbcPersonalMemoryRepository(
     private val transactions: TransactionTemplate,
 ) : PersonalMemoryRepository {
     override fun settings(ownerId: UUID): MemorySettings = jdbc.sql(
-        "SELECT enabled, updated_at FROM owner_memory_settings WHERE owner_id = :ownerId",
-    ).param("ownerId", ownerId).query { rs, _ -> MemorySettings(rs.getBoolean("enabled"), rs.getTimestamp("updated_at").toInstant()) }
+        "SELECT * FROM owner_memory_settings WHERE owner_id = :ownerId",
+    ).param("ownerId", ownerId).query { rs, _ ->
+        MemorySettings(
+            rs.getBoolean("enabled"),
+            rs.getTimestamp("updated_at").toInstant(),
+            rs.getBoolean("history_enabled"),
+            rs.getBoolean("preferences_enabled"),
+            rs.getString("categories").split(",").filter { it.isNotBlank() }.map(MemoryCategory::valueOf)
+        )
+    }
         .optional().orElse(MemorySettings(false, null))
 
     override fun updateSettings(ownerId: UUID, enabled: Boolean, updatedAt: Instant): MemorySettings {
@@ -25,6 +33,39 @@ class JdbcPersonalMemoryRepository(
                ON CONFLICT (owner_id) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = EXCLUDED.updated_at""",
         ).param("ownerId", ownerId).param("enabled", enabled).param("updatedAt", Timestamp.from(updatedAt)).update()
         return MemorySettings(enabled, updatedAt)
+    }
+
+    override fun contextSettings(
+        ownerId: UUID,
+        history: Boolean,
+        preferences: Boolean,
+        categories: List<MemoryCategory>,
+        now: Instant
+    ): MemorySettings {
+        jdbc.sql(
+            """INSERT INTO owner_memory_settings(owner_id,enabled,updated_at,history_enabled,preferences_enabled,categories)
+            VALUES(:id,FALSE,:now,:history,:preferences,:categories) ON CONFLICT(owner_id) DO UPDATE SET
+            history_enabled=:history,preferences_enabled=:preferences,categories=:categories,updated_at=:now"""
+        )
+            .param("id", ownerId).param("now", Timestamp.from(now)).param("history", history)
+            .param("preferences", preferences)
+            .param("categories", categories.joinToString(",") { it.name }).update()
+        return settings(ownerId)
+    }
+
+    override fun validity(
+        ownerId: UUID,
+        id: UUID,
+        active: Boolean,
+        expiresAt: Instant?,
+        now: Instant
+    ): PersonalMemory? {
+        val count =
+            jdbc.sql("UPDATE personal_memory SET active=:active,expires_at=:expiry,updated_at=:now WHERE id=:id AND owner_id=:owner")
+                .param("active", active).param("expiry", expiresAt?.let(Timestamp::from))
+                .param("now", Timestamp.from(now))
+                .param("id", id).param("owner", ownerId).update()
+        return if (count == 1) find(ownerId, id) else null
     }
 
     override fun recent(ownerId: UUID, limit: Int): List<PersonalMemory> = jdbc.sql(
@@ -104,5 +145,6 @@ class JdbcPersonalMemoryRepository(
         rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
         rs.getTimestamp("confirmed_at")?.toInstant(),
         rs.getObject("conflicts_with_memory_id", UUID::class.java),
+        rs.getBoolean("active"), rs.getTimestamp("expires_at")?.toInstant(), rs.getObject("owner_id", UUID::class.java),
     )
 }
