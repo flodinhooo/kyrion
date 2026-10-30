@@ -41,6 +41,18 @@ class MemoryContextItem(BaseModel):
     sensitivity: Literal["standard", "sensitive"]
 
 
+class KnowledgeContextItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str = Field(alias="documentId", max_length=36)
+    filename: str = Field(max_length=200)
+    excerpt: str = Field(min_length=1, max_length=2000)
+    page: int | None = Field(default=None, ge=1, le=200)
+    start_offset: int = Field(alias="startOffset", ge=0)
+    end_offset: int = Field(alias="endOffset", ge=1)
+    reference: str = Field(pattern=r"^kd:[0-9a-f-]{36}:[0-9]+:[0-9]+$")
+
+
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -62,6 +74,9 @@ class ChatRequest(BaseModel):
     voice_turn_id: str | None = Field(default=None, alias="voiceTurnId", max_length=64)
     cloud_consent: bool = Field(default=False, alias="cloudConsent", strict=True)
     tools: list[ToolDefinition] = Field(default_factory=list, max_length=16)
+    knowledge_context: list[KnowledgeContextItem] = Field(
+        default_factory=list, alias="knowledgeContext", max_length=3,
+    )
 
 
 class RuntimeDeviceCapability(BaseModel):

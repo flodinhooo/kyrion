@@ -13,6 +13,7 @@ export type ChatRequest = {
   modelId?: string;
   task?: "chat" | "analysis" | "code" | "voice";
   cloudConsent?: boolean;
+  knowledgeEnabled?: boolean;
   message: Pick<ChatMessage, "id" | "content" | "createdAt">;
   locale: "de" | "en";
 };
@@ -34,6 +35,7 @@ export type ChatErrorCode =
   | "COST_BUDGET_EXCEEDED" | "COST_ESTIMATE_UNAVAILABLE";
 
 export type ChatEvent =
+  | { type: "knowledge.sources"; messageId: string; items: import("@/features/knowledge/contracts").KnowledgeSource[] }
   | { type: "routing.fallback"; profileId: string; attempt: number }
   | { type: "model.selected"; provider: string; modelId: string; profileId: string }
   | { type: "usage"; usage: { inputTokens?: number | null; outputTokens?: number | null; totalTokens?: number | null } }

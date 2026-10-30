@@ -2,6 +2,7 @@ import type { ChatTransport, ChatStreamOptions } from "@/features/chat/client/ch
 import type { ChatEvent, ChatRequest } from "@/features/chat/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
 import {modelMessages} from "@/features/models/messages";
+import {isKnowledgeSource} from "@/features/knowledge/contracts";
 
 export function parseEvent(line: string): ChatEvent {
   if (line.length > 1_000_000) throw new Error("Invalid stream event");
@@ -12,6 +13,10 @@ export function parseEvent(line: string): ChatEvent {
     return {type: "routing.fallback", profileId: value.profileId, attempt: value.attempt};
   }
   const hasMessageId = "messageId" in value && typeof value.messageId === "string" && value.messageId.length > 0;
+  if (value.type === "knowledge.sources" && hasMessageId && "items" in value && Array.isArray(value.items)
+    && value.items.length <= 3 && value.items.every(isKnowledgeSource)) {
+    return {type: "knowledge.sources", messageId: String(value.messageId), items: value.items};
+  }
   if (value.type === "message.started" && hasMessageId) return {type: value.type, messageId: String(value.messageId)};
   if (value.type === "message.completed" && hasMessageId) return {type: value.type, messageId: String(value.messageId)};
   if (value.type === "message.delta" && hasMessageId && "delta" in value && typeof value.delta === "string") {

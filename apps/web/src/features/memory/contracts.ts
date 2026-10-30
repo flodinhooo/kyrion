@@ -25,7 +25,7 @@ export type MemoryProfile = {
     enabled: boolean;
     updatedAt: string | null;
     historyEnabled?: boolean;
-    preferencesEnabled?: boolean;
+    preferencesEnabled?: boolean; kyrionDataEnabled?: boolean;
     categories?: MemoryCategory[]
   };
   items: PersonalMemory[];

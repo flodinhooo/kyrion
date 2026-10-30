@@ -1,4 +1,4 @@
-import {CORE_SERVICE_URL, csrfIsValid, requireApiSession} from "@/lib/server-auth";
+import {CORE_SERVICE_URL, requireApiSession} from "@/lib/server-auth";
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();

@@ -52,6 +52,7 @@ function isChatRequest(value: unknown): value is ChatRequest {
     && request.title.length <= 160
     && (request.task === undefined || ["chat", "analysis", "code", "voice"].includes(request.task))
     && (request.cloudConsent === undefined || typeof request.cloudConsent === "boolean")
+    && (request.knowledgeEnabled === undefined || typeof request.knowledgeEnabled === "boolean")
     && (request.modelId === undefined
       || (typeof request.modelId === "string"
         && request.modelId.trim().length > 0
@@ -166,6 +167,7 @@ export async function POST(incomingRequest: Request) {
         turnId: contextValue.turnId,
         task: body.task ?? "chat",
         consentProvider: selected.cloud ? selected.model.provider : null,
+        knowledgeEnabled: body.knowledgeEnabled === true,
       }),
       cache: "no-store",
       signal: incomingRequest.signal,
@@ -189,11 +191,8 @@ export async function POST(incomingRequest: Request) {
       body.conversationId,
       auth.token,
       contextValue.turnId,
-      contextValue.usedMemories,
-      contextValue.compacted ? {
-        estimatedTokens: contextValue.estimatedTokens,
-        tokenBudget: contextValue.tokenBudget,
-      } : null,
+      [],
+      null,
     );
     return new Response(persistedStream, {
       status: 200,
