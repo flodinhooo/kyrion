@@ -40,7 +40,7 @@ export async function inspectService(service, fetcher = fetch) {
     if (body !== null && typeof body === 'object' && valid(body)) return result(true, 'READY');
     return result(false, body && typeof body.status === 'string' ? 'NOT_READY' : 'INVALID_RESPONSE');
   } catch (error) {
-    return result(false, ['AbortError', 'TimeoutError'].includes(error.name) ? 'PROBE_TIMEOUT'
+    return result(false, ['AbortError', 'TimeoutError'].includes(error?.name) ? 'PROBE_TIMEOUT'
       : error instanceof SyntaxError ? 'INVALID_RESPONSE' : 'UNREACHABLE');
   }
 }

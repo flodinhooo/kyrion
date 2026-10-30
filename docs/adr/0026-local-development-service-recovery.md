@@ -36,6 +36,13 @@ No Docker socket, SSH key, host or executable path is accepted from browser inpu
 
 ## Consequences
 
+The October 30 CLI extension can narrow a restart to one of the same fixed
+Windows targets (`core`, `ai`, `ollama`). Only processes owned by that helper may
+be restarted; external processes, WSL and untargeted/Pi services are preserved.
+The CLI's explicit PostgreSQL restart preserves its existing container/data and
+waits for SQL readiness and Core reconnect. It does not grant Web additional
+database or process authority, and does not permit global WSL/host lifecycle operations.
+
 Windows Web's `predev` launcher ensures the helper is running; it can also be
 started independently. Its key is a
 host administration credential and is not a Kyrion account recovery mechanism.

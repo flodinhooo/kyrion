@@ -6,6 +6,10 @@ For isolated worktrees and verified configuration loading, use the
 
 ## Single-command Windows development startup
 
+For the current live acceptance, diagnostics, scoped restart boundaries and
+October 31 demonstration, see the [demo checklist](demo-readiness-2026-10-31.md)
+and [Sprint 02 evidence](status/2026-10-30-stabilization-sprint-02.md).
+
 With Docker Desktop running and the existing local configuration/dependencies
 available, run from the repository root:
 

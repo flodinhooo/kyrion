@@ -1,4 +1,4 @@
-// Read-only demo checks. A fresh interactive login supplies its own session.
+// Demo checks; optional mutations use explicitly marked local-only test objects.
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
@@ -71,7 +71,9 @@ async function browserSmoke() {
   const rows = [];
   try {
     await page.goto('/login');
-    console.log('LOGIN_REQUIRED: sign in locally in the test browser. Credentials stay in the browser.');
+    console.log(process.argv.includes('--interactive')
+      ? 'Sign in locally if needed. Credentials stay in this workflow\'s test browser.'
+      : 'Checking this workflow\'s dedicated authenticated test profile.');
     const deadline = Date.now() + (process.argv.includes('--interactive') ? 300000 : 1000);
     let authenticated = false;
     while (Date.now() < deadline) {

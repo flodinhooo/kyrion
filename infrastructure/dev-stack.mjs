@@ -7,6 +7,7 @@ import path from 'node:path';
 import {promisify} from 'node:util';
 import {serviceReady, inspectService, waitUntilReady, startDatabase} from './dev-readiness.mjs';
 import {commandSucceeded} from './dev-command.mjs';
+import {requestRecovery} from './dev-recovery-client.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const state = path.join(root, '.run/dev-recovery');
@@ -48,7 +49,7 @@ async function helper(method = 'GET', body) {
     method, headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'},
     ...(body ? {body: JSON.stringify(body)} : {}), signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) throw new Error(`RECOVERY_HTTP_${response.status}`);
+  if (!response.ok) throw Object.assign(new Error(`RECOVERY_HTTP_${response.status}`), {status: response.status});
   return response.json();
 }
 
@@ -79,8 +80,7 @@ async function start(recoveryAction = 'start', target) {
   if (target && job.helperVersion !== '2026-10-30-scoped-v5') {
     throw new Error('HELPER_UPGRADE_REQUIRED: scoped restart needs the updated helper on its next safe launch.');
   }
-  if (target && job.state === 'running') throw new Error('RECOVERY_BUSY');
-  if (job.state !== 'running') job = await helper('POST', {action: recoveryAction, ...(target ? {service: target} : {})});
+  job = await requestRecovery(helper, {action: recoveryAction, ...(target ? {service: target} : {})});
   console.log(`Recovery ${job.correlationId}; logs: .run/dev-recovery/`);
   let reported = 0;
   const completed = await waitUntilReady(async () => {
@@ -130,7 +130,7 @@ try {
     }
     const lines = (await readFile(path.join(state, `${id}.log`), 'utf8')).split(/\r?\n/);
     console.log(lines.slice(-80).join('\n'));
-  } else throw new Error('Usage: node infrastructure/dev-stack.mjs start|status|health|logs [service]|restart [core|ai|ollama|postgres] --confirm');
+  } else throw new Error('Usage: node infrastructure/dev-stack.mjs start|status|health|diagnose|logs [service]|restart [core|ai|ollama|postgres] --confirm');
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

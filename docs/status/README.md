@@ -1,5 +1,10 @@
 # Kyrion Development Status
 
+Latest: [Sprint 02 runtime and demo evidence](2026-10-30-stabilization-sprint-02.md)
+and the [October 31 demo checklist](../demo-readiness-2026-10-31.md).
+Local Calendar deletion and restart diagnostics are repaired; Google
+reauthorization, the Pi-to-Windows Core path and host cold-start acceptance remain open.
+
 Latest runtime follow-up: [2026-10-30 stabilization verification](2026-10-30-runtime-verification.md).
 All seven local services were ready at the final probe; Windows reboot and the
 underlying WSL/Docker interruption remain unverified/unresolved respectively.

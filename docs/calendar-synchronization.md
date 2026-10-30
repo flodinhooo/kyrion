@@ -63,6 +63,12 @@ event only after deciding which copy to retain.
 
 ## Contracts and limits
 
+The Web local-event DELETE route normalizes a successful Core acknowledgement (including an empty HTTP 200) to HTTP 204.
+It does not parse successful empty
+bodies as JSON. Revision/authentication/permission failures retain their original
+status; acknowledgement of a linked event's local deletion does not imply that
+its pending remote deletion has already completed.
+
 - Local request: existing title/description/instants/timezone/Boolean intent plus
   optional `googleCalendarId` and `revision`. DELETE accepts optional `revision`.
 - Local response adds `syncStatus`, `syncError`, `syncActorId`, `googleEtag`,
