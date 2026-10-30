@@ -92,7 +92,27 @@ its effect-state handling. Those files were not edited by stabilization.
 The first full Core run built its JAR but the integration fixture's disposable
 PostgreSQL container timed out waiting for startup logs (189 tests passed, one
 initialization failure). The running database remained healthy. A retry and final
-Web build checks are recorded below once complete; no timeout/fixture changes
-were made merely to hide this failure.
+Web build checks then completed successfully; no timeout/fixture changes were
+made merely to hide this failure.
+
+Final executed results (the shared source continued to evolve concurrently):
+
+| Check                                      | Result                                                                      |
+|--------------------------------------------|-----------------------------------------------------------------------------|
+| Core full suite / bootJar                  | 233 tests passed, zero failures/errors/skips; build passed                  |
+| Web full suite                             | 149 tests passed across 49 files, including four new Google GET regressions |
+| Web ESLint / TypeScript / production build | All passed on the final checked source                                      |
+| AI full suite                              | 164 passed; one upstream TestClient deprecation warning                     |
+| TTS/speech targeted subset                 | 18 passed; Ruff passed                                                      |
+| Voice Satellite                            | 53 passed, including three new operator-session probe regressions           |
+| Gateway                                    | 17 passed, one Linux-specific metrics check skipped on Windows              |
+| Node readiness/diagnostics/demo tests      | 30 passed                                                                   |
+| PowerShell LAN plan                        | Syntax and real dry-run passed; application not executed                    |
+| Compose config / Node syntax / whitespace  | Passed                                                                      |
+
+The initial parallel AI UI lint/build errors were subsequently resolved by the
+other process. This work did not alter its provider, routing, memory, policy or
+Velora source. The new Core build was not selected for runtime deployment; the
+reviewed LAN plan preserves the existing working JAR instead.
 
 See [the reviewed LAN procedure and manual Voice/Google steps](../pi-core-and-voice-acceptance.md).

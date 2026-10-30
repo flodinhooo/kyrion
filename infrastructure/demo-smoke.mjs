@@ -1,4 +1,4 @@
-// Demo checks; optional mutations use explicitly marked local-only test objects.
+// Demo checks; optional mutations use only explicitly marked disposable objects.
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';

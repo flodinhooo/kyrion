@@ -6,6 +6,10 @@ For isolated worktrees and verified configuration loading, use the
 
 ## Single-command Windows development startup
 
+Latest Google acceptance and the approval-gated Pi/Core LAN repair are recorded
+in [Sprint 03](status/2026-10-30-stabilization-sprint-03.md) and the
+[Pi/Core and Voice procedure](pi-core-and-voice-acceptance.md).
+
 For the current live acceptance, diagnostics, scoped restart boundaries and
 October 31 demonstration, see the [demo checklist](demo-readiness-2026-10-31.md)
 and [Sprint 02 evidence](status/2026-10-30-stabilization-sprint-02.md).

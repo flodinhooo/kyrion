@@ -1,8 +1,9 @@
 # October 31 demo checklist
 
-Status: partial readiness. The local UI, local Calendar, HA refresh and speech
-APIs were exercised. Google requires reauthorization and the Pi-to-Windows Core
-connection is blocked. Do not present these as verified end-to-end features.
+Status: partial readiness. The local UI, local Calendar, HA refresh, Google
+provider CRUD/readback and speech APIs were exercised. Google works after the
+user's reauthorization; do not request new consent without an actual provider
+failure. Pi-to-Windows Core remains blocked pending approval of its LAN repair.
 
 ## Preflight
 
@@ -27,6 +28,8 @@ demo; it never restarts services and retains transient failures in its result.
 node infrastructure/demo-smoke.mjs --interactive --refresh-ha --local-calendar
 # Later runs may reuse only the dedicated profile created by this workflow:
 node infrastructure/demo-smoke.mjs --browser
+# Explicit live Google CRUD, only its newly marked test event:
+node infrastructure/demo-smoke.mjs --browser --google-calendar
 ```
 
 The browser uses the existing `@playwright/test` installation from `apps/website`;
@@ -40,23 +43,25 @@ overview reads. A manual import resets the 30-second throttle; an intervening
 scheduler tick may be skipped, so observation spans two ticks plus a bounded
 request allowance. `--local-calendar` creates one clearly marked, local-only
 `[KYRION-DEMO-SMOKE ...]` event, verifies edit, timezone and stale-revision rejection,
-then checks its exact marker/scope before deleting only that new event. No Google
-write/synchronization or physical device action is performed.
+then checks its exact marker/scope before deleting only that new event.
+`--google-calendar` separately opts into creating/editing/removing one uniquely
+marked Google test event with conditional ETags and verified cleanup. It never
+invokes actor-wide synchronization. No physical device action is performed.
 
-The overall browser smoke intentionally exits nonzero while Google remains
-blocked, even if local features pass. HTTP 200 with `reauthorizationRequired`
-or an offline/unconfigured integration is not a successful integration check.
+The browser smoke exits nonzero for any failed check. HTTP 200 with
+`reauthorizationRequired` or an offline/unconfigured integration is not a
+successful integration check. The latest Google run passed all checks.
 
 ## Demonstration sequence
 
 1. Login and Dashboard: show actual current status. Keep Recovery reachable.
 2. Home, Rooms and Devices: show actual inventory and timestamps. HA is read-only.
    Demonstrate a physical control only after selecting an authorized test device.
-3. Calendar: show local operation; explain Google reauthorization explicitly if
-   still outstanding. Do not modify personal appointments to populate the demo.
+3. Calendar: show local and Google operation. Do not modify personal appointments
+   to populate the demo; use only explicitly marked test objects.
 4. Integrations and System services: distinguish configured, connected, healthy
-   and physically verified. Resolve the Google authorization blocker before
-   promising live calendar pagination or synchronization.
+   and physically verified. Live Google CRUD/readback is verified; more-than-100
+   event pagination and external Samsung edits have separate acceptance scope.
 5. Lounge: show the actual Spotify device list. Playback and audible output need
    their own authorized physical acceptance; a connected receiver is insufficient.
 6. Chat and existing Velora: validate the selected local profile after the parallel
@@ -97,3 +102,6 @@ test, is required before Voice can be claimed. Do not weaken the firewall or
 repoint the Pi blindly. The running Core and parallel AI work were preserved.
 
 See [Sprint 02 evidence](status/2026-10-30-stabilization-sprint-02.md).
+For the later Google acceptance and reviewed LAN repair, use
+[Sprint 03 evidence](status/2026-10-30-stabilization-sprint-03.md) and the
+[Pi/Core and Voice procedure](pi-core-and-voice-acceptance.md).

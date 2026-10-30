@@ -1,9 +1,15 @@
 # Kyrion Development Status
 
-Latest: [Sprint 02 runtime and demo evidence](2026-10-30-stabilization-sprint-02.md)
+Latest: [Sprint 03 Google and Pi-Core evidence](2026-10-30-stabilization-sprint-03.md).
+Google is working after the user's reauthorization; live marked-event checks
+passed without new OAuth. The Pi-Core LAN correction is prepared and awaits
+explicit approval after automatic review rejected the network change/restart.
+
+Previous checkpoint: [Sprint 02 runtime and demo evidence](2026-10-30-stabilization-sprint-02.md)
 and the [October 31 demo checklist](../demo-readiness-2026-10-31.md).
-Local Calendar deletion and restart diagnostics are repaired; Google
-reauthorization, the Pi-to-Windows Core path and host cold-start acceptance remain open.
+That checkpoint repaired local Calendar deletion and restart diagnostics. Its
+Google reauthorization blocker is superseded by Sprint 03; Pi-to-Windows Core
+and host cold-start acceptance remain open.
 
 Latest runtime follow-up: [2026-10-30 stabilization verification](2026-10-30-runtime-verification.md).
 All seven local services were ready at the final probe; Windows reboot and the

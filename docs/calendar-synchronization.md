@@ -19,6 +19,12 @@ Web sends the local revision on edits/deletion; stale revisions produce
 
 ## Reading external calendars
 
+The direct Web Google event GET forwards `calendarId`, `start` and `end` to Core
+without dropping calendar selection or timezone offsets. Only these bounded
+filters are forwarded and reads are uncached. Live October 30 acceptance after
+the user's reauthorization covered marked event create/edit/readback, stable IDs,
+ETag conflict rejection and cleanup; see [Sprint 03 evidence](status/2026-10-30-stabilization-sprint-03.md).
+
 Select a Google calendar in Calendar. Core requests the visible month/week/day
 range, follows all pages within a 10,000-event safety bound, and expands recurring
 instances through Google's `singleEvents` mechanism. Date-only all-day events

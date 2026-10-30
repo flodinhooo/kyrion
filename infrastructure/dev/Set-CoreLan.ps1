@@ -36,7 +36,9 @@ if (!(Get-NetConnectionProfile | Where-Object NetworkCategory -eq 'Private') -or
     (Get-NetFirewallProfile -Name Private).Enabled -ne 'True') { throw 'PRIVATE_FIREWALL_REQUIRED' }
 $config = Join-Path $sourceRoot 'infrastructure/.env'
 $bytes = [IO.File]::ReadAllBytes($config)
-$configHash = (Get-FileHash -LiteralPath $config -Algorithm SHA256).Hash
+$hasher = [Security.Cryptography.SHA256]::Create()
+try { $configHash = ([BitConverter]::ToString($hasher.ComputeHash($bytes))).Replace('-', '') }
+finally { $hasher.Dispose() }
 $text = [Text.Encoding]::UTF8.GetString($bytes)
 $configured = [regex]::Match($text, '(?m)^KYRION_CORE_ADDRESS=([^\r\n]*)')
 if ($configured.Success -and $configured.Groups[1].Value -ne '0.0.0.0') { throw 'EXISTING_BIND_OVERRIDE_REQUIRES_REVIEW' }
@@ -62,10 +64,17 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $copy = Join-Path $directory "core-lan-$stamp.jar"
 Copy-Item -LiteralPath $artifact -Destination $copy
 if (!$configured.Success) {
-    if ((Get-FileHash -LiteralPath $config -Algorithm SHA256).Hash -ne $configHash) { throw 'CONFIGURATION_CHANGED' }
     $newline = if ($text.EndsWith("`n")) { '' } else { "`r`n" }
     $suffix = [Text.Encoding]::UTF8.GetBytes($newline + "KYRION_CORE_ADDRESS=0.0.0.0`r`n")
-    [IO.File]::WriteAllBytes($config, [byte[]]($bytes + $suffix))
+    $stream = [IO.File]::Open($config, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $currentHash = ([BitConverter]::ToString($hasher.ComputeHash($stream))).Replace('-', '')
+        if ($currentHash -ne $configHash) { throw 'CONFIGURATION_CHANGED' }
+        [void]$stream.Seek(0, [IO.SeekOrigin]::End)
+        $stream.Write($suffix, 0, $suffix.Length)
+        $stream.Flush($true)
+    } finally { $hasher.Dispose(); $stream.Dispose() }
 }
 & taskkill.exe /PID $CoreProcessId /T /F
 if ($LASTEXITCODE -ne 0) { throw 'CORE_STOP_FAILED_CONFIGURATION_RETAINED' }
