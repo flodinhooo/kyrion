@@ -14,7 +14,8 @@ data class AiGenerationRequest(
     val modelId: String? = null,
     val task: String = "chat",
     val cloudConsent: Boolean = false,
-    val consentProvider: String? = null
+    val consentProvider: String? = null,
+    val knowledgeEnabled: Boolean = false
 )
 
 data class PreparedAiGeneration(
@@ -26,7 +27,8 @@ data class PreparedAiGeneration(
     val conversation: Conversation,
     val context: ConversationContext,
     val reservation: AiReservation,
-    val timeoutSeconds: Int
+    val timeoutSeconds: Int,
+    val knowledgeSources: List<dev.kyrion.core.knowledge.domain.KnowledgeSource> = emptyList()
 )
 
 @Service
@@ -34,7 +36,8 @@ class AiOrchestrationService(
     private val gateway: AiGateway, private val settings: AiSettingsService,
     private val usage: AiUsageService, private val conversations: ConversationRepository,
     private val context: ConversationController, private val cloud: CloudContextPolicy,
-    private val rbac: RbacService, private val activity: ActivityService
+    private val rbac: RbacService, private val activity: ActivityService,
+    private val knowledgeContext: dev.kyrion.core.context.KnowledgeContextAssembler
 ) {
 
     fun route(actor: UUID, request: AiRouteRequest): AiRouteDecision {
@@ -59,15 +62,23 @@ class AiOrchestrationService(
         val catalog = gateway.catalog()
         val policy = settings.effectivePolicy(actor)
         val decision = ModelRouter.select(catalog, settings.repository.preferences(actor), policy, route)
+        // Current cloud consent releases only the current message, never documents.
+        if (request.knowledgeEnabled && (!decision.model.local || decision.alternatives.any { !it.local }))
+            throw AiFailure("CONTEXT_NOT_ALLOWED", 403)
         if (!decision.model.local) cloud.authorize(actor, decision.model.provider, "current_message", request.turnId)
         val limit = decision.model.contextLength?.let { it - decision.model.maxOutputTokens - 512 } ?: 3072
         if (limit < 128) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
-        val selected =
-            context.generationContext(actor, bounded, request.turnId, !decision.model.local, minOf(3072, limit))
+        val knowledgeBudget = if (request.knowledgeEnabled) minOf(1024, limit / 3) else 0
+        val sources = if (request.knowledgeEnabled)
+            knowledgeContext.assemble(actor, bounded.messages.last().content, knowledgeBudget) else emptyList()
+        val selected = context.generationContext(
+            actor, bounded, request.turnId, !decision.model.local,
+            minOf(3072, limit - knowledgeBudget)
+        )
         // UTF-8 bytes plus bounded protocol/system overhead: deliberately conservative,
         // not an exact tokenizer count. Provider counters replace this after success.
         val estimate = aiJson.writeValueAsBytes(selected.messages).size.toLong() +
-            aiJson.writeValueAsBytes(selected.usedMemories).size + 8192L
+            aiJson.writeValueAsBytes(selected.usedMemories).size + aiJson.writeValueAsBytes(sources).size + 8192L
         val reservation = usage.reserve(actor, request.turnId, 0, decision.model, route, catalog, estimate)
         activity.record(
             ActivityCategory.INTEGRATION,
@@ -89,7 +100,8 @@ class AiOrchestrationService(
             bounded,
             selected,
             reservation,
-            policy.maxTimeoutSeconds
+            policy.maxTimeoutSeconds,
+            sources
         )
     }
 
@@ -153,7 +165,8 @@ class AiOrchestrationService(
                         "interactionMode" to if (prepared.request.task == "voice") "voice" else "chat",
                         "cloudConsent" to (!model.local && prepared.request.cloudConsent),
                         "messages" to prepared.context.messages,
-                        "memoryContext" to prepared.context.usedMemories
+                        "memoryContext" to prepared.context.usedMemories,
+                        "knowledgeContext" to prepared.knowledgeSources
                     )
                 )
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
@@ -195,6 +208,21 @@ class AiOrchestrationService(
                         }
 
                         "message.started", "model.selected" -> {
+                            if (event.path("type")
+                                    .asText() == "message.started" && prepared.knowledgeSources.isNotEmpty()
+                            ) {
+                                buffered.add(raw)
+                                buffered.add(
+                                    aiJson.writeValueAsString(
+                                        mapOf(
+                                            "type" to "knowledge.sources",
+                                            "messageId" to event.path("messageId").asText(),
+                                            "items" to prepared.knowledgeSources
+                                        )
+                                    )
+                                )
+                                return@stream
+                            }
                             if (visible) emit(raw) else {
                                 if (buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502); buffered.add(raw)
                             }
@@ -234,9 +262,13 @@ class AiOrchestrationService(
         conversationId: UUID,
         turnId: UUID,
         locale: String,
+        knowledgeEnabled: Boolean = false,
         validateActive: () -> Unit = {}
     ): String {
-        val prepared = prepare(actor, AiGenerationRequest(conversationId, turnId, locale, task = "voice"))
+        val prepared = prepare(
+            actor,
+            AiGenerationRequest(conversationId, turnId, locale, task = "voice", knowledgeEnabled = knowledgeEnabled)
+        )
         val result = StringBuilder()
         stream(prepared) { raw ->
             validateActive()

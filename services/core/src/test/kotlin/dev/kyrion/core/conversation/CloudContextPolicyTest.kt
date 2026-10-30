@@ -49,7 +49,13 @@ class CloudContextPolicyTest {
             )
         )
         `when`(repository.startTurn(actor, id, "Local title", stored.messages.last(), now)).thenReturn(stored)
-        val controller = ConversationController(repository, memories, clock, CloudContextPolicy(activity, true))
+        val controller = ConversationController(
+            repository,
+            memories,
+            clock,
+            CloudContextPolicy(activity, true),
+            mock(dev.kyrion.core.context.ContextBuilder::class.java)
+        )
         val request = MockHttpServletRequest().apply { setAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE, actor) }
         val result = controller.startTurn(
             id, StartConversationTurnRequest(
@@ -69,7 +75,13 @@ class CloudContextPolicyTest {
     fun `denial happens before turn persistence or memory access`() {
         val repository = mock(ConversationRepository::class.java)
         val memories = mock(MemoryContextSelector::class.java)
-        val controller = ConversationController(repository, memories, Clock.systemUTC(), CloudContextPolicy(activity))
+        val controller = ConversationController(
+            repository,
+            memories,
+            Clock.systemUTC(),
+            CloudContextPolicy(activity),
+            mock(dev.kyrion.core.context.ContextBuilder::class.java)
+        )
         val request = MockHttpServletRequest().apply { setAttribute(AUTHENTICATED_USER_ID_ATTRIBUTE, actor) }
         assertThrows<CloudProcessingDenied> {
             controller.startTurn(

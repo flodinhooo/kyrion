@@ -204,6 +204,8 @@ async def benchmark_model(request: ModelBenchmarkRequest) -> ModelBenchmarkResul
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
 async def stream_chat(request: ChatRequest) -> Response:
+    if request.knowledge_context and request.cloud_consent:
+        return JSONResponse({"code": "CONTEXT_NOT_ALLOWED"}, status_code=403)
     try:
         models.resolve(request)
     except ProviderFailure as error:

@@ -18,7 +18,7 @@ import java.util.UUID
 
 data class ContextSettingsRequest(
     val historyEnabled: Boolean = false, val preferencesEnabled: Boolean = false,
-    val categories: List<MemoryCategory> = MemoryCategory.entries.toList()
+    val categories: List<MemoryCategory> = MemoryCategory.entries.toList(), val kyrionDataEnabled: Boolean = false
 )
 
 data class MemoryValidityRequest(val active: Boolean, val expiresAt: java.time.Instant? = null)
@@ -76,6 +76,7 @@ class PersonalMemoryController(
             body.categories,
             clock.instant()
         )
+        repository.dataSettings(owner, body.kyrionDataEnabled)
         record(owner, "memory.context.settings.updated", "memory.context.settings.updated")
         return result
     }
