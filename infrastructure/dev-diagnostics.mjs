@@ -55,6 +55,39 @@ export function classifyKernelLog(source) {
   };
 }
 
+export function windowsEventDiagnostic(value) {
+  const codes = ['HOST_SLEEP', 'HOST_RESUME', 'UNEXPECTED_HOST_STOP', 'GPU_DRIVER_RESET',
+    'HOST_RESOURCE_EXHAUSTION', 'STORAGE_IO_WARNING', 'WSL_DOCKER_PROCESS_FAILURE'];
+  return {
+    events: (Array.isArray(value?.events) ? value.events : []).filter((event) =>
+      timestamp(event?.at) && Number.isInteger(event.id) && codes.includes(event.code))
+      .slice(-50).map((event) => ({at: event.at, id: event.id, code: event.code})),
+    unavailableLogs: (Array.isArray(value?.unavailableLogs) ? value.unavailableLogs : [])
+      .filter((name) => ['System', 'Application', 'Microsoft-Windows-Hyper-V-Compute-Admin'].includes(name)),
+  };
+}
+
+const windowsEventsProbe = `
+$events=@(); $unavailable=@()
+foreach($log in @('System','Application','Microsoft-Windows-Hyper-V-Compute-Admin')) {
+  $readErrors=@()
+  $records=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=(Get-Date).AddHours(-2);Level=1,2,3,4} -MaxEvents 150 -ErrorAction SilentlyContinue -ErrorVariable readErrors
+  if($readErrors | Where-Object { $_.FullyQualifiedErrorId -notmatch 'NoMatchingEventsFound' }) { $unavailable += $log }
+  foreach($event in $records) {
+    $code=$null
+    if($event.ProviderName -eq 'Microsoft-Windows-Kernel-Power' -and $event.Id -eq 42) { $code='HOST_SLEEP' }
+    elseif($event.ProviderName -eq 'Microsoft-Windows-Power-Troubleshooter' -and $event.Id -eq 1) { $code='HOST_RESUME' }
+    elseif(($event.ProviderName -eq 'Microsoft-Windows-Kernel-Power' -and $event.Id -eq 41) -or ($event.ProviderName -eq 'EventLog' -and $event.Id -eq 6008)) { $code='UNEXPECTED_HOST_STOP' }
+    elseif($event.ProviderName -eq 'Display' -and $event.Id -eq 4101) { $code='GPU_DRIVER_RESET' }
+    elseif($event.ProviderName -eq 'Microsoft-Windows-Resource-Exhaustion-Detector' -and $event.Id -eq 2004) { $code='HOST_RESOURCE_EXHAUSTION' }
+    elseif($event.ProviderName -eq 'disk' -and $event.Id -in @(7,51,153)) { $code='STORAGE_IO_WARNING' }
+    elseif($event.ProviderName -in @('Application Error','Windows Error Reporting','Microsoft-Windows-Hyper-V-Compute') -and $event.Message -match 'wsl|docker|vmmem') { $code='WSL_DOCKER_PROCESS_FAILURE' }
+    if($code) { $events += [pscustomobject]@{at=$event.TimeCreated.ToUniversalTime().ToString('o');id=$event.Id;code=$code} }
+  }
+}
+[pscustomobject]@{events=@($events);unavailableLogs=@($unavailable)} | ConvertTo-Json -Compress -Depth 4
+`;
+
 function capture(file, args, timeoutMs = 10000) {
   return new Promise((resolve) => {
     const child = execFile(file, args, {cwd: root, windowsHide: true, maxBuffer: 4 * 1024 * 1024},
@@ -88,7 +121,7 @@ print(json.dumps({'bootId':pathlib.Path('/proc/sys/kernel/random/boot_id').read_
 export async function collectDiagnostics() {
   const result = {
     at: new Date().toISOString(), containers: [], dockerEvents: [], wsl: null,
-    kernel: null, windows: null, unavailable: []
+    kernel: null, windows: null, windowsEvents: null, unavailable: []
   };
   const jobs = await Promise.allSettled([
     capture('docker.exe', ['inspect', '--format',
@@ -97,9 +130,10 @@ export async function collectDiagnostics() {
     capture('wsl.exe', ['-d', 'Kyrion-Voice-Training', '--', 'dmesg']),
     capture('powershell.exe', ['-NoProfile', '-Command',
       "$o=Get-CimInstance Win32_OperatingSystem; [pscustomobject]@{totalMemoryKiB=$o.TotalVisibleMemorySize;freeMemoryKiB=$o.FreePhysicalMemory;lastBoot=$o.LastBootUpTime.ToUniversalTime().ToString('o')} | ConvertTo-Json -Compress"]),
+    capture('powershell.exe', ['-NoProfile', '-Command', windowsEventsProbe]),
   ]);
   const values = jobs.map((job) => job.status === 'fulfilled' ? job.value : null);
-  for (const [index, key] of ['docker', 'wsl', 'kernel', 'windows'].entries()) {
+  for (const [index, key] of ['docker', 'wsl', 'kernel', 'windows', 'windowsEvents'].entries()) {
     if (!values[index]) {
       result.unavailable.push(key);
       continue;
@@ -107,6 +141,7 @@ export async function collectDiagnostics() {
     try {
       if (key === 'docker') result.containers = JSON.parse(values[index]).map(containerDiagnostic);
       else if (key === 'kernel') result.kernel = classifyKernelLog(values[index]);
+      else if (key === 'windowsEvents') result.windowsEvents = windowsEventDiagnostic(JSON.parse(values[index]));
       else result[key] = JSON.parse(values[index]);
     } catch {
       result.unavailable.push(key);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {containerDiagnostic, classifyDockerLog, classifyKernelLog} from './dev-diagnostics.mjs';
+import {containerDiagnostic, classifyDockerLog, classifyKernelLog, windowsEventDiagnostic} from './dev-diagnostics.mjs';
 
 test('diagnostics cannot persist credentials, container logs, commands or healthcheck output', () => {
   const result = containerDiagnostic({
@@ -16,6 +16,25 @@ test('diagnostics cannot persist credentials, container logs, commands or health
   assert.equal(result.health, 'healthy');
   assert.ok(!JSON.stringify(result).includes('secret'));
   assert.ok(!JSON.stringify(result).includes('private-token'));
+});
+
+test('Windows crash correlation persists only classified metadata, never messages or command lines', () => {
+  const result = windowsEventDiagnostic({
+    events: [
+      {
+        at: '2026-10-30T17:43:26Z', id: 1000, code: 'WSL_DOCKER_PROCESS_FAILURE',
+        Message: 'private-token', CommandLine: 'secret'
+      },
+      {at: '2026-10-30T17:43:26Z', id: 1, code: 'arbitrary-provider-payload'},
+    ], unavailableLogs: ['Application', 'private path']
+  });
+  assert.deepEqual(result, {
+    events: [{
+      at: '2026-10-30T17:43:26Z', id: 1000,
+      code: 'WSL_DOCKER_PROCESS_FAILURE'
+    }], unavailableLogs: ['Application']
+  });
+  assert.ok(!JSON.stringify(result).includes('private'));
 });
 
 test('missing or malformed metadata remains unknown rather than claiming no OOM', () => {
