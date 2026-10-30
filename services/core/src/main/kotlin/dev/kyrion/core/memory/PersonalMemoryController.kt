@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.*
 import java.time.Clock
 import java.util.UUID
 
+data class ContextSettingsRequest(
+    val historyEnabled: Boolean = false, val preferencesEnabled: Boolean = false,
+    val categories: List<MemoryCategory> = MemoryCategory.entries.toList()
+)
+
+data class MemoryValidityRequest(val active: Boolean, val expiresAt: java.time.Instant? = null)
+
 data class MemorySettingsRequest(val enabled: Boolean)
 data class MemoryProposalRequest(
     @field:Pattern(regexp = "preference|person|project|value|other") val category: String,
@@ -38,6 +45,7 @@ class PersonalMemoryController(
     private val conversations: ConversationRepository,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val contextBuilder: dev.kyrion.core.context.ContextBuilder,
 ) {
     @GetMapping fun profile(request: HttpServletRequest): MemoryProfile {
         val ownerId = request.ownerId()
@@ -51,6 +59,54 @@ class PersonalMemoryController(
         record(ownerId, "memory.settings.updated", if (body.enabled) "memory.enabled" else "memory.disabled")
         return result
     }
+
+    @PutMapping("/context-settings")
+    fun contextSettings(@RequestBody raw: String, request: HttpServletRequest): MemorySettings {
+        val body = try {
+            dev.kyrion.core.ai.strictAiJson.readValue(raw, ContextSettingsRequest::class.java)
+        } catch (_: Exception) {
+            throw MemoryInvalidRequestException()
+        }
+        if (body.categories.distinct().size != body.categories.size) throw MemoryInvalidRequestException()
+        val owner = request.ownerId()
+        val result = repository.contextSettings(
+            owner,
+            body.historyEnabled,
+            body.preferencesEnabled,
+            body.categories,
+            clock.instant()
+        )
+        record(owner, "memory.context.settings.updated", "memory.context.settings.updated")
+        return result
+    }
+
+    @PatchMapping("/{id}/validity")
+    fun validity(@PathVariable id: UUID, @RequestBody raw: String, request: HttpServletRequest): PersonalMemory {
+        val body = try {
+            dev.kyrion.core.ai.strictAiJson.readValue(raw, MemoryValidityRequest::class.java)
+        } catch (_: Exception) {
+            throw MemoryInvalidRequestException()
+        }
+        val owner = request.ownerId()
+        val result = repository.validity(owner, id, body.active, body.expiresAt, clock.instant())
+            ?: throw MemoryNotFoundException()
+        record(owner, "memory.validity.updated", "memory.validity.updated", memoryId = id)
+        return result
+    }
+
+    @PostMapping("/{id}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun reject(@PathVariable id: UUID, request: HttpServletRequest) {
+        val owner = request.ownerId()
+        val memory = repository.find(owner, id) ?: throw MemoryNotFoundException()
+        if (memory.status != MemoryStatus.proposed) throw MemoryConflictException()
+        repository.delete(owner, id)
+        record(owner, "memory.rejected", "memory.rejected", memoryId = id)
+    }
+
+    @GetMapping("/context")
+    fun sources(@RequestParam conversationId: UUID, @RequestParam turnId: UUID, request: HttpServletRequest) =
+        contextBuilder.build(request.ownerId(), conversationId, turnId).sources
 
     @PostMapping("/proposals") @ResponseStatus(HttpStatus.CREATED)
     fun propose(@Valid @RequestBody body: MemoryProposalRequest, request: HttpServletRequest): PersonalMemory {

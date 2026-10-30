@@ -6,15 +6,21 @@ import java.util.Locale
 import java.util.UUID
 
 @Service
-class MemoryContextSelector(private val repository: PersonalMemoryRepository) {
+class MemoryContextSelector(
+    private val repository: PersonalMemoryRepository,
+    private val clock: java.time.Clock = java.time.Clock.systemUTC()
+) {
     fun select(ownerId: UUID, query: String, limit: Int = 3): List<PersonalMemory> {
-        if (!repository.settings(ownerId).enabled) return emptyList()
+        val settings = repository.settings(ownerId)
+        if (!settings.enabled) return emptyList()
         val queryTerms = terms(query)
         if (queryTerms.isEmpty()) return emptyList()
         return repository.confirmed(ownerId, CANDIDATE_LIMIT)
+            .filter { it.active && (it.expiresAt == null || it.expiresAt.isAfter(clock.instant())) && it.category in settings.categories }
             .map { memory -> memory to queryTerms.intersect(terms(memory.content)).size }
             .filter { (memory, score) -> score >= if (memory.sensitivity == MemorySensitivity.sensitive) 2 else 1 }
-            .sortedWith(compareByDescending<Pair<PersonalMemory, Int>> { it.second }.thenByDescending { it.first.updatedAt })
+            .sortedWith(compareByDescending<Pair<PersonalMemory, Int>> { it.second }.thenByDescending { it.first.updatedAt }
+                .thenBy { it.first.id })
             .take(limit.coerceIn(0, MAX_SELECTED))
             .map { it.first }
     }
@@ -26,7 +32,8 @@ class MemoryContextSelector(private val repository: PersonalMemoryRepository) {
             .filter { it.category == category }
             .map { it to proposedTerms.intersect(terms(it.content)).size }
             .filter { it.second >= 2 }
-            .sortedWith(compareByDescending<Pair<PersonalMemory, Int>> { it.second }.thenByDescending { it.first.updatedAt })
+            .sortedWith(compareByDescending<Pair<PersonalMemory, Int>> { it.second }.thenByDescending { it.first.updatedAt }
+                .thenBy { it.first.id })
             .firstOrNull()?.first
     }
 
