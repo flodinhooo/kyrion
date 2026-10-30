@@ -1,6 +1,6 @@
 export const modelMessages = {
   de: {
-    provider: "Anbieter", local: "Lokal", cloud: "Cloud", unavailable: "Nicht verfügbar",
+    provider: "Anbieter", allProviders: "Alle Anbieter", local: "Lokal", cloud: "Cloud", unavailable: "Nicht verfügbar",
     unconfigured: "Nicht konfiguriert", disabled: "Nicht freigegeben", selected: "Aktuelle Auswahl",
     cloudNotice: "Cloud-Verarbeitung: Nur deine aktuelle Nachricht wird übertragen. Verlauf und persönliche Erinnerungen bleiben lokal. Es können API-Kosten entstehen.",
     cloudConfirm: "Aktuelle Nachricht an {provider} senden? Verlauf und persönliche Erinnerungen werden nicht übertragen. Es können API-Kosten entstehen.",
@@ -20,7 +20,7 @@ export const modelMessages = {
     },
   },
   en: {
-    provider: "Provider", local: "Local", cloud: "Cloud", unavailable: "Unavailable",
+    provider: "Provider", allProviders: "All providers", local: "Local", cloud: "Cloud", unavailable: "Unavailable",
     unconfigured: "Not configured", disabled: "Not approved", selected: "Current selection",
     cloudNotice: "Cloud processing: Only your current message is transmitted. History and personal memories stay local. API charges may apply.",
     cloudConfirm: "Send the current message to {provider}? History and personal memories are excluded. API charges may apply.",

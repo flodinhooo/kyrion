@@ -22,6 +22,7 @@ function formatBytes(bytes: number, locale: string): string {
 export function ModelSettingsView() {
   const { locale, modelCatalog, selectedModelId, selectModel, t } = useWorkspace();
   const mt = modelMessages[locale];
+  const [providerFilter, setProviderFilter] = useState("all");
   const [benchmarkResults, setBenchmarkResults] = useState<Record<string, ModelBenchmarkResult>>({});
   const [benchmarkErrors, setBenchmarkErrors] = useState<string[]>([]);
   const [benchmarkingModelId, setBenchmarkingModelId] = useState<string | null>(null);
@@ -129,7 +130,11 @@ export function ModelSettingsView() {
             </span>)}
           </div>
           <div className="model-grid">
-          {modelCatalog.models.map((model) => {
+          <label>{mt.provider}<select value={providerFilter} onChange={event => setProviderFilter(event.target.value)}>
+            <option value="all">{mt.allProviders}</option>
+            {[...new Set(modelCatalog.models.map(model => model.provider ?? "ollama"))].map(provider => <option key={provider} value={provider}>{provider}</option>)}
+          </select></label>
+          {modelCatalog.models.filter(model => providerFilter === "all" || (model.provider ?? "ollama") === providerFilter).map((model) => {
             const isSelected = model.id === selectedModelId;
             const isDefault = model.id === modelCatalog.defaultModelId;
             const isRecommended = model.id === recommendedModelId;

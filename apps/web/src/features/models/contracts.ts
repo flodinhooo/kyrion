@@ -59,6 +59,7 @@ export function isModelCatalog(value: unknown): value is ModelCatalog {
       && (model.local === undefined || typeof model.local === "boolean")
       && (model.available === undefined || typeof model.available === "boolean")
       && (model.enabled === undefined || typeof model.enabled === "boolean")
+      && (model.provider === undefined || model.local === undefined || model.local === (model.provider === "ollama"))
       && (model.contextLength === undefined
         || model.contextLength === null
         || (typeof model.contextLength === "number" && model.contextLength > 0)),
