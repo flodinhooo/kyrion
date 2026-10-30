@@ -127,8 +127,10 @@ operator helper; it does not grant Web host authority.
   available while loading, reached readiness in 31.1 seconds and produced a
   53,804-byte RIFF/WAVE response after 33.8 seconds. That invocation nevertheless
   ended with a nonzero tool-reported exit; a later retry overlapped the host
-  interruption below. Functional output is established; clean process/host
-  lifecycle acceptance is not.
+  interruption below. The retry subsequently completed in **294.3 seconds**,
+  produced the same 53,804-byte WAV and explicitly returned **process exit 0**.
+  Functional output and a clean isolated process exit are established; complete
+  host lifecycle acceptance is not.
 - Read-only local health checks found PostgreSQL, Web, Core, AI, Ollama, Parakeet
   and Chatterbox reachable. These are the existing running processes, not evidence
   that the new helper/runtime source has been deployed.
@@ -154,6 +156,13 @@ start audit entries not issued by this session, and a changed private operator
 `coreJar` selection. This session did not change that selection. Further lifecycle
 mutations were stopped to avoid interfering with the other operator. Read-only
 probes and source validation remain separate from that shared runtime state.
+
+After integration commit `3661544`, further external changes appeared in
+`infrastructure/dev-stack.mjs`, with new `dev-command.mjs` and its test. Those
+subsequent edits are deliberately left uncommitted and are not covered by this
+session's validation claim. At the last full probe PostgreSQL/Web/Core/AI/Ollama/
+STT were ready; the existing TTS endpoint had not yet become ready after the
+interruption. No unconditional all-services-ready claim is made.
 
 The known host problem where terminating speech processes disrupted WSL/Docker
 was not reproduced through destructive termination. Its underlying cause remains
