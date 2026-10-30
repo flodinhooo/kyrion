@@ -59,12 +59,14 @@ class CoreDeviceProposalProvider(
     private val catalog: DeviceCatalogService,
     private val rooms: RoomResolver,
     @Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") aiBaseUrl: String,
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) : DeviceProposalProvider {
     private val proposalUrl = "${aiBaseUrl.trimEnd('/')}/v1/device-commands/propose"
     private val client = RestTemplate()
     private val mapper = jacksonObjectMapper()
 
     override fun propose(ownerId: UUID, message: String, locale: String, priorMessages: List<ActionPriorMessage>): ProposalResult {
+        if (boundary?.allowsLegacyProposal(ownerId) == false) return ProposalResult.Unavailable
         val devices = catalog.devices(ownerId)
         val response = try {
             client.postForEntity(

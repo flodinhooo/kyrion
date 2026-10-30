@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/components/app-shell";
+import { identityMessages } from "@/features/spaces/identity-messages";
 import { Icons } from "@/components/icons";
 
 function voiceDisplayName(name: string): string {
@@ -14,6 +15,7 @@ function voiceDisplayName(name: string): string {
 
 export function VoiceSettingsView() {
   const {
+    browserVoiceAllowed,
     locale,
     selectedVoiceUri,
     selectVoice,
@@ -30,6 +32,7 @@ export function VoiceSettingsView() {
   useEffect(() => () => window.speechSynthesis.cancel(), []);
 
   function previewVoice(voiceUri: string): void {
+    if (!browserVoiceAllowed) return;
     window.speechSynthesis.cancel();
     const voice = window.speechSynthesis.getVoices().find((item) =>
       item.voiceURI === voiceUri,
@@ -45,6 +48,8 @@ export function VoiceSettingsView() {
     utterance.onerror = () => setPreviewingVoiceUri(null);
     window.speechSynthesis.speak(utterance);
   }
+
+  if (!browserVoiceAllowed) return <section className="settings-stage"><h1>{t.voiceSettingsTitle}</h1><p>{identityMessages[locale].voiceBlocked}</p></section>;
 
   return (
     <section className="models-stage">

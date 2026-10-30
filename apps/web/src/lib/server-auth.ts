@@ -1,3 +1,4 @@
+import { isSpace, type Space } from "@/features/spaces/contracts";
 import { cookies } from "next/headers";
 import { csrfTokensMatch } from "@/lib/auth-security";
 
@@ -5,7 +6,7 @@ export const SESSION_COOKIE = "kyrion_session";
 export const CSRF_COOKIE = "kyrion_csrf";
 export const CORE_SERVICE_URL = process.env.CORE_SERVICE_URL ?? "http://127.0.0.1:8080";
 
-export type AuthUser = { id: string; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[]; enabled?: boolean };
+export type AuthUser = { id: string; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[]; enabled?: boolean; space?: Space };
 type UserLookup = { user: AuthUser | null; unavailable: boolean };
 
 export async function sessionToken(): Promise<string | null> {
@@ -30,7 +31,7 @@ async function lookupUser(): Promise<UserLookup> {
     if (!value || typeof value !== "object") return { user: null, unavailable: true };
     const user = value as Partial<AuthUser>;
     return typeof user.id === "string" && typeof user.username === "string"
-      ? { user: { id: user.id, username: user.username, ...(typeof user.canInvite === "boolean" ? { canInvite: user.canInvite } : {}), ...(Array.isArray(user.roles) ? { roles: user.roles.filter((v): v is string => typeof v === "string") } : {}), ...(Array.isArray(user.permissions) ? { permissions: user.permissions.filter((v): v is string => typeof v === "string") } : {}), ...(typeof user.enabled === "boolean" ? { enabled: user.enabled } : {}) }, unavailable: false }
+      ? { user: { ...(isSpace(user.space) ? { space: user.space } : {}), id: user.id, username: user.username, ...(typeof user.canInvite === "boolean" ? { canInvite: user.canInvite } : {}), ...(Array.isArray(user.roles) ? { roles: user.roles.filter((v): v is string => typeof v === "string") } : {}), ...(Array.isArray(user.permissions) ? { permissions: user.permissions.filter((v): v is string => typeof v === "string") } : {}), ...(typeof user.enabled === "boolean" ? { enabled: user.enabled } : {}) }, unavailable: false }
       : { user: null, unavailable: true };
   } catch {
     return { user: null, unavailable: true };

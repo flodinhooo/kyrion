@@ -69,6 +69,57 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         service.search(actor, service.spaces(actor).map { it.id }, "What is the budget?", 3)
 
     @Test
+    fun `personal knowledge remains private across canonical Spaces and multi Space startup stays blocked`() {
+        val document = upload()
+        worker.runOnce()
+        val foreign = UUID.randomUUID()
+        jdbc.sql("INSERT INTO user_account(id,username,password_hash) VALUES(:id,'foreign-space-owner',:hash)")
+            .param("id", foreign).param("hash", hashing.hash("foreign-space-password")).update()
+        rbac.initializeUser(foreign, foreign, true)
+        val token = auth.login("foreign-space-owner", "foreign-space-password").session.rawToken
+        val foreignSpace = service.createSpace(foreign)
+        assertThat(service.documents(foreign, foreignSpace.id, 50, 0)).isEmpty()
+        org.mockito.Mockito.clearInvocations(embeddings)
+        listOf("/v1/knowledge/documents/${document.id}", "/v1/knowledge/documents/${document.id}/content",
+            "/v1/knowledge/spaces/${space.id}/documents").forEach { path ->
+            mvc.perform(get(path).header("Authorization", "Bearer $token")).andExpect(status().isNotFound)
+        }
+        mvc.perform(delete("/v1/knowledge/documents/${document.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mvc.perform(post("/v1/knowledge/documents/${document.id}/reindex").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        assertThatThrownBy { service.search(foreign, listOf(space.id), "private budget", 3) }
+            .isInstanceOf(KnowledgeFailure::class.java)
+        org.mockito.Mockito.verify(embeddings, org.mockito.Mockito.never()).embed(org.mockito.ArgumentMatchers.anyList())
+        assertThatThrownBy { SingleSpaceRuntimeGuard(jdbc).run(org.springframework.boot.DefaultApplicationArguments()) }
+            .isInstanceOf(IllegalStateException::class.java).hasMessageContaining("MULTI_SPACE_RUNTIME_UNSUPPORTED")
+    }
+
+    @Test
+    fun `suspended canonical Space denies personal APIs and ingestion before embedding`() {
+        upload()
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", a.user.id).update()
+        org.mockito.Mockito.clearInvocations(embeddings)
+        assertThatThrownBy { service.spaces(a.user.id) }.isInstanceOf(ForbiddenException::class.java)
+        assertThat(repository.claim()).isNull()
+        worker.runOnce()
+        org.mockito.Mockito.verify(embeddings, org.mockito.Mockito.never()).embed(org.mockito.ArgumentMatchers.anyList())
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `Space suspension during embedding fences publication`() {
+        upload()
+        org.mockito.Mockito.doAnswer { invocation ->
+            jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", a.user.id).update()
+            invocation.getArgument<List<String>>(0).map { listOf(1f, 0f, 0f) }
+        }.`when`(embeddings).embed(org.mockito.ArgumentMatchers.anyList())
+        worker.runOnce()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_documents WHERE status='READY'").query(Long::class.java).single()).isZero()
+    }
+
+    @Test
     fun `upload download search and foreign UUID access enforce actor privacy including admins`() {
         val file = MockMultipartFile("file", "private.txt", "text/plain", "Private budget 42 francs".toByteArray())
         val uploaded = mvc.perform(

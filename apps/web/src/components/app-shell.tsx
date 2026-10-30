@@ -20,6 +20,8 @@ import {
   type BrowserVoiceOption,
 } from "@/features/voice/browser-speech";
 import { readPreference, writePreference } from "@/lib/browser-preferences";
+import { type Space } from "@/features/spaces/contracts";
+import { spaceMessages } from "@/features/spaces/messages";
 import { Locale, messages } from "@/lib/messages";
 import { csrfHeader } from "@/features/auth/csrf";
 import { BrandAsset } from "@/components/brand-asset";
@@ -29,6 +31,7 @@ type WorkspaceContextValue = {
   userId: string;
   username: string;
   canInvite: boolean;
+  browserVoiceAllowed: boolean;
   permissions: string[];
   roles: string[];
   hasPermission: (permission: string) => boolean;
@@ -68,7 +71,7 @@ export function useWorkspace() {
   return context;
 }
 
-export function AppShell({ children, userId, username, canInvite = false, roles = [], permissions = [] }: { children: ReactNode; userId: string; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[] }) {
+export function AppShell({ children, userId, username, canInvite = false, roles = [], permissions = [], space }: { children: ReactNode; userId: string; username: string; canInvite?: boolean; roles?: string[]; permissions?: string[]; space?: Space }) {
   const pathname = usePathname();
   const router = useRouter();
   const [locale, setLocale] = useState<Locale>("de");
@@ -391,6 +394,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
       userId,
       username,
       canInvite,
+      browserVoiceAllowed: space?.type === "HOME",
       permissions,
       roles,
       hasPermission,
@@ -427,6 +431,7 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
             </Sheet>
             <div className="topbar-title">
               <span>{pageTitle}</span>
+              {space && <small style={{ maxWidth: "35vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Link href="/settings/space">{space.name} ? {space.type === "HOME" ? spaceMessages[locale].home : spaceMessages[locale].business}</Link> ? {roles.join(", ")}</small>}
             </div>
             <div className="topbar-actions">
               <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile" aria-label={t.profile} title={username}>

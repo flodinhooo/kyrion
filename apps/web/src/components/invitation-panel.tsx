@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { spaceMessages } from "@/features/spaces/messages";
 import { useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { csrfHeader } from "@/features/auth/csrf";
 
 export function InvitationPanel() {
-  const { t, canInvite } = useWorkspace();
+  const { t, canInvite, locale } = useWorkspace();
   const [code, setCode] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -30,6 +32,7 @@ export function InvitationPanel() {
   if (!canInvite) return null;
   return <div className="settings-link-card profile-security-panel">
     <span><strong>{t.invitationTitle}</strong><small>{t.invitationDescription}</small></span>
+    <p><Link href="/settings/space">{spaceMessages[locale].invitations}</Link></p>
     <div className="password-form">
       {code && <>
         <label>{t.authInvitationCode}<input readOnly value={code} autoComplete="off" onFocus={(event) => event.currentTarget.select()} /></label>

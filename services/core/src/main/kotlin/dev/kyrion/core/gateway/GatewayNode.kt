@@ -207,6 +207,7 @@ class GatewayService(
     private val tokens: SessionTokenService,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     fun createEnrollment(ownerId: UUID, displayName: String): CreatedGatewayEnrollment {
         val now = clock.instant()
@@ -243,6 +244,7 @@ class GatewayService(
     fun all(ownerId: UUID): List<GatewayNodeView> = repository.all(ownerId).map { it.view(clock.instant()) }
 
     fun heartbeat(nodeId: UUID, rawCredential: String, health: GatewayHealth) {
+        authenticate(nodeId, rawCredential)
         validateHealth(health)
         if (!repository.updateHeartbeat(nodeId, tokens.hash(rawCredential), health, clock.instant())) {
             throw GatewayUnauthenticatedException()
@@ -250,7 +252,7 @@ class GatewayService(
     }
 
     fun authenticate(nodeId: UUID, rawCredential: String): GatewayNode =
-        repository.findById(nodeId)?.takeIf { it.credentialHash == tokens.hash(rawCredential) }
+        repository.findById(nodeId)?.takeIf { it.credentialHash == tokens.hash(rawCredential) }?.also { boundary?.workspace(it.ownerId) }
             ?: throw GatewayUnauthenticatedException()
 
     private fun validateHealth(health: GatewayHealth) {

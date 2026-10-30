@@ -12,7 +12,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RequestMapping("/v1/ai")
 class AiController(
     private val settings: AiSettingsService, private val usage: AiUsageService,
-    private val orchestration: AiOrchestrationService, private val rbac: RbacService
+    private val orchestration: AiOrchestrationService, private val rbac: RbacService,
+    private val authentication: dev.kyrion.core.security.LocalAuthenticationService
 ) {
     @GetMapping("/preferences")
     fun preferences(request: HttpServletRequest): Map<String, Any> {
@@ -41,13 +42,19 @@ class AiController(
 
     @PostMapping("/chat/stream", produces = ["application/x-ndjson"])
     fun stream(@RequestBody body: String, request: HttpServletRequest): ResponseEntity<StreamingResponseBody> {
+        val actor = request.authenticatedUserId()
+        val token = request.getHeader("Authorization")?.removePrefix("Bearer ") ?: throw dev.kyrion.core.security.UnauthenticatedException()
         val prepared =
             orchestration.prepare(request.authenticatedUserId(), parse(body, AiGenerationRequest::class.java))
         org.springframework.web.context.request.async.WebAsyncUtils.getAsyncManager(request)
             .asyncWebRequest?.setTimeout((prepared.timeoutSeconds + 10L) * 1000)
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/x-ndjson"))
             .header("Cache-Control", "no-store").body(StreamingResponseBody { output ->
-                orchestration.stream(prepared) { line -> output.write((line + "\n").toByteArray(Charsets.UTF_8)); output.flush() }
+                orchestration.stream(prepared, {
+                    if (authentication.authenticate(token)?.id != actor) throw dev.kyrion.core.security.UnauthenticatedException()
+                }) { line ->
+                    if (authentication.authenticate(token)?.id != actor) throw dev.kyrion.core.security.UnauthenticatedException()
+                    output.write((line + "\n").toByteArray(Charsets.UTF_8)); output.flush() }
             })
     }
 

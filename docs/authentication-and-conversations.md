@@ -28,11 +28,14 @@ claim retryable until expiry. Once consumed, the file cannot reopen setup, even
 if accounts are subsequently absent. Restore must preserve this marker and the
 original credential/audit keys. Existing startup must not refresh bootstrap files.
 
-Additional accounts require a cryptographically random, single-use invitation
-valid for 24 hours. Only users explicitly granted `invitations:create` can issue
+Additional accounts require a cryptographically random invitation, defaulting to
+one use and 24 hours. [Kyrion Spaces](kyrion-spaces.md) adds bounded uses, role
+selection, listing, revocation and local fragment URLs. Only users explicitly granted `invitations:create` can issue
 one. Actor and workspace are separate, including for delegated administrators.
 Invitation redemption, account/session creation and audit are transactional.
-Registration assigns the existing USER role without changing any role grants.
+Registration assigns the selected non-OWNER role, or the Space default role,
+without changing existing grants. Inviter delegation is checked at creation and
+redemption. The new account belongs to exactly that Space.
 Repeated initial seeding only grants defaults to newly created roles.
 
 Core checks effective permissions and workspace ownership. Non-owner delegates
@@ -85,6 +88,14 @@ server rendering. Private Next.js API routes repeat that check. Core separately
 requires a bearer session on protected `/v1` resources, so bypassing the Web UI
 does not bypass the authority boundary.
 
+## Optional Business identity
+
+[Business identity and local recovery](business-identity-and-recovery.md) adds
+pending/SMTP-verified email, domain-control proof and exact-domain enrollment
+policy. Existing accounts are not auto-verified. Strict policy requires verified
+members and recovery; personal membership/session ownership remains unchanged.
+Recovery is an interactive host-local CLI, never an HTTP owner-creation flow.
+
 ## Endpoints
 
 Public Core endpoints:
@@ -92,7 +103,8 @@ Public Core endpoints:
 - `GET /v1/auth/setup/status`
 - `POST /v1/auth/setup`
 - `POST /v1/auth/login`
-- `POST /v1/auth/register` (requires a valid invitation code)
+- `POST /v1/auth/register` (requires a valid invitation and policy-required email proof)
+- `POST /v1/auth/registration-email` (generic accepted response; requires invitation to deliver mail)
 
 Authenticated Core endpoints:
 

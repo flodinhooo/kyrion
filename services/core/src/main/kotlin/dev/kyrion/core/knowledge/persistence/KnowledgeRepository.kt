@@ -91,7 +91,7 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
             WITH candidate AS (
               SELECT j.id FROM knowledge_ingestion_jobs j JOIN knowledge_documents d ON d.id=j.document_id
               JOIN knowledge_spaces s ON s.id=d.space_id JOIN user_account u ON u.id=s.owner_user_id
-              WHERE d.deleted_at IS NULL AND s.owner_type='PERSONAL' AND u.enabled AND j.attempt_count<3
+              WHERE d.deleted_at IS NULL AND s.owner_type='PERSONAL' AND u.enabled AND EXISTS(SELECT 1 FROM kyrion_space tenant WHERE tenant.id=u.space_id AND tenant.status='ACTIVE') AND j.attempt_count<3
               AND ((j.status='PENDING' AND j.next_attempt_at<=CURRENT_TIMESTAMP) OR
                    (j.status='PROCESSING' AND j.lease_expires_at<CURRENT_TIMESTAMP))
               ORDER BY j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1
@@ -117,7 +117,7 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
     }
 
     fun alive(job: KnowledgeJob): Boolean =
-        jdbc.sql("SELECT EXISTS(SELECT 1 FROM knowledge_documents d JOIN knowledge_ingestion_jobs j ON j.document_id=d.id JOIN knowledge_spaces s ON s.id=d.space_id JOIN user_account u ON u.id=s.owner_user_id WHERE d.id=:doc AND d.deleted_at IS NULL AND u.enabled AND d.ingestion_revision=:rev AND j.id=:job AND j.lease_owner=:lease AND j.status='PROCESSING' AND j.lease_expires_at>CURRENT_TIMESTAMP)")
+        jdbc.sql("SELECT EXISTS(SELECT 1 FROM knowledge_documents d JOIN knowledge_ingestion_jobs j ON j.document_id=d.id JOIN knowledge_spaces s ON s.id=d.space_id JOIN user_account u ON u.id=s.owner_user_id WHERE d.id=:doc AND d.deleted_at IS NULL AND u.enabled AND EXISTS(SELECT 1 FROM kyrion_space tenant WHERE tenant.id=u.space_id AND tenant.status='ACTIVE') AND d.ingestion_revision=:rev AND j.id=:job AND j.lease_owner=:lease AND j.status='PROCESSING' AND j.lease_expires_at>CURRENT_TIMESTAMP)")
             .param("doc", job.documentId).param("rev", job.revision).param("job", job.id).param("lease", job.lease)
             .query(Boolean::class.java).single()
 

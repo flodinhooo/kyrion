@@ -69,6 +69,476 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val aiUsage: dev.kyrion.core.ai.AiUsageService,
     private val aiOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
 ) {
+    @Autowired lateinit var identities: BusinessIdentityService
+    @Autowired lateinit var recovery: LocalOwnerRecovery
+    @Autowired lateinit var tenantBoundary: TenantBoundary
+    @Autowired lateinit var satelliteService: dev.kyrion.core.voice.VoiceSatelliteService
+    @MockitoBean lateinit var verificationDelivery: VerificationDelivery
+    @MockitoBean lateinit var domainLookup: DomainTxtLookup
+    private val deliveredCodes = java.util.concurrent.ConcurrentHashMap<String,String>()
+
+    private fun enableDelivery() {
+        deliveredCodes.clear()
+        `when`(verificationDelivery.available()).thenReturn(true)
+        org.mockito.Mockito.doAnswer { invocation ->
+            deliveredCodes[invocation.getArgument(0)] = invocation.getArgument(1); null
+        }.`when`(verificationDelivery).send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())
+    }
+    private fun verifyAddress(user: UUID, email: String) {
+        identities.requestEmail(user,email)
+        identities.verifyEmail(user,deliveredCodes.getValue(email))
+    }
+    private fun verifyCompanyDomain(user: UUID): String {
+        val challenge=identities.challengeDomain(user,"Company.CH")
+        `when`(domainLookup.records("company.ch")).thenReturn(listOf(challenge.value))
+        identities.verifyDomain(user,"company.ch")
+        return challenge.value
+    }
+
+    @Test fun `mail verification separates pending changes invalidates resends and consumes tokens once`() {
+        enableDelivery()
+        val owner=authentication.setup("email_owner",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business").user
+        identities.requestEmail(owner.id,"owner@COMPANY.CH")
+        val first=deliveredCodes.getValue("owner@company.ch")
+        assertThat(identities.email(owner.id).status).isEqualTo("PENDING")
+        assertThat(jdbc.sql("SELECT token_hash FROM business_email_challenge").query(String::class.java).single()).isEqualTo(SessionTokenService().hash(first)).isNotEqualTo(first)
+        assertThatThrownBy { identities.requestEmail(owner.id,"owner@company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        jdbc.sql("UPDATE business_email_challenge SET created_at=CURRENT_TIMESTAMP-INTERVAL '61 seconds'").update()
+        identities.requestEmail(owner.id,"owner@company.ch")
+        assertThatThrownBy { identities.verifyEmail(owner.id,first) }.isInstanceOf(IdentityPolicyException::class.java)
+        identities.verifyEmail(owner.id,deliveredCodes.getValue("owner@company.ch"))
+        assertThatThrownBy { identities.verifyEmail(owner.id,deliveredCodes.getValue("owner@company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
+        jdbc.sql("UPDATE business_email_challenge SET created_at=CURRENT_TIMESTAMP-INTERVAL '61 seconds'").update()
+        identities.requestEmail(owner.id,"replacement@company.ch")
+        assertThat(identities.email(owner.id).email).isEqualTo("owner@company.ch")
+        jdbc.sql("UPDATE business_email_challenge SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE consumed_at IS NULL").update()
+        assertThatThrownBy { identities.verifyEmail(owner.id,deliveredCodes.getValue("replacement@company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThat(identities.email(owner.id).email).isEqualTo("owner@company.ch")
+    }
+
+    @Test fun `concurrent email verification has exactly one winner and never exposes proof over HTTP`() {
+        enableDelivery()
+        val owner=authentication.setup("email_race",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business")
+        identities.requestEmail(owner.user.id,"race@company.ch")
+        val code=deliveredCodes.getValue("race@company.ch")
+        val start=java.util.concurrent.CountDownLatch(1)
+        val executor=java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val futures=(1..2).map { executor.submit<Boolean> { start.await(); try { identities.verifyEmail(owner.user.id,code); true } catch(_: IdentityPolicyException) { false } } }
+            start.countDown()
+            assertThat(futures.map { it.get(20,java.util.concurrent.TimeUnit.SECONDS) }).containsExactlyInAnyOrder(true,false)
+        } finally { executor.shutdownNow() }
+        val result=mockMvc.perform(get("/v1/identity/email").header("Authorization","Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.status").value("VERIFIED")).andReturn()
+        assertThat(result.response.contentAsString).doesNotContain(code)
+        mockMvc.perform(get("/v1/identity/email")).andExpect(status().isUnauthorized)
+    }
+
+    @Test fun `DNS proof is scoped expiring rotating and restricted to a Business Owner`() {
+        enableDelivery()
+        val owner=authentication.setup("dns_owner",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business").user
+        val first=identities.challengeDomain(owner.id,"company.ch")
+        `when`(domainLookup.records("company.ch")).thenReturn(listOf("unrelated TXT"))
+        assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        val next=identities.challengeDomain(owner.id,"company.ch")
+        `when`(domainLookup.records("company.ch")).thenReturn(listOf(first.value))
+        assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        `when`(domainLookup.records("company.ch")).thenReturn(listOf(next.value))
+        identities.verifyDomain(owner.id,"company.ch")
+        assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("VERIFIED")
+        assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        val invite=spaces.createInvitation(owner.id,InvitationOptions())
+        val user=authentication.register("dns_member",OTHER_PASSWORD,invite.code).user
+        assertThatThrownBy { identities.challengeDomain(user.id,"company.ch") }.isInstanceOf(ForbiddenException::class.java)
+        identities.challengeDomain(owner.id,"expired.company.ch")
+        jdbc.sql("UPDATE business_domain SET challenge_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE domain='expired.company.ch'").update()
+        assertThatThrownBy { identities.verifyDomain(owner.id,"expired.company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+    }
+
+    @Test fun `strict policy prevents lockouts requires recovery and enforces invitation email proof atomically`() {
+        enableDelivery()
+        val owner=authentication.setup("strict_owner",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business").user
+        verifyAddress(owner.id,"owner@company.ch")
+        verifyCompanyDomain(owner.id)
+        val request=BusinessPolicyRequest("STRICT",setOf("company.ch"),true)
+        assertThatThrownBy { identities.updatePolicy(owner.id,request) }.isInstanceOf(IdentityPolicyException::class.java)
+        recovery.provision(owner.id,OLD_PASSWORD,SessionTokenService().create().rawToken)
+        val invite=spaces.createInvitation(owner.id,InvitationOptions())
+        val member=authentication.register("unverified",OTHER_PASSWORD,invite.code).user
+        assertThatThrownBy { identities.updatePolicy(owner.id,request) }.isInstanceOf(IdentityPolicyException::class.java)
+        verifyAddress(member.id,"member@company.ch")
+        val old=spaces.createInvitation(owner.id,InvitationOptions())
+        identities.updatePolicy(owner.id,request)
+        assertThat(spaces.invitations(owner.id).first { it.id==old.id }.status).isEqualTo("REVOKED")
+        assertThatThrownBy { spaces.createInvitation(owner.id,InvitationOptions()) }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.id,InvitationOptions(email="outsider@example.com")) }.isInstanceOf(IdentityPolicyException::class.java)
+        val issued=spaces.createInvitation(owner.id,InvitationOptions(email="join@company.ch"))
+        assertThatThrownBy { authentication.register("joiner",OTHER_PASSWORD,issued.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        identities.requestRegistrationEmail(issued.code,"join@company.ch")
+        val proof=deliveredCodes.getValue("join@company.ch")
+        assertThatThrownBy { authentication.register("joiner",OTHER_PASSWORD,issued.code,"wrong@company.ch",proof) }.isInstanceOf(InvalidInvitationException::class.java)
+        val joined=authentication.register("joiner",OTHER_PASSWORD,issued.code,"join@company.ch",proof).user
+        assertThat(identities.email(joined.id).status).isEqualTo("VERIFIED")
+        assertThat(tenantBoundary.actor(joined.id).spaceId).isEqualTo(owner.id)
+        assertThatThrownBy { identities.requestEmail(owner.id,"replacement@example.com") }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThatThrownBy { identities.updatePolicy(owner.id,BusinessPolicyRequest("STRICT",emptySet(),true)) }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThatThrownBy { spaces.update(owner.id,SpaceSettingsRequest("Home",SpaceType.HOME)) }.isInstanceOf(IdentityPolicyException::class.java)
+        rbac.deactivate(owner.id,member.id,false)
+        identities.suspendDomain(owner.id,"company.ch")
+        assertThat(tenantBoundary.actor(owner.id).spaceId).isEqualTo(owner.id)
+        assertThatThrownBy { rbac.deactivate(owner.id,member.id,true) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.id,InvitationOptions(email="late@company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThat(identities.updatePolicy(owner.id,BusinessPolicyRequest("OFF",setOf("company.ch"))).mode).isEqualTo("OFF")
+    }
+
+    @Test fun `local attestation is privileged and cannot satisfy strict mailbox verification`() {
+        enableDelivery()
+        val owner=authentication.setup("local_owner",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business").user
+        val host=SessionTokenService().create().rawToken
+        recovery.provision(owner.id,OLD_PASSWORD,host)
+        assertThatThrownBy { recovery.attestEmail(owner.id,"bad",OLD_PASSWORD,owner.id,"local@company.ch") }.isInstanceOf(LocalRecoveryException::class.java)
+        recovery.attestEmail(owner.id,host,OLD_PASSWORD,owner.id,"local@company.ch")
+        assertThat(identities.email(owner.id).status).isEqualTo("LOCALLY_ATTESTED")
+        verifyCompanyDomain(owner.id)
+        assertThatThrownBy { identities.updatePolicy(owner.id,BusinessPolicyRequest("STRICT",setOf("company.ch"),true)) }.isInstanceOf(IdentityPolicyException::class.java)
+        mockMvc.perform(post("/v1/auth/registration-email").contentType(MediaType.APPLICATION_JSON).content("""{"invitationCode":"invalid","email":"unrelated@example.com"}"""))
+            .andExpect(status().isAccepted)
+    }
+
+    @Test fun `host recovery consumes codes rotates passwords revokes sessions and keeps Owner roles`() {
+        val owner=authentication.setup("recover_owner",OLD_PASSWORD,setupSecret)
+        val host=SessionTokenService().create().rawToken
+        assertThatThrownBy { recovery.provision(owner.user.id,"wrong",host) }.isInstanceOf(LocalRecoveryException::class.java)
+        val code=recovery.provision(owner.user.id,OLD_PASSWORD,host)
+        val other=insertAdditionalOwner("other_recovery")
+        assertThatThrownBy { recovery.open(other,host,code) }.isInstanceOf(LocalRecoveryException::class.java)
+        assertThatThrownBy { recovery.open(owner.user.id,"wrong",code) }.isInstanceOf(LocalRecoveryException::class.java)
+        val opened=recovery.open(owner.user.id,host,code)
+        assertThatThrownBy { recovery.open(owner.user.id,host,code) }.isInstanceOf(LocalRecoveryException::class.java)
+        assertThatThrownBy { recovery.complete(owner.user.id,host,opened.session,OLD_PASSWORD) }.isInstanceOf(LocalRecoveryException::class.java)
+        val next=recovery.complete(owner.user.id,host,opened.session,NEW_PASSWORD)
+        assertThat(next).isNotEqualTo(code).isNotEqualTo(opened.nextCode)
+        assertThat(authentication.authenticate(owner.session.rawToken)).isNull()
+        assertThat(authentication.login("recover_owner",NEW_PASSWORD).user.id).isEqualTo(owner.user.id)
+        assertThat(rbac.isOwner(owner.user.id)).isTrue()
+        assertThatThrownBy { recovery.complete(owner.user.id,host,opened.session,"another-secure-password") }.isInstanceOf(LocalRecoveryException::class.java)
+        assertThatThrownBy { rbac.deactivate(owner.user.id,owner.user.id,false) }.isInstanceOf(LastOwnerProtectedException::class.java)
+        assertThat(activity.recent(owner.user.id,100).map { it.eventType }).contains("identity.recovery.denied","identity.recovery.completed")
+        mockMvc.perform(post("/v1/auth/recovery").contentType(MediaType.APPLICATION_JSON).content("{}" )).andExpect(status().isNotFound)
+    }
+
+    @Test fun `expired recovery sessions fail closed and rotated material permits a local retry`() {
+        val owner=authentication.setup("expired_recovery",OLD_PASSWORD,setupSecret).user
+        val host=SessionTokenService().create().rawToken
+        val code=recovery.provision(owner.id,OLD_PASSWORD,host)
+        val opened=recovery.open(owner.id,host,code)
+        jdbc.sql("UPDATE space_recovery_session SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+        assertThatThrownBy { recovery.complete(owner.id,host,opened.session,NEW_PASSWORD) }.isInstanceOf(LocalRecoveryException::class.java)
+        val retry=recovery.open(owner.id,host,opened.nextCode)
+        val completedCode=recovery.complete(owner.id,host,retry.session,NEW_PASSWORD)
+        jdbc.sql("UPDATE space_recovery_material SET code_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+        assertThatThrownBy { recovery.open(owner.id,host,completedCode) }.isInstanceOf(LocalRecoveryException::class.java)
+    }
+
+    @Test fun `tenant context nested ownership policies and voice sessions reject a second Space`() {
+        val owner=authentication.setup("tenant_a",OLD_PASSWORD,setupSecret).user
+        val foreign=insertAdditionalOwner("tenant_b")
+        rbac.initializeUser(foreign,foreign,true)
+        assertThat(rbac.roles(owner.id).map { it.key }).containsAll(rbac.roles(foreign).map { it.key })
+        assertThatThrownBy { tenantBoundary.shared(owner.id,foreign) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { tenantBoundary.personal(owner.id,foreign) }.isInstanceOf(ForbiddenException::class.java)
+        val satelliteA=satelliteService.bootstrap(owner.id,"A","satellite-a","test")
+        val satelliteB=satelliteService.bootstrap(foreign,"B","satellite-b","test")
+        val sessionB=satelliteService.openSession(satelliteB.satellite.id,satelliteB.token)
+        assertThatThrownBy { satelliteService.activeSession(satelliteA.satellite.id,satelliteA.token,sessionB.id) }.isInstanceOf(dev.kyrion.core.voice.VoiceSessionNotFoundException::class.java)
+        val id=UUID.randomUUID()
+        conversations.replace(foreign,Conversation(id,"Foreign",Instant.now(),Instant.now(),listOf()))
+        assertThatThrownBy { aiOrchestration.prepare(owner.id,dev.kyrion.core.ai.AiGenerationRequest(id,UUID.randomUUID())) }.isInstanceOf(dev.kyrion.core.ai.AiFailure::class.java)
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:space").param("space",foreign).update()
+        assertThatThrownBy { satelliteService.authenticate(satelliteB.satellite.id,satelliteB.token) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { tenantBoundary.workspace(foreign) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test fun `Business voice and unrouted proposals stay disabled rather than bypassing policy`() {
+        val owner=authentication.setup("voice_business",OLD_PASSWORD,setupSecret,SpaceType.BUSINESS,"Business").user
+        val satellite=satelliteService.bootstrap(owner.id,"Business satellite","business-satellite","test")
+        assertThatThrownBy { satelliteService.openSession(satellite.satellite.id,satellite.token) }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThat(tenantBoundary.allowsLegacyProposal(owner.id)).isFalse()
+        // Knowledge is now integrated; authentication must protect the real API.
+        mockMvc.perform(get("/v1/knowledge/spaces")).andExpect(status().isUnauthorized)
+    }
+
+    @Test fun `nested room and voice ownership cannot be forged in persistence`() {
+        val owner=authentication.setup("nested_a",OLD_PASSWORD,setupSecret).user
+        val foreign=insertAdditionalOwner("nested_b")
+        val roomId=UUID.randomUUID()
+        jdbc.sql("INSERT INTO owner_room(id,owner_id,name,created_at,updated_at) VALUES(:id,:owner,'Foreign room',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)")
+            .param("id",roomId).param("owner",foreign).update()
+        `when`(nanoleafGateway.pair("192.168.1.71")).thenReturn("nested-test-credential")
+        val connection=nanoleaf.pair(owner.id,"192.168.1.71","Owner lamp")
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("UPDATE integration_connection SET room_id=:room WHERE id=:id").param("room",roomId).param("id",connection.id).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+        val satellite=satelliteService.bootstrap(owner.id,"A","nested-satellite","test")
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("INSERT INTO voice_dialogue_session(id,satellite_id,owner_id,conversation_id,status,started_at,last_activity_at,expires_at) VALUES(:id,:satellite,:owner,:conversation,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP+INTERVAL '1 minute')")
+                .param("id",UUID.randomUUID()).param("satellite",satellite.satellite.id).param("owner",foreign).param("conversation",UUID.randomUUID()).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+    }
+
+    @Test fun `recovery material rotation requires current Owner and invalidates prior codes`() {
+        val owner=authentication.setup("rotate_recovery",OLD_PASSWORD,setupSecret).user
+        val host=SessionTokenService().create().rawToken
+        val code=recovery.provision(owner.id,OLD_PASSWORD,host)
+        assertThatThrownBy { recovery.rotate(owner.id,host,"incorrect") }.isInstanceOf(LocalRecoveryException::class.java)
+        val next=recovery.rotate(owner.id,host,OLD_PASSWORD)
+        assertThatThrownBy { recovery.open(owner.id,host,code) }.isInstanceOf(LocalRecoveryException::class.java)
+        assertThat(recovery.open(owner.id,host,next).session).hasSize(43)
+    }
+
+    @Test fun `prepared AI observes policy revocation before provider use and releases its reservation`() {
+        val token=setupToken()
+        val actor=authentication.authenticate(token)!!.id
+        val conversation=UUID.randomUUID()
+        val turn=UUID.randomUUID()
+        startHttpTurn(token,conversation,turn,"Synthetic policy revocation question","2026-10-30T12:00:00Z")
+        val prepared=aiOrchestration.prepare(actor,dev.kyrion.core.ai.AiGenerationRequest(conversation,turn))
+        aiSettings.savePolicy(actor,dev.kyrion.core.ai.AiPolicy(allowedProviders=emptyList()))
+        val output=mutableListOf<String>()
+        aiOrchestration.stream(prepared,output::add)
+        assertThat(aiGateway.payloads).isEmpty()
+        assertThat(aiUsage.summary(actor).chargedTokens).isZero()
+        assertThat(output.joinToString()).contains("error")
+    }
+
+    @Test fun `tenant policies usage and queued workers ignore altered foreign Space parameters`() {
+        val owner=authentication.setup("policy_a",OLD_PASSWORD,setupSecret)
+        val foreign=insertAdditionalOwner("policy_b")
+        rbac.initializeUser(foreign,foreign,true)
+        aiSettings.savePolicy(owner.user.id,dev.kyrion.core.ai.AiPolicy(monthlyTokenLimit=100_000))
+        aiSettings.savePolicy(foreign,dev.kyrion.core.ai.AiPolicy(monthlyTokenLimit=200_000))
+        mockMvc.perform(get("/v1/ai/policy").param("spaceId",foreign.toString()).header("Authorization","Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.monthlyTokenLimit").value(100_000))
+        mockMvc.perform(put("/v1/ai/policy").header("Authorization","Bearer ${owner.session.rawToken}").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"spaceId":"$foreign","monthlyTokenLimit":1}""" )).andExpect(status().isBadRequest)
+        assertThat(aiSettings.policy(foreign).monthlyTokenLimit).isEqualTo(200_000)
+        aiUsage.reserve(foreign,UUID.randomUUID(),0,aiGateway.model,dev.kyrion.core.ai.AiRouteRequest(),aiGateway.catalog(),100)
+        assertThat(aiUsage.summary(owner.user.id).chargedTokens).isZero()
+        assertThat(aiUsage.summary(foreign).chargedTokens).isGreaterThan(0)
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:space").param("space",foreign).update()
+        val importer=org.mockito.Mockito.mock(dev.kyrion.core.integration.HomeAssistantImportService::class.java)
+        val worker=dev.kyrion.core.integration.HomeAssistantRefresh(jdbc,importer,tenantBoundary)
+        val executor=java.util.concurrent.Executors.newSingleThreadExecutor()
+        try { executor.submit { worker.refresh() }.get(10,java.util.concurrent.TimeUnit.SECONDS) } finally { executor.shutdownNow() }
+        org.mockito.Mockito.verify(importer,org.mockito.Mockito.never()).refreshIfDue(foreign)
+    }
+
+    @Test fun `stale sessions cannot start an asynchronously prepared provider stream`() {
+        val token=setupToken()
+        val actor=authentication.authenticate(token)!!.id
+        val conversation=UUID.randomUUID()
+        val turn=UUID.randomUUID()
+        startHttpTurn(token,conversation,turn,"Synthetic revoked session question","2026-10-30T12:00:00Z")
+        val prepared=aiOrchestration.prepare(actor,dev.kyrion.core.ai.AiGenerationRequest(conversation,turn))
+        authentication.logout(token,actor)
+        val executor=java.util.concurrent.Executors.newSingleThreadExecutor()
+        try {
+            executor.submit {
+                aiOrchestration.stream(prepared,{ if(authentication.authenticate(token)?.id!=actor) throw UnauthenticatedException() }) { }
+            }.get(10,java.util.concurrent.TimeUnit.SECONDS)
+        } finally { executor.shutdownNow() }
+        assertThat(aiGateway.payloads).isEmpty()
+        assertThat(aiUsage.summary(actor).chargedTokens).isZero()
+    }
+
+    @Autowired
+    lateinit var spaces: SpaceService
+
+    @Test
+    fun `Home and Business setup preserve the protected bootstrap and Space ownership`() {
+        val owner = authentication.setup("business_owner", OLD_PASSWORD, setupSecret, SpaceType.BUSINESS, "Local Company")
+        assertThat(spaces.current(owner.user.id).type).isEqualTo(SpaceType.BUSINESS)
+        assertThat(spaces.current(owner.user.id).name).isEqualTo("Local Company")
+        assertThat(spaces.current(owner.user.id).id).isEqualTo(owner.user.resourceOwnerId)
+        assertThat(rbac.isOwner(owner.user.id)).isTrue()
+        assertThatThrownBy { authentication.setup("replay", OLD_PASSWORD, setupSecret) }.isInstanceOf(SetupAlreadyCompletedException::class.java)
+    }
+
+    @Test
+    fun `custom default roles are applied without changing additive permissions`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val role = rbac.createRole(owner.user.id, RoleRequest("guest", "Guest", setOf("devices:read")))
+        spaces.update(owner.user.id, SpaceSettingsRequest("Home", SpaceType.HOME, role.key))
+        val invitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val member = authentication.register("guest", OTHER_PASSWORD, invitation.code).user
+        assertThat(rbac.permissions(member.id)).containsExactly("devices:read")
+        assertThat(spaces.current(member.id).id).isEqualTo(owner.user.id)
+        assertThatThrownBy { rbac.deleteRole(owner.user.id, role.id) }.isInstanceOf(RoleInUseException::class.java)
+        assertThatThrownBy { spaces.update(member.id, SpaceSettingsRequest("Stolen", SpaceType.BUSINESS)) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test
+    fun `invitation tokens are hashed bounded expiring revocable and never grant Owner`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val ownerRole = rbac.roles(owner.user.id).first { it.key == "OWNER" }
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(ownerRole.id)) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(maxUses=21)) }.isInstanceOf(InvalidSpaceSettingsException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(expiresInHours=169)) }.isInstanceOf(InvalidSpaceSettingsException::class.java)
+        val issued = spaces.createInvitation(owner.user.id, InvitationOptions(maxUses=2))
+        assertThat(jdbc.sql("SELECT token_hash FROM registration_invitation WHERE id=:id").param("id", issued.id).query(String::class.java).single())
+            .isEqualTo(SessionTokenService().hash(issued.code)).isNotEqualTo(issued.code)
+        authentication.register("first", OTHER_PASSWORD, issued.code)
+        authentication.register("second", OTHER_PASSWORD, issued.code)
+        assertThatThrownBy { authentication.register("replay", OTHER_PASSWORD, issued.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(spaces.invitations(owner.user.id).first { it.id == issued.id }.status).isEqualTo("USED")
+        val revoked = spaces.createInvitation(owner.user.id, InvitationOptions())
+        spaces.revoke(owner.user.id, revoked.id)
+        spaces.revoke(owner.user.id, revoked.id)
+        assertThatThrownBy { authentication.register("revoked", OTHER_PASSWORD, revoked.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        val expired = spaces.createInvitation(owner.user.id, InvitationOptions())
+        jdbc.sql("UPDATE registration_invitation SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE id=:id").param("id", expired.id).update()
+        assertThatThrownBy { authentication.register("expired", OTHER_PASSWORD, expired.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(spaces.invitations(owner.user.id).first { it.id == expired.id }.status).isEqualTo("EXPIRED")
+    }
+
+    @Test
+    fun `concurrent redemption consumes a one use invitation exactly once`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val issued = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val start = java.util.concurrent.CountDownLatch(1)
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val futures = (1..2).map { index -> executor.submit<Boolean> {
+                start.await()
+                try { authentication.register("racer$index", OTHER_PASSWORD, issued.code); true }
+                catch (_: InvalidInvitationException) { false }
+            } }
+            start.countDown()
+            assertThat(futures.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }).containsExactlyInAnyOrder(true, false)
+            assertThat(jdbc.sql("SELECT use_count FROM registration_invitation WHERE id=:id").param("id", issued.id).query(Int::class.java).single()).isEqualTo(1)
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test
+    fun `role changes cannot turn an outstanding invitation into a privilege escalation`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val memberInvitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val member = authentication.register("delegate", OTHER_PASSWORD, memberInvitation.code).user
+        val delegated = rbac.createRole(owner.user.id, RoleRequest("delegate", "Delegate", setOf("invitations:create", "devices:read")))
+        rbac.assignRoles(owner.user.id, member.id, setOf(delegated.id))
+        val viewer = rbac.createRole(owner.user.id, RoleRequest("limited", "Limited", setOf("devices:read")))
+        val issued = spaces.createInvitation(member.id, InvitationOptions(viewer.id))
+        rbac.updateRole(owner.user.id, viewer.id, RoleRequest("limited", "Expanded", setOf("devices:read", "devices:execute")))
+        assertThatThrownBy { authentication.register("escalation", OTHER_PASSWORD, issued.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThatThrownBy { spaces.createInvitation(member.id, InvitationOptions(viewer.id)) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test
+    fun `Space endpoints enforce authentication permissions tenant IDs and audit`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        mockMvc.perform(get("/v1/space")).andExpect(status().isUnauthorized)
+        mockMvc.perform(get("/v1/space").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.type").value("HOME"))
+        val foreign = insertAdditionalOwner("foreign")
+        assertThatThrownBy { SingleSpaceRuntimeGuard(jdbc).run(org.springframework.boot.DefaultApplicationArguments()) }
+            .isInstanceOf(IllegalStateException::class.java).hasMessageContaining("MULTI_SPACE_RUNTIME_UNSUPPORTED")
+        rbac.initializeUser(foreign, foreign, true)
+        val foreignInvitation = spaces.createInvitation(foreign, InvitationOptions())
+        assertThatThrownBy { spaces.revoke(owner.user.id, foreignInvitation.id) }.isInstanceOf(InvalidInvitationException::class.java)
+        val ownInvitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        spaces.revoke(owner.user.id, ownInvitation.id)
+        assertThat(activity.recent(owner.user.id, 50).map { it.eventType }).contains("space.invitation.created", "space.invitation.revoked", "space.settings.updated")
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("UPDATE user_account SET workspace_owner_id=:foreign WHERE id=:id").param("foreign", foreign).param("id", owner.user.id).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+        val foreignRole = rbac.roles(foreign).firstOrNull()
+        // A root created by a test fixture has no roles until initialization.
+        if (foreignRole == null) rbac.initializeUser(foreign, foreign, true)
+        val roleId = rbac.roles(foreign).first().id
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("INSERT INTO rbac_user_role(user_id,role_id) VALUES(:user,:role)").param("user", owner.user.id).param("role", roleId).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+    }
+
+    @Test
+    fun `Spaces migration preserves membership custom role grants and fails closed on ambiguous roots`() {
+        java.sql.DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            for (ambiguous in listOf(false, true)) {
+                val schema = "spaces_" + UUID.randomUUID().toString().replace("-", "")
+                connection.createStatement().use { it.execute("CREATE SCHEMA $schema") }
+                fun flyway(target: String?) = org.flywaydb.core.Flyway.configure()
+                    .dataSource(postgres.jdbcUrl, postgres.username, postgres.password).schemas(schema).defaultSchema(schema)
+                    .locations("classpath:db/migration").apply { if (target != null) target(target) }.load()
+                try {
+                    flyway("34").migrate()
+                    connection.schema = schema
+                    val owner = UUID.randomUUID()
+                    val member = UUID.randomUUID()
+                    val role = UUID.randomUUID()
+                    connection.prepareStatement("INSERT INTO user_account(id,username,password_hash) VALUES(?, 'legacy_owner','test-hash')").use {
+                        it.setObject(1, owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO user_account(id,username,password_hash,workspace_owner_id) VALUES(?,'legacy_member','test-hash',?)").use {
+                        it.setObject(1, member); it.setObject(2, if (ambiguous) null else owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_role(id,installation_owner_id,role_key,display_name) VALUES(?,?,'custom','Custom')").use {
+                        it.setObject(1, role); it.setObject(2, owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_role_permission(role_id,permission_key) VALUES(?,'devices:read')").use {
+                        it.setObject(1, role); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_user_role(user_id,role_id) VALUES(?,?)").use {
+                        it.setObject(1, if (ambiguous) owner else member); it.setObject(2, role); it.executeUpdate()
+                    }
+                    if (ambiguous) {
+                        assertThatThrownBy { flyway(null).migrate() }.hasStackTraceContaining("SPACES_MIGRATION_AMBIGUOUS")
+                    } else {
+                        flyway(null).migrate()
+                        connection.createStatement().use { statement ->
+                            statement.executeQuery("SELECT count(*) FROM kyrion_space").use { it.next(); assertThat(it.getInt(1)).isEqualTo(1) }
+                            statement.executeQuery("SELECT count(*) FROM account_email_identity").use { it.next(); assertThat(it.getInt(1)).isZero() }
+                            statement.executeQuery("SELECT count(*) FROM business_identity_policy").use { it.next(); assertThat(it.getInt(1)).isZero() }
+                            statement.executeQuery("SELECT space_id FROM user_account WHERE username='legacy_member'").use { it.next(); assertThat(it.getObject(1)).isEqualTo(owner) }
+                            statement.executeQuery("SELECT permission_key FROM rbac_role_permission rp JOIN rbac_user_role ur ON ur.role_id=rp.role_id").use {
+                                it.next(); assertThat(it.getString(1)).isEqualTo("devices:read"); assertThat(it.next()).isFalse()
+                            }
+                            statement.executeQuery("SELECT default_role_key,type FROM kyrion_space").use {
+                                it.next(); assertThat(it.getString(1)).isEqualTo("USER"); assertThat(it.getString(2)).isEqualTo("HOME")
+                            }
+                        }
+                    }
+                } finally {
+                    connection.schema = "public"
+                    connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `foreign Space IDs cannot read integration credentials or execute device actions`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        `when`(nanoleafGateway.pair("192.168.1.61")).thenReturn("private-device-token")
+        val device = nanoleaf.pair(owner.user.id, "192.168.1.61", "Private lamp")
+        val foreign = insertAdditionalOwner("other_space")
+        rbac.initializeUser(foreign, foreign, true)
+        val token = authentication.login("other_space", OTHER_PASSWORD).session.rawToken
+        org.mockito.Mockito.clearInvocations(nanoleafGateway)
+        mockMvc.perform(get("/v1/integrations/nanoleaf/connections/${device.id}/state").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(put("/v1/integrations/nanoleaf/connections/${device.id}/power").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"on":true,"confirmed":true}"""))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(delete("/v1/integrations/nanoleaf/connections/${device.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(post("/v1/device-commands").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"capability":"power.set","selector":{"provider":"nanoleaf","deviceId":"${device.id}"},"arguments":{"on":true}}"""))
+            .andExpect(status().isNotFound)
+        assertThat(catalog.devices(foreign)).isEmpty()
+        assertThat(nanoleaf.connections(owner.user.id).map { it.id }).contains(device.id)
+        org.mockito.Mockito.verifyNoInteractions(nanoleafGateway)
+    }
+
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
 
@@ -589,7 +1059,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         mockMvc.perform(get("/v1/retention/preview").header("Authorization", "Bearer $token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversations.records").value(1))
-            .andExpect(jsonPath("$.activity.records").value(2))
+            .andExpect(jsonPath("$.activity.records").value(3))
             .andExpect(jsonPath("$.personalMemory.records").value(1))
         mockMvc.perform(post("/v1/retention/cleanup").header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"NO"}"""))
@@ -599,7 +1069,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"DELETE"}"""))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversationsDeleted").value(1))
-            .andExpect(jsonPath("$.activityDeleted").value(2))
+            .andExpect(jsonPath("$.activityDeleted").value(3))
             .andExpect(jsonPath("$.personalMemoriesDeleted").value(1))
         assertThat(conversations.recent(ownerId, 10).map { it.title }).containsExactly("Current")
         assertThat(conversations.recent(secondOwner, 10).map { it.title }).containsExactly("Other owner expired")
@@ -892,6 +1362,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         rbac.deactivate(admin.user.id, user.user.id, false)
         rbac.deactivate(admin.user.id, user.user.id, true)
         mockMvc.perform(post("/v1/auth/invitations").header("Authorization", "Bearer ${admin.session.rawToken}"))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(post("/v1/space/invitations").header("Authorization", "Bearer ${admin.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"roleId":"$roleId","expiresInHours":24,"maxUses":1}"""))
             .andExpect(status().isCreated)
         mockMvc.perform(post("/v1/rbac/roles").header("Authorization", "Bearer ${user.session.rawToken}")
             .contentType(MediaType.APPLICATION_JSON).content("""{"key":"bad","name":"Bad","permissions":[]}"""))

@@ -1,0 +1,9 @@
+Kyrion: Verify your email / E-Mail bestätigen
+
+Enter this one-time code on your local Kyrion instance. It expires in 15 minutes.
+Gib diesen einmaligen Code auf deiner lokalen Kyrion-Instanz ein. Er gilt 15 Minuten.
+
+{code}
+
+If you did not request this message, ignore it. Never share this code with support.
+Falls du diese Nachricht nicht angefordert hast, ignoriere sie. Teile den Code niemals mit dem Support.

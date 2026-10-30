@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useWorkspace } from "@/components/app-shell";
+import { identityMessages } from "@/features/spaces/identity-messages";
+import { spaceMessages } from "@/features/spaces/messages";
 import { Icons } from "@/components/icons";
 
 export default function SettingsPage() {
-  const { selectedVoiceUri, speechVoices, textSize, setTextSize, t } = useWorkspace();
+  const { selectedVoiceUri, speechVoices, textSize, setTextSize, t, locale } = useWorkspace();
   const selectedVoice = speechVoices.find((voice) => voice.voiceURI === selectedVoiceUri);
 
   return (
@@ -17,6 +19,10 @@ export default function SettingsPage() {
         <p className="placeholder-copy">{t.settingsDescription}</p>
 
         <div className="settings-grid">
+          <Link className="settings-link-card" href="/settings/identity"><Icons.shield /><span><strong>{identityMessages[locale].title}</strong></span></Link>
+          <Link className="settings-link-card" href="/settings/space">
+            <Icons.shield /><span><strong>{spaceMessages[locale].title}</strong><small>{spaceMessages[locale].description}</small></span>
+          </Link>
           <div className="typography-setting">
             <div className="typography-setting-heading">
               <span className="typography-icon" aria-hidden="true">Aa</span>
