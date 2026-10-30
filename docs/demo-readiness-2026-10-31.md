@@ -3,7 +3,10 @@
 Status: partial readiness. The local UI, local Calendar, HA refresh, Google
 provider CRUD/readback and speech APIs were exercised. Google works after the
 user's reauthorization; do not request new consent without an actual provider
-failure. Pi-to-Windows Core remains blocked pending approval of its LAN repair.
+failure. The approved Pi-to-Windows Core repair and synthetic Voice turn now
+pass; see [Sprint 04](status/2026-10-30-stabilization-sprint-04.md). Physical audio,
+Gateway target verification and IPv6-first client delays remain open. LAN access
+is process-scoped; an ordinary later Core start safely falls back to loopback.
 
 ## Preflight
 

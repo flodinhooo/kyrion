@@ -1,9 +1,15 @@
 # Kyrion Development Status
 
-Latest: [Sprint 03 Google and Pi-Core evidence](2026-10-30-stabilization-sprint-03.md).
+Latest network acceptance: [Sprint 04 LAN activation and Pi-hole protection](2026-10-30-stabilization-sprint-04.md).
+The explicitly approved Core-only restart succeeded; Pi-to-Core and authenticated
+Voice greeting/synthetic stop turn passed. Two scoped Block guards are active.
+Pi-hole was untouched. Shared configuration remains loopback-safe; the LAN bind
+is process-only. IPv6-first client delays, Gateway target verification and real
+microphone/speaker acceptance remain open.
+
+Previous: [Sprint 03 Google and Pi-Core evidence](2026-10-30-stabilization-sprint-03.md).
 Google is working after the user's reauthorization; live marked-event checks
-passed without new OAuth. The Pi-Core LAN correction is prepared and awaits
-explicit approval after automatic review rejected the network change/restart.
+passed without new OAuth. Its pending LAN approval was superseded by Sprint 04.
 
 Previous checkpoint: [Sprint 02 runtime and demo evidence](2026-10-30-stabilization-sprint-02.md)
 and the [October 31 demo checklist](../demo-readiness-2026-10-31.md).

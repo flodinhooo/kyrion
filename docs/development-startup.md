@@ -6,6 +6,10 @@ For isolated worktrees and verified configuration loading, use the
 
 ## Single-command Windows development startup
 
+For approved, firewall-scoped LAN access see [Sprint 04](status/2026-10-30-stabilization-sprint-04.md).
+The shared configuration intentionally stays on loopback: generic starts may use
+a different Java executable. Do not add a global LAN bind to `.env`.
+
 Latest Google acceptance and the approval-gated Pi/Core LAN repair are recorded
 in [Sprint 03](status/2026-10-30-stabilization-sprint-03.md) and the
 [Pi/Core and Voice procedure](pi-core-and-voice-acceptance.md).

@@ -36,6 +36,7 @@ $current = Get-CimInstance Win32_Process -Filter "ProcessId=$CoreProcessId"
 if (!$current -or $current.CreationDate.ToString('o') -ne $review.processCreated) { throw 'CORE_PROCESS_CHANGED' }
 $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$CoreProcessId")
 $originalJava = ($children | Where-Object Name -eq 'java.exe' | Select-Object -First 1).ExecutablePath
+if (!$originalJava) { $originalJava = $current.ExecutablePath }
 if (!$originalJava -or !(Test-Path -LiteralPath $originalJava)) { throw 'ROLLBACK_JAVA_UNAVAILABLE' }
 New-Item -ItemType Directory -Path $directory -Force | Out-Null
 $config = Join-Path $root 'infrastructure/.env'

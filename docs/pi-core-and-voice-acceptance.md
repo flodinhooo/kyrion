@@ -1,12 +1,14 @@
 # Pi-to-Windows Core and Voice acceptance
 
-> Sprint 04 supersedes the activation instructions below. Read
+> Sprint 04 activation succeeded after explicit approval. It supersedes the
+> historical activation instructions below. Read
 > [the Pi-hole protection and LAN approval plan](status/2026-10-30-stabilization-sprint-04.md).
 > The old `Set-CoreLan.ps1 -Apply` path is intentionally blocked: a second,
 > broader Windows Java Allow rule matches the current Core executable.
 
 This is a local development repair, not production deployment. No new radio,
-voice model, AI provider, firewall rule or public port is required.
+voice model, AI provider or public port is required. Sprint 04 added two tightly
+scoped firewall Block guards; it did not change existing rules or Pi-hole.
 
 ## Identified network fault
 
