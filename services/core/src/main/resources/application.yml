@@ -9,6 +9,11 @@ spring:
     import: optional:file:../../infrastructure/.env[.properties]
   application:
     name: kyrion-core
+  task:
+    scheduling:
+      pool:
+        # A slow calendar provider must not block Home Assistant refresh.
+        size: 2
   mvc:
     async:
       request-timeout: 5m

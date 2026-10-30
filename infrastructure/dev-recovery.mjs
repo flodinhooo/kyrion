@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {homedir} from 'node:os';
 import {authorisedKey, validAction, canRestartManagedProcess} from './dev-recovery-policy.mjs';
+import {serviceReady, startDatabase, waitUntilReady} from './dev-readiness.mjs';
 
 if (process.platform !== 'win32') throw new Error('Windows development helper only');
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -113,14 +114,20 @@ async function run(action, correlationId) {
   try {
     await audit({event: 'requested', action, correlationId});
     // Database start is idempotent; never restart a database automatically.
+    let databaseReady = false;
     try {
-      await command('docker.exe', ['compose', '-f', 'infrastructure/compose.yml', 'up', '-d', '--wait', '--wait-timeout', '180', 'postgres'], 195_000);
+      databaseReady = await startDatabase(command);
+      if (!databaseReady) throw new Error('DATABASE_NOT_READY');
       job.results.push({id: 'postgresql', result: 'started'});
     } catch {
       job.results.push({id: 'postgresql', result: 'failed'});
     }
     for (const service of services) {
       try {
+        if (service.id === 'core' && !databaseReady) {
+          job.results.push({id: service.id, result: 'failed'});
+          continue;
+        }
         const child = managed.get(service.id);
         if (canRestartManagedProcess(action, service.file, child)) {
           await audit({
@@ -132,7 +139,21 @@ async function run(action, correlationId) {
           for (let i = 0; i < 20 && await listening(service.port); i++) await sleep(500);
         }
         if (await listening(service.port)) {
-          job.results.push({id: service.id, result: 'already_running'});
+          const healthy = await waitUntilReady(() => serviceReady(service), {
+            timeoutMs: service.id === 'tts' ? 900_000 : 180_000,
+          });
+          job.results.push({id: service.id, result: healthy ? 'already_running' : 'failed'});
+          continue;
+        }
+        const pending = managed.get(service.id);
+        if (pending && pending.exitCode === null && !pending.killed) {
+          // A previous request may have timed out during model initialization.
+          // Reuse that process; never load a second copy or terminate WSL.
+          const healthy = await waitUntilReady(() => serviceReady(service), {
+            timeoutMs: service.id === 'tts' ? 900_000 : 180_000,
+            alive: () => pending.exitCode === null && !pending.killed,
+          });
+          job.results.push({id: service.id, result: healthy ? 'already_running' : 'failed'});
           continue;
         }
         if (service.id === 'core') await copyFile(coreArtifact, frozenCoreArtifact);
@@ -152,14 +173,10 @@ async function run(action, correlationId) {
         launched.once('error', () => {
           failed = true;
         });
-        let ready = false;
-        for (let i = 0; i < (service.id === 'tts' ? 300 : 90) && !failed && launched.exitCode === null; i++) {
-          if (await listening(service.port)) {
-            ready = true;
-            break;
-          }
-          await sleep(1000);
-        }
+        const ready = await waitUntilReady(() => serviceReady(service), {
+          timeoutMs: service.id === 'tts' ? 900_000 : 180_000,
+          alive: () => !failed && launched.exitCode === null,
+        });
         job.results.push({id: service.id, result: ready ? 'started' : 'failed'});
       } catch {
         job.results.push({id: service.id, result: 'failed'});
@@ -189,7 +206,7 @@ const server = createServer(async (request, response) => {
   };
   if (!authorisedKey(request.headers.authorization?.replace(/^Bearer /, ''), key)) return reply(401, {code: 'UNAUTHORISED'});
   if (request.url !== '/') return reply(404, {code: 'NOT_FOUND'});
-  if (request.method === 'GET') return reply(200, {...job, helperVersion: '2026-10-22-preserve-wsl-v3'});
+  if (request.method === 'GET') return reply(200, {...job, helperVersion: '2026-10-30-readiness-v4'});
   if (request.method !== 'POST') return reply(405, {code: 'METHOD_NOT_ALLOWED'});
   if (job.state === 'running' || Date.now() - lastAttempt < 5000) return reply(409, {code: 'RECOVERY_BUSY'});
   let raw = '';

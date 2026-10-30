@@ -171,7 +171,8 @@ class HomeAssistantClient(
             val humidity = number("humidity", 0.0, 100.0)
             val battery = number("battery", 0.0, 100.0)
             val power = entities.filter { it.path("entity").asText().substringBefore('.') in setOf("light", "switch") }
-            val on = power.singleOrNull()?.path("state")?.asText()?.let {
+            val contact = entities.filter { it.path("entity").asText().startsWith("binary_sensor.") && it.path("class").asText() in setOf("door", "window", "opening") }
+            val on = (power.singleOrNull() ?: contact.singleOrNull())?.path("state")?.asText()?.let {
                 when (it) {
                     "on" -> true; "off" -> false; else -> null
                 }
@@ -183,7 +184,14 @@ class HomeAssistantClient(
                     "on" -> true; "off" -> false; else -> null
                 }
             }
+            val light = power.singleOrNull()?.takeIf { it.path("entity").asText().startsWith("light.") && it.path("state").asText() in setOf("on", "off") }
+            fun lightNumber(key: String, min: Double, max: Double): Double? = light?.path(key)?.takeIf { it.isNumber }?.asDouble()?.takeIf { it.isFinite() && it in min..max }
+            val brightness = lightNumber("brightness", 0.0, 255.0)?.let { kotlin.math.round(it * 100 / 255).toInt() }
+            val hue = lightNumber("hue", 0.0, 360.0)
+            val saturation = lightNumber("saturation", 0.0, 100.0)
+            if (power.size > 1 || contact.size > 1 || occupancyEntities.size > 1) invalid = true
             val times = entities.mapNotNull { runCatching { Instant.parse(it.path("updated").asText()) }.getOrNull() }
+            if (times.size != entities.size) invalid = true
             val availability = when {
                 entities.all { it.path("state").asText() == "unavailable" } -> DeviceAvailability.OFFLINE
                 entities.all {
@@ -212,7 +220,7 @@ class HomeAssistantClient(
                     }) DeviceClass.LIGHT else if (power.isNotEmpty()) DeviceClass.SWITCH else DeviceClass.SENSOR,
                 availability,
                 DeviceStateView(
-                    on, null, null, null, null, battery = battery, occupancy = occupancy,
+                    on, brightness, hue, saturation, null, battery = battery, occupancy = occupancy,
                     temperatureCelsius = temperature, relativeHumidity = humidity, measuredAt = times.minOrNull()
                 ),
                 buildList {
@@ -220,6 +228,7 @@ class HomeAssistantClient(
                     if (entities.any { it.path("class").asText() == "humidity" }) add("humidity.read")
                     if (entities.any { it.path("class").asText() == "battery" }) add("battery.read")
                     if (power.size == 1) add("power.read")
+                    if (contact.size == 1 && power.isEmpty()) add("contact.read")
                     if (occupancyEntities.size == 1) add("occupancy.read")
                 })
         }
@@ -237,7 +246,10 @@ class HomeAssistantClient(
             {% set ns.rows = ns.rows + [dict(id=id, entity=s.entity_id,
               name=device_attr(id, 'name_by_user') or device_attr(id, 'name'),
               area=area_name(id), manufacturer=device_attr(id, 'manufacturer'), model=device_attr(id, 'model'),
-              state=s.state, class=s.attributes.get('device_class'), unit=s.attributes.get('unit_of_measurement'), updated=s.last_updated.isoformat())] %}
+              state=s.state, class=s.attributes.get('device_class'), unit=s.attributes.get('unit_of_measurement'), updated=s.last_updated.isoformat(),
+              brightness=s.attributes.get('brightness'),
+              hue=(s.attributes.get('hs_color') or [none, none])[0],
+              saturation=(s.attributes.get('hs_color') or [none, none])[1])] %}
             {% endif %}{% endfor %}{{ ns.rows | to_json }}
         """.trimIndent()
     }

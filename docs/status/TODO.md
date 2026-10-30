@@ -1,5 +1,12 @@
 # Kyrion Development TODO
 
+Current checkpoint: [2026-10-30 stabilization](2026-10-30-stabilization.md).
+Calendar/HA recovery is integrated and automatically verified. Remaining near-term
+work is controlled rollout/full-host cold-start acceptance, authenticated Calendar/
+Google acceptance and physical device/voice reliability. The
+[multi-provider architecture review](2026-10-30-ai-architecture-review.md) is an
+analysis, not implemented cloud-provider support.
+
 Last updated: 2026-10-12.
 
 This is the consolidated active backlog. Source of truth: current code,
@@ -100,16 +107,18 @@ The initial fresh-install boundary is implemented under
 
 ### Calendar and household
 
-- [x] R8: Local calendar survives thrown optional Google fetches; that request
-  has a 10-second timeout and a regression. Local upstream timeout remains follow-up.
-- [x] R9 API: Missing/null syncToGoogle defaults to false; strict Booleans,
-  timezone validation and bounded description are implemented. Browser timezone/DST
-  and bilingual Calendar UX below remain open.
-- [ ] Review selected-date creation and event editing in the browser, especially
-  UTC/local/DST conversion; move existing hardcoded German text to bilingual resources.
-- [ ] Correct the sync checkbox's user promise: it currently persists intent but
-  does not perform full sync. Define conflict/delete/retry/idempotency semantics
-  before implementing optional bidirectional Google sync.
+- [x] R8: Local calendar survives optional Google failures. Both upstream calendar
+  requests are bounded by timeouts; provider errors remain distinct from empty data.
+- [x] R9 API: Strict optional Booleans, timezone validation and bounded content;
+  browser-local event editing and bilingual Calendar resources are implemented.
+- [x] Explicit mapped Google synchronization with conditional writes, stable IDs,
+  conflict preservation, durable deletion/retry state and optional leased scheduling.
+- [x] Windows recovery: preserved historical V31 checksum, worktree configuration
+  loading, immutable runtime artifacts and live HA refresh to existing records.
+- [ ] Complete authenticated browser month/week/day and DST acceptance after login.
+- [ ] Reauthorize the live Google connection (`invalid_grant`), then perform
+  disposable-calendar write acceptance only with explicit authorization. See
+  [Windows acceptance](2026-10-19-windows-live-acceptance.md) for evidence and gates.
 - [ ] Define explicit household membership, personal/shared calendar scope and
   room/device-level permissions as a later bounded extension to RBAC V1.
 - [ ] Resolve consumer OAuth ownership/callback design (proposed ADR 0021) separately;

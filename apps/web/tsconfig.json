@@ -36,7 +36,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-review/types/**/*.ts",
-    ".next-review/dev/types/**/*.ts"
+    ".next-review/dev/types/**/*.ts",
+    ".next-acceptance-build/types/**/*.ts",
+    ".next-acceptance-build/dev/types/**/*.ts",
+    ".next-stabilization-build/types/**/*.ts",
+    ".next-stabilization-build/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

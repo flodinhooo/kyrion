@@ -1,6 +1,55 @@
 # Local Development Startup
 
 This guide starts the complete local Kyrion stack on Windows.
+For isolated worktrees and verified configuration loading, use the
+[Windows worktree workflow](windows-development.md).
+
+## Single-command Windows development startup
+
+With Docker Desktop running and the existing local configuration/dependencies
+available, run from the repository root:
+
+```powershell
+node infrastructure/dev-stack.mjs start
+node infrastructure/dev-stack.mjs status
+node infrastructure/dev-stack.mjs logs tts
+```
+
+The CLI reuses the existing operator-key protected recovery helper. It starts
+Web independently, waits for PostgreSQL SQL readiness before Core, allows ten
+minutes for database recovery and fifteen minutes for TTS, and verifies actual
+HTTP health responses. It preserves running services. `status` / `health` return
+a nonzero exit code if any required local service is unavailable. Logs remain
+local below `.run/dev-recovery/`. The configured optional Pi units use the
+existing pinned SSH connection. No credentials are printed by status/start.
+
+`node infrastructure/dev-stack.mjs restart --confirm` uses the helper's existing
+bounded restart policy: only its managed Windows processes and configured Pi
+user units restart. PostgreSQL, Web, external processes and running WSL speech
+services remain running. It is not a full-machine restart or a per-service
+restart. For foreground processes, use Ctrl+C in their owning terminals. Stop
+PostgreSQL only after stopping Core with
+`docker compose -f infrastructure/compose.yml stop postgres`; never use `down -v`.
+
+The helper reads local artifact settings at launch. The stabilization acceptance
+selects a tested JAR built from the primary checkout, after comparing all 33
+installed Flyway checksums; the recovery worktree is no longer required for the
+next helper launch. Rebuild and select a matching artifact after Core changes.
+An already-running helper retains its previous settings until its next launch.
+
+Chatterbox uses the existing persistent WSL Hugging Face cache in offline mode;
+model provisioning is separate from startup. The selected Velora reference is
+preserved. The updated runtime exposes `/live` (HTTP process), `/ready` (503
+during loading/failure, 200 after warmup) and backward-compatible `/health`
+with initialization stage and a bounded error code. Transient local I/O failures
+retry twice with backoff; permanent configuration errors remain visible without
+a restart loop. `KYRION_CHATTERBOX_MODEL_DIRECTORY` and
+`KYRION_CHATTERBOX_REFERENCE` optionally select existing local files;
+`KYRION_CHATTERBOX_DEVICE=cpu` is an explicit diagnostic option, with CUDA still
+the default. Running speech processes are preserved; new runtime code becomes
+active on their next safe start. No provider/voice switch is performed.
+
+The manual startup steps below remain available for individual services.
 
 ## Installed locations
 
@@ -114,8 +163,15 @@ excluded on this host. Missing STT/TTS runtimes can start, but running ones are
 preserved. The helper never terminates WSL or its Windows process tree. Resolving
 this host runtime problem is separate from these bounded recovery controls.
 
-Results confirm a listening port, not functional health. Use System services
-for validated health probes. Per-service logs and a correlated operator JSONL
+The updated helper waits for `SELECT 1` before starting Core, allowing up to ten
+minutes for PostgreSQL crash recovery without recreating its container. An
+unavailable database blocks Core, while optional independent services can still
+start. Service results validate their HTTP health body rather than only an open
+socket. TTS has a fifteen-minute bounded initialization window; an existing
+loading helper-managed process is reused instead of launching another copy.
+AI health still confirms the AI process/configuration, not successful inference.
+Use System services and an intentional chat/voice check for end-to-end acceptance.
+Per-service logs and a correlated operator JSONL
 audit live below `.run/dev-recovery/`, separately from the Core activity log.
 When `KYRION_RECOVERY_PI_HOST` is configured in the helper's environment, it also
 starts/restarts the existing Spotify receiver, Voice Satellite and media player
@@ -127,6 +183,31 @@ Without this optional setting only Windows services are managed.
 See [ADR 0026](adr/0026-local-development-service-recovery.md).
 The [local acceptance record](status/2026-10-22-local-service-recovery.md)
 documents the installed artifact selection, successful live checks and WSL limit.
+
+Source changes do not update an already running helper. Inspect its reported
+`helperVersion` before acceptance; the readiness implementation is
+`2026-10-30-readiness-v4`. Replacing a running helper/runtime is a separate local
+operator rollout. The October 30 stabilization checks do not claim deployment or
+a complete Windows/Pi host reboot.
+
+### Chatterbox cold initialization
+
+The Chatterbox runtime loads existing cached model files only. It never resolves
+or downloads a newer Hugging Face revision at service startup. Provision/review
+weights separately. In the **WSL runtime process environment**, optional
+`KYRION_CHATTERBOX_MODEL_DIRECTORY` selects an existing reviewed snapshot,
+`KYRION_CHATTERBOX_REFERENCE` selects existing private reference audio, and
+`KYRION_CHATTERBOX_DEVICE` selects `cuda` (default) or `cpu`. These settings are
+not automatically read from the AI-service `.env` or Windows environment by WSL.
+Defaults preserve the existing cache and reference location.
+
+`/live` stays available during background loading; `/ready` returns 503 until
+weights, reference conditioning and warmup succeed. `/health` reports bounded
+stage/error metadata without private paths. Transient local I/O gets at most
+three attempts; configuration failures remain visible. Startup stage durations
+are logged. The measured isolated GPU initialization took 108.8 seconds; this
+does not guarantee a maximum on another host or a cold disk cache. Missing cache,
+reference audio, unavailable GPU and insufficient VRAM require operator diagnosis.
 
 ### 3. Start Ollama
 
@@ -269,8 +350,9 @@ docker compose -f infrastructure\compose.yml ps
 $env:KYRION_DATABASE_PASSWORD = 'the-same-local-password'
 ```
 
-Flyway currently applies the activity-log schema (V1) and the prepared identity
-and session schema (V2). No login user is created automatically.
+Flyway validates and applies the migration chain through the checked-out version
+(currently V33 in this recovery worktree). No login user is created automatically.
+Never edit an already-applied migration, including formatting-only edits.
 
 ### A model is missing
 

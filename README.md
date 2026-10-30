@@ -1,6 +1,6 @@
 <p align="center">
 
-Latest implementation: [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
+Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-19-calendar-ha-recovery.md); [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/logo/kyrion-dark.svg">
@@ -10,6 +10,11 @@ Latest implementation: [security hardening closeout](docs/status/2026-10-11-secu
 </p>
 
 # Kyrion
+
+Current engineering checkpoint: [recovery integration and startup stabilization](docs/status/2026-10-30-stabilization.md).
+The [AI architecture review](docs/status/2026-10-30-ai-architecture-review.md)
+describes current model coupling and a proposed multi-provider path; no new
+providers or deployment are implied.
 
 > A local-first orchestration platform for devices, services, automations and
 > optional AI.

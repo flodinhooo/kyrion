@@ -34,7 +34,14 @@ the authenticated stored connection flow does not require that environment resta
 
 In **Settings > System services**, the Home Assistant card shows configuration
 and the last sync diagnostic. **Import / sync devices** explicitly reads HA and
-updates the catalog. Devices appear under Devices and Home using Kyrion IDs.
+updates the catalog. Core also refreshes configured owners every 30 seconds and
+performs a due refresh when the device overview requests its initial catalog.
+Both reuse the same serialized importer; a due refresh rechecks its 30-second
+throttle under the owner lock, including after failures. The existing manual
+observation refresh also imports HA. There is no parallel WebSocket path.
+`kyrion.home-assistant.refresh-enabled=false` disables the background scheduler
+(for example in integration tests); on-demand reads remain available.
+Devices appear under Devices and Home using Kyrion IDs.
 The request requires a Kyrion owner session and Web CSRF protection. The server
 also exposes `POST /v1/integrations/home-assistant/sync` and a read-only status
 at `GET /v1/integrations/home-assistant`.
@@ -61,7 +68,8 @@ read-only template at `/api/template`.
   mapping, including clearing an earlier assignment. Removing an imported device
   locally does not remove it from HA; the next import can recreate it.
 - Supported observations: power, temperature (Celsius, converting Fahrenheit),
-  relative humidity, battery and occupancy/motion/presence. Read capabilities
+  relative humidity, battery, occupancy/motion/presence, contact opening, and
+  single-light brightness/hue/saturation. Read capabilities
   remain declared while an entity is unavailable. Conflicting multiple numeric
   sensors are not silently selected; their value is omitted and health degraded.
 - HA timestamps describe provider observations, not independently verified
@@ -74,12 +82,16 @@ read-only template at `/api/template`.
   reports unknown. Missing devices in a later snapshot remain cataloged as
   unknown. A failed HA connection preserves prior device readings; it does not
   assert that all physical devices are offline. Catalog availability expires
-  after the existing 60-second observation window.
+  after the existing 60-second observation window. Catalog diagnostics distinguish
+  no observation, a provider-reported unknown state, stale observation, disconnected
+  integration and failed integration. Cached readings remain timestamped and
+  explicitly labelled during failures. The encrypted connection record is excluded
+  from physical inventory and missing-device reconciliation.
 
 ## Scope
 
 Implemented: Web probe/connect/disconnect with encrypted credentials, development
-fallback configuration, explicit device import, bounded
+fallback configuration, explicit and periodic device import, bounded
 basic state/sensor import, mapping to existing rooms, stable reconciliation,
 owner boundaries, status diagnostics and correlated sync audit.
 

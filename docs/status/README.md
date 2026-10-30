@@ -1,11 +1,20 @@
 # Kyrion Development Status
 
-Latest: [2026-10-11 security hardening](2026-10-11-security-hardening.md), with code, regression and additive migration evidence.
+Current source integration and verification:
+[2026-10-30 stabilization](2026-10-30-stabilization.md), with a separate
+[AI architecture analysis](2026-10-30-ai-architecture-review.md). Recovery code is
+integrated for review; no new production deployment or full-host cold-start
+acceptance is claimed. Dated checkpoints below retain their historical evidence.
+
+Latest: [2026-10-19 Windows integration acceptance](2026-10-19-windows-live-acceptance.md).
+The updated isolated stack runs locally, HA refresh is live-verified through persistence,
+and Google reauthorization/authenticated browser acceptance remain open.
+Core: 217 passing tests; Web: 121 passing tests. No production deployment or merge.
 
 
-Last updated: 2026-10-11
+Last updated: 2026-10-19
 
-## Current handoff - Installer v1 preparation
+## Installer handoff - October 11 security baseline
 
 Read the [security hardening closeout](2026-10-11-security-hardening.md),
 [consolidated TODO](TODO.md) and [Installer v1 plan](../installer-v1-plan.md).

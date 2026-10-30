@@ -52,7 +52,9 @@ secrets/
 
 # New local runtime outputs; reviewed scripts and historical evidence stay tracked.
 .run/dev-recovery/
+.run/stabilization/
 .run/private-evidence/
+.run/stabilization/
 .run/**/*.wav
 .run/*.json
 !.run/short_tts_corpus.json

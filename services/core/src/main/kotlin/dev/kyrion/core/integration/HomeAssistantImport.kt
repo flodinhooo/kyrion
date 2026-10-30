@@ -56,9 +56,9 @@ class JdbcImportedDeviceRepository(private val jdbc: JdbcClient) : ImportedDevic
                     rs.getObject("connection_id", UUID::class.java),
                     rs.getString("hardware_name"), DeviceStateView(
                         rs.getObject("on_state", Boolean::class.javaObjectType),
-                        null,
-                        null,
-                        null,
+                        rs.getObject("brightness", Int::class.javaObjectType),
+                        rs.getObject("hue", Double::class.javaObjectType),
+                        rs.getObject("saturation", Double::class.javaObjectType),
                         null,
                         occupancy = rs.getObject("occupancy", Boolean::class.javaObjectType),
                         battery = rs.getObject("battery", Double::class.javaObjectType),
@@ -71,15 +71,19 @@ class JdbcImportedDeviceRepository(private val jdbc: JdbcClient) : ImportedDevic
 
     override fun save(ownerId: UUID, state: ImportedDeviceState) {
         jdbc.sql(
-            """INSERT INTO home_assistant_device(connection_id,owner_id,hardware_name,on_state,temperature_celsius,relative_humidity,battery,occupancy,measured_at,capabilities)
-            VALUES(:id,:owner,:hardware,:on,:temperature,:humidity,:battery,:occupancy,:measured,:capabilities) ON CONFLICT(connection_id) DO UPDATE SET
+            """INSERT INTO home_assistant_device(connection_id,owner_id,hardware_name,on_state,temperature_celsius,relative_humidity,battery,occupancy,measured_at,capabilities,brightness,hue,saturation)
+            VALUES(:id,:owner,:hardware,:on,:temperature,:humidity,:battery,:occupancy,:measured,:capabilities,:brightness,:hue,:saturation) ON CONFLICT(connection_id) DO UPDATE SET
             hardware_name=EXCLUDED.hardware_name,on_state=EXCLUDED.on_state,temperature_celsius=EXCLUDED.temperature_celsius,
             relative_humidity=EXCLUDED.relative_humidity,battery=EXCLUDED.battery,occupancy=EXCLUDED.occupancy,
-            measured_at=EXCLUDED.measured_at,capabilities=EXCLUDED.capabilities
+            measured_at=EXCLUDED.measured_at,capabilities=EXCLUDED.capabilities,
+            brightness=EXCLUDED.brightness,hue=EXCLUDED.hue,saturation=EXCLUDED.saturation
             WHERE home_assistant_device.owner_id=EXCLUDED.owner_id"""
         )
             .param("id", state.connectionId).param("owner", ownerId).param("hardware", state.hardwareName)
             .param("on", state.state.on, java.sql.Types.BOOLEAN)
+            .param("brightness", state.state.brightness, java.sql.Types.INTEGER)
+            .param("hue", state.state.hue, java.sql.Types.DOUBLE)
+            .param("saturation", state.state.saturation, java.sql.Types.DOUBLE)
             .param("temperature", state.state.temperatureCelsius, java.sql.Types.DOUBLE)
             .param("humidity", state.state.relativeHumidity, java.sql.Types.DOUBLE)
             .param("battery", state.state.battery, java.sql.Types.DOUBLE)
@@ -105,7 +109,7 @@ class HomeAssistantReconciler(
 ) {
     fun reconcile(ownerId: UUID, devices: List<HomeAssistantDevice>) {
         val now = clock.instant()
-        val existing = connections.findAll(ownerId).filter { it.provider == HOME_ASSISTANT_PROVIDER }
+        val existing = connections.findAll(ownerId).filter { it.provider == HOME_ASSISTANT_PROVIDER && it.credentialCiphertext.isEmpty() }
             .associateBy { it.endpointHost }
         val ownerRooms = rooms.all(ownerId)
         devices.forEach { device ->
@@ -194,7 +198,14 @@ class HomeAssistantImportService(
             }.optional().orElse(HomeAssistantSyncStatus(true, "unknown", reason = "no_observation"))
     }
 
-    fun sync(ownerId: UUID): HomeAssistantSyncResult {
+    fun refreshIfDue(ownerId: UUID) {
+        val current = status(ownerId)
+        if (current.configured && (current.lastAttemptAt == null || current.lastAttemptAt.isBefore(clock.instant().minusSeconds(30)))) {
+            sync(ownerId, ActivityActorType.SYSTEM, onlyIfDue = true)
+        }
+    }
+
+    fun sync(ownerId: UUID, actorType: ActivityActorType = ActivityActorType.USER, onlyIfDue: Boolean = false): HomeAssistantSyncResult {
         val connection = resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)
             ?: throw HomeAssistantException("configuration_missing")
         val correlationId = UUID.randomUUID()
@@ -202,6 +213,12 @@ class HomeAssistantImportService(
         return transactions.execute {
             jdbc.sql("SELECT id FROM user_account WHERE id=:owner FOR UPDATE").param("owner", ownerId)
                 .query(UUID::class.java).single()
+            if (onlyIfDue) {
+                val attempted = status(ownerId).lastAttemptAt
+                if (attempted != null && !attempted.isBefore(clock.instant().minusSeconds(30))) {
+                    return@execute HomeAssistantSyncResult(0, correlationId)
+                }
+            }
             var reason: String? = null
             val devices = try {
                 client?.snapshot(connection) ?: gateway?.snapshot(ownerId)
@@ -221,8 +238,8 @@ class HomeAssistantImportService(
                 .param("reason", reason).param("correlation", correlationId).update()
             activity.record(
                 ActivityCategory.INTEGRATION, "integration.home_assistant.synced",
-                if (devices != null) ActivityStatus.SUCCEEDED else ActivityStatus.FAILED, ActivityActorType.USER,
-                "home_assistant", reason ?: "import.succeeded", ownerId.toString(), correlationId, ownerId
+                if (devices != null) ActivityStatus.SUCCEEDED else ActivityStatus.FAILED, actorType,
+                "home_assistant", reason ?: "import.succeeded", if (actorType == ActivityActorType.USER) ownerId.toString() else null, correlationId, ownerId
             )
             HomeAssistantSyncResult(devices?.size ?: 0, correlationId, reason)
         }

@@ -109,11 +109,13 @@ class DeviceObservationService(
     providerObservers: List<DeviceProviderObserver>,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val homeAssistant: dev.kyrion.core.integration.HomeAssistantImportService? = null,
 ) {
     private val providerObservers = providerObservers.associateBy { it.provider }
 
     fun refresh(ownerId: UUID): List<DeviceObservation> {
         val correlationId = UUID.randomUUID()
+        if (homeAssistant?.status(ownerId)?.configured == true) homeAssistant.sync(ownerId)
         val refreshed = connections.findAll(ownerId).take(MAX_REFRESH_DEVICES).mapNotNull { connection ->
             val observer = providerObservers[connection.provider] ?: return@mapNotNull null
             val availability = observer.observe(ownerId, connection)
