@@ -124,6 +124,22 @@ class ConversationController(
         )
     }
 
+    fun generationContext(actor: UUID, conversation: Conversation, turnId: UUID, cloud: Boolean): ConversationContext {
+        if (cloud) {
+            val current = conversation.messages.last()
+            return ConversationContext(
+                conversation.id, turnId, listOf(ConversationContextMessage("user", current.content)),
+                estimateTokens(current.content), 3072, false, emptyList()
+            )
+        }
+        return assembleContext(
+            conversation,
+            turnId,
+            3072,
+            memorySelector.select(actor, conversation.messages.last().content)
+        )
+    }
+
     private fun assembleContext(
         conversation: Conversation,
         turnId: UUID,
