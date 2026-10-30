@@ -1670,6 +1670,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         @DynamicPropertySource
         @JvmStatic
         fun databaseProperties(registry: DynamicPropertyRegistry) {
+            registry.add("kyrion.knowledge.worker-enabled") { "false" }
             registry.add("kyrion.calendar.sync.scheduler-enabled") { "false" }
             registry.add("kyrion.home-assistant.refresh-enabled") { "false" }
             registry.add("kyrion.google.client-id") { "test-only-client" }

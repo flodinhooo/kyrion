@@ -54,8 +54,11 @@ and CSRF mechanisms. There are no client-provided owner identifiers.
 - `POST /search`: `{spaceIds: [UUID], query: string, limit: 1..5}`.
 - `GET /answers/{conversationId}`: actor-scoped references for saved answers.
 
-`knowledge:read/create/delete` follow existing RBAC conventions. Permission alone
-never bypasses personal ownership, including installation OWNER/ADMIN roles.
+`knowledge:read/create/delete` follow existing RBAC conventions. Upgrade defaults
+derive from each role's existing
+personal-memory grants; deliberately restricted roles retain their restrictions.
+New ADMIN roles receive no automatic personal-data permission.
+Permission alone never bypasses personal ownership, including installation OWNER/ADMIN roles.
 Foreign document and space identifiers return the same 404 as unknown resources.
 Organizations are a domain enum only until the canonical Spaces schema and
 membership authorization are integrated. No organization controls are exposed.

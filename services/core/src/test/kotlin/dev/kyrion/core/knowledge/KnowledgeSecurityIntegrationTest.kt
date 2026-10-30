@@ -116,6 +116,9 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         assertThat(service.document(a.user.id, document.id).status).isEqualTo("FAILED")
         assertThat(service.document(a.user.id, document.id).errorCode).isEqualTo("KNOWLEDGE_EMBEDDING_SETUP_REQUIRED")
         assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        org.mockito.Mockito.reset(embeddings)
+        `when`(embeddings.modelId).thenReturn("test-local-embedding")
+        `when`(embeddings.dimension).thenReturn(3)
         `when`(embeddings.embed(org.mockito.ArgumentMatchers.anyList())).thenAnswer { invocation ->
             invocation.getArgument<List<String>>(
                 0
@@ -209,6 +212,30 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
             .andExpect(status().isOk).andExpect(content().json("[]"))
     }
 
+    @Test fun `competing workers only claim one revision and exhausted crash leases fail explicitly`() {
+        val document = upload()
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val futures = (1..2).map { executor.submit<KnowledgeJob?> { repository.claim() } }
+            val claims = futures.mapNotNull { it.get(10, java.util.concurrent.TimeUnit.SECONDS) }
+            assertThat(claims).hasSize(1)
+            jdbc.sql("UPDATE knowledge_ingestion_jobs SET attempt_count=3,lease_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+            assertThat(repository.claim()).isNull()
+            assertThat(service.document(a.user.id, document.id).status).isEqualTo("FAILED")
+            assertThat(service.document(a.user.id, document.id).errorCode).isEqualTo("KNOWLEDGE_RETRY_EXHAUSTED")
+        } finally { executor.shutdownNow() }
+    }
+    @Test fun `delete during embedding cannot publish content`() {
+        val document = upload("a".repeat(500))
+        org.mockito.Mockito.doAnswer { invocation ->
+            service.delete(a.user.id, document.id)
+            invocation.getArgument<List<String>>(0).map { listOf(1f,0f,0f) }
+        }.`when`(embeddings).embed(org.mockito.ArgumentMatchers.anyList())
+        worker.runOnce()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        assertThat(repository.search(a.user.id, listOf(space.id), listOf(1f,0f,0f), "test-local-embedding", 3, 3)).isEmpty()
+    }
+
     companion object {
         private val secret = SessionTokenService().create().rawToken
         private val temp = Files.createTempDirectory("knowledge-tests")
@@ -216,7 +243,7 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer("postgres:17-alpine")
+        val postgres = PostgreSQLContainer("postgres:17-alpine").withStartupTimeout(java.time.Duration.ofMinutes(3))
         @DynamicPropertySource
         @JvmStatic
         fun properties(registry: DynamicPropertyRegistry) {

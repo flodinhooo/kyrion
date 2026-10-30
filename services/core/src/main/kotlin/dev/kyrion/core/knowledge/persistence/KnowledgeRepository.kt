@@ -107,8 +107,6 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
             )
         }.optional().orElse(null)
             ?: return@execute null
-        jdbc.sql("UPDATE knowledge_documents SET status='PROCESSING',updated_at=CURRENT_TIMESTAMP WHERE id=:id AND deleted_at IS NULL")
-            .param("id", job.second).update()
         jdbc.sql("SELECT d.storage_key,d.media_type,s.owner_user_id FROM knowledge_documents d JOIN knowledge_spaces s ON s.id=d.space_id WHERE d.id=:id AND d.deleted_at IS NULL")
             .param("id", job.second).query { r, _ ->
                 KnowledgeJob(
@@ -122,6 +120,9 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
         jdbc.sql("SELECT EXISTS(SELECT 1 FROM knowledge_documents d JOIN knowledge_ingestion_jobs j ON j.document_id=d.id JOIN knowledge_spaces s ON s.id=d.space_id JOIN user_account u ON u.id=s.owner_user_id WHERE d.id=:doc AND d.deleted_at IS NULL AND u.enabled AND d.ingestion_revision=:rev AND j.id=:job AND j.lease_owner=:lease AND j.status='PROCESSING' AND j.lease_expires_at>CURRENT_TIMESTAMP)")
             .param("doc", job.documentId).param("rev", job.revision).param("job", job.id).param("lease", job.lease)
             .query(Boolean::class.java).single()
+
+    fun markProcessing(job: KnowledgeJob): Boolean = jdbc.sql("UPDATE knowledge_documents d SET status='PROCESSING',updated_at=CURRENT_TIMESTAMP WHERE d.id=:doc AND d.deleted_at IS NULL AND d.ingestion_revision=:rev AND EXISTS(SELECT 1 FROM knowledge_ingestion_jobs j WHERE j.document_id=d.id AND j.id=:job AND j.lease_owner=:lease AND j.status='PROCESSING' AND j.lease_expires_at>CURRENT_TIMESTAMP)")
+        .param("doc", job.documentId).param("rev", job.revision).param("job", job.id).param("lease", job.lease).update() == 1
 
     fun renew(job: KnowledgeJob): Boolean {
         if (!alive(job)) return false

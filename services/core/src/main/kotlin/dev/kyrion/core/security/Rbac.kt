@@ -50,7 +50,7 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
             val count = jdbc.sql("INSERT INTO rbac_role(id, installation_owner_id, role_key, display_name, system_role) VALUES (:id,:owner,:key,:key,TRUE) ON CONFLICT DO NOTHING")
                 .param("id", UUID.randomUUID()).param("owner", ownerId).param("key", key).update()
             if (count == 1) created.add(key)
-            if (count == 1) jdbc.sql("INSERT INTO rbac_role_permission(role_id,permission_key) SELECT r.id,p.permission_key FROM rbac_role r CROSS JOIN rbac_permission p WHERE r.installation_owner_id=:owner AND r.role_key=:role AND p.resource='knowledge' AND (:role<>'VIEWER' OR p.operation='READ') ON CONFLICT DO NOTHING")
+            if (count == 1 && key != "ADMIN") jdbc.sql("INSERT INTO rbac_role_permission(role_id,permission_key) SELECT r.id,p.permission_key FROM rbac_role r CROSS JOIN rbac_permission p WHERE r.installation_owner_id=:owner AND r.role_key=:role AND p.resource='knowledge' AND (:role<>'VIEWER' OR p.operation='READ') ON CONFLICT DO NOTHING")
                 .param("owner", ownerId).param("role", key).update()
         }
         if ("OWNER" in created) jdbc.sql("INSERT INTO rbac_role_permission(role_id, permission_key) SELECT r.id,p.permission_key FROM rbac_role r CROSS JOIN rbac_permission p WHERE r.installation_owner_id=:owner AND r.role_key='OWNER' ON CONFLICT DO NOTHING").param("owner", ownerId).update()

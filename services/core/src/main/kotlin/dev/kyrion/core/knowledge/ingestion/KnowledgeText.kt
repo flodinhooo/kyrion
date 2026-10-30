@@ -93,11 +93,13 @@ fun knowledgeChunks(pages: List<Pair<Int?, String>>): List<KnowledgeChunk> {
     pages.forEach { (page, text) ->
         var start = 0
         while (start < text.length) {
-            val end = minOf(start + 2000, text.length)
+            var end = minOf(start + 2000, text.length)
+            if (end < text.length && text[end - 1].isHighSurrogate()) end--
             val content = text.substring(start, end)
             if (content.isNotBlank()) result.add(KnowledgeChunk(result.size, content, page, start, end))
             if (end == text.length) break
             start = end - 200
+            if (start > 0 && text[start].isLowSurrogate()) start++
         }
     }
     if (result.size > 600) throw KnowledgeFailure("KNOWLEDGE_TEXT_LIMIT")

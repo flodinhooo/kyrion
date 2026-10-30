@@ -154,6 +154,7 @@ class AiOrchestrationService(
             var visible = false
             var completed = false
             var completion: String? = null
+            var sourceMessageId: String? = null
             var input: Long? = null;
             var output: Long? = null;
             var total: Long? = null
@@ -161,6 +162,10 @@ class AiOrchestrationService(
             var explicitError = false
             val buffered = mutableListOf<String>()
             try {
+                knowledgeContext.verify(prepared.actor, prepared.knowledgeSources)
+                if (prepared.knowledgeSources.isNotEmpty() && model.contextLength != null &&
+                    prepared.context.estimatedTokens + aiJson.writeValueAsBytes(prepared.knowledgeSources).size / 3 +
+                    model.maxOutputTokens + 512 > model.contextLength) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
                 val payload = aiJson.writeValueAsString(
                     mapOf(
                         "conversationId" to prepared.request.conversationId.toString(),
@@ -196,6 +201,14 @@ class AiOrchestrationService(
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
                 gateway.stream(payload, remaining) { raw ->
                     val event = aiJson.readTree(raw)
+                    if (prepared.knowledgeSources.isNotEmpty() && event.path("type").asText().startsWith("message.")) {
+                        val id = event.path("messageId").asText()
+                        if (event.path("type").asText() == "message.started") {
+                            if (sourceMessageId != null || runCatching { UUID.fromString(id) }.isFailure)
+                                throw AiFailure("STREAM_FAILED", 502)
+                            sourceMessageId = id
+                        } else if (sourceMessageId == null || id != sourceMessageId) throw AiFailure("STREAM_FAILED", 502)
+                    }
                     if (completed || error != null || buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502)
                     when (event.path("type").asText()) {
                         "error" -> {
@@ -227,6 +240,9 @@ class AiOrchestrationService(
                         }
 
                         "message.completed" -> {
+                            if (prepared.knowledgeSources.isNotEmpty()) knowledgeContext.record(prepared.actor,
+                                prepared.request.conversationId, UUID.fromString(event.path("messageId").asText()),
+                                prepared.knowledgeSources)
                             completion = raw; completed = true
                         }
 
