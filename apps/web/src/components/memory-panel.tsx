@@ -168,7 +168,7 @@ function MemoryItem({item, conflict, pending, onValidity, onConfirm, onForget, o
       <ContextSourceInspector conversationId={item.sourceConversationId} turnId={item.sourceMessageId}/>}
     <p>{c.created}: {item.createdAt} / {c.updated}: {item.updatedAt}</p>
     <label><input type="checkbox" checked={item.active ?? true} disabled={pending}
-                  onChange={e => void onValidity(item.id, e.target.checked, item.expiresAt ?? null)}/>{item.active === false ? c.inactive : item.expiresAt && Date.parse(item.expiresAt) <= Date.now() ? c.expired : c.active}
+                  onChange={e => void onValidity(item.id, e.target.checked, item.expiresAt ?? null)}/>{item.active === false ? c.inactive : item.expired === true ? c.expired : c.active}
     </label>
     <label>{c.expiry}<input type="datetime-local" value={expiry} onChange={e => setExpiry(e.target.value)}/></label>
     <button type="button" disabled={pending}

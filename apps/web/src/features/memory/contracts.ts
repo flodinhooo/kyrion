@@ -16,6 +16,7 @@ export type PersonalMemory = {
   confirmedAt: string | null;
   conflictsWithMemoryId: string | null;
   active?: boolean;
+  expired?: boolean;
   expiresAt?: string | null;
   ownerId?: string | null;
 };

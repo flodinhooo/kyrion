@@ -29,6 +29,7 @@ data class PersonalMemory(
     val active: Boolean = true,
     val expiresAt: Instant? = null,
     val ownerId: UUID? = null,
+    val expired: Boolean = expiresAt?.isAfter(Instant.now()) == false,
 )
 
 data class MemoryProfile(val settings: MemorySettings, val items: List<PersonalMemory>)
