@@ -30,6 +30,7 @@ dependencies {
     implementation("org.jmdns:jmdns:3.6.3")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation(kotlin("reflect"))
+    implementation("org.apache.pdfbox:pdfbox:3.0.7")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -46,3 +47,15 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+val knowledgeParserJar by tasks.registering(Jar::class) {
+    archiveFileName.set("knowledge-parser.jar")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.get().output) { include("dev/kyrion/core/knowledge/ingestion/PdfParserMain*.class") }
+    from(configurations.runtimeClasspath.get().filter {
+        it.name.startsWith("pdfbox") || it.name.startsWith("fontbox") || it.name.startsWith("commons-logging")
+    }.map { zipTree(it) })
+    exclude("META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
+}
+tasks.named("bootJar") { dependsOn(knowledgeParserJar) }
+tasks.withType<Test> { dependsOn(knowledgeParserJar) }

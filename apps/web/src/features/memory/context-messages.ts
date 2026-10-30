@@ -1,5 +1,6 @@
 export const contextMessages = {
   de: {
+    expired: "Abgelaufen",
     data: "Eigene kommende Kalendertermine lokal einbeziehen",
     excluded: "Nicht verwendet", blocked: "Gesperrt", local: "Lokal",
     sourceKinds: {
@@ -19,6 +20,7 @@ export const contextMessages = {
     inspect: "Kontextquellen ansehen", conversation: "Konversations-ID", turn: "Nachrichten-ID", selected: "Ausgewählt",
   },
   en: {
+    expired: "Expired",
     data: "Include my upcoming calendar events locally",
     excluded: "Excluded", blocked: "Blocked", local: "Local",
     sourceKinds: {

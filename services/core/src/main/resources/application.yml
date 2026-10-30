@@ -9,6 +9,10 @@ spring:
     import: optional:file:../../infrastructure/.env[.properties]
   application:
     name: kyrion-core
+  servlet:
+    multipart:
+      max-file-size: ${KYRION_KNOWLEDGE_MAX_BYTES:10485760}B
+      max-request-size: 51MB
   task:
     scheduling:
       pool:
@@ -31,6 +35,13 @@ management:
         include: health
 
 kyrion:
+  knowledge:
+    root: ${KYRION_KNOWLEDGE_ROOT:./data/knowledge}
+    max-bytes: ${KYRION_KNOWLEDGE_MAX_BYTES:10485760}
+    parser-jar: ${KYRION_KNOWLEDGE_PARSER_JAR:build/libs/knowledge-parser.jar}
+    embedding-url: ${KYRION_KNOWLEDGE_EMBEDDING_URL:http://127.0.0.1:11434}
+    embedding-model: ${KYRION_KNOWLEDGE_EMBEDDING_MODEL:}
+    embedding-dimension: ${KYRION_KNOWLEDGE_EMBEDDING_DIMENSION:768}
   security:
     bootstrap-secret-file: ${KYRION_BOOTSTRAP_SECRET_FILE:}
   ai:

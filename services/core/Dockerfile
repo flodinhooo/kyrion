@@ -10,7 +10,10 @@ RUN ./gradlew bootJar --no-daemon
 FROM eclipse-temurin:21-jre-jammy AS runtime
 
 WORKDIR /opt/kyrion
-COPY --from=build --chown=10001:10001 /workspace/build/libs/*.jar app.jar
+COPY --from=build --chown=10001:10001 /workspace/build/libs/kyrion-core-*-SNAPSHOT.jar app.jar
+COPY --from=build --chown=10001:10001 /workspace/build/libs/knowledge-parser.jar knowledge-parser.jar
+ENV KYRION_KNOWLEDGE_PARSER_JAR=/opt/kyrion/knowledge-parser.jar
+ENV KYRION_KNOWLEDGE_ROOT=/var/lib/kyrion/knowledge
 
 USER 10001:10001
 EXPOSE 8080
