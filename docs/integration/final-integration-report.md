@@ -1,5 +1,10 @@
 # Final integration report
 
+> Subsequent explicit user request completed the local database upgrade to V39:
+> [backup, real-data rehearsal and upgrade evidence](database-upgrade-v39.md).
+> V33/no-live-migration statements below describe the preceding integration
+> checkpoint. The older running Core binary was not replaced by that upgrade.
+
 Date: 2026-10-30. Checkout: `E:/dev/Kyrion/kyrion`, existing branch
 `refresh/product-credibility`. This report describes source integration, isolated
 database validation and retained operational limits; it is not a production rollout.
