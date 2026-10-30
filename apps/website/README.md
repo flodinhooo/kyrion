@@ -32,7 +32,7 @@ remain planned. Voice reliability and physical HA acceptance remain open.
 Update both locales when development claims change.
 
 The [current product review](PRODUCT-STATUS.md) records the October 30 handover
-sources, separate-worktree limits and the follow-up after the final Spaces handover.
+sources, all four final handovers and the remaining separate-worktree integration limits.
 Current labels say “Implemented in prototype”; they do not establish a public
 release. Google Calendar now includes bounded editing and explicit synchronization
 of selected events; earlier blanket read-only descriptions are superseded.
@@ -136,4 +136,3 @@ software reuse or commercial-availability promise.
 The root pnpm workspace currently includes only `apps/website`. The pre-existing
 `apps/web` workspace and lockfile remain independent and unchanged; continue
 running its pnpm commands from that directory.
-
