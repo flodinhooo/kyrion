@@ -29,6 +29,8 @@ class LocalAuthenticationService(
     private val invitationTokens: SessionTokenService = SessionTokenService(),
     private val rbac: RbacService? = null,
     private val bootstrap: FirstOwnerBootstrap? = null,
+    private val spaces: SpaceService? = null,
+    private val registrationAttempts: LoginAttemptLimiter = LoginAttemptLimiter(clock),
 ) {
     fun setupRequired() = !users.setupCompleted()
 
@@ -38,6 +40,10 @@ class LocalAuthenticationService(
         if (rbac != null) rbac.authorizeMutation(inviter.id, "invitations:create")
         else if (inviter.resourceOwnerId != inviter.id) throw InvitationForbiddenException()
         if (authenticatedSession(rawToken, touch = false) == null) throw UnauthenticatedException()
+        spaces?.let {
+            val issued = it.createInvitation(inviter.id, InvitationOptions())
+            return CreatedInvitation(issued.code, issued.expiresAt)
+        }
         val token = invitationTokens.create()
         val expiresAt = clock.instant().plus(java.time.Duration.ofHours(24))
         users.createInvitation(RegistrationInvitation(token.tokenHash, inviter.id, inviter.resourceOwnerId, expiresAt))
@@ -48,16 +54,21 @@ class LocalAuthenticationService(
     @Transactional
     fun register(username: String, password: String, invitationCode: String): AuthenticatedOwner {
         val normalized = normalizeUsername(username)
+        registrationAttempts.backoffFor(normalized)?.let { throw LoginRateLimitedException(it.retryAfter(clock.instant())) }
         val now = clock.instant()
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
-        val created = users.register(account, invitationTokens.hash(invitationCode), now) ?: throw InvalidInvitationException()
+        val created = users.register(account, invitationTokens.hash(invitationCode), now) ?: run {
+            registrationAttempts.recordFailure(normalized)
+            throw InvalidInvitationException()
+        }
+        registrationAttempts.recordSuccess(normalized)
         rbac?.initializeUser(created.id, created.resourceOwnerId, false)
         record("auth.user.registered", ActivityStatus.SUCCEEDED, "activity.auth.userRegistered", created.id)
         return AuthenticatedOwner(created, sessions.create(created.id))
     }
 
     @Transactional
-    fun setup(username: String, password: String, setupSecret: String? = null): AuthenticatedOwner {
+    fun setup(username: String, password: String, setupSecret: String? = null, spaceType: SpaceType = SpaceType.HOME, spaceName: String = "Kyrion"): AuthenticatedOwner {
         if (users.setupCompleted()) throw SetupAlreadyCompletedException()
         (bootstrap ?: throw BootstrapForbiddenException()).verify(setupSecret)
         val normalized = normalizeUsername(username)
@@ -65,6 +76,7 @@ class LocalAuthenticationService(
         val account = UserAccount(UUID.randomUUID(), normalized, passwords.hash(password), true, now, now)
         val created = users.createOwner(account) ?: throw SetupAlreadyCompletedException()
         rbac?.initializeUser(created.id, created.id, true)
+        spaces?.update(created.id, SpaceSettingsRequest(spaceName, spaceType))
         record("auth.owner.setup", ActivityStatus.SUCCEEDED, "activity.auth.ownerSetup", created.id)
         return AuthenticatedOwner(created, sessions.create(created.id))
     }

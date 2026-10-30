@@ -1,9 +1,9 @@
 # Role-based access control
 
-Kyrion Core is the authority for installation-wide RBAC. Users may have multiple
+Kyrion Core is the authority for Space-aware RBAC. The MVP runs one Space per installation; see [Kyrion Spaces](kyrion-spaces.md). Users may have multiple
 roles and effective permissions are the union of all assigned role permissions.
 The initial system roles are `OWNER`, `ADMIN`, `USER` and `VIEWER`; custom roles
-are stored per installation and cannot replace or delete system roles.
+are stored per Space and cannot replace or delete system roles.
 
 Permission keys use `resource:operation`, for example `devices:execute`.
 The permission catalog is seeded by Flyway migration V29 and is validated by
@@ -22,7 +22,7 @@ are migrated to `OWNER` for the primary account and `USER` for invited accounts.
 Fresh setup also creates the roles idempotently because the migration runs before
 the first user exists.
 
-The current model is intentionally installation-wide. Room, device and other
+Space ownership uses the preserved workspace owner UUID as its compatibility key. Room, device and other
 resource scopes are a future extension point and are not represented in the
 current permission keys.
 

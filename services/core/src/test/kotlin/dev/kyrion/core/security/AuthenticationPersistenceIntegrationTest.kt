@@ -68,6 +68,192 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val aiUsage: dev.kyrion.core.ai.AiUsageService,
     private val aiOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
 ) {
+    @Autowired
+    lateinit var spaces: SpaceService
+
+    @Test
+    fun `Home and Business setup preserve the protected bootstrap and Space ownership`() {
+        val owner = authentication.setup("business_owner", OLD_PASSWORD, setupSecret, SpaceType.BUSINESS, "Local Company")
+        assertThat(spaces.current(owner.user.id).type).isEqualTo(SpaceType.BUSINESS)
+        assertThat(spaces.current(owner.user.id).name).isEqualTo("Local Company")
+        assertThat(spaces.current(owner.user.id).id).isEqualTo(owner.user.resourceOwnerId)
+        assertThat(rbac.isOwner(owner.user.id)).isTrue()
+        assertThatThrownBy { authentication.setup("replay", OLD_PASSWORD, setupSecret) }.isInstanceOf(SetupAlreadyCompletedException::class.java)
+    }
+
+    @Test
+    fun `custom default roles are applied without changing additive permissions`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val role = rbac.createRole(owner.user.id, RoleRequest("guest", "Guest", setOf("devices:read")))
+        spaces.update(owner.user.id, SpaceSettingsRequest("Home", SpaceType.HOME, role.key))
+        val invitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val member = authentication.register("guest", OTHER_PASSWORD, invitation.code).user
+        assertThat(rbac.permissions(member.id)).containsExactly("devices:read")
+        assertThat(spaces.current(member.id).id).isEqualTo(owner.user.id)
+        assertThatThrownBy { rbac.deleteRole(owner.user.id, role.id) }.isInstanceOf(RoleInUseException::class.java)
+        assertThatThrownBy { spaces.update(member.id, SpaceSettingsRequest("Stolen", SpaceType.BUSINESS)) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test
+    fun `invitation tokens are hashed bounded expiring revocable and never grant Owner`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val ownerRole = rbac.roles(owner.user.id).first { it.key == "OWNER" }
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(ownerRole.id)) }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(maxUses=21)) }.isInstanceOf(InvalidSpaceSettingsException::class.java)
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(expiresInHours=169)) }.isInstanceOf(InvalidSpaceSettingsException::class.java)
+        val issued = spaces.createInvitation(owner.user.id, InvitationOptions(maxUses=2))
+        assertThat(jdbc.sql("SELECT token_hash FROM registration_invitation WHERE id=:id").param("id", issued.id).query(String::class.java).single())
+            .isEqualTo(SessionTokenService().hash(issued.code)).isNotEqualTo(issued.code)
+        authentication.register("first", OTHER_PASSWORD, issued.code)
+        authentication.register("second", OTHER_PASSWORD, issued.code)
+        assertThatThrownBy { authentication.register("replay", OTHER_PASSWORD, issued.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(spaces.invitations(owner.user.id).first { it.id == issued.id }.status).isEqualTo("USED")
+        val revoked = spaces.createInvitation(owner.user.id, InvitationOptions())
+        spaces.revoke(owner.user.id, revoked.id)
+        spaces.revoke(owner.user.id, revoked.id)
+        assertThatThrownBy { authentication.register("revoked", OTHER_PASSWORD, revoked.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        val expired = spaces.createInvitation(owner.user.id, InvitationOptions())
+        jdbc.sql("UPDATE registration_invitation SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE id=:id").param("id", expired.id).update()
+        assertThatThrownBy { authentication.register("expired", OTHER_PASSWORD, expired.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(spaces.invitations(owner.user.id).first { it.id == expired.id }.status).isEqualTo("EXPIRED")
+    }
+
+    @Test
+    fun `concurrent redemption consumes a one use invitation exactly once`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val issued = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val start = java.util.concurrent.CountDownLatch(1)
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val futures = (1..2).map { index -> executor.submit<Boolean> {
+                start.await()
+                try { authentication.register("racer$index", OTHER_PASSWORD, issued.code); true }
+                catch (_: InvalidInvitationException) { false }
+            } }
+            start.countDown()
+            assertThat(futures.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }).containsExactlyInAnyOrder(true, false)
+            assertThat(jdbc.sql("SELECT use_count FROM registration_invitation WHERE id=:id").param("id", issued.id).query(Int::class.java).single()).isEqualTo(1)
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test
+    fun `role changes cannot turn an outstanding invitation into a privilege escalation`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val memberInvitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        val member = authentication.register("delegate", OTHER_PASSWORD, memberInvitation.code).user
+        val delegated = rbac.createRole(owner.user.id, RoleRequest("delegate", "Delegate", setOf("invitations:create", "devices:read")))
+        rbac.assignRoles(owner.user.id, member.id, setOf(delegated.id))
+        val viewer = rbac.createRole(owner.user.id, RoleRequest("limited", "Limited", setOf("devices:read")))
+        val issued = spaces.createInvitation(member.id, InvitationOptions(viewer.id))
+        rbac.updateRole(owner.user.id, viewer.id, RoleRequest("limited", "Expanded", setOf("devices:read", "devices:execute")))
+        assertThatThrownBy { authentication.register("escalation", OTHER_PASSWORD, issued.code) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThatThrownBy { spaces.createInvitation(member.id, InvitationOptions(viewer.id)) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test
+    fun `Space endpoints enforce authentication permissions tenant IDs and audit`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        mockMvc.perform(get("/v1/space")).andExpect(status().isUnauthorized)
+        mockMvc.perform(get("/v1/space").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.type").value("HOME"))
+        val foreign = insertAdditionalOwner("foreign")
+        assertThatThrownBy { SingleSpaceRuntimeGuard(jdbc).run(org.springframework.boot.DefaultApplicationArguments()) }
+            .isInstanceOf(IllegalStateException::class.java).hasMessageContaining("MULTI_SPACE_RUNTIME_UNSUPPORTED")
+        rbac.initializeUser(foreign, foreign, true)
+        val foreignInvitation = spaces.createInvitation(foreign, InvitationOptions())
+        assertThatThrownBy { spaces.revoke(owner.user.id, foreignInvitation.id) }.isInstanceOf(InvalidInvitationException::class.java)
+        val ownInvitation = spaces.createInvitation(owner.user.id, InvitationOptions())
+        spaces.revoke(owner.user.id, ownInvitation.id)
+        assertThat(activity.recent(owner.user.id, 50).map { it.eventType }).contains("space.invitation.created", "space.invitation.revoked", "space.settings.updated")
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("UPDATE user_account SET workspace_owner_id=:foreign WHERE id=:id").param("foreign", foreign).param("id", owner.user.id).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+        val foreignRole = rbac.roles(foreign).firstOrNull()
+        // A root created by a test fixture has no roles until initialization.
+        if (foreignRole == null) rbac.initializeUser(foreign, foreign, true)
+        val roleId = rbac.roles(foreign).first().id
+        assertThatThrownBy { transactions.execute {
+            jdbc.sql("INSERT INTO rbac_user_role(user_id,role_id) VALUES(:user,:role)").param("user", owner.user.id).param("role", roleId).update()
+        } }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+    }
+
+    @Test
+    fun `Spaces migration preserves membership custom role grants and fails closed on ambiguous roots`() {
+        java.sql.DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            for (ambiguous in listOf(false, true)) {
+                val schema = "spaces_" + UUID.randomUUID().toString().replace("-", "")
+                connection.createStatement().use { it.execute("CREATE SCHEMA $schema") }
+                fun flyway(target: String?) = org.flywaydb.core.Flyway.configure()
+                    .dataSource(postgres.jdbcUrl, postgres.username, postgres.password).schemas(schema).defaultSchema(schema)
+                    .locations("classpath:db/migration").apply { if (target != null) target(target) }.load()
+                try {
+                    flyway("34").migrate()
+                    connection.schema = schema
+                    val owner = UUID.randomUUID()
+                    val member = UUID.randomUUID()
+                    val role = UUID.randomUUID()
+                    connection.prepareStatement("INSERT INTO user_account(id,username,password_hash) VALUES(?, 'legacy_owner','test-hash')").use {
+                        it.setObject(1, owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO user_account(id,username,password_hash,workspace_owner_id) VALUES(?,'legacy_member','test-hash',?)").use {
+                        it.setObject(1, member); it.setObject(2, if (ambiguous) null else owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_role(id,installation_owner_id,role_key,display_name) VALUES(?,?,'custom','Custom')").use {
+                        it.setObject(1, role); it.setObject(2, owner); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_role_permission(role_id,permission_key) VALUES(?,'devices:read')").use {
+                        it.setObject(1, role); it.executeUpdate()
+                    }
+                    connection.prepareStatement("INSERT INTO rbac_user_role(user_id,role_id) VALUES(?,?)").use {
+                        it.setObject(1, if (ambiguous) owner else member); it.setObject(2, role); it.executeUpdate()
+                    }
+                    if (ambiguous) {
+                        assertThatThrownBy { flyway(null).migrate() }.hasStackTraceContaining("SPACES_MIGRATION_AMBIGUOUS")
+                    } else {
+                        flyway(null).migrate()
+                        connection.createStatement().use { statement ->
+                            statement.executeQuery("SELECT count(*) FROM kyrion_space").use { it.next(); assertThat(it.getInt(1)).isEqualTo(1) }
+                            statement.executeQuery("SELECT space_id FROM user_account WHERE username='legacy_member'").use { it.next(); assertThat(it.getObject(1)).isEqualTo(owner) }
+                            statement.executeQuery("SELECT permission_key FROM rbac_role_permission rp JOIN rbac_user_role ur ON ur.role_id=rp.role_id").use {
+                                it.next(); assertThat(it.getString(1)).isEqualTo("devices:read"); assertThat(it.next()).isFalse()
+                            }
+                            statement.executeQuery("SELECT default_role_key,type FROM kyrion_space").use {
+                                it.next(); assertThat(it.getString(1)).isEqualTo("USER"); assertThat(it.getString(2)).isEqualTo("HOME")
+                            }
+                        }
+                    }
+                } finally {
+                    connection.schema = "public"
+                    connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `foreign Space IDs cannot read integration credentials or execute device actions`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        `when`(nanoleafGateway.pair("192.168.1.61")).thenReturn("private-device-token")
+        val device = nanoleaf.pair(owner.user.id, "192.168.1.61", "Private lamp")
+        val foreign = insertAdditionalOwner("other_space")
+        rbac.initializeUser(foreign, foreign, true)
+        val token = authentication.login("other_space", OTHER_PASSWORD).session.rawToken
+        org.mockito.Mockito.clearInvocations(nanoleafGateway)
+        mockMvc.perform(get("/v1/integrations/nanoleaf/connections/${device.id}/state").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(put("/v1/integrations/nanoleaf/connections/${device.id}/power").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"on":true,"confirmed":true}"""))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(delete("/v1/integrations/nanoleaf/connections/${device.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mockMvc.perform(post("/v1/device-commands").header("Authorization", "Bearer $token")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"capability":"power.set","selector":{"provider":"nanoleaf","deviceId":"${device.id}"},"arguments":{"on":true}}"""))
+            .andExpect(status().isNotFound)
+        assertThat(catalog.devices(foreign)).isEmpty()
+        assertThat(nanoleaf.connections(owner.user.id).map { it.id }).contains(device.id)
+        org.mockito.Mockito.verifyNoInteractions(nanoleafGateway)
+    }
+
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
 
@@ -588,7 +774,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         mockMvc.perform(get("/v1/retention/preview").header("Authorization", "Bearer $token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversations.records").value(1))
-            .andExpect(jsonPath("$.activity.records").value(2))
+            .andExpect(jsonPath("$.activity.records").value(3))
             .andExpect(jsonPath("$.personalMemory.records").value(1))
         mockMvc.perform(post("/v1/retention/cleanup").header("Authorization", "Bearer $token")
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"NO"}"""))
@@ -598,7 +784,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .contentType(MediaType.APPLICATION_JSON).content("""{"confirmation":"DELETE"}"""))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.conversationsDeleted").value(1))
-            .andExpect(jsonPath("$.activityDeleted").value(2))
+            .andExpect(jsonPath("$.activityDeleted").value(3))
             .andExpect(jsonPath("$.personalMemoriesDeleted").value(1))
         assertThat(conversations.recent(ownerId, 10).map { it.title }).containsExactly("Current")
         assertThat(conversations.recent(secondOwner, 10).map { it.title }).containsExactly("Other owner expired")
@@ -891,6 +1077,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         rbac.deactivate(admin.user.id, user.user.id, false)
         rbac.deactivate(admin.user.id, user.user.id, true)
         mockMvc.perform(post("/v1/auth/invitations").header("Authorization", "Bearer ${admin.session.rawToken}"))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(post("/v1/space/invitations").header("Authorization", "Bearer ${admin.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"roleId":"$roleId","expiresInHours":24,"maxUses":1}"""))
             .andExpect(status().isCreated)
         mockMvc.perform(post("/v1/rbac/roles").header("Authorization", "Bearer ${user.session.rawToken}")
             .contentType(MediaType.APPLICATION_JSON).content("""{"key":"bad","name":"Bad","permissions":[]}"""))

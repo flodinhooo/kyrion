@@ -364,6 +364,10 @@
       "description": "Geräteverfügbarkeit, Dienstzustand und ein Aktionsinspektor zeigen, was passiert ist – und warum."
     }
   ],
+  "spaces": {
+    "title": "Home, Business und Kyrion Spaces",
+    "description": "Kyrion Home und Kyrion Business teilen eine lokale Plattform. Ein Space organisiert die lokale Installation, Mitglieder und Rollen. Private und gesch?ftliche Konten sind getrennte Identit?ten. Mitgliederverwaltung und Einladungsannahme erfolgen auf deiner erreichbaren Kyrion-Instanz; diese Website bietet keinen Cloud-Login und keine Fernverbindung."
+  },
   "product": {
     "eyebrow": "DIE KYRION-PLATTFORM",
     "title": "Ein verbundenes Zuhause.\nVom Core aus gedacht.",

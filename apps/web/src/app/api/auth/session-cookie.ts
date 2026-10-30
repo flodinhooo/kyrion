@@ -27,7 +27,7 @@ export async function authenticate(request: Request, path: string, successStatus
     if (isBrowserForm) {
       const form = await request.formData();
       body = { username: form.get("username"), password: form.get("password"),
-        ...(path === "/v1/auth/setup" ? { setupSecret: form.get("setupSecret") } : {}),
+        ...(path === "/v1/auth/setup" ? { setupSecret: form.get("setupSecret"), spaceName: form.get("spaceName") ?? "Kyrion", spaceType: form.get("spaceType") ?? "HOME" } : {}),
         ...(path === "/v1/auth/register" ? { invitationCode: form.get("invitationCode") } : {}) };
     } else {
       body = await request.json();

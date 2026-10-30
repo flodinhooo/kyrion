@@ -39,6 +39,14 @@ export function ProductPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       <PageHero {...t.product}>
         <DevelopmentBanner t={t} locale={locale} />
       </PageHero>
+      <section className="border-t border-border py-12">
+        <Container>
+          <SectionHeader
+            title={t.spaces.title}
+            description={t.spaces.description}
+          />
+        </Container>
+      </section>
       <section className="py-20">
         <Container>
           <SectionHeader

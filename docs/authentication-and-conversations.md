@@ -28,11 +28,14 @@ claim retryable until expiry. Once consumed, the file cannot reopen setup, even
 if accounts are subsequently absent. Restore must preserve this marker and the
 original credential/audit keys. Existing startup must not refresh bootstrap files.
 
-Additional accounts require a cryptographically random, single-use invitation
-valid for 24 hours. Only users explicitly granted `invitations:create` can issue
+Additional accounts require a cryptographically random invitation, defaulting to
+one use and 24 hours. [Kyrion Spaces](kyrion-spaces.md) adds bounded uses, role
+selection, listing, revocation and local fragment URLs. Only users explicitly granted `invitations:create` can issue
 one. Actor and workspace are separate, including for delegated administrators.
 Invitation redemption, account/session creation and audit are transactional.
-Registration assigns the existing USER role without changing any role grants.
+Registration assigns the selected non-OWNER role, or the Space default role,
+without changing existing grants. Inviter delegation is checked at creation and
+redemption. The new account belongs to exactly that Space.
 Repeated initial seeding only grants defaults to newly created roles.
 
 Core checks effective permissions and workspace ownership. Non-owner delegates

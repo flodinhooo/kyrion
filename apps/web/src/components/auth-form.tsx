@@ -1,11 +1,23 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { messages, type Locale } from "@/lib/messages";
 
+import { spaceMessages } from "@/features/spaces/messages";
+
 export function AuthForm({ setup, locale, registration = false }: { setup: boolean; locale: Locale; registration?: boolean }) {
   const t = messages[locale];
+  const st = spaceMessages[locale];
+  const invitationInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!registration) return;
+    const code = new URLSearchParams(window.location.hash.slice(1)).get("invitation");
+    if (code && /^[A-Za-z0-9_-]{43}$/.test(code)) {
+      if (invitationInput.current) invitationInput.current.value = code;
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [registration]);
   const router = useRouter();
   const [error, setError] = useState<"authInvalidCredentials" | "authSetupCompleted" | "authCoreUnavailable" | "authInvalidInput" | "authNetworkError" | "authPasswordMismatch" | "authUsernameTaken" | "authInvitationInvalid" | null>(null);
   const [pending, setPending] = useState(false);
@@ -25,7 +37,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
       const response = await fetch(endpoint, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: data.get("username"), password: data.get("password"),
-          ...(setup ? { setupSecret: data.get("setupSecret") } : {}),
+          ...(setup ? { setupSecret: data.get("setupSecret"), spaceName: data.get("spaceName"), spaceType: data.get("spaceType") } : {}),
           ...(registration && !setup ? { invitationCode: data.get("invitationCode") } : {}) }),
         signal: AbortSignal.timeout(15_000),
       });
@@ -56,8 +68,12 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
         <small id="password-hint">{setup ? t.authPasswordHint : t.authRegistrationPasswordHint}</small>
         <label>{t.authConfirmPassword}<input name="passwordConfirmation" type="password" autoComplete="new-password" minLength={12} maxLength={200} aria-describedby="password-hint" required /></label>
       </>}
+      {setup && <>
+        <label>{st.name}<input name="spaceName" minLength={1} maxLength={120} required /></label>
+        <label>{st.type}<select name="spaceType" defaultValue="HOME"><option value="HOME">{st.home}</option><option value="BUSINESS">{st.business}</option></select></label>
+      </>}
       {setup && <label>{t.authSetupSecret}<input name="setupSecret" type="password" autoComplete="off" minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
-      {registration && !setup && <label>{t.authInvitationCode}<input name="invitationCode" autoComplete="off" autoCapitalize="none" spellCheck={false} minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
+      {registration && !setup && <label>{t.authInvitationCode}<input name="invitationCode" ref={invitationInput} autoComplete="off" autoCapitalize="none" spellCheck={false} minLength={43} maxLength={43} pattern="[A-Za-z0-9_-]{43}" required /></label>}
       {error && <p className="auth-error" role="alert">{t[error]}</p>}
       <button disabled={pending} type="submit">{pending ? t.authPending : setup ? t.authSetup : registration ? t.authSignupTitle : t.authLogin}</button>
     </form>

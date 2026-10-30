@@ -16,6 +16,7 @@ class AuthenticatedRouteInterceptor(
     private val activity: ActivityService,
 ) : HandlerInterceptor {
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
+        if (request.requestURI.startsWith("/v1/space")) response.setHeader("Cache-Control", "no-store")
         val header = request.getHeader("Authorization")
         val token = header?.takeIf { it.startsWith("Bearer ") }?.substring(7)
         val user = token?.let(authentication::authenticate)
@@ -45,6 +46,10 @@ class AuthenticatedRouteInterceptor(
 }
 
 internal fun permissionFor(path: String, method: String): String? = when {
+    path == "/v1/space" -> when (method) { "GET" -> "devices:read"; "PUT" -> "system_settings:update"; else -> null }
+    path.startsWith("/v1/space/invitations") -> when (method) {
+        "GET", "POST", "DELETE" -> "invitations:create"; else -> null
+    }
     path == "/v1/ai/policy" -> when (method) {
         "GET" -> "system_settings:read"; "PUT" -> "system_settings:update"; else -> null
     }
@@ -92,6 +97,7 @@ class AuthenticatedRouteConfiguration(
             "/v1/retention/**",
             "/v1/backups/**",
             "/v1/rbac/**",
+            "/v1/space/**",
             "/v1/ai/**",
         )
     }

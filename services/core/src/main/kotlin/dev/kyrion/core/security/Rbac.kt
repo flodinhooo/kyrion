@@ -39,7 +39,8 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
             if (userId != ownerId) throw ForbiddenException()
             ensureRoles(ownerId)
         }
-        val key = if (owner) "OWNER" else "USER"
+        val key = if (owner) "OWNER" else jdbc.sql("SELECT default_role_key FROM kyrion_space WHERE id=:owner")
+            .param("owner", ownerId).query(String::class.java).single()
         val assigned = jdbc.sql("INSERT INTO rbac_user_role(user_id, role_id) SELECT :user, id FROM rbac_role WHERE installation_owner_id=:owner AND role_key=:key AND NOT EXISTS (SELECT 1 FROM rbac_user_role WHERE user_id=:user) ON CONFLICT DO NOTHING")
             .param("user", userId).param("owner", ownerId).param("key", key).update()
         if (assigned == 0 && !jdbc.sql("SELECT EXISTS(SELECT 1 FROM rbac_user_role WHERE user_id=:id)").param("id", userId).query(Boolean::class.java).single()) throw RoleNotFoundException()
@@ -96,7 +97,9 @@ class RbacService(private val jdbc: JdbcClient, private val activity: ActivitySe
         val existing = roleRow(owner, id)
         if (existing.system) throw SystemRoleProtectedException()
         validateDelegation(actor, rolePermissions(id))
-        if (existingUserCount(id) > 0) throw RoleInUseException()
+        if (existingUserCount(id) > 0 || jdbc.sql("SELECT EXISTS(SELECT 1 FROM registration_invitation WHERE role_id=:id)")
+                .param("id", id).query(Boolean::class.java).single() || jdbc.sql("SELECT EXISTS(SELECT 1 FROM kyrion_space WHERE id=:owner AND default_role_key=:key)")
+                .param("owner", owner).param("key", existing.key).query(Boolean::class.java).single()) throw RoleInUseException()
         jdbc.sql("DELETE FROM rbac_role WHERE id=:id AND installation_owner_id=:owner").param("id", id).param("owner", owner).update()
         audit("rbac.role.deleted", actor, id)
     }
