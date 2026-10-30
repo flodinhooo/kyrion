@@ -76,6 +76,7 @@ def test_model_catalog_serialises_web_contract() -> None:
     assert catalog.model_dump(by_alias=True) == {
         "defaultModelId": "gemma3:4b",
       "providers": [],
+      "voiceProfileId": None,
         "models": [
             {
                 "id": "gemma3:4b",

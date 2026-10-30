@@ -275,7 +275,7 @@ def registry(tmp_path, **options):
 def test_local_default_and_legacy_voice_share_configuration(tmp_path):
   models = registry(tmp_path)
   assert models.resolve(request()).id == "local"
-  assert models.resolve(request(interactionMode="voice", modelId="gemma3:1b")).id == "local"
+  assert models.resolve(request(interactionMode="voice")).id == "local"
   assert not any(status.enabled for status in models.provider_status() if not status.local)
 
 
@@ -364,3 +364,14 @@ def test_tool_results_are_serialized_without_execution_and_gemini_signature_is_r
   assert "confirmed" in json.dumps(wire)
   if provider == "gemini":
     assert wire["contents"][1]["parts"][0]["thoughtSignature"] == "opaque"
+
+
+def test_core_selected_voice_profile_overrides_default_and_cloud_voice_is_denied(tmp_path):
+  models = registry(tmp_path, model_cloud_enabled=True, openai_api_key="synthetic")
+  models.profiles["voice-personal"] = models.profiles["local"].model_copy(
+    update={"id": "voice-personal", "model_id": "configured-local-model"}
+  )
+  chosen = models.resolve(request(modelId="voice-personal", interactionMode="voice"))
+  assert chosen.id == "voice-personal"
+  with pytest.raises(ProviderFailure, match="CLOUD_NOT_ALLOWED"):
+    models.resolve(request(modelId="openai:test", interactionMode="voice", cloudConsent=True))
