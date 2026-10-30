@@ -16,7 +16,20 @@ data class KnowledgeSearchRequest(val spaceIds: List<UUID>, val query: String, v
 
 @RestController
 @RequestMapping("/v1/knowledge")
-class KnowledgeController(private val service: KnowledgeService) {
+class KnowledgeController(
+    private val service: KnowledgeService,
+    private val answers: dev.kyrion.core.knowledge.persistence.KnowledgeAnswerSources,
+    private val rbac: dev.kyrion.core.security.RbacService
+) {
+    @GetMapping("/answers/{id}")
+    fun sources(
+        @PathVariable id: UUID,
+        request: HttpServletRequest
+    ): List<dev.kyrion.core.knowledge.persistence.AnswerSource> {
+        val actor = request.authenticatedUserId()
+        rbac.require(actor, "knowledge:read")
+        return answers.list(actor, id)
+    }
     @GetMapping("/spaces")
     fun spaces(request: HttpServletRequest) = service.spaces(request.authenticatedUserId())
     @PostMapping("/spaces")
@@ -60,6 +73,9 @@ class KnowledgeController(private val service: KnowledgeService) {
     @DeleteMapping("/documents/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(@PathVariable id: UUID, request: HttpServletRequest) = service.delete(request.authenticatedUserId(), id)
+    @PostMapping("/documents/{id}/reindex")
+    fun reindex(@PathVariable id: UUID, request: HttpServletRequest) =
+        service.reindex(request.authenticatedUserId(), id)
     @PostMapping("/search")
     fun search(@RequestBody body: KnowledgeSearchRequest, request: HttpServletRequest) =
         service.search(request.authenticatedUserId(), body.spaceIds, body.query, body.limit)

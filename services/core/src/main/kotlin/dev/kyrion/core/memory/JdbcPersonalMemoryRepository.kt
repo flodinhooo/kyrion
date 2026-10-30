@@ -21,7 +21,8 @@ class JdbcPersonalMemoryRepository(
             rs.getTimestamp("updated_at").toInstant(),
             rs.getBoolean("history_enabled"),
             rs.getBoolean("preferences_enabled"),
-            rs.getString("categories").split(",").filter { it.isNotBlank() }.map(MemoryCategory::valueOf)
+            rs.getString("categories").split(",").filter { it.isNotBlank() }.map(MemoryCategory::valueOf),
+            rs.getBoolean("kyrion_data_enabled")
         )
     }
         .optional().orElse(MemorySettings(false, null))
@@ -35,6 +36,10 @@ class JdbcPersonalMemoryRepository(
         return MemorySettings(enabled, updatedAt)
     }
 
+    override fun dataSettings(ownerId: UUID, enabled: Boolean) {
+        jdbc.sql("UPDATE owner_memory_settings SET kyrion_data_enabled=:enabled WHERE owner_id=:id")
+            .param("enabled", enabled).param("id", ownerId).update()
+    }
     override fun contextSettings(
         ownerId: UUID,
         history: Boolean,
@@ -92,7 +97,7 @@ class JdbcPersonalMemoryRepository(
             .param("createdAt", Timestamp.from(memory.createdAt)).param("updatedAt", Timestamp.from(memory.updatedAt))
             .param("confirmedAt", memory.confirmedAt?.let(Timestamp::from))
             .param("conflictsWithMemoryId", memory.conflictsWithMemoryId).update()
-        return memory
+        return memory.copy(ownerId = ownerId)
     }
 
     override fun find(ownerId: UUID, id: UUID): PersonalMemory? = jdbc.sql(

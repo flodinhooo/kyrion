@@ -1543,6 +1543,56 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(memories.find(actor, UUID.fromString(id))).isNull()
     }
 
+    @Test
+    fun `voice uses the central personal context and calendar adapter never crosses account boundaries`() {
+        val token = setupToken();
+        val actor = authentication.authenticate(token)!!.id
+        val invite = authentication.createInvitation(token)
+        val friend = authentication.register("CalendarContextFriend", OTHER_PASSWORD, invite.code)
+        val other = authentication.authenticate(friend.session.rawToken)!!.id
+        fun event(owner: UUID, title: String) {
+            val now = Instant.now()
+            jdbc.sql(
+                """INSERT INTO local_calendar_event(id,owner_id,title,starts_at,ends_at,time_zone,content_fingerprint,sync_to_google,created_at,updated_at)
+                VALUES(:id,:owner,:title,:start,:end,'UTC','synthetic',FALSE,:now,:now)"""
+            )
+                .param("id", UUID.randomUUID()).param("owner", owner).param("title", title)
+                .param("start", Timestamp.from(now.plusSeconds(3600)))
+                .param("end", Timestamp.from(now.plusSeconds(7200)))
+                .param("now", Timestamp.from(now)).update()
+        }
+        event(actor, "Owned calendar appointment")
+        event(other, "OTHER ACCOUNT SECRET")
+        val conversation = UUID.randomUUID();
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Orchard telescope calendar", "2026-10-30T12:00:00Z")
+        memories.updateSettings(actor, true, Instant.now())
+        val id = UUID.randomUUID();
+        val now = Instant.now()
+        memories.create(
+            actor, dev.kyrion.core.memory.PersonalMemory(
+                id, dev.kyrion.core.memory.MemoryCategory.project,
+                "Orchard telescope confirmed preference", dev.kyrion.core.memory.MemorySensitivity.standard, "explicit",
+                dev.kyrion.core.memory.MemoryStatus.proposed, conversation, turn, now, now, null
+            )
+        )
+        memories.confirm(actor, id, now, false)
+        memories.contextSettings(actor, false, false, dev.kyrion.core.memory.MemoryCategory.entries.toList(), now)
+        assertThat(
+            contextBuilder.build(
+                actor,
+                conversation,
+                turn
+            ).messages.joinToString()
+        ).doesNotContain("Owned calendar appointment")
+        memories.dataSettings(actor, true)
+        val cloud = contextBuilder.build(actor, conversation, turn, 3072, true)
+        assertThat(cloud.messages.joinToString()).doesNotContain("Owned calendar appointment", "confirmed preference")
+        assertThat(aiOrchestration.voice(actor, conversation, turn, "en")).isEqualTo("Synthetic answer")
+        assertThat(aiGateway.payloads.single()).contains("Owned calendar appointment", "confirmed preference")
+            .doesNotContain("OTHER ACCOUNT SECRET")
+    }
+
     private fun startHttpTurn(token: String, conversationId: UUID, messageId: UUID, content: String, createdAt: String) {
         mockMvc.perform(
             post("/v1/conversations/$conversationId/turns").header("Authorization", "Bearer $token")

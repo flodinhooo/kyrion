@@ -21,7 +21,7 @@ data class ContextSettingsRequest(
     val categories: List<MemoryCategory> = MemoryCategory.entries.toList(), val kyrionDataEnabled: Boolean = false
 )
 
-data class MemoryValidityRequest(val active: Boolean, val expiresAt: java.time.Instant? = null)
+data class MemoryValidityRequest(val active: Boolean, val expiresAt: String? = null)
 
 data class MemorySettingsRequest(val enabled: Boolean)
 data class MemoryProposalRequest(
@@ -61,7 +61,9 @@ class PersonalMemoryController(
     }
 
     @PutMapping("/context-settings")
+    @org.springframework.transaction.annotation.Transactional
     fun contextSettings(@RequestBody raw: String, request: HttpServletRequest): MemorySettings {
+        if (raw.length > 64000) throw MemoryInvalidRequestException()
         val body = try {
             dev.kyrion.core.ai.strictAiJson.readValue(raw, ContextSettingsRequest::class.java)
         } catch (_: Exception) {
@@ -78,18 +80,25 @@ class PersonalMemoryController(
         )
         repository.dataSettings(owner, body.kyrionDataEnabled)
         record(owner, "memory.context.settings.updated", "memory.context.settings.updated")
-        return result
+        return repository.settings(owner)
     }
 
     @PatchMapping("/{id}/validity")
     fun validity(@PathVariable id: UUID, @RequestBody raw: String, request: HttpServletRequest): PersonalMemory {
+        if (raw.length > 64000) throw MemoryInvalidRequestException()
         val body = try {
             dev.kyrion.core.ai.strictAiJson.readValue(raw, MemoryValidityRequest::class.java)
         } catch (_: Exception) {
             throw MemoryInvalidRequestException()
         }
         val owner = request.ownerId()
-        val result = repository.validity(owner, id, body.active, body.expiresAt, clock.instant())
+        val result = repository.validity(owner, id, body.active, body.expiresAt?.let {
+            try {
+                java.time.Instant.parse(it)
+            } catch (_: Exception) {
+                throw MemoryInvalidRequestException()
+            }
+        }, clock.instant())
             ?: throw MemoryNotFoundException()
         record(owner, "memory.validity.updated", "memory.validity.updated", memoryId = id)
         return result

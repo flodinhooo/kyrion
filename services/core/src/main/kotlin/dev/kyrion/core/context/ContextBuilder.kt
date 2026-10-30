@@ -16,7 +16,8 @@ class ContextBuilder(
     private val repository: ConversationRepository,
     private val memories: PersonalMemoryRepository, private val selector: MemoryContextSelector,
     private val preferences: AiSettingsRepository, private val rbac: RbacService,
-    private val activity: ActivityService, private val clock: Clock = Clock.systemUTC()
+    private val activity: ActivityService, private val clock: Clock = Clock.systemUTC(),
+    private val dataSources: List<PersonalContextDataSource> = emptyList()
 ) {
 
     fun build(
@@ -33,22 +34,7 @@ class ContextBuilder(
         val query = conversation.messages.last().content
         if (estimateTokens(query) > budget) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
         val sources = mutableListOf<ContextSource>()
-        if (cloud) return ConversationContext(
-            conversationId, turnId,
-            listOf(ConversationContextMessage("user", query)), estimateTokens(query), budget, false, emptyList(),
-            listOf(
-                ContextSource(
-                    "current_message",
-                    turnId.toString(),
-                    "cloud_current",
-                    true,
-                    "explicit_consent",
-                    estimateTokens(query)
-                )
-            ) +
-                listOf("conversation_history", "personal_memory", "user_preferences", "kyrion_data", "documents").map {
-                    ContextSource(it, null, "blocked", false, "cloud_disclosure_denied", 0)
-                })
+        if (cloud) return currentOnly(conversationId, turnId, query, budget)
         val options = memories.settings(actor)
         val optionalBudget = (budget - estimateTokens(query)).coerceAtLeast(0).coerceAtMost(budget / 3)
         val selected = mutableListOf<PersonalMemory>()
@@ -90,6 +76,13 @@ class ContextBuilder(
                 "explicit_opt_in"
             )
         }
+        if (options.kyrionDataEnabled) {
+            dataSources.filter { it.permission in rbac.permissions(actor) }.forEach { source ->
+                source.retrieve(PersonalContextScope(actor), query).take(2).forEach {
+                    add("kyrion_data", it.id, it.text, "explicit_opt_in_and_permission")
+                }
+            }
+        }
         if (options.historyEnabled) {
             val terms = selector.terms(query)
             repository.recent(actor, 20).filter { it.id != conversationId }.mapNotNull { summary ->
@@ -126,16 +119,18 @@ class ContextBuilder(
                 if (base.compacted) "deterministic_compaction" else "current_conversation",
                 base.estimatedTokens - selected.sumOf { estimateTokens(it.content) + 8 })
         )
-        for (kind in listOf("kyrion_data", "documents")) sources.add(
-            ContextSource(
-                kind,
-                null,
-                "blocked",
-                false,
-                "authorized_source_not_integrated",
-                0
+        for (kind in listOf("kyrion_data", "documents")) {
+            if (sources.none { it.kind == kind }) sources.add(
+                ContextSource(
+                    kind,
+                    null,
+                    "blocked",
+                    false,
+                    "authorized_source_not_integrated",
+                    0
+                )
             )
-        )
+        }
         for (kind in listOf("personal_memory", "conversation_history", "user_preferences")) {
             if (sources.none { it.kind == kind }) sources.add(
                 ContextSource(
@@ -246,6 +241,38 @@ class ContextBuilder(
     private fun estimateTokens(content: String): Int = (content.length + 3) / 4 + 4
 
     companion object {
+        fun currentOnly(conversationId: UUID, turnId: UUID, text: String, budget: Int): ConversationContext {
+            val cost = (text.length + 3) / 4 + 4
+            if (cost > budget) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
+            return ConversationContext(
+                conversationId,
+                turnId,
+                listOf(ConversationContextMessage("user", text)),
+                cost,
+                budget,
+                false,
+                emptyList(),
+                listOf(
+                    ContextSource(
+                        "current_message",
+                        turnId.toString(),
+                        "cloud_current",
+                        true,
+                        "explicit_consent",
+                        cost
+                    )
+                ) +
+                    listOf(
+                        "conversation_history",
+                        "personal_memory",
+                        "user_preferences",
+                        "kyrion_data",
+                        "documents"
+                    ).map {
+                        ContextSource(it, null, "blocked", false, "cloud_disclosure_denied", 0)
+                    })
+        }
+
         private const val CONTEXT_ALGORITHM_VERSION = 1
         private const val MIN_CONVERSATION_BUDGET = 128
         private const val SUMMARY_MESSAGE_CHARACTER_LIMIT = 600

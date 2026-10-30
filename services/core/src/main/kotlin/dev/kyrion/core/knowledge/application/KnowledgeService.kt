@@ -85,6 +85,10 @@ class KnowledgeService(
         }
     }
 
+    fun reindex(actor: UUID, id: UUID) {
+        rbac.require(actor, "knowledge:create"); repository.reindex(actor, id)
+        audit(actor, id, "knowledge.reindex.requested")
+    }
     fun delete(actor: UUID, id: UUID) {
         rbac.require(actor, "knowledge:delete"); repository.tombstone(actor, id)
         audit(actor, id, "knowledge.deleted")

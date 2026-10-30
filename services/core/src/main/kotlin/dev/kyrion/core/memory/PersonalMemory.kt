@@ -10,7 +10,7 @@ enum class MemoryStatus { proposed, confirmed, superseded }
 data class MemorySettings(
     val enabled: Boolean, val updatedAt: Instant?,
     val historyEnabled: Boolean = false, val preferencesEnabled: Boolean = false,
-    val categories: List<MemoryCategory> = MemoryCategory.entries.toList()
+    val categories: List<MemoryCategory> = MemoryCategory.entries.toList(), val kyrionDataEnabled: Boolean = false
 )
 
 data class PersonalMemory(

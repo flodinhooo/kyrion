@@ -69,6 +69,16 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
         ) missing()
     }
 
+    fun reindex(actor: UUID, id: UUID) {
+        tx.executeWithoutResult {
+            val revision =
+                jdbc.sql("UPDATE knowledge_documents d SET ingestion_revision=ingestion_revision+1,status='PENDING',error_code=NULL,updated_at=CURRENT_TIMESTAMP WHERE d.id=:id AND d.deleted_at IS NULL AND EXISTS(SELECT 1 FROM knowledge_spaces s WHERE s.id=d.space_id AND s.owner_user_id=:actor AND s.owner_type='PERSONAL') RETURNING ingestion_revision")
+                    .param("id", id).param("actor", actor).query(Int::class.java).optional().orElse(null) ?: missing()
+            jdbc.sql("INSERT INTO knowledge_ingestion_jobs(id,document_id,requested_revision,status) VALUES(:job,:id,:rev,'PENDING') ON CONFLICT(document_id) DO UPDATE SET requested_revision=:rev,status='PENDING',attempt_count=0,lease_owner=NULL,lease_expires_at=NULL,error_code=NULL,next_attempt_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP")
+                .param("job", UUID.randomUUID()).param("id", id).param("rev", revision).update()
+        }
+    }
+
     fun claim(): KnowledgeJob? = tx.execute {
         // Exhausted leases become explicit failures even after the last worker crashes.
         jdbc.sql("UPDATE knowledge_documents d SET status='FAILED',error_code='KNOWLEDGE_RETRY_EXHAUSTED',updated_at=CURRENT_TIMESTAMP FROM knowledge_ingestion_jobs j WHERE j.document_id=d.id AND d.deleted_at IS NULL AND j.status='PROCESSING' AND j.attempt_count>=3 AND j.lease_expires_at<CURRENT_TIMESTAMP")
@@ -172,7 +182,7 @@ class KnowledgeRepository(private val jdbc: JdbcClient, private val tx: Transact
     }
 
     fun keys(): Set<UUID> =
-        jdbc.sql("SELECT storage_key FROM knowledge_documents").query(UUID::class.java).list().toSet()
+        jdbc.sql("SELECT storage_key FROM knowledge_documents").query(UUID::class.java).list().filterNotNull().toSet()
 
     /** Authorization and active model/revision are enforced before ranking, inside SQL. */
     fun search(

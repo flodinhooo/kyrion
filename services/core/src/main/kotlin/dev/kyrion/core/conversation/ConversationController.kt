@@ -91,10 +91,9 @@ class ConversationController(
             startedAt = clock.instant(),
         )
         if (body.externalProvider != null) {
-            return ConversationContext(
+            return dev.kyrion.core.context.ContextBuilder.currentOnly(
                 conversation.id, body.message.id,
-                listOf(ConversationContextMessage("user", body.message.content.trim())),
-                (body.message.content.length + 3) / 4 + 4, tokenBudget, false, emptyList(),
+                body.message.content.trim(), tokenBudget
             )
         }
         return contextBuilder.build(request.ownerId(), id, body.message.id, tokenBudget)

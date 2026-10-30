@@ -7,7 +7,22 @@ import org.springframework.stereotype.Service
 import java.util.UUID
 
 @Service
-class KnowledgeContextAssembler(private val knowledge: KnowledgeService) {
+class KnowledgeContextAssembler(
+    private val knowledge: KnowledgeService,
+    private val answerSources: dev.kyrion.core.knowledge.persistence.KnowledgeAnswerSources
+) {
+    fun verify(actor: UUID, sources: List<KnowledgeSource>) {
+        sources.forEach { source ->
+            val document = knowledge.document(actor, source.documentId)
+            if (document.status != "READY" || source.reference.split(':')
+                    .getOrNull(2) != document.ingestionRevision.toString()
+            )
+                throw AiFailure("CONTEXT_NOT_ALLOWED", 403)
+        }
+    }
+
+    fun record(actor: UUID, conversation: UUID, message: UUID, sources: List<KnowledgeSource>) =
+        answerSources.save(actor, conversation, message, sources)
     fun assemble(actor: UUID, query: String, budget: Int): List<KnowledgeSource> {
         if (budget < 256) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
         val spaces = knowledge.spaces(actor).map { it.id }
