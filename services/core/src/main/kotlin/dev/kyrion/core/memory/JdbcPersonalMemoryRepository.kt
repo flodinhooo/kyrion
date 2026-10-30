@@ -87,16 +87,17 @@ class JdbcPersonalMemoryRepository(
         jdbc.sql(
             """INSERT INTO personal_memory
                (id, owner_id, category, content, sensitivity, origin, status, source_conversation_id,
-                source_message_id, created_at, updated_at, confirmed_at, conflicts_with_memory_id)
+                source_message_id, created_at, updated_at, confirmed_at, conflicts_with_memory_id, active, expires_at)
                VALUES (:id, :ownerId, :category, :content, :sensitivity, :origin, :status,
-                       :sourceConversationId, :sourceMessageId, :createdAt, :updatedAt, :confirmedAt, :conflictsWithMemoryId)""",
+                       :sourceConversationId, :sourceMessageId, :createdAt, :updatedAt, :confirmedAt, :conflictsWithMemoryId, :active, :expiresAt)""",
         ).param("id", memory.id).param("ownerId", ownerId).param("category", memory.category.name)
             .param("content", memory.content).param("sensitivity", memory.sensitivity.name)
             .param("origin", memory.origin).param("status", memory.status.name)
             .param("sourceConversationId", memory.sourceConversationId).param("sourceMessageId", memory.sourceMessageId)
             .param("createdAt", Timestamp.from(memory.createdAt)).param("updatedAt", Timestamp.from(memory.updatedAt))
             .param("confirmedAt", memory.confirmedAt?.let(Timestamp::from))
-            .param("conflictsWithMemoryId", memory.conflictsWithMemoryId).update()
+            .param("conflictsWithMemoryId", memory.conflictsWithMemoryId).param("active", memory.active)
+            .param("expiresAt", memory.expiresAt?.let(Timestamp::from)).update()
         return memory.copy(ownerId = ownerId)
     }
 

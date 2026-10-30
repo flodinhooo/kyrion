@@ -169,6 +169,25 @@ class AiOrchestrationService(
                         "knowledgeContext" to prepared.knowledgeSources
                     )
                 )
+                if (attempt == 0) {
+                    if (prepared.context.usedMemories.isNotEmpty()) emit(
+                        aiJson.writeValueAsString(
+                            mapOf(
+                                "type" to "memory.used",
+                                "items" to prepared.context.usedMemories
+                            )
+                        )
+                    )
+                    if (prepared.context.compacted) emit(
+                        aiJson.writeValueAsString(
+                            mapOf(
+                                "type" to "context.compacted",
+                                "estimatedTokens" to prepared.context.estimatedTokens,
+                                "tokenBudget" to prepared.context.tokenBudget
+                            )
+                        )
+                    )
+                }
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
                 gateway.stream(payload, remaining) { raw ->

@@ -81,6 +81,19 @@ CREATE TABLE knowledge_ingestion_jobs
 );
 CREATE INDEX knowledge_jobs_schedule_idx ON knowledge_ingestion_jobs (status, next_attempt_at, lease_expires_at);
 
+CREATE TABLE knowledge_answer_sources
+(
+  conversation_id UUID         NOT NULL REFERENCES conversation (id) ON DELETE CASCADE,
+  user_id         UUID         NOT NULL REFERENCES user_account (id),
+  message_id      UUID         NOT NULL,
+  document_id     UUID         NOT NULL REFERENCES knowledge_documents (id) ON DELETE CASCADE,
+  reference       VARCHAR(100) NOT NULL,
+  source_page     INTEGER,
+  start_offset    INTEGER      NOT NULL,
+  end_offset      INTEGER      NOT NULL,
+  PRIMARY KEY (conversation_id, message_id, reference)
+);
+
 INSERT INTO rbac_permission(permission_key, resource, operation)
 VALUES ('knowledge:read', 'knowledge', 'READ'),
        ('knowledge:create', 'knowledge', 'CREATE'),
