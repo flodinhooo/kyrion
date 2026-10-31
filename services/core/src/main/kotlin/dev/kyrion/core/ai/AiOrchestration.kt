@@ -172,6 +172,8 @@ class AiOrchestrationService(
                 if (attempt == 0) onStage("context.completed")
                 validateActive()
                 rbac.require(prepared.actor, "conversations:create")
+                rbac.require(prepared.actor, "conversations:read")
+                if (prepared.context.usedMemories.isNotEmpty()) rbac.require(prepared.actor, "personal_memories:read")
                 if (conversations.find(prepared.actor, prepared.request.conversationId) == null) throw AiFailure("CONVERSATION_NOT_FOUND",404)
                 val current = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor), settings.effectivePolicy(prepared.actor), prepared.route)
                 if ((listOf(current.model) + current.alternatives).none { it.id == model.id }) throw AiFailure("PROVIDER_BLOCKED",403)
@@ -218,6 +220,11 @@ class AiOrchestrationService(
                 gateway.streamTraced(payload, remaining, correlationId) { raw ->
                     validateActive()
                     rbac.require(prepared.actor, "conversations:create")
+                    rbac.require(prepared.actor, "conversations:read")
+                    if (prepared.context.usedMemories.isNotEmpty()) rbac.require(prepared.actor, "personal_memories:read")
+                    knowledgeContext.verify(prepared.actor, prepared.knowledgeSources)
+                    val activeRoute = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor), settings.effectivePolicy(prepared.actor), prepared.route)
+                    if ((listOf(activeRoute.model) + activeRoute.alternatives).none { it.id == model.id }) throw AiFailure("PROVIDER_BLOCKED", 403)
                     val event = aiJson.readTree(raw)
                     if (prepared.knowledgeSources.isNotEmpty() && event.path("type").asText().startsWith("message.")) {
                         val id = event.path("messageId").asText()
@@ -320,7 +327,9 @@ class AiOrchestrationService(
                     visible
                 )
             ) return@forEachIndexed
-            buffered.forEach(emit)
+            // Buffered source metadata may have lost authorization since it was received.
+            // Only a successful stream or an authorized delta may release it.
+            buffered.clear()
             emit(aiJson.writeValueAsString(mapOf("type" to "error", "code" to code)))
             return
         }

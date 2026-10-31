@@ -125,6 +125,7 @@ class VoiceDialogueService(
             HttpEntity(audio, headers),
             AiTranscriptionResponse::class.java,
         ).body?.text?.trim().orEmpty()
+        satellites.activeSession(satelliteId, credential, sessionId)
         voiceEvent(turnId, "stt_first_result")
         voiceEvent(turnId, "stt_complete")
         trace("stt.completed")

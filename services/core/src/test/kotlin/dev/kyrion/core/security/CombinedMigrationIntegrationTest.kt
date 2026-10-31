@@ -180,6 +180,33 @@ class CombinedMigrationIntegrationTest {
     }
 
     @Test
+    fun `V41 adds outcome metadata without rewriting valid domains identities or membership`() {
+        val schema = "domain_" + UUID.randomUUID().toString().replace("-", "")
+        fun config(target: String? = null) = Flyway.configure()
+            .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            .schemas(schema).defaultSchema(schema).locations("classpath:db/migration")
+            .apply { if (target != null) target(target) }.load()
+        config("40").migrate()
+        DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            connection.schema = schema
+            val owner = UUID.randomUUID()
+            connection.createStatement().use { sql ->
+                sql.execute("INSERT INTO user_account(id,username,password_hash) VALUES('$owner','domain-upgrade','fixture')")
+                sql.execute("UPDATE kyrion_space SET type='BUSINESS' WHERE id='$owner'")
+                sql.execute("INSERT INTO business_domain(space_id,domain,allowed,challenge_hash,challenge_expires_at,verified_at,verified_until) VALUES('$owner','company.ch',TRUE,repeat('a',64),CURRENT_TIMESTAMP+INTERVAL '30 minutes',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP+INTERVAL '30 days')")
+                sql.execute("INSERT INTO account_email_identity(user_id,space_id,email,proof_method,verified_at) VALUES('$owner','$owner','owner@company.ch','SMTP',CURRENT_TIMESTAMP)")
+            }
+            config().migrate()
+            config().validate()
+            connection.createStatement().use { sql ->
+                sql.executeQuery("SELECT d.allowed AND d.verified_until>CURRENT_TIMESTAMP AND d.verification_failed_at IS NULL AND d.challenge_hash=repeat('a',64) AND e.email='owner@company.ch' AND e.proof_method='SMTP' AND u.space_id=u.id FROM business_domain d JOIN account_email_identity e ON e.space_id=d.space_id JOIN user_account u ON u.id=e.user_id").use {
+                    it.next(); assertThat(it.getBoolean(1)).isTrue()
+                }
+            }
+        }
+    }
+
+    @Test
     fun `V40 rollout rehearses real dump restore and retains an unmodified V39 rollback database`() {
         val suffix = UUID.randomUUID().toString().replace("-", "")
         val original = "rollout_original_$suffix"
@@ -207,8 +234,8 @@ class CombinedMigrationIntegrationTest {
             }
             command("pg_dump", "-U", postgres.username, "-d", original, "--format=custom", "--file=$dump")
             command("pg_restore", "-U", postgres.username, "-d", restored, "--exit-on-error", dump)
-            config(restored).migrate()
-            config(restored).validate()
+            config(restored, "40").migrate()
+            config(restored, "40").validate()
             for ((database, version) in listOf(original to "39", restored to "40")) {
                 DriverManager.getConnection(url(database), postgres.username, postgres.password).use { connection ->
                     connection.createStatement().use { sql ->

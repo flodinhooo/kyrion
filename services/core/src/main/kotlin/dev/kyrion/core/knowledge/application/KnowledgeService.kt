@@ -99,10 +99,13 @@ class KnowledgeService(
         if (spaces.isEmpty() || spaces.size > 10 || spaces.distinct().size != spaces.size || query.isBlank() || query.length > 8000 || limit !in 1..5)
             throw KnowledgeFailure("INVALID_REQUEST")
         spaces.forEach { repository.requireSpace(actor, it) }
+        val queryVector = embeddings.embed(listOf(query)).single()
+        // Embedding is an external/blocking boundary: do not return data under stale authority.
+        rbac.require(actor, "knowledge:read")
         val result = repository.search(
             actor,
             spaces,
-            embeddings.embed(listOf(query)).single(),
+            queryVector,
             embeddings.modelId,
             embeddings.dimension,
             limit

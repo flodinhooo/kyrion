@@ -158,6 +158,7 @@ class VoiceSatelliteService(
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     fun createEnrollment(ownerId: UUID, displayName: String): CreatedVoiceEnrollment {
+        boundary?.workspace(ownerId)
         val now = clock.instant()
         val token = tokens.create()
         val enrollment = VoiceSatelliteEnrollment(
@@ -227,6 +228,7 @@ class VoiceSatelliteService(
         runtimeVersion: String,
         now: Instant,
     ): RegisteredVoiceSatellite {
+        boundary?.workspace(ownerId)
         val credential = tokens.create()
         val satellite = VoiceSatellite(
             UUID.randomUUID(), ownerId, displayName, hostname,

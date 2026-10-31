@@ -263,6 +263,42 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
             .andExpect(status().isOk).andExpect(content().json("[]"))
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = [false, true])
+    fun `deleted knowledge cannot start or continue a prepared stream`(duringStream: Boolean) {
+        val document = upload(); worker.runOnce()
+        val conversation = UUID.randomUUID()
+        val turn = UUID.randomUUID()
+        mvc.perform(post("/v1/conversations/$conversation/turns").header("Authorization", "Bearer ${a.session.rawToken}")
+            .contentType("application/json")
+            .content("""{"title":"Knowledge revocation","message":{"id":"$turn","role":"user","content":"What is the budget?","createdAt":"2026-10-31T12:00:00Z"}}"""))
+            .andExpect(status().isOk)
+        val prepared = ai.prepare(a.user.id, AiGenerationRequest(conversation, turn, knowledgeEnabled = true))
+        assertThat(prepared.knowledgeSources).hasSize(1)
+        if (duringStream) {
+            aiGateway.behavior = { _, receive ->
+                val message = UUID.randomUUID()
+                receive("""{"type":"message.started","messageId":"$message"}""")
+                service.delete(a.user.id, document.id)
+                receive("""{"type":"message.delta","messageId":"$message","delta":"revoked document must not escape"}""")
+            }
+        } else service.delete(a.user.id, document.id)
+        val frames = mutableListOf<String>()
+        ai.stream(prepared, frames::add)
+        assertThat(aiGateway.payloads).hasSize(if (duringStream) 1 else 0)
+        assertThat(frames.joinToString()).contains("error").doesNotContain("revoked document must not escape", "knowledge.sources", "message.completed")
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_answer_sources").query(Long::class.java).single()).isZero()
+    }
+
+    @Test fun `suspension during query embedding prevents retrieval under stale authority`() {
+        upload(); worker.runOnce()
+        `when`(embeddings.embed(org.mockito.ArgumentMatchers.anyList())).thenAnswer {
+            jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", a.user.id).update()
+            listOf(listOf(1f, 0f, 0f))
+        }
+        assertThatThrownBy { search(a.user.id) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
     @Test fun `competing workers only claim one revision and exhausted crash leases fail explicitly`() {
         val document = upload()
         val executor = java.util.concurrent.Executors.newFixedThreadPool(2)

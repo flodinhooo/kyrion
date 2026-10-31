@@ -96,8 +96,11 @@ class ActionExecutionService(
     private val orchestrator: ActionOrchestrator,
     private val clock: Clock = Clock.systemUTC(),
     private val mapper: ObjectMapper = jacksonObjectMapper(),
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
+    private val rbac: dev.kyrion.core.security.RbacService? = null,
 ) {
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
+        context.requireCurrentAuthority(boundary, rbac)
         val requestHash = sha256(mapper.writeValueAsBytes(mapOf(
             "channel" to context.channel.value,
             "actorId" to context.actorId,

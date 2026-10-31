@@ -73,6 +73,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     @Autowired lateinit var recovery: LocalOwnerRecovery
     @Autowired lateinit var tenantBoundary: TenantBoundary
     @Autowired lateinit var satelliteService: dev.kyrion.core.voice.VoiceSatelliteService
+    @Autowired lateinit var gatewayService: dev.kyrion.core.gateway.GatewayService
     @MockitoBean lateinit var verificationDelivery: VerificationDelivery
     @MockitoBean lateinit var domainLookup: DomainTxtLookup
     private val deliveredCodes = java.util.concurrent.ConcurrentHashMap<String,String>()
@@ -140,19 +141,136 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val first=identities.challengeDomain(owner.id,"company.ch")
         `when`(domainLookup.records("company.ch")).thenReturn(listOf("unrelated TXT"))
         assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("FAILED")
+        assertThat(activity.recent(owner.id, 100).any { it.eventType == "identity.domain.verification.failed" && it.status == ActivityStatus.FAILED }).isTrue()
         val next=identities.challengeDomain(owner.id,"company.ch")
+        assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("PENDING")
         `when`(domainLookup.records("company.ch")).thenReturn(listOf(first.value))
         assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
         `when`(domainLookup.records("company.ch")).thenReturn(listOf(next.value))
         identities.verifyDomain(owner.id,"company.ch")
         assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("VERIFIED")
         assertThatThrownBy { identities.verifyDomain(owner.id,"company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        // A failed replay cannot revoke independently valid evidence or lock out existing users.
+        assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("VERIFIED")
         val invite=spaces.createInvitation(owner.id,InvitationOptions())
         val user=authentication.register("dns_member",OTHER_PASSWORD,invite.code).user
         assertThatThrownBy { identities.challengeDomain(user.id,"company.ch") }.isInstanceOf(ForbiddenException::class.java)
         identities.challengeDomain(owner.id,"expired.company.ch")
         jdbc.sql("UPDATE business_domain SET challenge_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE domain='expired.company.ch'").update()
         assertThatThrownBy { identities.verifyDomain(owner.id,"expired.company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
+        assertThat(identities.policy(owner.id).domains.first { it.domain == "expired.company.ch" }.status).isEqualTo("FAILED")
+    }
+
+    @Test fun `domain verification failure rolls back when audit cannot be sealed`() {
+        val owner = authentication.setup("dns_audit", OLD_PASSWORD, setupSecret, SpaceType.BUSINESS, "Business").user
+        identities.challengeDomain(owner.id, "company.ch")
+        `when`(domainLookup.records("company.ch")).thenReturn(emptyList())
+        jdbc.sql("""CREATE FUNCTION reject_domain_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit failure'; END $$""").update()
+        jdbc.sql("CREATE TRIGGER reject_domain_audit BEFORE INSERT ON activity_event FOR EACH ROW EXECUTE FUNCTION reject_domain_audit()").update()
+        try {
+            assertThatThrownBy { identities.verifyDomain(owner.id, "company.ch") }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(identities.policy(owner.id).domains.single().status).isEqualTo("PENDING")
+        } finally {
+            jdbc.sql("DROP TRIGGER reject_domain_audit ON activity_event").update()
+            jdbc.sql("DROP FUNCTION reject_domain_audit()").update()
+        }
+    }
+
+    @Test fun `changed domain policy revokes pending invitations preserves members and rejects subdomains`() {
+        enableDelivery()
+        val owner = authentication.setup("changed_domain", OLD_PASSWORD, setupSecret, SpaceType.BUSINESS, "Business")
+        verifyAddress(owner.user.id, "owner@company.ch")
+        verifyCompanyDomain(owner.user.id)
+        recovery.provision(owner.user.id, OLD_PASSWORD, SessionTokenService().create().rawToken)
+        identities.updatePolicy(owner.user.id, BusinessPolicyRequest("STRICT", setOf("company.ch"), true))
+        val invite = spaces.createInvitation(owner.user.id, InvitationOptions(email = "pending@company.ch"))
+        identities.requestRegistrationEmail(invite.code, "pending@company.ch")
+        val proof = deliveredCodes.getValue("pending@company.ch")
+        assertThatThrownBy { spaces.createInvitation(owner.user.id, InvitationOptions(email = "person@sub.company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
+        val otherDomain = identities.challengeDomain(owner.user.id, "other.ch")
+        assertThatThrownBy { identities.updatePolicy(owner.user.id, BusinessPolicyRequest("STRICT", setOf("other.ch"), true)) }.isInstanceOf(IdentityPolicyException::class.java)
+        `when`(domainLookup.records("other.ch")).thenReturn(listOf(otherDomain.value))
+        identities.verifyDomain(owner.user.id, "other.ch")
+        assertThatThrownBy { identities.updatePolicy(owner.user.id, BusinessPolicyRequest("STRICT", setOf("other.ch"), true)) }
+            .isInstanceOf(IdentityPolicyException::class.java).extracting("code").isEqualTo("POLICY_MEMBER_LOCKOUT")
+        assertThat(identities.policy(owner.user.id).domains.first { it.domain == "company.ch" }.allowed).isTrue()
+        // Adding a separately verified domain changes policy and invalidates older invitation authority.
+        identities.updatePolicy(owner.user.id, BusinessPolicyRequest("STRICT", setOf("company.ch", "other.ch"), true))
+        assertThatThrownBy { authentication.register("late_join", OTHER_PASSWORD, invite.code, "pending@company.ch", proof) }.isInstanceOf(InvalidInvitationException::class.java)
+        assertThat(authentication.authenticate(owner.session.rawToken)?.id).isEqualTo(owner.user.id)
+        assertThat(rbac.isOwner(owner.user.id)).isTrue()
+    }
+
+    @Test fun `suspended Spaces cannot redeem device enrollments or bootstrap satellites`() {
+        val owner = authentication.setup("enrollment_scope", OLD_PASSWORD, setupSecret).user
+        val voice = satelliteService.createEnrollment(owner.id, "pending satellite")
+        val gateway = gatewayService.createEnrollment(owner.id, "pending gateway")
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", owner.id).update()
+        assertThatThrownBy { gatewayService.enroll(gateway.enrollmentToken, "node", "test", "Linux", "test", "arm64") }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { satelliteService.enroll(voice.token, "satellite", "test") }.isInstanceOf(ForbiddenException::class.java)
+        assertThatThrownBy { satelliteService.bootstrap(owner.id, "satellite", "satellite", "test") }.isInstanceOf(ForbiddenException::class.java)
+        assertThat(jdbc.sql("SELECT count(*) FROM voice_satellite").query(Long::class.java).single()).isZero()
+        assertThat(jdbc.sql("SELECT count(*) FROM gateway_node").query(Long::class.java).single()).isZero()
+    }
+
+    @Test fun `prepared human actions recheck permission before invoking a handler`() {
+        val owner = authentication.setup("action_revocation", OLD_PASSWORD, setupSecret).user
+        val invited = spaces.createInvitation(owner.id, InvitationOptions())
+        val member = authentication.register("action_member", OTHER_PASSWORD, invited.code).user
+        val handler = org.mockito.Mockito.mock(dev.kyrion.core.action.ActionHandler::class.java)
+        val orchestrator = dev.kyrion.core.action.ActionOrchestrator(listOf(handler), dev.kyrion.core.action.ActionPolicyService(), activity, tenantBoundary, rbac)
+        val action = dev.kyrion.core.action.ActionContext(owner.id, ActivityActorType.USER, member.id.toString(), dev.kyrion.core.action.InteractionChannel.WEB, java.util.Locale.ENGLISH, UUID.randomUUID(), UUID.randomUUID())
+        val proposal = dev.kyrion.core.action.DeviceActionProposal(UUID.randomUUID(), "power.set", dev.kyrion.core.capability.DeviceCommandArguments(on = true))
+        val viewer = rbac.roles(owner.id).first { it.key == "VIEWER" }
+        rbac.assignRoles(owner.id, member.id, setOf(viewer.id))
+        assertThatThrownBy { orchestrator.execute(action, proposal) }.isInstanceOf(ForbiddenException::class.java)
+        org.mockito.Mockito.verifyNoInteractions(handler)
+        val foreign = insertAdditionalOwner("action_foreign")
+        assertThatThrownBy { orchestrator.execute(action.copy(ownerId = foreign), proposal) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test fun `AI stream stops delivering data when routing policy changes midstream`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        val conversation = UUID.randomUUID()
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Synthetic policy change while streaming", "2026-10-31T12:00:00Z")
+        val prepared = aiOrchestration.prepare(actor, dev.kyrion.core.ai.AiGenerationRequest(conversation, turn))
+        aiGateway.behavior = { _, receive ->
+            val id = UUID.randomUUID()
+            receive("""{"type":"message.started","messageId":"$id"}""")
+            aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy(allowedProviders = emptyList()))
+            receive("""{"type":"message.delta","messageId":"$id","delta":"must not escape after revocation"}""")
+        }
+        val output = mutableListOf<String>()
+        aiOrchestration.stream(prepared, output::add)
+        assertThat(aiGateway.payloads).hasSize(1)
+        assertThat(output.joinToString()).contains("error").doesNotContain("must not escape")
+    }
+
+    @Test fun `multi target actions stop before the next adapter after permission revocation`() {
+        val owner = authentication.setup("batch_owner", OLD_PASSWORD, setupSecret).user
+        val member = authentication.register("batch_member", OTHER_PASSWORD, spaces.createInvitation(owner.id, InvitationOptions()).code).user
+        val viewer = rbac.roles(owner.id).first { it.key == "VIEWER" }
+        val commands = org.mockito.Mockito.mock(dev.kyrion.core.capability.DeviceCommandService::class.java)
+        val scopedCatalog = org.mockito.Mockito.mock(dev.kyrion.core.capability.DeviceCatalogService::class.java)
+        val targets = (1..2).map {
+            dev.kyrion.core.capability.DeviceCatalogItem(UUID.randomUUID(), "nanoleaf", "light", "Synthetic $it", "Synthetic", null,
+                listOf(dev.kyrion.core.capability.DeviceCapabilityView("power.set")), dev.kyrion.core.capability.DeviceAvailability.ONLINE, null, null)
+        }
+        `when`(scopedCatalog.devices(owner.id)).thenReturn(targets)
+        val action = dev.kyrion.core.action.ActionContext(owner.id, ActivityActorType.USER, member.id.toString(), dev.kyrion.core.action.InteractionChannel.WEB, java.util.Locale.ENGLISH, UUID.randomUUID(), UUID.randomUUID())
+        val proposal = dev.kyrion.core.action.DeviceActionProposal(null, "power.set", dev.kyrion.core.capability.DeviceCommandArguments(on = true), targets.map { it.id })
+        val firstRequest = dev.kyrion.core.capability.ExecuteDeviceCommandRequest("power.set", dev.kyrion.core.capability.DeviceTargetSelector(provider = "nanoleaf", deviceId = targets.first().id), proposal.arguments)
+        `when`(commands.execute(owner.id, firstRequest, action.correlationId, false)).thenAnswer {
+            rbac.assignRoles(owner.id, member.id, setOf(viewer.id))
+            dev.kyrion.core.capability.DeviceCommandResult("power.set", "Synthetic", 1, 1, 0, emptyList(), action.correlationId)
+        }
+        val handler = dev.kyrion.core.action.DeviceActionHandler(scopedCatalog, commands, activity, tenantBoundary, rbac)
+        assertThatThrownBy { handler.execute(action, proposal) }.isInstanceOf(ForbiddenException::class.java)
+        org.mockito.Mockito.verify(commands).execute(owner.id, firstRequest, action.correlationId, false)
+        org.mockito.Mockito.verifyNoMoreInteractions(commands)
     }
 
     @Test fun `strict policy prevents lockouts requires recovery and enforces invitation email proof atomically`() {

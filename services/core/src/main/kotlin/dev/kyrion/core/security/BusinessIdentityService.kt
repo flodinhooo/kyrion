@@ -210,7 +210,7 @@ class BusinessIdentityService(
         val domains =
             jdbc
                 .sql(
-                    "SELECT domain,allowed,verified_until FROM business_domain WHERE space_id=:space ORDER BY domain"
+                    "SELECT domain,allowed,verified_until,verification_failed_at,challenge_expires_at FROM business_domain WHERE space_id=:space ORDER BY domain"
                 )
                 .param("space", space)
                 .query { rs, _ ->
@@ -218,7 +218,11 @@ class BusinessIdentityService(
                     BusinessDomainView(
                         rs.getString(1),
                         rs.getBoolean(2),
-                        if (until?.isAfter(clock.instant()) == true) "VERIFIED" else "PENDING",
+                        when {
+                            until?.isAfter(clock.instant()) == true -> "VERIFIED"
+                            rs.getTimestamp(4) != null || !rs.getTimestamp(5).toInstant().isAfter(clock.instant()) -> "FAILED"
+                            else -> "PENDING"
+                        },
                         until,
                     )
                 }
@@ -247,7 +251,7 @@ class BusinessIdentityService(
         jdbc
             .sql(
                 """INSERT INTO business_domain(space_id,domain,challenge_hash,challenge_expires_at) VALUES(:space,:domain,:hash,:expires)
-            ON CONFLICT(space_id,domain) DO UPDATE SET challenge_hash=:hash,challenge_expires_at=:expires"""
+            ON CONFLICT(space_id,domain) DO UPDATE SET challenge_hash=:hash,challenge_expires_at=:expires,verification_failed_at=NULL"""
             )
             .param("space", space)
             .param("domain", domain)
@@ -258,7 +262,8 @@ class BusinessIdentityService(
         return DomainChallengeView("_kyrion-verification.$domain", record, expiry)
     }
 
-    @Transactional
+    // Expected denial must retain the failed-check status and audit. Audit/SQL failures still roll back.
+    @Transactional(noRollbackFor = [IdentityPolicyException::class])
     fun verifyDomain(actor: UUID, value: String): BusinessPolicyView {
         val space = owner(actor)
         domainAttempts.check(actor)
@@ -273,19 +278,19 @@ class BusinessIdentityService(
                 .param("now", Timestamp.from(clock.instant()))
                 .query(String::class.java)
                 .optional()
-                .orElse(null) ?: throw IdentityPolicyException("DOMAIN_PROOF_INVALID")
+                .orElse(null) ?: domainFailure(actor, space, domain, "DOMAIN_PROOF_INVALID")
         val records =
             runCatching { dns.records(domain) }
-                .getOrElse { throw IdentityPolicyException("DNS_UNAVAILABLE") }
+                .getOrElse { domainFailure(actor, space, domain, "DNS_UNAVAILABLE") }
         if (
             records.none {
                 MessageDigest.isEqual(tokens.hash(it).toByteArray(), expected.toByteArray())
             }
         )
-            throw IdentityPolicyException("DOMAIN_PROOF_INVALID")
+            domainFailure(actor, space, domain, "DOMAIN_PROOF_INVALID")
         jdbc
             .sql(
-                "UPDATE business_domain SET verified_at=:now,verified_until=:until,challenge_expires_at=:now WHERE space_id=:space AND domain=:domain"
+                "UPDATE business_domain SET verified_at=:now,verified_until=:until,challenge_expires_at=:now,verification_failed_at=NULL WHERE space_id=:space AND domain=:domain"
             )
             .param("now", Timestamp.from(clock.instant()))
             .param("until", Timestamp.from(clock.instant().plusSeconds(30 * 86400L)))
@@ -294,6 +299,16 @@ class BusinessIdentityService(
             .update()
         audit("identity.domain.verified", actor, space, tokens.hash(domain))
         return policy(actor)
+    }
+
+    private fun domainFailure(actor: UUID, space: UUID, domain: String, code: String): Nothing {
+        jdbc.sql("UPDATE business_domain SET verification_failed_at=:now WHERE space_id=:space AND domain=:domain")
+            .param("now", Timestamp.from(clock.instant())).param("space", space).param("domain", domain).update()
+        activity.record(
+            ActivityCategory.SECURITY, "identity.domain.verification.failed", ActivityStatus.FAILED,
+            ActivityActorType.USER, "kyrion-core", code, actor.toString(), ownerId = space,
+        )
+        throw IdentityPolicyException(code)
     }
 
     @Transactional
@@ -319,6 +334,9 @@ class BusinessIdentityService(
         if (request.mode !in setOf("OFF", "STRICT") || request.domains.size > 20)
             throw IdentityPolicyException("POLICY_INVALID")
         val domains = request.domains.map(BusinessAddress::domain).toSet()
+        // Read prerequisites under the current valid policy, before staging a new allowlist.
+        // Re-entering actor authorization against the staged list would hide the explicit lockout error.
+        val recoveryConfigured = request.mode != "STRICT" || policy(actor).recoveryConfigured
         jdbc
             .sql("UPDATE business_domain SET allowed=FALSE WHERE space_id=:space")
             .param("space", space)
@@ -339,7 +357,7 @@ class BusinessIdentityService(
         if (request.mode == "STRICT") {
             if (!request.confirmRevokeInvitations || domains.isEmpty() || !delivery.available())
                 throw IdentityPolicyException("POLICY_CONFIRMATION_REQUIRED")
-            if (!policy(actor).recoveryConfigured)
+            if (!recoveryConfigured)
                 throw IdentityPolicyException("RECOVERY_REQUIRED")
             val excluded =
                 jdbc

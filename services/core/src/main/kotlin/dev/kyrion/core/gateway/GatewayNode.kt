@@ -210,6 +210,7 @@ class GatewayService(
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     fun createEnrollment(ownerId: UUID, displayName: String): CreatedGatewayEnrollment {
+        boundary?.workspace(ownerId)
         val now = clock.instant()
         val token = tokens.create()
         val enrollment = GatewayEnrollment(
@@ -227,6 +228,7 @@ class GatewayService(
     fun enroll(token: String, hostname: String, agentVersion: String, osName: String, osVersion: String, architecture: String): RegisteredGateway {
         val now = clock.instant()
         val enrollment = repository.consumeEnrollment(tokens.hash(token), now) ?: throw GatewayEnrollmentInvalidException()
+        boundary?.workspace(enrollment.ownerId)
         val credential = tokens.create()
         val node = GatewayNode(
             UUID.randomUUID(), enrollment.ownerId, enrollment.displayName, hostname, credential.tokenHash,
