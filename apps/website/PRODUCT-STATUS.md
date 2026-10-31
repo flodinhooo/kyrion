@@ -1,7 +1,8 @@
 # Public website product review — 2026-10-30
 
-This review covers the shared `refresh/product-credibility` checkout at
-`082b661`, not a deployment. Initial Git status contained only dirty nested
+The initial review covered the shared `refresh/product-credibility` checkout at
+`082b661`, not a deployment. The final four-handover review used shared HEAD
+`ac7e87d` and Spaces documentation commit `024e1e6`. Initial Git status contained only dirty nested
 calendar-recovery and Spaces worktrees. They were inspected read-only and left
 untouched. No implementation was imported from either feature branch.
 
@@ -27,15 +28,20 @@ untouched. No implementation was imported from either feature branch.
   are not evidence of integration or deployment. Real-model RAG, browser,
   runtime and database-plus-file restore acceptance remain open. Team knowledge,
   OCR and cloud document context are not available.
-- Read-only Spaces branch evidence: `.worktrees/kyrion-spaces/docs/status/
-kyrion-spaces-agent-3.md`, `docs/kyrion-spaces.md` and
-  `docs/spaces-tenant-audit.md` in that worktree. The initial handoff describes
-  missing verified BUSINESS domain restrictions; later in-progress documents
-  describe additional identity/domain work and bounded isolation tests.
-  These are evolving branch snapshots, not an integrated final acceptance.
-  No Spaces handover exists in the shared `docs/agent-handoffs/` at review time.
-  HOME/BUSINESS, memberships and invitations are presented as separate work;
-  domain verification and complete isolation are explicitly unvalidated.
+- Final Spaces handover, read-only: `.worktrees/kyrion-spaces/docs/agent-handoffs/spaces-handover.md`
+  at `024e1e6`, with `docs/kyrion-spaces.md` and `docs/spaces-tenant-audit.md`
+  in that worktree. All four final handovers are now available; the Spaces one
+  remains branch-local. Milestone 02 supersedes the initial report's missing
+  domain enforcement/recovery statements. Spaces, memberships, invitations,
+  email/DNS domain proof and protected local owner recovery are implemented and
+  tested separately. `BusinessIdentityService` and `TenantBoundary.voice` in
+  that branch confirm the implementation and Business voice guard. Actual
+  mailbox/DNS deployment, interactive recovery and combined integration remain
+  unvalidated. Multi-Space runtime stays blocked; targeted two-Space tests do
+  not establish complete isolation. Knowledge APIs are absent in that branch,
+  so its tests cannot establish document/RAG isolation. No branch implementation
+  was imported. Public copy now distinguishes implemented branch capabilities
+  from shared availability and real operational acceptance.
 - `docs/home-assistant-import.md`, `docs/installer-v1-implementation-status.md`,
   `docs/development-startup.md` and existing hardware evidence: bounded device
   support, read-only HA import, separately configured local services and no
@@ -54,11 +60,12 @@ sitemap use the existing allowlisted route convention. About and Docs remain
 available in the footer. Status wording now says “Implemented in prototype”
 rather than unqualified “Available”. Business examples are explicitly planned.
 
-## Reconcile after the fourth handover
+## Follow-up after the final four-handover review
 
-Recheck the final Spaces commit and shared integration before changing claims
-about HOME/BUSINESS setup, verified domain policies, memberships/invitations,
-role scope or isolation. Require combined evidence for personal documents,
+The fourth handover has been reviewed; it does not change the Business release
+boundary. Recheck shared integration before changing claims about available
+HOME/BUSINESS setup, verified domain policies, memberships/invitations, role
+scope or isolation. Require combined evidence for personal documents,
 retrieval, asynchronous workers, AI streams, integrations and restoration.
 Reconcile the documented V37 collision and other migration histories through
 their owners; this website change performs no migration or merge. Check K-Data
@@ -66,6 +73,12 @@ completion integration, local-model acceptance, release artifacts and operating
 evidence separately. Branch test totals must never become release claims.
 
 ## Verification
+
+Lint, typecheck, build and the complete 28-test browser suite passed again after
+the final Spaces handover updates. The audience test now explicitly checks the
+separate-branch integration boundary and disabled Business voice in both locales.
+The updated mobile Business screenshot was inspected. The full formatting check
+still reports only the three unchanged files listed below.
 
 - `pnpm --filter website lint`: passed.
 - `pnpm --filter website typecheck`: passed.

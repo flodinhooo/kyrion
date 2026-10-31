@@ -440,7 +440,7 @@
     },
     {
       "title": "Spaces für Zuhause und Business",
-      "description": "HOME/BUSINESS, Mitgliedschaften, Rollen und Einladungen werden separat entwickelt. Im gemeinsamen Stand sind installationsweite Rollen vorhanden. BUSINESS-Domainprüfung, Isolation und Zusammenführung mit persönlichem Wissen sind noch nicht abschliessend integriert und geprüft.",
+      "description": "HOME/BUSINESS, Mitgliedschaften, Rollen, Einladungen und E-Mail-/Domainprüfung sind in einem separaten Entwicklungsstand implementiert und automatisiert getestet. Im gemeinsamen Stand sind installationsweite Rollen vorhanden. Gemeinsame Integration, reale Betriebsprüfung und vollständige Isolation einschliesslich persönlichem Wissen bleiben offen.",
       "status": "development"
     }
   ],
@@ -681,7 +681,7 @@
     "eyebrow": "FÜR UNTERNEHMEN — IM AUFBAU",
     "title": "Geräte, Dienste und Teamwissen.\nEine gemeinsame Richtung.",
     "description": "Kyrion soll kleinen Unternehmen und Teams helfen, ihre digitale Umgebung verständlich zu verbinden. Dieser Bereich beschreibt das Zielbild und erste Entwicklungsarbeiten, keinen produktionsreifen Business-Service.",
-    "notice": "Business ist im Aufbau. Eine abgeschlossene BUSINESS-Domainprüfung und vollständig geprüfte Isolation sind nicht belegt. Es gibt kein Angebot für produktiven Mandantenbetrieb, gehostete Teamumgebungen oder garantierten Support.",
+    "notice": "Business ist im Aufbau. Erste Spaces- und Identitätsfunktionen sind separat implementiert und getestet, aber noch nicht gemeinsam integriert und im realen Betrieb geprüft. Vollständige Isolation ist nicht belegt. Es gibt kein Angebot für produktiven Mandantenbetrieb, gehostete Teamumgebungen oder garantierten Support.",
     "casesTitle": "Mögliche Anwendungen für kleine Teams",
     "examplesNote": "Die folgenden Beispiele sind Zielbilder, keine bereits verfügbaren Business-Funktionen.",
     "cases": [
@@ -707,8 +707,8 @@
       }
     ],
     "controlTitle": "Zugriff ist eine Voraussetzung, kein Versprechen.",
-    "controlDescription": "Im gemeinsamen Prototyp existieren installationsweite Rollen, eigene Rollen und vom Eigentümer ausgestellte Einladungen. HOME-/BUSINESS-Spaces mit Mitgliedschaften und weiteren Einladungsregeln werden in einem separaten Arbeitsstand entwickelt. Das ist noch keine integrierte Business-Verfügbarkeit.",
-    "cloudNote": "Die BUSINESS-Domainprüfung ist noch nicht abschliessend integriert und geprüft. Auch die Trennung von Daten, Hintergrundaufgaben, KI-Streams und Wissenszugriff benötigt gemeinsame Nachweise. Lokale und optionale Cloud-Verarbeitung müssen für jeden Anwendungsfall ausgewiesen werden. Es wird keine DSG-/DSGVO-Konformität oder zertifizierte Mandantenfähigkeit behauptet.",
+    "controlDescription": "Im gemeinsamen Prototyp existieren installationsweite Rollen, eigene Rollen und vom Eigentümer ausgestellte Einladungen. Ein separater Entwicklungsstand ergänzt HOME-/BUSINESS-Spaces, Mitgliedschaften, begrenzte Einladungen, E-Mail-Bestätigung und Domainprüfung sowie lokale Kontowiederherstellung für Eigentümer. Dafür liegen automatisierte Tests vor; die gemeinsame Integration und reale Betriebsprüfung stehen aus.",
+    "cloudNote": "Die Domainprüfung ist implementiert, aber noch nicht mit einem realen Postfach und einer eigenen Domain abgenommen. Auch die Trennung von Daten, Hintergrundaufgaben, KI-Streams und Wissenszugriff benötigt gemeinsame Nachweise. Mehrere Spaces in einer laufenden Installation bleiben gesperrt. Business-Sprachfunktionen sind im separaten Stand gesperrt, bis die handelnde Person verlässlich zugeordnet werden kann. Lokale und optionale Cloud-Verarbeitung müssen für jeden Anwendungsfall ausgewiesen werden.",
     "setupTitle": "Was vor einem Business-Einsatz noch fehlt",
     "setupDescription": "Zusammenführung der getrennten Arbeitsstände, konfliktfreie Migrationen, Prüfung von Identitäten und Berechtigungen sowie gemeinsame Isolationstests für Geräte, Dienste und Dokumente. Betrieb, Wiederherstellung und reale Modellantworten müssen auf der Zielumgebung belegt werden.",
     "setupNote": "Abonnements, Abrechnung, Kundenportal, verwaltetes Hosting und privilegierter Fernsupport sind nicht implementiert. Es werden keine Preise oder Verfügbarkeitsdaten angekündigt.",

@@ -440,7 +440,7 @@
     },
     {
       "title": "Spaces for home and business",
-      "description": "HOME/BUSINESS, memberships, roles and invitations are being developed separately. Installation-wide roles exist in the shared checkout. BUSINESS domain verification, isolation and integration with personal knowledge are not yet fully integrated and validated.",
+      "description": "HOME/BUSINESS, memberships, roles, invitations and email/domain verification are implemented and automatically tested in a separate development branch. Installation-wide roles exist in the shared checkout. Combined integration, real operational acceptance and complete isolation including personal knowledge remain open.",
       "status": "development"
     }
   ],
@@ -681,7 +681,7 @@
     "eyebrow": "FOR BUSINESS — IN DEVELOPMENT",
     "title": "Devices, services and team knowledge.\nOne shared direction.",
     "description": "Kyrion aims to help small businesses and teams connect their digital environment in an understandable way. This area presents the vision and early development, not a production-ready business service.",
-    "notice": "Business is in development. Completed BUSINESS domain verification and fully validated isolation are not established. There is no offering for production multi-tenant operation, hosted team environments or guaranteed support.",
+    "notice": "Business is in development. Initial Spaces and identity capabilities are implemented and tested separately, but are not yet integrated together or validated in real operation. Complete isolation is not established. There is no offering for production multi-tenant operation, hosted team environments or guaranteed support.",
     "casesTitle": "Possible uses for small teams",
     "examplesNote": "The following examples describe possible future uses, not available business features.",
     "cases": [
@@ -707,8 +707,8 @@
       }
     ],
     "controlTitle": "Access control is a prerequisite, not a promise.",
-    "controlDescription": "The shared prototype has installation-wide roles, custom roles and owner-issued invitations. HOME/BUSINESS Spaces with memberships and additional invitation rules are being developed in a separate checkout. This does not establish integrated business availability.",
-    "cloudNote": "BUSINESS domain verification is not yet fully integrated and validated. Separation of data, background jobs, AI streams and knowledge access also requires combined evidence. Local and optional cloud processing must be explained for each use case. No DSG/GDPR compliance or certified multi-tenancy is claimed.",
+    "controlDescription": "The shared prototype has installation-wide roles, custom roles and owner-issued invitations. A separate development branch adds HOME/BUSINESS Spaces, memberships, bounded invitations, email confirmation, domain verification and local owner account recovery. Automated tests cover these capabilities; combined integration and real operational acceptance remain open.",
+    "cloudNote": "Domain verification is implemented, but has not been acceptance-tested with a real mailbox and an owned domain. Separation of data, background jobs, AI streams and knowledge access also requires combined evidence. Multiple Spaces in a running installation remain blocked. Business voice is blocked in the separate branch until the acting person can be reliably identified. Local and optional cloud processing must be explained for each use case.",
     "setupTitle": "What remains before business use",
     "setupDescription": "Integration of separate workstreams, conflict-free migrations, identity and permission review, and combined isolation tests for devices, services and documents. Operations, recovery and real model answers need evidence on the intended runtime.",
     "setupNote": "Subscriptions, billing, a customer portal, managed hosting and privileged remote support are not implemented. No prices or availability dates are announced.",

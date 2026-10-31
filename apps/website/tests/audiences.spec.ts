@@ -34,6 +34,16 @@ test("audience routes retain language, truthful status, contact and mobile navig
           await expect(page.locator("main")).toContainText(
             locale === "en" ? "isolation" : "Isolation",
           );
+          await expect(page.locator("main")).toContainText(
+            locale === "en"
+              ? "Business voice is blocked in the separate branch"
+              : "Business-Sprachfunktionen sind im separaten Stand gesperrt",
+          );
+          await expect(page.locator("main")).toContainText(
+            locale === "en"
+              ? "Automated tests cover these capabilities; combined integration and real operational acceptance remain open."
+              : "Dafür liegen automatisierte Tests vor; die gemeinsame Integration und reale Betriebsprüfung stehen aus.",
+          );
         } else {
           await expect(page.locator("main")).toContainText("PDF");
           await expect(page.locator("main")).toContainText(
