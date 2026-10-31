@@ -41,6 +41,16 @@ the satellite listens for a bounded follow-up window, so the next command can
 be spoken directly without repeating the wake phrase. After inactivity closes
 that window, use `Hey Velora` again.
 
+An empty STT result ends the authenticated session as inactivity. Core sends a
+terminal `completed` event with `outcome: "no_speech"` and `continueSession: false`,
+without fabricated transcript, model response or audio. The matching batch client
+accepts this explicit outcome, logs it and returns to wake detection without a
+retry or a second close request. A missing/truncated completion still fails;
+text, audio or a pending action cannot masquerade as a no-speech outcome.
+Ordinary follow-up listening and the six-second default inactivity window remain.
+No audible farewell is added for this silent/no-speech exit. Spoken barge-in is
+not implemented by synchronous batch playback.
+
 Repeating `Hey Velora` during an active follow-up window is also valid. Core
 closes the previous session with reason `restart`, and the satellite immediately
 opens and acknowledges a new session. The deployed German STT's observed

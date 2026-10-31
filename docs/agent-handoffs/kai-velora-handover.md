@@ -1,5 +1,16 @@
 # K-AI / Velora agent handoff
 
+Latest authorized activation: [no-speech exit fix](../status/2026-10-31-voice-no-speech-rollout.md).
+Active V39 is now `f07c20a`, pin D023441F..., schema39, Core PID18596. Core
+closes blank STT as inactivity and emits completed/no_speech; updated installed
+Satellite accepts this without fake text, retry or duplicate close. True Pi
+silence submission passed; a normal two-section local dialogue completed with
+one reported usage attempt. Full Core315/296 and Satellite77 pass. Satellite
+unit is active again, voice/model unchanged. Next is the owner's two live
+questions with10s quiet after each, then re-wake. No audible farewell was added.
+See the rollout for immutable artifact, module hashes, configuration proof and
+coordinated rollback. Gateway/host/cloud/V40 remain separate.
+
 Latest live hardware evidence: [two-wake log analysis](../status/2026-10-31-velora-live-log-analysis.md).
 Owner heard convincing output; three turns completed across two wakes. Both
 sessions then captured short audio with empty STT: Core throws before LLM/TTS,

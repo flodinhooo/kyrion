@@ -30,6 +30,7 @@ class VoiceTurn:
     response_text: str
     continue_session: bool
     restart_session: bool
+    outcome: str = "answered"
 
 
 class CoreVoiceClient:
@@ -88,6 +89,8 @@ class CoreVoiceClient:
         continue_session = False
         restart_session = False
         pending_action = False
+        no_speech = False
+        received_audio = False
         try:
             with open_core_url(request, timeout=180) as response:
                 for raw_line in response:
@@ -98,6 +101,7 @@ class CoreVoiceClient:
                     if event_type == "transcript":
                         transcript = event.get("transcript", "")
                     elif event_type == "audio.chunk":
+                        received_audio = True
                         play_audio(base64.b64decode(event["audioBase64"], validate=True))
                         if event.get("playbackAcknowledgementRequired") is True:
                             self._request(
@@ -108,6 +112,10 @@ class CoreVoiceClient:
                                 "application/json",
                             )
                     elif event_type == "completed":
+                        no_speech = (
+                            event.get("outcome") == "no_speech"
+                            and event.get("continueSession") is False
+                        )
                         response_text = event.get("responseText", "")
                         continue_session = bool(event.get("continueSession"))
                         restart_session = bool(event.get("restartSession"))
@@ -123,17 +131,21 @@ class CoreVoiceClient:
             ConnectionError,
         ) as error:
             raise CoreVoiceError("Core voice stream failed") from error
+        if no_speech:
+            if transcript or response_text or received_audio or pending_action or restart_session:
+                raise CoreVoiceError("Core returned an invalid no-speech result")
+            return VoiceTurn("", "", False, False, outcome="no_speech")
         if pending_action:
             completion = self._request(
                 "POST",
-                f"/v1/voice-satellite/sessions/{session_id}/turns/"
-                f"{turn_id}/execute",
+                f"/v1/voice-satellite/sessions/{session_id}/turns/{turn_id}/execute",
                 b"",
                 "application/json",
             )
             try:
                 final_audio = base64.b64decode(
-                    completion["audioBase64"], validate=True,
+                    completion["audioBase64"],
+                    validate=True,
                 )
                 response_text = str(completion["responseText"])
                 continue_session = bool(completion.get("continueSession", True))
@@ -194,5 +206,8 @@ class CoreVoiceClient:
             **(extra_headers or {}),
         }
         return urllib.request.Request(
-            f"{self._base_url}{path}", data=body, headers=headers, method=method,
+            f"{self._base_url}{path}",
+            data=body,
+            headers=headers,
+            method=method,
         )

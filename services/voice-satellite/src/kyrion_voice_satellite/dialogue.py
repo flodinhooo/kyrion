@@ -32,7 +32,9 @@ class DialogueRunner:
         assert config.core_url and config.satellite_id and config.credential_file
         self._config = config
         self._client = CoreVoiceClient(
-            config.core_url, config.satellite_id, config.credential_file,
+            config.core_url,
+            config.satellite_id,
+            config.credential_file,
         )
         self._vad = WebRtcVoiceActivityDetector()
         self._playback = PipeWirePlayback(config.playback_target)
@@ -97,6 +99,10 @@ class DialogueRunner:
                     play_chunk,
                     turn_id,
                 )
+                if turn.outcome == "no_speech":
+                    LOGGER.info("No speech recognized; session closed, returning to wake detection")
+                    reason = "explicit"  # Core already closed the authenticated session.
+                    return False
                 LOGGER.info("Voice turn transcribed and answered")
                 if turn.restart_session:
                     reason = "explicit"

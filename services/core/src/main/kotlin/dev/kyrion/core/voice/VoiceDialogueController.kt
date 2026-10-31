@@ -45,6 +45,7 @@ data class VoiceTurnEvent(
     val correlationId: String? = null,
     val textCharacters: Int? = null,
     val segmentIndex: Int? = null,
+    val outcome: String? = null,
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
@@ -127,7 +128,11 @@ class VoiceDialogueService(
         voiceEvent(turnId, "stt_first_result")
         voiceEvent(turnId, "stt_complete")
         trace("stt.completed")
-        if (transcript.isBlank()) throw VoiceAudioInvalidException()
+        if (transcript.isBlank()) {
+            satellites.closeSession(satelliteId, credential, sessionId, "inactivity")
+            emit(VoiceTurnEvent(type = "completed", outcome = "no_speech", continueSession = false))
+            return
+        }
         emit(VoiceTurnEvent(type = "transcript", transcript = transcript))
 
         if (isVoiceSessionRestart(transcript)) {

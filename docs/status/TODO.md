@@ -1,8 +1,13 @@
 # Kyrion Development TODO
 
+Latest active fix: [empty recognition local V39 rollout](2026-10-31-voice-no-speech-rollout.md).
+- [x] Activate explicit terminal no_speech/inactivity closure on master/V39 and installed batch client; no model/action/TTS/usage for blank input, no retry or double close.
+- [x] Full Core315/296, Satellite77 and lint/build checks; actual Pi blank-audio close plus complete normal local-model/Chatterbox playback and single usage attempt verified. Schema39 and guards retained.
+- [ ] Owner repeats both live questions, stays quiet10s, wakes again; verify no empty-STT exception. Inactivity ending is still silent; no spoken barge-in added.
+
 Latest physical run: [live dialogue log diagnosis](2026-10-31-velora-live-log-analysis.md).
 - [x] Correlate two actual wakes, three completed response turns and two subsequent empty-STT failures; owner reports convincing audible output. Both sessions are closed with reason error, Satellite remains active without restart.
-- [ ] Handle empty STT in the Voice stream as an explicit recoverable outcome; retain no-invocation/no-usage behavior and V39 compatibility. Investigate brief post-playback VAD triggers without presuming echo/noise as proven.
+- [x] Handle empty STT as explicit no_speech closure; retain no-invocation/no-usage behavior and V39 compatibility. Acoustic cause of brief post-playback VAD triggers remains unproven.
 - [ ] Define/verify clear session-end feedback and complete physical end-piece/pause acceptance; current inactivity close is silent and both live attempts ended through the error path.
 
 Latest hearing-review preparation: [A/B pack, local STT and anomaly findings](2026-10-31-tts-listening-review.md).

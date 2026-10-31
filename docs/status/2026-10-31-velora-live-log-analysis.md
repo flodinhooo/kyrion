@@ -1,5 +1,8 @@
 # Live Velora dialogue log analysis, 2026-10-31
 
+Subsequent authorized [no-speech fix and local activation](2026-10-31-voice-no-speech-rollout.md)
+supersedes the unfixed runtime below. A physical repeat remains open.
+
 Owner reports convincing audible responses, no apparent ending, and an error
 after the first attempt. This continuation inspected logs, installed configuration
 and session metadata only. No model, voice, schema, runtime or service changed.

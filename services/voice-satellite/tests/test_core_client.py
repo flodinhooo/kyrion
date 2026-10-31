@@ -25,6 +25,51 @@ class StreamingResponse:
         return iter(self._lines)
 
 
+def test_explicit_no_speech_completion_needs_no_fake_text_or_audio(tmp_path):
+    credential = tmp_path / "credential"
+    credential.write_text("synthetic-secret")
+    events = [{"type": "completed", "outcome": "no_speech", "continueSession": False}]
+    played = []
+    client = CoreVoiceClient("http://core", "synthetic", credential)
+    with patch(
+        "kyrion_voice_satellite.core_client.open_core_url", return_value=StreamingResponse(events)
+    ):
+        turn = client.turn("session", b"RIFF", "de", played.append, "turn")
+    assert turn.outcome == "no_speech"
+    assert not turn.continue_session
+    assert turn.transcript == turn.response_text == ""
+    assert played == []
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [],
+        [{"type": "completed", "outcome": "no_speech", "continueSession": True}],
+        [
+            {"type": "transcript", "transcript": "real input"},
+            {"type": "completed", "outcome": "no_speech", "continueSession": False},
+        ],
+        [
+            {"type": "action.pending"},
+            {"type": "completed", "outcome": "no_speech", "continueSession": False},
+        ],
+    ],
+)
+def test_missing_or_inconsistent_no_speech_result_is_not_accepted(tmp_path, events):
+    credential = tmp_path / "credential"
+    credential.write_text("synthetic-secret")
+    client = CoreVoiceClient("http://core", "synthetic", credential)
+    with (
+        patch(
+            "kyrion_voice_satellite.core_client.open_core_url",
+            return_value=StreamingResponse(events),
+        ),
+        pytest.raises(CoreVoiceError),
+    ):
+        client.turn("session", b"RIFF", "de", lambda _: None, "turn")
+
+
 @pytest.mark.parametrize(
     "failure", [http.client.IncompleteRead(b"partial"), ConnectionResetError()]
 )
