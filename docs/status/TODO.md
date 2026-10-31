@@ -1,5 +1,13 @@
 # Kyrion Development TODO
 
+Latest bounded TTS decision: [isolated CPU candidate and active-path preservation](2026-10-31-isolated-tts-decision.md).
+- [x] Inventory installed engines/hardware; compare exactly one existing MOSS CPU candidate with resident Chatterbox, three fixed German texts and three warm runs per text; keep cold/first-use boundaries explicit.
+- [x] Retain active V39/schema39/voice, guarded pin and rollback; verify seven services, Pi health/authentication and clean session closure.
+- [x] Attribute2793ms section gap to next synthesis exceeding preceding audio; existing overlap is already active, so no speculative concurrency change.
+- [ ] Human review of retained MOSS samples, especially suspicious2.80s list and20.48s two-sentence outputs; faster batch medians do not establish acceptable or complete speech. No activation or further tuning before this review.
+- [ ] Twice Hey Velora, heard answer/section continuity and same-clock acoustic timing. Spoken interruption is not implemented; technical abort is a different check.
+- [ ] True Chatterbox model-cold comparison was intentionally not performed; resident fallback was preserved. Gateway, host restart, cloud and V40 remain separate gates.
+
 Latest Voice continuation: [section boundaries, engine limits and playback safety](2026-10-31-voice-section-boundary.md).
 - [x] Release complete list items with their first meaningful content; keep the final item,32-character minimum and8-section cap.
 - [x] Measure T3/decoder/packaging and per-section text/audio lengths; selected Chatterbox0.1.7 remains a batch engine.

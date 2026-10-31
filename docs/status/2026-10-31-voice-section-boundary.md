@@ -1,5 +1,11 @@
 # Voice section boundaries, engine limits and playback safety
 
+Later continuation: [bounded isolated TTS experiment and decision](2026-10-31-isolated-tts-decision.md).
+The active artifact/voice below remains unchanged. A single existing CPU candidate
+has faster batch medians but unaccepted, anomalous output lengths; next step is
+human listening, not automatic activation. The2793ms pause is explained by
+synthesis outlasting prior playback despite already-overlapped next-section work.
+
 Continuation from `master` `89d41c2` and active V39 `ba372d0`. All operations were
 local and authorized. Schema39, existing SQL checksums, protected LAN/firewall
 rules and credentials were preserved. No V40 migration, cloud call, Docker reset,

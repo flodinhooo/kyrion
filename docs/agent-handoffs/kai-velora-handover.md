@@ -1,5 +1,17 @@
 # K-AI / Velora agent handoff
 
+Latest bounded experiment: [isolated TTS comparison and decision](../status/2026-10-31-isolated-tts-decision.md).
+No runtime change: active V39 `2488c1b`, Core SHA50A8174C..., schema39 and the
+selected Chatterbox/F voice remain intact. One existing CPU MOSS candidate was
+compared against Chatterbox using three texts and three warm runs each. Medians
+were3.062/3.682/4.187s versus4.852/6.995/13.027s, but MOSS had suspicious2.80s
+full-list and20.48s two-sentence outputs. These are batch-only isolated synthesis
+times, not dialogue/acoustic latency or quality-equivalent improvements. Keep
+the current path; listen to retained samples before any promotion or more tuning.
+The2793ms pause is synth-bound despite existing next-section/playback overlap;
+no speculative prefetch fix was added. Spoken barge-in is absent in the synchronous
+client. Read the report for exact human commands, sample paths and cold-run caveat.
+
 Latest continuation: [section-boundary optimization and engine/playback limits](../status/2026-10-31-voice-section-boundary.md).
 Active V39 Core is `2488c1b` (hash50A8174C...), with whole-list-item segmentation
 and section metadata. AI pools bounded TTS HTTP connections; the installed
