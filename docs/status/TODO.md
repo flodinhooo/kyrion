@@ -1,5 +1,10 @@
 # Kyrion Development TODO
 
+Latest physical run: [live dialogue log diagnosis](2026-10-31-velora-live-log-analysis.md).
+- [x] Correlate two actual wakes, three completed response turns and two subsequent empty-STT failures; owner reports convincing audible output. Both sessions are closed with reason error, Satellite remains active without restart.
+- [ ] Handle empty STT in the Voice stream as an explicit recoverable outcome; retain no-invocation/no-usage behavior and V39 compatibility. Investigate brief post-playback VAD triggers without presuming echo/noise as proven.
+- [ ] Define/verify clear session-end feedback and complete physical end-piece/pause acceptance; current inactivity close is silent and both live attempts ended through the error path.
+
 Latest hearing-review preparation: [A/B pack, local STT and anomaly findings](2026-10-31-tts-listening-review.md).
 - [x] Map all24 existing WAVs to identical expected inputs, configuration, run/seed and SHA256; retain a committed synthetic audit.
 - [x] Inspect termination and pure text preparation; no frame/token hard limit reached and no input-content truncation found. No proven engine defect, so no parameter change or new synthesis.

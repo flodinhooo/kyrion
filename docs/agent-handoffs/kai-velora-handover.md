@@ -1,5 +1,14 @@
 # K-AI / Velora agent handoff
 
+Latest live hardware evidence: [two-wake log analysis](../status/2026-10-31-velora-live-log-analysis.md).
+Owner heard convincing output; three turns completed across two wakes. Both
+sessions then captured short audio with empty STT: Core throws before LLM/TTS,
+Satellite reports incomplete stream and resumes wake detection. DB confirms
+both closed with reason error; no service restart. Brief VAD triggers are visible,
+their acoustic cause is unproven. No audible inactivity-ending signal exists.
+Typed recoverable no-speech handling is the concrete follow-up; no runtime fix,
+threshold change, migration or restart was made during this diagnosis.
+
 Human A/B decision received2026-10-31: choices A/B/A map to Chatterbox for all
 three texts. Keep the existing active path; do not promote the tested MOSS
 configuration. Chatterbox completeness/intelligibility/voice were5/5 throughout;
