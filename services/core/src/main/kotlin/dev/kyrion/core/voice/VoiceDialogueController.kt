@@ -43,6 +43,8 @@ data class VoiceTurnEvent(
     val stage: String? = null,
     val elapsedMs: Long? = null,
     val correlationId: String? = null,
+    val textCharacters: Int? = null,
+    val segmentIndex: Int? = null,
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
@@ -225,10 +227,11 @@ class VoiceDialogueService(
         else listOf(responsePlan)
         audioPlans.forEachIndexed { index, plan ->
             satellites.activeSession(satelliteId, credential, sessionId)
+            trace("answer.text.released.$index")
             trace("answer.tts.start.$index")
             emitAudio(plan, turnId, { event ->
                 trace("answer.audio.ready.$index")
-                emit(event)
+                emit(event.copy(textCharacters = plan.renderedText.length, segmentIndex = index, correlationId = turnId))
                 trace("answer.audio.flushed.$index")
             }, playbackScope = sessionId.toString()) {
                 satellites.activeSession(satelliteId, credential, sessionId)
