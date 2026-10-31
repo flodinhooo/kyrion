@@ -69,6 +69,57 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         service.search(actor, service.spaces(actor).map { it.id }, "What is the budget?", 3)
 
     @Test
+    fun `personal knowledge remains private across canonical Spaces and multi Space startup stays blocked`() {
+        val document = upload()
+        worker.runOnce()
+        val foreign = UUID.randomUUID()
+        jdbc.sql("INSERT INTO user_account(id,username,password_hash) VALUES(:id,'foreign-space-owner',:hash)")
+            .param("id", foreign).param("hash", hashing.hash("foreign-space-password")).update()
+        rbac.initializeUser(foreign, foreign, true)
+        val token = auth.login("foreign-space-owner", "foreign-space-password").session.rawToken
+        val foreignSpace = service.createSpace(foreign)
+        assertThat(service.documents(foreign, foreignSpace.id, 50, 0)).isEmpty()
+        org.mockito.Mockito.clearInvocations(embeddings)
+        listOf("/v1/knowledge/documents/${document.id}", "/v1/knowledge/documents/${document.id}/content",
+            "/v1/knowledge/spaces/${space.id}/documents").forEach { path ->
+            mvc.perform(get(path).header("Authorization", "Bearer $token")).andExpect(status().isNotFound)
+        }
+        mvc.perform(delete("/v1/knowledge/documents/${document.id}").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        mvc.perform(post("/v1/knowledge/documents/${document.id}/reindex").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+        assertThatThrownBy { service.search(foreign, listOf(space.id), "private budget", 3) }
+            .isInstanceOf(KnowledgeFailure::class.java)
+        org.mockito.Mockito.verify(embeddings, org.mockito.Mockito.never()).embed(org.mockito.ArgumentMatchers.anyList())
+        assertThatThrownBy { SingleSpaceRuntimeGuard(jdbc).run(org.springframework.boot.DefaultApplicationArguments()) }
+            .isInstanceOf(IllegalStateException::class.java).hasMessageContaining("MULTI_SPACE_RUNTIME_UNSUPPORTED")
+    }
+
+    @Test
+    fun `suspended canonical Space denies personal APIs and ingestion before embedding`() {
+        upload()
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", a.user.id).update()
+        org.mockito.Mockito.clearInvocations(embeddings)
+        assertThatThrownBy { service.spaces(a.user.id) }.isInstanceOf(ForbiddenException::class.java)
+        assertThat(repository.claim()).isNull()
+        worker.runOnce()
+        org.mockito.Mockito.verify(embeddings, org.mockito.Mockito.never()).embed(org.mockito.ArgumentMatchers.anyList())
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `Space suspension during embedding fences publication`() {
+        upload()
+        org.mockito.Mockito.doAnswer { invocation ->
+            jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", a.user.id).update()
+            invocation.getArgument<List<String>>(0).map { listOf(1f, 0f, 0f) }
+        }.`when`(embeddings).embed(org.mockito.ArgumentMatchers.anyList())
+        worker.runOnce()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_documents WHERE status='READY'").query(Long::class.java).single()).isZero()
+    }
+
+    @Test
     fun `upload download search and foreign UUID access enforce actor privacy including admins`() {
         val file = MockMultipartFile("file", "private.txt", "text/plain", "Private budget 42 francs".toByteArray())
         val uploaded = mvc.perform(
@@ -116,6 +167,9 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         assertThat(service.document(a.user.id, document.id).status).isEqualTo("FAILED")
         assertThat(service.document(a.user.id, document.id).errorCode).isEqualTo("KNOWLEDGE_EMBEDDING_SETUP_REQUIRED")
         assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        org.mockito.Mockito.reset(embeddings)
+        `when`(embeddings.modelId).thenReturn("test-local-embedding")
+        `when`(embeddings.dimension).thenReturn(3)
         `when`(embeddings.embed(org.mockito.ArgumentMatchers.anyList())).thenAnswer { invocation ->
             invocation.getArgument<List<String>>(
                 0
@@ -209,6 +263,30 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
             .andExpect(status().isOk).andExpect(content().json("[]"))
     }
 
+    @Test fun `competing workers only claim one revision and exhausted crash leases fail explicitly`() {
+        val document = upload()
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val futures = (1..2).map { executor.submit<KnowledgeJob?> { repository.claim() } }
+            val claims = futures.mapNotNull { it.get(10, java.util.concurrent.TimeUnit.SECONDS) }
+            assertThat(claims).hasSize(1)
+            jdbc.sql("UPDATE knowledge_ingestion_jobs SET attempt_count=3,lease_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+            assertThat(repository.claim()).isNull()
+            assertThat(service.document(a.user.id, document.id).status).isEqualTo("FAILED")
+            assertThat(service.document(a.user.id, document.id).errorCode).isEqualTo("KNOWLEDGE_RETRY_EXHAUSTED")
+        } finally { executor.shutdownNow() }
+    }
+    @Test fun `delete during embedding cannot publish content`() {
+        val document = upload("a".repeat(500))
+        org.mockito.Mockito.doAnswer { invocation ->
+            service.delete(a.user.id, document.id)
+            invocation.getArgument<List<String>>(0).map { listOf(1f,0f,0f) }
+        }.`when`(embeddings).embed(org.mockito.ArgumentMatchers.anyList())
+        worker.runOnce()
+        assertThat(jdbc.sql("SELECT count(*) FROM knowledge_chunks").query(Long::class.java).single()).isZero()
+        assertThat(repository.search(a.user.id, listOf(space.id), listOf(1f,0f,0f), "test-local-embedding", 3, 3)).isEmpty()
+    }
+
     companion object {
         private val secret = SessionTokenService().create().rawToken
         private val temp = Files.createTempDirectory("knowledge-tests")
@@ -216,7 +294,7 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer("postgres:17-alpine")
+        val postgres = PostgreSQLContainer("postgres:17-alpine").withStartupTimeout(java.time.Duration.ofMinutes(3))
         @DynamicPropertySource
         @JvmStatic
         fun properties(registry: DynamicPropertyRegistry) {

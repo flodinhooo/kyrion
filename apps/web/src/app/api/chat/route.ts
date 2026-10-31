@@ -2,9 +2,11 @@ import type { ChatRequest } from "@/features/chat/contracts";
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
 import {resolveChatModel} from "@/features/models/server-policy";
 import {modelMessages} from "@/features/models/messages";
+import {knowledgeMessages} from "@/features/knowledge/messages";
 
 const CONTEXT_TOKEN_BUDGET = 3072;
-const modelErrorCodes = new Set(["MODEL_UNAVAILABLE", "INVALID_REQUEST", ...Object.keys(modelMessages.en.errors)]);
+const modelErrorCodes = new Set(["MODEL_UNAVAILABLE", "INVALID_REQUEST", ...Object.keys(modelMessages.en.errors),
+  ...Object.keys(knowledgeMessages.en.errors)]);
 
 type CoreContext = {
   conversationId: string;

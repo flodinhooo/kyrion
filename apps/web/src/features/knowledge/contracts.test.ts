@@ -26,4 +26,8 @@ describe("knowledge source contracts", () => {
   it("has matching translated error codes", () => {
     expect(Object.keys(knowledgeMessages.de.errors).sort()).toEqual(Object.keys(knowledgeMessages.en.errors).sort());
   });
+  it("preserves actionable local embedding failures in chat", () => {
+    expect(parseEvent(JSON.stringify({type: "error", code: "KNOWLEDGE_EMBEDDING_SETUP_REQUIRED"})))
+      .toEqual({type: "error", code: "KNOWLEDGE_EMBEDDING_SETUP_REQUIRED"});
+  });
 });

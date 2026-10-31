@@ -130,21 +130,25 @@ def test_proposes_polite_web_chat_room_power_command() -> None:
 
 
 def test_proposes_polite_web_voice_room_power_command_with_spaced_punctuation() -> None:
-    request = DeviceCommandProposalRequest.model_validate({
-        "message": "kannst du die lampen im flur bitte ausschalten ?",
-        "locale": "de",
-        "priorMessages": [],
-        "devices": [{
-            "id": "device-1",
-            "provider": "zigbee",
-            "deviceClass": "light",
-            "displayName": "Flurlampe",
-            "roomName": "Flur",
-            "capabilities": [{"id": "power.set"}],
-            "availability": "online",
-            "observedAt": None,
-        }],
-    })
+    request = DeviceCommandProposalRequest.model_validate(
+        {
+            "message": "kannst du die lampen im flur bitte ausschalten ?",
+            "locale": "de",
+            "priorMessages": [],
+            "devices": [
+                {
+                    "id": "device-1",
+                    "provider": "zigbee",
+                    "deviceClass": "light",
+                    "displayName": "Flurlampe",
+                    "roomName": "Flur",
+                    "capabilities": [{"id": "power.set"}],
+                    "availability": "online",
+                    "observedAt": None,
+                }
+            ],
+        }
+    )
 
     proposal = propose_device_command(request)
 
@@ -156,25 +160,35 @@ def test_proposes_polite_web_voice_room_power_command_with_spaced_punctuation() 
 
 
 def test_non_light_catalog_entries_do_not_reject_a_light_command() -> None:
-    request = DeviceCommandProposalRequest.model_validate({
-        "message": "Mach die Lampen im Wohnzimmer an.",
-        "locale": "de",
-        "priorMessages": [],
-        "devices": [
-            {
-                "id": "button-1", "provider": "zigbee", "deviceClass": "other",
-                "displayName": "Wohnzimmer Taster", "roomName": "Wohnzimmer",
-                "capabilities": [{"id": "button.events"}], "availability": "online",
-                "observedAt": None,
-            },
-            {
-                "id": "light-1", "provider": "bluetooth", "deviceClass": "light",
-                "displayName": "Lampe links", "roomName": "Wohnzimmer",
-                "capabilities": [{"id": "power.set"}], "availability": "online",
-                "observedAt": None,
-            },
-        ],
-    })
+    request = DeviceCommandProposalRequest.model_validate(
+        {
+            "message": "Mach die Lampen im Wohnzimmer an.",
+            "locale": "de",
+            "priorMessages": [],
+            "devices": [
+                {
+                    "id": "button-1",
+                    "provider": "zigbee",
+                    "deviceClass": "other",
+                    "displayName": "Wohnzimmer Taster",
+                    "roomName": "Wohnzimmer",
+                    "capabilities": [{"id": "button.events"}],
+                    "availability": "online",
+                    "observedAt": None,
+                },
+                {
+                    "id": "light-1",
+                    "provider": "bluetooth",
+                    "deviceClass": "light",
+                    "displayName": "Lampe links",
+                    "roomName": "Wohnzimmer",
+                    "capabilities": [{"id": "power.set"}],
+                    "availability": "online",
+                    "observedAt": None,
+                },
+            ],
+        }
+    )
 
     proposal = propose_device_command(request)
 
@@ -185,17 +199,25 @@ def test_non_light_catalog_entries_do_not_reject_a_light_command() -> None:
 
 
 def test_real_parakeet_schalte_as_schaute_transcript_is_a_power_command() -> None:
-    request = DeviceCommandProposalRequest.model_validate({
-        "message": "Schaute das Licht im Wohnzimmer aus.",
-        "locale": "de",
-        "priorMessages": [],
-        "devices": [{
-            "id": "light-1", "provider": "bluetooth", "deviceClass": "light",
-            "displayName": "Lampe Links", "roomName": "Wohnzimmer",
-            "capabilities": [{"id": "power.set"}], "availability": "online",
-            "observedAt": None,
-        }],
-    })
+    request = DeviceCommandProposalRequest.model_validate(
+        {
+            "message": "Schaute das Licht im Wohnzimmer aus.",
+            "locale": "de",
+            "priorMessages": [],
+            "devices": [
+                {
+                    "id": "light-1",
+                    "provider": "bluetooth",
+                    "deviceClass": "light",
+                    "displayName": "Lampe Links",
+                    "roomName": "Wohnzimmer",
+                    "capabilities": [{"id": "power.set"}],
+                    "availability": "online",
+                    "observedAt": None,
+                }
+            ],
+        }
+    )
 
     proposal = propose_device_command(request)
 
@@ -447,9 +469,7 @@ def test_rejects_partial_or_ambiguous_device_names() -> None:
     ],
 )
 def test_rejects_out_of_scope_or_invalid_requests(message: str) -> None:
-    assert propose_device_command(
-        request(message)
-    ) is None
+    assert propose_device_command(request(message)) is None
 
 
 def test_does_not_propose_an_unavailable_runtime_capability() -> None:

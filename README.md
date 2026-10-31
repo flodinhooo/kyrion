@@ -63,6 +63,9 @@ slices.
 ### Platform and security
 
 - local owner setup and authentication;
+- [Kyrion Spaces](docs/kyrion-spaces.md): local HOME/BUSINESS setup, Space settings,
+  default/custom roles and bounded, revocable invitations; one Space per installation;
+- optional [Business mailbox/domain verification and local OWNER recovery](docs/business-identity-and-recovery.md);
 - owner-issued invitations for additional accounts with shared device control;
 - Argon2id password hashing and opaque, hashed session credentials;
 - owner-scoped PostgreSQL persistence;

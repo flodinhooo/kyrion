@@ -45,10 +45,17 @@ class ActionOrchestrator(
     handlers: List<ActionHandler<out ActionProposal>>,
     private val policy: ActionPolicyService,
     private val activity: ActivityService,
+    private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
 ) {
     private val handlers = handlers.toList()
 
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
+        boundary?.workspace(context.ownerId)
+        if (boundary != null && context.actorType == ActivityActorType.USER) {
+            val actor = context.actorId?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                ?: throw dev.kyrion.core.security.ForbiddenException()
+            boundary?.shared(actor, context.ownerId)
+        }
         record(context, "action.proposed", ActivityStatus.PROPOSED, "action.proposed")
         if (proposal is DeviceActionProposal && proposal.capability in setOf(
                 DeviceCommandService.POWER_SET, DeviceCommandService.BRIGHTNESS_SET, DeviceCommandService.COLOR_SET)) {

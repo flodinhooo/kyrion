@@ -14,6 +14,7 @@ class KnowledgeWorker(
     private val repository: KnowledgeRepository, private val store: LocalKnowledgeObjectStore,
     private val extractor: KnowledgeText, private val embeddings: EmbeddingProvider,
     private val activity: ActivityService,
+    private val rbac: dev.kyrion.core.security.RbacService,
     @Value("\${kyrion.knowledge.worker-enabled:true}") private val enabled: Boolean = true,
 ) {
     private val running = AtomicBoolean()
@@ -31,13 +32,17 @@ class KnowledgeWorker(
     fun runOnce() {
         cleanup()
         val job = repository.claim() ?: return
+        if (!repository.markProcessing(job)) return
         try {
+            rbac.require(job.owner, "knowledge:create")
             val chunks = knowledgeChunks(extractor.extract(store.path(job.storageKey), job.mediaType))
             val vectors = mutableListOf<List<Float>>()
             chunks.chunked(8).forEach { batch ->
+                rbac.require(job.owner, "knowledge:create")
                 if (!repository.renew(job)) return
                 vectors.addAll(embeddings.embed(batch.map { it.content }))
             }
+            rbac.require(job.owner, "knowledge:create")
             val published = repository.publish(job, chunks, vectors, embeddings.modelId, embeddings.dimension)
             if (published) activity.record(
                 ActivityCategory.INTEGRATION,

@@ -14,9 +14,7 @@ def test_emits_complete_sentences_before_stream_completion() -> None:
 
 def test_preserves_domain_names_and_flushes_unpunctuated_tail() -> None:
     phrases = list(
-        segment_tts_phrases(
-            ["Ich schalte die desk lamp im ", "Gamingraum für Velora ein"], Event()
-        )
+        segment_tts_phrases(["Ich schalte die desk lamp im ", "Gamingraum für Velora ein"], Event())
     )
 
     assert [(phrase.text, phrase.final) for phrase in phrases] == [

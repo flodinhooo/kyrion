@@ -77,8 +77,12 @@ class KnowledgeController(
     fun reindex(@PathVariable id: UUID, request: HttpServletRequest) =
         service.reindex(request.authenticatedUserId(), id)
     @PostMapping("/search")
-    fun search(@RequestBody body: KnowledgeSearchRequest, request: HttpServletRequest) =
-        service.search(request.authenticatedUserId(), body.spaceIds, body.query, body.limit)
+    fun search(@RequestBody raw: String, request: HttpServletRequest): List<dev.kyrion.core.knowledge.domain.KnowledgeSource> {
+        if (raw.length > 16000) throw KnowledgeFailure("INVALID_REQUEST")
+        val body = try { dev.kyrion.core.ai.strictAiJson.readValue(raw, KnowledgeSearchRequest::class.java) }
+            catch (_: Exception) { throw KnowledgeFailure("INVALID_REQUEST") }
+        return service.search(request.authenticatedUserId(), body.spaceIds, body.query, body.limit)
+    }
 }
 
 @RestControllerAdvice

@@ -86,9 +86,7 @@ def propose_device_command(
         return direct
 
     correction_pattern = (
-        _GERMAN_ROOM_CORRECTION
-        if request.locale == "de"
-        else _ENGLISH_ROOM_CORRECTION
+        _GERMAN_ROOM_CORRECTION if request.locale == "de" else _ENGLISH_ROOM_CORRECTION
     )
     correction = correction_pattern.search(request.message)
     if correction is None:
@@ -113,9 +111,7 @@ def propose_device_command(
 def _propose_direct(
     request: DeviceCommandProposalRequest,
 ) -> DeviceCommandProposal | None:
-    brightness_pattern = (
-        _GERMAN_BRIGHTNESS if request.locale == "de" else _ENGLISH_BRIGHTNESS
-    )
+    brightness_pattern = _GERMAN_BRIGHTNESS if request.locale == "de" else _ENGLISH_BRIGHTNESS
     brightness_match = brightness_pattern.search(request.message)
     if brightness_match:
         value = int(brightness_match.group("value"))
@@ -186,9 +182,7 @@ def _propose_direct(
             arguments=DeviceCommandArguments(on=state in {"an", "ein", "on"}),
         )
     device_brightness_pattern = (
-        _GERMAN_DEVICE_BRIGHTNESS
-        if request.locale == "de"
-        else _ENGLISH_DEVICE_BRIGHTNESS
+        _GERMAN_DEVICE_BRIGHTNESS if request.locale == "de" else _ENGLISH_DEVICE_BRIGHTNESS
     )
     device_brightness_match = device_brightness_pattern.search(request.message)
     if device_brightness_match:
@@ -204,9 +198,7 @@ def _propose_direct(
                 selector=DeviceTargetSelector(provider="light", deviceId=device.id),
                 arguments=DeviceCommandArguments(brightness=value),
             )
-    device_power_pattern = (
-        _GERMAN_DEVICE_POWER if request.locale == "de" else _ENGLISH_DEVICE_POWER
-    )
+    device_power_pattern = _GERMAN_DEVICE_POWER if request.locale == "de" else _ENGLISH_DEVICE_POWER
     device_power_match = device_power_pattern.search(request.message)
     if device_power_match:
         device = _exact_device(request, device_power_match.group("target"), "power.set")
@@ -232,8 +224,7 @@ def _room_selector(
         if len(room_names) > 1:
             return DeviceTargetSelector(
                 roomNames=[
-                    _normalise_room_name(request, name, capability, provider)
-                    for name in room_names
+                    _normalise_room_name(request, name, capability, provider) for name in room_names
                 ],
                 provider=provider,
             )
@@ -272,9 +263,7 @@ def _normalise_room_name(
         normalised = exact[0]
     else:
         aliases = [
-            room
-            for room in room_names
-            if _room_alias_key(room) == _room_alias_key(normalised)
+            room for room in room_names if _room_alias_key(room) == _room_alias_key(normalised)
         ]
         if len(aliases) == 1:
             normalised = aliases[0]

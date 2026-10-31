@@ -30,11 +30,14 @@ def test_cloud_session_is_disabled_by_default() -> None:
 
 
 def test_openrouter_spike_rejects_paid_model() -> None:
-    manager = CloudConversationManager(settings(
-        cloud_conversation_enabled=True,
-        openrouter_api_key="test-only",
-        openrouter_model="provider/paid-model",
-    ), UnusedSpeech())
+    manager = CloudConversationManager(
+        settings(
+            cloud_conversation_enabled=True,
+            openrouter_api_key="test-only",
+            openrouter_model="provider/paid-model",
+        ),
+        UnusedSpeech(),
+    )
     with pytest.raises(CloudConversationError, match="free models"):
         asyncio.run(manager.open("openrouter", "de"))
 

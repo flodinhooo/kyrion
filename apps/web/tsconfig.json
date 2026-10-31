@@ -48,7 +48,11 @@
     ".next-kai02-build/types/**/*.ts",
     ".next-kai02-build/dev/types/**/*.ts",
     ".next-kai03-build/types/**/*.ts",
-    ".next-kai03-build/dev/types/**/*.ts"
+    ".next-kai03-build/dev/types/**/*.ts",
+    ".next-kdata-build/types/**/*.ts",
+    ".next-kdata-build/dev/types/**/*.ts",
+    ".next-final-integration-build/types/**/*.ts",
+    ".next-final-integration-build/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

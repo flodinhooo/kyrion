@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { identityMessages } from "@/features/spaces/identity-messages";
 import { useWorkspace } from "@/components/app-shell";
 import { Icons } from "@/components/icons";
 import { MarkdownMessage } from "@/components/markdown-message";
@@ -24,7 +25,7 @@ import { isPersonalMemory } from "@/features/memory/contracts";
 import { explicitMemoryStatement } from "@/features/memory/explicit-request";
 import {orchestrationMessages} from "@/features/models/orchestration-messages";
 import {modelMessages} from "@/features/models/messages";
-import {knowledgeMessages} from "@/features/knowledge/messages";
+import {knowledgeMessages, knowledgeError} from "@/features/knowledge/messages";
 import {isKnowledgeSource, type KnowledgeSource} from "@/features/knowledge/contracts";
 
 const chatTransport = new ApiChatTransport();
@@ -52,7 +53,7 @@ function latestAssistant(messages: ChatMessage[]): ChatMessage | null {
 
 export function ChatView({ initialConversation }: { initialConversation?: Conversation }) {
   const router = useRouter();
-  const {locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
+  const {browserVoiceAllowed, locale, modelCatalog, selectedModelId, selectedVoiceUri, speechRate, t} = useWorkspace();
   const mt = modelMessages[locale];
   const ot = orchestrationMessages[locale];
   const kt = knowledgeMessages[locale];
@@ -133,7 +134,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
   async function submitMessage(rawContent: string): Promise<void> {
     const content = rawContent.trim();
     if (!content || isStreaming) return;
-    const cloud = !isVoiceModeOpen && selectedModel?.local === false;
+    const cloud = !(isVoiceModeOpen && browserVoiceAllowed) && selectedModel?.local === false;
     if (cloud && !window.confirm(mt.cloudConfirm.replace("{provider}", selectedModel.provider ?? ""))) return;
 
     const userMessage = createMessage("user", content);
@@ -144,8 +145,8 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
     const request: ChatRequest = {
       conversationId,
       title,
-      modelId: isVoiceModeOpen ? "auto" : selectedModelId ?? undefined,
-      task: isVoiceModeOpen ? "voice" : task,
+      modelId: isVoiceModeOpen && browserVoiceAllowed ? "auto" : selectedModelId ?? undefined,
+      task: isVoiceModeOpen && browserVoiceAllowed ? "voice" : task,
       cloudConsent: cloud,
       knowledgeEnabled,
       locale,
@@ -287,8 +288,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
             className="velora-orb"
             type="button"
             aria-label={t.voiceOpen}
-            title={t.voiceOpen}
-            onClick={() => setIsVoiceModeOpen(true)}
+            title={browserVoiceAllowed ? t.voiceOpen : identityMessages[locale].voiceBlocked}
+            disabled={!browserVoiceAllowed}
+            onClick={() => { if (browserVoiceAllowed) setIsVoiceModeOpen(true); }}
           >
             <div className="orb-core" /><div className="orb-ring" />
           </button>
@@ -333,7 +335,9 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
               </div>
             </article>
           ))}
-          {streamError && <p className="stream-error" role="alert">{streamError in mt.errors
+          {streamError && <p className="stream-error" role="alert">{streamError in kt.errors
+            ? knowledgeError(locale, streamError)
+            : streamError in mt.errors
             ? mt.errors[streamError as keyof typeof mt.errors]
             : t[errorMessageKeys[streamError as keyof typeof errorMessageKeys]]}</p>}
           {wasStopped && <p className="stream-notice" role="status">{t.responseStopped}</p>}
@@ -369,7 +373,7 @@ export function ChatView({ initialConversation }: { initialConversation?: Conver
         </form>
         <p>{t.inputHint}</p>
       </div>
-      {isVoiceModeOpen && (
+      {isVoiceModeOpen && browserVoiceAllowed && (
         <VoiceMode
           isStreaming={isStreaming}
           latestAssistantMessage={latestAssistant(chatMessages)}

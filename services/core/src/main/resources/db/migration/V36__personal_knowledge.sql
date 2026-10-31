@@ -103,6 +103,10 @@ SELECT r.id, p.permission_key
 FROM rbac_role r
        CROSS JOIN rbac_permission p
 WHERE p.resource = 'knowledge'
-  AND (r.role_key IN ('OWNER', 'USER', 'ADMIN') OR
-       (r.role_key = 'VIEWER' AND p.operation = 'READ'))
+  AND (r.role_key = 'OWNER' OR EXISTS (
+    SELECT 1 FROM rbac_role_permission existing
+    JOIN rbac_permission original ON original.permission_key=existing.permission_key
+    WHERE existing.role_id=r.id AND original.resource='personal_memories'
+      AND original.operation=p.operation
+  ))
 ON CONFLICT DO NOTHING;

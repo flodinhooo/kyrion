@@ -71,9 +71,7 @@ def stream_voice_turn(
                 chunks += 1
                 pcm_bytes += len(event.pcm)
         if cancelled.is_set():
-            yield VoiceTurnTerminal(
-                "cancelled", turn_id, phrases, chunks, pcm_bytes
-            )
+            yield VoiceTurnTerminal("cancelled", turn_id, phrases, chunks, pcm_bytes)
             return
         phrases += 1
     terminal_type = "cancelled" if cancelled.is_set() else "complete"

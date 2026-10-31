@@ -1,10 +1,14 @@
-import { requireApiSession } from "@/lib/server-auth";
+import { csrfIsValid, requireApiSession } from "@/lib/server-auth";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://127.0.0.1:8000";
 
 export async function POST(request: Request) {
+  if (!(await csrfIsValid(request))) return Response.json({ code: "CSRF_INVALID" }, { status: 403 });
   const auth = await requireApiSession();
   if (auth instanceof Response) return auth;
+  if (auth.user.space?.type !== "HOME" || !auth.user.permissions?.includes("conversations:read")) {
+    return Response.json({ code: "BUSINESS_VOICE_IDENTITY_REQUIRED" }, { status: 403 });
+  }
   const body: unknown = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return Response.json({ code: "INVALID_REQUEST" }, { status: 400 });

@@ -26,6 +26,8 @@ data class CredentialsRequest(
     @field:NotBlank @field:Size(min = 3, max = 120)
     @field:Pattern(regexp = "^[A-Za-z0-9._-]+$") val username: String,
     @field:Size(min = 12, max = 200) val password: String,
+    val spaceType: SpaceType? = null,
+    @field:Size(min = 1, max = 120) val spaceName: String? = null,
 )
 data class SetupStatusResponse(val setupRequired: Boolean)
 data class RegistrationRequest(
@@ -33,23 +35,25 @@ data class RegistrationRequest(
     @field:Pattern(regexp = "^[A-Za-z0-9._-]+$") val username: String,
     @field:Size(min = 12, max = 200) val password: String,
     @field:Pattern(regexp = "^[A-Za-z0-9_-]{43}$") val invitationCode: String,
+    @field:Size(max = 254) val email: String? = null,
+    @field:Size(min = 43, max = 43) val emailProof: String? = null,
 )
 data class ChangePasswordRequest(
     @field:Size(min = 12, max = 200) val currentPassword: String,
     @field:Size(min = 12, max = 200) val newPassword: String,
 )
-data class UserResponse(val id: UUID, val username: String, val canInvite: Boolean, val roles: Set<String> = emptySet(), val permissions: Set<String> = emptySet(), val enabled: Boolean = true)
+data class UserResponse(val id: UUID, val username: String, val canInvite: Boolean, val roles: Set<String> = emptySet(), val permissions: Set<String> = emptySet(), val enabled: Boolean = true, val space: SpaceView? = null)
 data class SessionResponse(val user: UserResponse, val sessionToken: String, val expiresAt: Instant)
 data class ErrorResponse(val code: String)
 
 @RestController
 @RequestMapping("/v1/auth")
-class AuthenticationController(private val authentication: LocalAuthenticationService, private val rbac: RbacService) {
+class AuthenticationController(private val authentication: LocalAuthenticationService, private val rbac: RbacService, private val spaces: SpaceService) {
     @GetMapping("/setup/status") fun setupStatus() = SetupStatusResponse(authentication.setupRequired())
 
     @PostMapping("/setup") @ResponseStatus(HttpStatus.CREATED)
     fun setup(@Valid @RequestBody body: CredentialsRequest, request: HttpServletRequest) =
-        authentication.setup(body.username, body.password, request.getHeader("X-Kyrion-Setup-Secret")).response()
+        authentication.setup(body.username, body.password, request.getHeader("X-Kyrion-Setup-Secret"), body.spaceType ?: SpaceType.HOME, body.spaceName ?: "Kyrion").response()
 
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: CredentialsRequest) = authentication.login(body.username, body.password).response()
@@ -65,12 +69,12 @@ class AuthenticationController(private val authentication: LocalAuthenticationSe
 
     @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody body: RegistrationRequest) =
-        authentication.register(body.username, body.password, body.invitationCode).response()
+        authentication.register(body.username, body.password, body.invitationCode, body.email, body.emailProof).response()
 
     @GetMapping("/me")
     fun me(request: HttpServletRequest): UserResponse {
         val user = authentication.authenticate(request.bearerToken()) ?: throw UnauthenticatedException()
-        return UserResponse(user.id, user.username, "invitations:create" in rbac.permissions(user.id), rbac.users(user.resourceOwnerId).first { it.id == user.id }.roles.toSet(), rbac.permissions(user.id), user.enabled)
+        return UserResponse(user.id, user.username, "invitations:create" in rbac.permissions(user.id), rbac.users(user.resourceOwnerId).first { it.id == user.id }.roles.toSet(), rbac.permissions(user.id), user.enabled, spaces.current(user.id))
     }
 
     @PostMapping("/logout") @ResponseStatus(HttpStatus.NO_CONTENT)

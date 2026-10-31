@@ -47,10 +47,12 @@ def request():
 
 
 def test_validates_and_scopes_incremental_pcm_events():
-    provider = StubProvider([
-        ProviderPcmChunk(0, bytes(7_680), 1_000),
-        ProviderPcmChunk(1, bytes(7_680), 1_160),
-    ])
+    provider = StubProvider(
+        [
+            ProviderPcmChunk(0, bytes(7_680), 1_000),
+            ProviderPcmChunk(1, bytes(7_680), 1_160),
+        ]
+    )
 
     events = list(ValidatedStreamingTts(provider).stream(request(), Event()))
 
@@ -77,10 +79,12 @@ def test_rejects_oversized_provider_chunk():
 
 def test_cancellation_emits_terminal_without_later_audio():
     cancelled = Event()
-    provider = StubProvider([
-        ProviderPcmChunk(0, bytes(7_680), 1_000),
-        ProviderPcmChunk(1, bytes(7_680), 1_160),
-    ])
+    provider = StubProvider(
+        [
+            ProviderPcmChunk(0, bytes(7_680), 1_000),
+            ProviderPcmChunk(1, bytes(7_680), 1_160),
+        ]
+    )
     stream = ValidatedStreamingTts(provider).stream(request(), cancelled)
 
     start = next(stream)
@@ -114,4 +118,3 @@ def test_rejects_document_larger_than_provider_contract():
 
     with pytest.raises(StreamingTtsContractError, match="TTS_TEXT_INVALID"):
         list(ValidatedStreamingTts(StubProvider()).stream(oversized, Event()))
-

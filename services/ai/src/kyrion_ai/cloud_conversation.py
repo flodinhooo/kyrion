@@ -267,9 +267,9 @@ class CloudConversationManager:
             response_text,
             audio,
             {
-            "provider": "openrouter",
-            "model": actual_model,
-            "sessionStartupMs": session.startup_ms,
+                "provider": "openrouter",
+                "model": actual_model,
+                "sessionStartupMs": session.startup_ms,
                 "firstResponseMs": first_token_ms,
                 "firstAudioMs": first_audio_ms,
                 "completeMs": first_audio_ms,

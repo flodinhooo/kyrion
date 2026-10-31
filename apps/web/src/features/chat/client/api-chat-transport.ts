@@ -3,6 +3,7 @@ import type { ChatEvent, ChatRequest } from "@/features/chat/contracts";
 import { csrfHeader } from "@/features/auth/csrf";
 import {modelMessages} from "@/features/models/messages";
 import {isKnowledgeSource} from "@/features/knowledge/contracts";
+import {knowledgeMessages} from "@/features/knowledge/messages";
 
 export function parseEvent(line: string): ChatEvent {
   if (line.length > 1_000_000) throw new Error("Invalid stream event");
@@ -57,6 +58,7 @@ export function parseEvent(line: string): ChatEvent {
 }
 
 const responseErrorCodes = new Set([
+  ...Object.keys(knowledgeMessages.en.errors),
   ...Object.keys(modelMessages.en.errors),
   "MODEL_UNAVAILABLE",
   "INVALID_REQUEST",
