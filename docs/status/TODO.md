@@ -1,5 +1,13 @@
 # Kyrion Development TODO
 
+Latest hearing-review preparation: [A/B pack, local STT and anomaly findings](2026-10-31-tts-listening-review.md).
+- [x] Map all24 existing WAVs to identical expected inputs, configuration, run/seed and SHA256; retain a committed synthetic audit.
+- [x] Inspect termination and pure text preparation; no frame/token hard limit reached and no input-content truncation found. No proven engine defect, so no parameter change or new synthesis.
+- [x] Analyze quiet energy and transcribe all samples locally:20.48s includes16.90s below−40dBFS;2.80s list recognizes only item1; first-warm list also lacks item3 in STT. STT is diagnostic, not hearing acceptance.
+- [x] Prepare fixed-first-warm blind A/B page, DE/EN labels, ratings export, reveal/times and all24 runs; verify browser playback/served hashes without claiming audibility.
+- [ ] Human A/B decision on actual completeness, intelligibility, naturalness and suitable voice; check both outliers and selected list1. Keep Chatterbox until this review; no automatic benchmark/tuning round.
+- [ ] Two Hey Velora dialogues and acoustic/end-piece/pause review; operator cancellation commands are documented, spoken barge-in is absent. Gateway/host/cloud/V40 remain separate.
+
 Latest bounded TTS decision: [isolated CPU candidate and active-path preservation](2026-10-31-isolated-tts-decision.md).
 - [x] Inventory installed engines/hardware; compare exactly one existing MOSS CPU candidate with resident Chatterbox, three fixed German texts and three warm runs per text; keep cold/first-use boundaries explicit.
 - [x] Retain active V39/schema39/voice, guarded pin and rollback; verify seven services, Pi health/authentication and clean session closure.

@@ -1,5 +1,11 @@
 # Isolated local TTS decision, 2026-10-31
 
+Later continuation: [prepared blind A/B review and anomaly investigation](2026-10-31-tts-listening-review.md).
+Use its loopback start command and `review/index.html`, rather than the original
+unblinded listening page. All24 existing WAVs now have local STT/signal/provenance
+records; no new synthesis or active-stack change occurred. The20.48s outlier is
+mostly low-energy material; STT suggests missing list contents in short runs.
+
 ## Decision and preserved runtime
 
 Keep the existing Chatterbox path active. MOSS-TTS-Nano ONNX CPU is a faster
