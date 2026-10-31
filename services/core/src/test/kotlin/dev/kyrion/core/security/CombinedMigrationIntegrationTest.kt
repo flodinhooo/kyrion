@@ -145,6 +145,41 @@ class CombinedMigrationIntegrationTest {
     }
 
     @Test
+    fun `V40 preserves legacy charges and closes unknown invocation history without guessing prices`() {
+        val schema = "usage_" + UUID.randomUUID().toString().replace("-", "")
+        fun config(target: String? = null) = Flyway.configure()
+            .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            .schemas(schema).defaultSchema(schema).locations("classpath:db/migration")
+            .apply { if (target != null) target(target) }.load()
+        config("39").migrate()
+        DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            connection.schema = schema
+            val owner = UUID.randomUUID()
+            connection.createStatement().use { statement ->
+                statement.execute("INSERT INTO user_account(id,username,password_hash) VALUES('$owner','usage-upgrade','fixture')")
+                for (state in listOf("pending", "uncertain", "estimated", "reported", "rejected")) {
+                    statement.execute("""INSERT INTO ai_usage_attempt(id,actor_id,request_id,attempt,provider,profile_id,model_id,
+                        period,charged_tokens,estimated_cost,currency,state) VALUES(gen_random_uuid(),'$owner',gen_random_uuid(),0,
+                        'ollama','fixture','fixture','2026-09',116,NULL,NULL,'$state')""")
+                }
+            }
+            config().migrate()
+            config().validate()
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*) FROM ai_usage_attempt WHERE reserved_tokens=116 AND charged_tokens=116 AND reserved_cost IS NULL AND input_price IS NULL AND invoked_at IS NULL").use {
+                    it.next(); assertThat(it.getInt(1)).isEqualTo(5)
+                }
+                statement.executeQuery("SELECT COUNT(*) FROM ai_usage_attempt WHERE state='pending'").use {
+                    it.next(); assertThat(it.getInt(1)).isZero()
+                }
+                statement.executeQuery("SELECT COUNT(*) FROM ai_usage_attempt WHERE state='uncertain' AND error_code='LEGACY_REVIEW_REQUIRED'").use {
+                    it.next(); assertThat(it.getInt(1)).isEqualTo(1)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `incompatible already applied feature history fails validation without repair`() {
         val resources = Path.of(javaClass.getResource("/db/migration")!!.toURI())
         Files.list(resources).use { files ->

@@ -10,13 +10,21 @@ export type AiPolicy = {
   monthlyCostLimit: number | null; currency: string | null; maxRequestTokens: number; maxTimeoutSeconds: number;
 };
 export type AiSettings = { preferences: AiPreferences; policy: AiPolicy; canAdmin: boolean };
+export type AiAccountingState = "pending" | "invoked" | "uncertain" | "estimated" | "reported" | "rejected";
+export type AiCostBasis = "reservation" | "provider_usage_estimate" | "not_invoked";
 export type AiUsage = {
   period: string; tokenLimit: number | null; costLimit: number | null; currency: string | null;
   chargedTokens: number; costsAreEstimates: boolean; rows: Array<{
     provider: string; profileId: string; modelId: string;
     requests: number; chargedTokens: number; inputTokens: number | null; outputTokens: number | null;
-    estimatedCost: number | null; currency: string | null; pending: number
-  }>
+    estimatedCost: number | null; currency: string | null; pending: number;
+    accountingState?: AiAccountingState; unknownCosts?: number; costBasis?: AiCostBasis;
+  }>;
+  openAttempts?: Array<{
+    id: string; period: string; provider: string; profileId: string; state: AiAccountingState;
+    chargedTokens: number; estimatedCost: number | null; currency: string | null; errorCode: string | null;
+  }>;
+  openAttemptsTruncated?: boolean;
 };
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -26,6 +34,11 @@ function object(value: unknown): value is Record<string, unknown> {
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(item => typeof item === "string");
 const nullableString = (value: unknown) => value === null || typeof value === "string";
 const nullableNumber = (value: unknown) => value === null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
+const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+const accountingState = (value: unknown): value is AiAccountingState =>
+  ["pending", "invoked", "uncertain", "estimated", "reported", "rejected"].some(state => state === value);
+const costBasis = (value: unknown): value is AiCostBasis =>
+  ["reservation", "provider_usage_estimate", "not_invoked"].some(basis => basis === value);
 
 export function isAiSettings(value: unknown): value is AiSettings {
   if (!object(value) || !object(value.preferences) || !object(value.policy) || typeof value.canAdmin !== "boolean") return false;
@@ -46,5 +59,13 @@ export function isAiUsage(value: unknown): value is AiUsage {
     && Array.isArray(value.rows) && value.rows.every(row => object(row) && typeof row.provider === "string"
       && typeof row.profileId === "string" && typeof row.modelId === "string" && typeof row.requests === "number"
       && typeof row.chargedTokens === "number" && nullableNumber(row.inputTokens) && nullableNumber(row.outputTokens)
-      && nullableNumber(row.estimatedCost) && nullableString(row.currency) && typeof row.pending === "number");
+      && nullableNumber(row.estimatedCost) && nullableString(row.currency) && count(row.pending)
+      && (row.accountingState === undefined || accountingState(row.accountingState))
+      && (row.unknownCosts === undefined || count(row.unknownCosts))
+      && (row.costBasis === undefined || costBasis(row.costBasis)))
+    && (value.openAttemptsTruncated === undefined || typeof value.openAttemptsTruncated === "boolean")
+    && (value.openAttempts === undefined || (Array.isArray(value.openAttempts) && value.openAttempts.length <= 100
+      && value.openAttempts.every(row => object(row) && typeof row.id === "string" && typeof row.period === "string"
+        && typeof row.provider === "string" && typeof row.profileId === "string" && accountingState(row.state)
+        && count(row.chargedTokens) && nullableNumber(row.estimatedCost) && nullableString(row.currency) && nullableString(row.errorCode))));
 }

@@ -1,5 +1,14 @@
 # K-AI / Velora agent handoff
 
+> Continuation, 2026-10-31: the integrated `master` checkpoint and subsequent
+> accounting fixes supersede the historical software-baseline/operational state
+> below. Read [the accounting continuation](../status/2026-10-31-kai-accounting.md)
+> and [Cloud/Velora acceptance procedures](../kai-accounting-and-acceptance.md).
+> M01–M03 were verified in the integrated code. KAI-005 adds durable invocation,
+> price snapshots, idempotent late settlement, explicit disputes and all-period
+> open cases. Provider billing lookup, live cloud spending/configuration and
+> physical Velora remain open; V40 is not deployed by this continuation.
+
 Date: 2026-10-30. Documentation-only closeout of this Codex session.
 Owner/scope: AI provider foundation, orchestration, personal memory/context and
 the related Velora model/context integration. No further implementation is planned

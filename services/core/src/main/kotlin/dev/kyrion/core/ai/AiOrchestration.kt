@@ -207,6 +207,7 @@ class AiOrchestrationService(
                 }
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
+                usage.begin(prepared.actor, reservation)
                 invoked = true
                 gateway.stream(payload, remaining) { raw ->
                     validateActive()
@@ -229,11 +230,22 @@ class AiOrchestrationService(
 
                         "usage" -> {
                             val value = event.path("usage")
-                            fun token(key: String) =
-                                value.path(key).takeIf { it.isIntegralNumber && it.asLong() in 0..1_000_000_000L }
-                                    ?.asLong()
-                            input = token("inputTokens") ?: input; output = token("outputTokens") ?: output; total =
-                                token("totalTokens") ?: total
+                            if (!value.isObject) throw AiFailure("STREAM_FAILED", 502)
+                            fun token(key: String): Long? {
+                                val node = value.path(key)
+                                if (node.isMissingNode || node.isNull) return null
+                                if (!node.isIntegralNumber || !node.canConvertToLong() || node.asLong() !in 0..1_000_000_000L)
+                                    throw AiFailure("STREAM_FAILED", 502)
+                                return node.asLong()
+                            }
+                            fun latest(key: String, previous: Long?): Long? {
+                                val next = token(key) ?: return previous
+                                if (previous != null && next < previous) throw AiFailure("STREAM_FAILED", 502)
+                                return next
+                            }
+                            input = latest("inputTokens", input); output = latest("outputTokens", output)
+                            total = latest("totalTokens", total)
+                            if (!validAiUsage(input, output, total)) throw AiFailure("STREAM_FAILED", 502)
                             if (visible) emit(raw) else buffered.add(raw)
                         }
 

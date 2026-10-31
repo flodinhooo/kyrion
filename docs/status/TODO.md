@@ -1,11 +1,25 @@
 # Kyrion Development TODO
 
+Current K-AI accounting/acceptance continuation:
+[durable accounting follow-up](2026-10-31-kai-accounting.md) and
+[operator investigation / Cloud / Velora checklists](../kai-accounting-and-acceptance.md).
+KAI-005 software hardening is verified separately from provider billing lookup,
+real cloud acceptance, physical Voice and deployment of additive V40.
+
+Latest K-AI follow-up: [October 31 accounting and runtime checks](2026-10-31-kai-resume.md).
+The [combined integration](../integration/final-integration-report.md) supersedes
+the original handoff's failing software baseline; the local database's verified
+[V39 upgrade](../integration/database-upgrade-v39.md) also supersedes its V33 state.
+K-AI M01–M03 are implemented; live cloud, physical Voice and the remaining
+reconciliation/isolation acceptance gates remain separate.
+
 Current checkpoint: [2026-10-30 stabilization](2026-10-30-stabilization.md).
 Calendar/HA recovery is integrated and automatically verified. Remaining near-term
 work is controlled rollout/full-host cold-start acceptance, authenticated Calendar/
 Google acceptance and physical device/voice reliability. The
-[multi-provider architecture review](2026-10-30-ai-architecture-review.md) is an
-analysis, not implemented cloud-provider support.
+[multi-provider architecture review](2026-10-30-ai-architecture-review.md) is
+historical analysis; subsequent [provider support](../ai-model-providers.md)
+is implemented with simulated cloud acceptance, not real account acceptance.
 
 Last updated: 2026-10-12.
 

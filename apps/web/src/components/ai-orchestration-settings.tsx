@@ -161,20 +161,28 @@ export function AiOrchestrationSettings() {
       <div className="table-wrap">
         <table>
           <thead>
-          <tr>{[t.provider, t.requests, t.charged, t.input, t.output, t.estimate, t.pending].map(label => <th
+          <tr>{[t.provider, t.accountingState, t.requests, t.charged, t.input, t.output, t.estimate, t.pending].map(label => <th
             key={label}>{label}</th>)}</tr>
           </thead>
           <tbody>{usage.rows.map((row, i) => <tr key={`${row.profileId}:${i}`}>
             <td>{row.provider} / {row.profileId}</td>
+            <td>{row.accountingState ? t.states[row.accountingState] : t.pending}</td>
             <td>{row.requests}</td>
             <td>{row.chargedTokens}</td>
             <td>{row.inputTokens ?? "—"}</td>
             <td>{row.outputTokens ?? "—"}</td>
-            <td>{row.estimatedCost ?? "—"} {row.currency}</td>
+            <td>{row.estimatedCost ?? t.unknown} {row.currency}
+              {row.costBasis && <small> · {t.costBases[row.costBasis]}</small>}</td>
             <td>{row.pending}</td>
           </tr>)}</tbody>
         </table>
       </div>
+      <h3>{t.openAttempts}</h3><p>{t.reviewNote}</p>
+      {usage.openAttempts === undefined ? <p role="status">{t.detailsMissing}</p> :
+        <ul>{usage.openAttempts.map(attempt => <li key={attempt.id}>
+          <code>{attempt.id}</code> · {attempt.period} · {attempt.provider} / {attempt.profileId} · {t.states[attempt.state]} · {attempt.chargedTokens} · {attempt.estimatedCost ?? t.unknown} {attempt.currency}
+        </li>)}</ul>}
+      {usage.openAttemptsTruncated && <p role="status">{t.truncated}</p>}
     </>}
     {status && <p role={status === "error" ? "alert" : "status"}>{status === "error" ? t.error : t.saved}</p>}
   </section>;

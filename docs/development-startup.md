@@ -316,10 +316,11 @@ Open `http://localhost:3000` and send a chat message.
 
 ## Request flow
 
-The browser calls only Next.js. Next.js reads trusted activity through Kyrion
-Core using `CORE_SERVICE_URL`, which defaults to `http://127.0.0.1:8080`, and
-forwards chat requests to the AI service using `AI_SERVICE_URL`, which defaults
-to `http://127.0.0.1:8000`. The AI service then calls Ollama using
+The browser calls only Next.js. Chat generation goes through Kyrion Core using
+`CORE_SERVICE_URL`, which defaults to `http://127.0.0.1:8080`. Core owns routing,
+context, consent and usage accounting, and calls AI using `KYRION_AI_BASE_URL`
+(default `http://127.0.0.1:8000`). `AI_SERVICE_URL` remains Web's server-side
+AI endpoint for other supported operations. The AI service calls Ollama using
 `OLLAMA_BASE_URL`, which defaults to `http://127.0.0.1:11434`.
 
 Configuration examples are stored in:
@@ -362,11 +363,31 @@ docker compose -f infrastructure\compose.yml ps
 $env:KYRION_DATABASE_PASSWORD = 'the-same-local-password'
 ```
 
-Flyway validates and applies the migration chain through the checked-out version
-(currently V33 in this recovery worktree). No login user is created automatically.
+Flyway validates and applies the migration chain through the checked-out version.
+The integrated checkout and the local database reached V39 on October 30; see
+[the verified upgrade](integration/database-upgrade-v39.md). Select a Core
+artifact with matching migration resources. No login user is created automatically.
 Never edit an already-applied migration, including formatting-only edits.
 
 ### A model is missing
+
+An HTTP-ready Ollama process does not prove inference readiness. On October 31,
+the desktop-autostarted process returned an empty `/api/tags` catalog and
+`bad manifest` errors through `C:\Users\Flo\.ollama\models`, even though that
+junction's target held all manifest/blob files. An isolated process using
+`OLLAMA_MODELS=E:\Ollama\Models` listed all three existing models; starting the
+local runtime with that direct path restored real Gemma chat. Inspect the
+effective process configuration and existing files before downloading weights.
+When deliberately starting the runtime, set the direct path in that process:
+
+```powershell
+$env:OLLAMA_MODELS = 'E:\Ollama\Models'
+& 'E:\Ollama\App\ollama.exe' serve
+```
+
+An already running process keeps its original environment. Avoid competing
+servers on the same port; coordinate its replacement through the operator workflow.
+This local observation does not establish a general cause for all Ollama errors.
 
 ```powershell
 & 'E:\Ollama\App\ollama.exe' list

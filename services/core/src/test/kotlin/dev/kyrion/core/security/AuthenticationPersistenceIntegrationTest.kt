@@ -1804,6 +1804,279 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `AI concurrent settlement audits once and cannot refund a finalized or foreign attempt`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val reservation = aiUsage.reserve(
+            actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100
+        )
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val jobs = (1..2).map {
+                pool.submit {
+                    ready.await()
+                    aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+                }
+            }
+            ready.countDown()
+            jobs.forEach { it.get(20, java.util.concurrent.TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
+        aiUsage.releaseUninvoked(actor, reservation, "REQUEST_ABORTED")
+        aiUsage.settle(UUID.randomUUID(), reservation, 0, 0, 0, true, null)
+        aiUsage.releaseUninvoked(UUID.randomUUID(), reservation, "REQUEST_ABORTED")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.settled'")
+            .query(Int::class.java).single()).isEqualTo(1)
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.rejected'")
+            .query(Int::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `AI repeated uninvoked release cannot settle or audit a rejected attempt again`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val reservation = aiUsage.reserve(
+            actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100
+        )
+        aiUsage.releaseUninvoked(actor, reservation, "REQUEST_ABORTED")
+        aiUsage.releaseUninvoked(actor, reservation, "REQUEST_ABORTED")
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        assertThat(aiUsage.summary(actor).chargedTokens).isZero()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.rejected'")
+            .query(Int::class.java).single()).isEqualTo(1)
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.settled'")
+            .query(Int::class.java).single()).isZero()
+    }
+
+    @Test
+    fun `AI invocation fence survives service recreation and prepared stream replay`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        val conversation = UUID.randomUUID()
+        val turn = UUID.randomUUID()
+        startHttpTurn(token, conversation, turn, "Synthetic replay test", "2026-10-31T12:00:00Z")
+        val prepared = aiOrchestration.prepare(actor, dev.kyrion.core.ai.AiGenerationRequest(conversation, turn))
+        aiOrchestration.stream(prepared) {}
+        val repeated = mutableListOf<String>()
+        aiOrchestration.stream(prepared, repeated::add)
+        assertThat(aiGateway.payloads).hasSize(1)
+        assertThat(repeated.joinToString()).contains("REQUEST_ALREADY_STARTED")
+        val restarted = dev.kyrion.core.ai.AiUsageService(jdbc, aiSettings, rbac, activity)
+        assertThatThrownBy {
+            transactions.executeWithoutResult { restarted.begin(actor, prepared.reservation) }
+        }.hasMessageContaining("REQUEST_ALREADY_STARTED")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.invoked'")
+            .query(Int::class.java).single()).isEqualTo(1)
+    }
+
+    @Test
+    fun `AI incomplete timeout disconnect and malformed streams keep conservative reservations`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        val cases: List<Pair<String, ((String) -> Unit) -> Unit>> = listOf(
+            "uncertain" to { receive -> receive("""{"type":"usage","usage":{"inputTokens":12,"outputTokens":2,"totalTokens":14}}""") },
+            "estimated" to { receive -> receive("""{"type":"message.completed","messageId":"m"}""") },
+            "uncertain" to { _ -> throw dev.kyrion.core.ai.AiFailure("REQUEST_TIMEOUT", 504) },
+            "uncertain" to { _ -> throw java.io.IOException("synthetic disconnect") },
+            "uncertain" to { receive ->
+                receive("""{"type":"usage","usage":{"inputTokens":12,"outputTokens":2,"totalTokens":0}}""")
+                receive("""{"type":"message.completed","messageId":"m"}""")
+            },
+            "uncertain" to { receive ->
+                receive("""{"type":"message.completed","messageId":"m"}""")
+                receive("""{"type":"message.completed","messageId":"m"}""")
+            },
+            "uncertain" to { receive ->
+                receive("""{"type":"usage","usage":{"inputTokens":12,"outputTokens":2,"totalTokens":14}}""")
+                receive("""{"type":"usage","usage":{"inputTokens":0,"outputTokens":0,"totalTokens":0}}""")
+                receive("""{"type":"message.completed","messageId":"m"}""")
+            }
+        )
+        cases.forEach { (expected, behavior) ->
+            val conversation = UUID.randomUUID()
+            val turn = UUID.randomUUID()
+            startHttpTurn(token, conversation, turn, "Synthetic interrupted request", "2026-10-31T12:00:00Z")
+            val prepared = aiOrchestration.prepare(actor, dev.kyrion.core.ai.AiGenerationRequest(conversation, turn))
+            aiGateway.behavior = { _, receive -> behavior(receive) }
+            runCatching { aiOrchestration.stream(prepared) {} }
+            assertThat(jdbc.sql("SELECT state FROM ai_usage_attempt WHERE id=:id").param("id", prepared.reservation.id)
+                .query(String::class.java).single()).isEqualTo(expected)
+            assertThat(jdbc.sql("SELECT charged_tokens FROM ai_usage_attempt WHERE id=:id").param("id", prepared.reservation.id)
+                .query(Long::class.java).single()).isEqualTo(prepared.reservation.tokens)
+        }
+        assertThat(aiGateway.payloads).hasSize(cases.size)
+        assertThat(aiUsage.summary(actor).openAttempts).hasSize(cases.size)
+    }
+
+    @Test
+    fun `AI late terminal usage reconciles once using stored prices and its original month`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val model = aiGateway.model.copy(inputCostPerMillion=java.math.BigDecimal("2"),
+            outputCostPerMillion=java.math.BigDecimal("4"), currency="USD")
+        val request = UUID.randomUUID()
+        val reservation = aiUsage.reserve(actor, request, 0, model, dev.kyrion.core.ai.AiRouteRequest(),
+            dev.kyrion.core.ai.AiCatalog(model.id, listOf(model)), 100)
+        aiUsage.begin(actor, reservation)
+        aiUsage.settle(actor, reservation, 12, 2, 14, false, "REQUEST_TIMEOUT")
+        aiUsage.releaseUninvoked(actor, reservation, "REQUEST_ABORTED")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+        jdbc.sql("UPDATE ai_usage_attempt SET period='2026-09' WHERE id=:id").param("id", reservation.id).update()
+        val restarted = dev.kyrion.core.ai.AiUsageService(jdbc, aiSettings, rbac, activity)
+        assertThat(restarted.summary(actor).openAttempts.single().period).isEqualTo("2026-09")
+        val changedProfile = reservation.copy(model=model.copy(inputCostPerMillion=java.math.BigDecimal.ZERO))
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val ready = java.util.concurrent.CountDownLatch(1)
+        try {
+            val jobs = (1..2).map { pool.submit {
+                ready.await()
+                transactions.executeWithoutResult { restarted.settle(actor, changedProfile, 12, 2, 14, true, null) }
+            } }
+            ready.countDown()
+            jobs.forEach { it.get(20, java.util.concurrent.TimeUnit.SECONDS) }
+        } finally { pool.shutdownNow() }
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        assertThat(jdbc.sql("SELECT charged_tokens FROM ai_usage_attempt WHERE id=:id").param("id", reservation.id)
+            .query(Long::class.java).single()).isEqualTo(14)
+        assertThat(jdbc.sql("SELECT estimated_cost FROM ai_usage_attempt WHERE id=:id").param("id", reservation.id)
+            .query(java.math.BigDecimal::class.java).single()).isEqualByComparingTo("0.000032")
+        assertThat(jdbc.sql("SELECT period FROM ai_usage_attempt WHERE id=:id").param("id", reservation.id)
+            .query(String::class.java).single()).isEqualTo("2026-09")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.settled' AND correlation_id=:request")
+            .param("request", request).query(Int::class.java).single()).isEqualTo(2)
+        assertThat(aiUsage.summary(actor).openAttempts).isEmpty()
+        assertThatThrownBy { aiUsage.reserve(actor, request, 0, model, dev.kyrion.core.ai.AiRouteRequest(),
+            dev.kyrion.core.ai.AiCatalog(model.id, listOf(model)), 100) }.hasMessage("REQUEST_ALREADY_STARTED")
+    }
+
+    @Test
+    fun `AI missing partial and invalid usage cannot turn unknown costs into zero`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val reservation = aiUsage.reserve(actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100)
+        aiUsage.begin(actor, reservation)
+        aiUsage.settle(actor, reservation, null, null, 0, true, null)
+        assertThat(aiUsage.summary(actor).rows.single().accountingState).isEqualTo("estimated")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        val row = aiUsage.summary(actor).rows.single()
+        assertThat(row.accountingState).isEqualTo("reported")
+        assertThat(row.estimatedCost).isNull()
+        assertThat(row.unknownCosts).isEqualTo(1)
+        assertThat(row.chargedTokens).isEqualTo(14)
+        assertThat(aiUsage.summary(actor).openAttempts.single().id).isEqualTo(reservation.id)
+    }
+
+    @Test
+    fun `AI conflicting terminal reports stay visibly unresolved without repeat refunds or audits`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val reservation = aiUsage.reserve(actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100)
+        aiUsage.begin(actor, reservation)
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        repeat(2) { aiUsage.settle(actor, reservation, 0, 0, 0, true, null) }
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+        assertThat(aiUsage.summary(actor).openAttempts.single().errorCode).isEqualTo("USAGE_CONFLICT")
+        assertThat(aiUsage.summary(actor).rows.single().estimatedCost).isNull()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM activity_event WHERE event_type='ai.usage.disputed'")
+            .query(Int::class.java).single()).isEqualTo(1)
+        assertThat(jdbc.sql("SELECT reported_input_tokens FROM ai_usage_attempt WHERE id=:id")
+            .param("id", reservation.id).query(Long::class.java).single()).isEqualTo(12)
+    }
+
+    @Test
+    fun `AI observed partial overruns stay charged and unpriced provider categories stay unknown`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val model = aiGateway.model.copy(inputCostPerMillion=java.math.BigDecimal.ONE,
+            outputCostPerMillion=java.math.BigDecimal.ONE, currency="USD")
+        val reservation = aiUsage.reserve(actor, UUID.randomUUID(), 0, model, dev.kyrion.core.ai.AiRouteRequest(),
+            dev.kyrion.core.ai.AiCatalog(model.id, listOf(model)), 100)
+        aiUsage.begin(actor, reservation)
+        aiUsage.settle(actor, reservation, 200, 40, 240, false, "REQUEST_TIMEOUT")
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(240)
+        assertThat(aiUsage.summary(actor).rows.single().estimatedCost).isEqualByComparingTo("0.00024")
+        aiUsage.settle(actor, reservation, 200, 40, 244, true, null)
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(244)
+        assertThat(aiUsage.summary(actor).rows.single().estimatedCost).isNull()
+        assertThat(aiUsage.summary(actor).openAttempts.single().state).isEqualTo("reported")
+    }
+
+    @Test
+    fun `AI audit failures roll back invocation and settlement while crash reservations survive`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        val reservation = aiUsage.reserve(actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100)
+        jdbc.sql("""CREATE FUNCTION reject_ai_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN RAISE EXCEPTION 'injected AI audit failure'; END; $$""").update()
+        fun install() { jdbc.sql("CREATE TRIGGER reject_ai_test_audit BEFORE INSERT ON activity_event FOR EACH ROW EXECUTE FUNCTION reject_ai_test_audit()").update() }
+        fun remove() { jdbc.sql("DROP TRIGGER IF EXISTS reject_ai_test_audit ON activity_event").update() }
+        try {
+            install()
+            assertThatThrownBy { aiUsage.begin(actor, reservation) }.isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(aiUsage.summary(actor).openAttempts.single().state).isEqualTo("pending")
+            remove()
+            aiUsage.begin(actor, reservation)
+            aiUsage.releaseUninvoked(actor, reservation, "REQUEST_ABORTED")
+            val restarted = dev.kyrion.core.ai.AiUsageService(jdbc, aiSettings, rbac, activity)
+            assertThat(restarted.summary(actor).openAttempts.single().state).isEqualTo("invoked")
+            assertThatThrownBy { transactions.executeWithoutResult { restarted.begin(actor, reservation) } }
+                .hasMessageContaining("REQUEST_ALREADY_STARTED")
+            install()
+            assertThatThrownBy { aiUsage.settle(actor, reservation, 12, 2, 14, true, null) }
+                .isInstanceOf(org.springframework.dao.DataAccessException::class.java)
+            assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(116)
+            assertThat(aiUsage.summary(actor).openAttempts.single().state).isEqualTo("invoked")
+        } finally {
+            remove()
+            jdbc.sql("DROP FUNCTION reject_ai_test_audit()").update()
+        }
+        aiUsage.settle(actor, reservation, 12, 2, 14, true, null)
+        assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
+    }
+
+    @Test
+    fun `AI unknown historical prices and changed currencies block new monetary limited requests`() {
+        val actor = authentication.authenticate(setupToken())!!.id
+        aiUsage.reserve(actor, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100)
+        val priced = aiGateway.model.copy(inputCostPerMillion=java.math.BigDecimal.ONE,
+            outputCostPerMillion=java.math.BigDecimal.ONE, currency="USD")
+        aiSettings.savePolicy(actor, dev.kyrion.core.ai.AiPolicy(monthlyCostLimit=java.math.BigDecimal.ONE, currency="USD"))
+        assertThatThrownBy { aiUsage.reserve(actor, UUID.randomUUID(), 0, priced,
+            dev.kyrion.core.ai.AiRouteRequest(), dev.kyrion.core.ai.AiCatalog(priced.id, listOf(priced)), 100) }
+            .hasMessage("COST_ESTIMATE_UNAVAILABLE")
+        jdbc.sql("UPDATE ai_usage_attempt SET estimated_cost=0.1,currency='CHF' WHERE actor_id=:actor")
+            .param("actor", actor).update()
+        assertThatThrownBy { aiUsage.reserve(actor, UUID.randomUUID(), 0, priced,
+            dev.kyrion.core.ai.AiRouteRequest(), dev.kyrion.core.ai.AiCatalog(priced.id, listOf(priced)), 100) }
+            .hasMessage("COST_ESTIMATE_UNAVAILABLE")
+    }
+
+    @Test
+    fun `AI open accounting cases are personal across accounts Spaces and query overrides`() {
+        val owner = authentication.setup("accounting_owner", OLD_PASSWORD, setupSecret)
+        val member = authentication.register("accounting_member", OTHER_PASSWORD,
+            spaces.createInvitation(owner.user.id, InvitationOptions()).code)
+        val reservation = aiUsage.reserve(owner.user.id, UUID.randomUUID(), 0, aiGateway.model,
+            dev.kyrion.core.ai.AiRouteRequest(), aiGateway.catalog(), 100)
+        aiUsage.begin(owner.user.id, reservation)
+        aiUsage.settle(member.user.id, reservation, 0, 0, 0, true, null)
+        mockMvc.perform(get("/v1/ai/usage").param("actorId", owner.user.id.toString())
+            .header("Authorization", "Bearer ${member.session.rawToken}"))
+            .andExpect(status().isOk).andExpect(jsonPath("$.openAttempts.length()").value(0))
+        val foreign = insertAdditionalOwner("accounting_foreign")
+        rbac.initializeUser(foreign, foreign, true)
+        assertThat(aiUsage.summary(foreign).openAttempts).isEmpty()
+        assertThat(aiUsage.summary(owner.user.id).openAttempts.single().id).isEqualTo(reservation.id)
+        jdbc.sql("UPDATE kyrion_space SET status='SUSPENDED' WHERE id=:id").param("id", foreign).update()
+        assertThatThrownBy { aiUsage.summary(foreign) }.isInstanceOf(ForbiddenException::class.java)
+    }
+
+    @Test
     fun `AI generation observes usage server side prevents replay and uses actual local voice preference`() {
         val token = setupToken();
         val actor = authentication.authenticate(token)!!.id

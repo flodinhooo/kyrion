@@ -34,7 +34,7 @@ Authenticated Core endpoints:
 | GET `/v1/ai/preferences`  | `conversations:read`; personal settings and effective policy          |
 | PUT `/v1/ai/preferences`  | `conversations:update`; own preferences only                          |
 | GET/PUT `/v1/ai/policy`   | `system_settings:read/update`; workspace administrator policy         |
-| GET `/v1/ai/usage`        | `conversations:read`; own current UTC-month usage                     |
+| GET `/v1/ai/usage`        | `conversations:read`; own current UTC-month usage plus open cases across all months |
 | POST `/v1/ai/route`       | `conversations:create`; deterministic selection preview               |
 | POST `/v1/ai/chat/stream` | `conversations:create`; owned turn, reservation and NDJSON generation |
 
@@ -76,18 +76,44 @@ workspace policy changes and other requests. The stricter of personal and admin
 monthly token ceilings applies, alongside per-request and monetary ceilings.
 Replay of an already reserved turn/attempt is rejected.
 
-Core observes provider token metadata directly. Successful requests with known
-usage settle to reported counters; incomplete, disconnected or unknown outcomes
-retain conservative reservations. Usage records distinguish reported, estimated,
-pending and uncertain attempts. Cost figures are explicitly estimates using only
+Budget checks and reservation insertion share one captured UTC month, taken
+after acquiring the account lock. A usage summary likewise uses one month for
+both its counters and its period label. Settlement updates the original attempt;
+finishing in a later month does not move its charge into that month.
+
+Core observes provider token metadata directly. Successful terminal requests with
+complete input/output usage settle to reported counters; incomplete, disconnected
+or unknown outcomes retain conservative reservations or larger observed usage.
+Usage records distinguish pending, invoked, reported, estimated, rejected and
+uncertain attempts. Cost figures are explicitly estimates using only
 operator-configured input/output prices and currency, never assumed vendor
 prices. A monetary-limited request with unknown pricing or mismatched currency
 fails closed, including a local profile without configured cost metadata.
+
+V40 adds immutable reservation/pricing snapshots and an invocation fence committed
+before network I/O. The same prepared generation cannot invoke twice, even after
+restart. Legacy pending attempts become uncertain without guessing past prices.
+Complete server-observed terminal usage may reconcile an uncertain/estimated
+attempt once, in its original month. The settlement transaction serializes with
+budget reservations; audit failure rolls it back. Uninvoked release applies only
+before that fence. Identical callbacks, missing attempts and foreign account IDs
+do not create duplicate completion evidence or refunds.
+
+Conflicting final reports preserve the first counters, restore a conservative
+token floor and open `USAGE_CONFLICT` once with unknown monetary cost. Subsequent
+callbacks cannot silently resolve that dispute. Missing prices/currency, mixed
+known/unknown aggregates and unpriced extra token categories remain unknown;
+monetary budgets fail closed instead of summing them as zero. The DE/EN usage
+view separates accounting state and cost basis and lists up to100 open cases
+across all months, including reported usage with unknown money.
 
 There is no exchange-rate conversion, provider billing reconciliation or exact
 hard monetary guarantee. Conservative estimates may reject short requests;
 pending attempts after a crash need operator investigation. There is deliberately
 no client endpoint that can refund usage or submit trusted token totals.
+See [the accounting investigation and Cloud/Velora acceptance procedure](kai-accounting-and-acceptance.md)
+and [ADR 0034](adr/0034-durable-ai-usage-finalization.md). The new migration and
+candidate build are tested separately from active-installation rollout.
 
 ## Fallback and action safety
 
