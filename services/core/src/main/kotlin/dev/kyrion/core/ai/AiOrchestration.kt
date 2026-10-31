@@ -169,6 +169,7 @@ class AiOrchestrationService(
             var explicitError = false
             val buffered = mutableListOf<String>()
             try {
+                if (attempt == 0) onStage("context.completed")
                 validateActive()
                 rbac.require(prepared.actor, "conversations:create")
                 if (conversations.find(prepared.actor, prepared.request.conversationId) == null) throw AiFailure("CONVERSATION_NOT_FOUND",404)
@@ -211,8 +212,8 @@ class AiOrchestrationService(
                 }
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
-                invoked = true
                 onStage("model.dispatch")
+                invoked = true
                 gateway.streamTraced(payload, remaining, correlationId) { raw ->
                     validateActive()
                     rbac.require(prepared.actor, "conversations:create")
@@ -331,7 +332,6 @@ class AiOrchestrationService(
             AiGenerationRequest(conversationId, turnId, locale, task = "voice", knowledgeEnabled = knowledgeEnabled),
             personalContextAllowed
         )
-        onStage("context.completed")
         val result = StringBuilder()
         streamObserved(prepared, validateActive, correlationId, onStage) { raw ->
             validateActive()
