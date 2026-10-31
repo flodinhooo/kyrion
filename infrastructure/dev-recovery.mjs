@@ -10,6 +10,7 @@ import path from 'node:path';
 import {homedir} from 'node:os';
 import {authorisedKey, validAction, canRestartManagedProcess, selectedServices} from './dev-recovery-policy.mjs';
 import {serviceReady, startDatabase, waitUntilReady} from './dev-readiness.mjs';
+import {coreLaunch} from './dev-core-runtime.mjs';
 
 if (process.platform !== 'win32') throw new Error('Windows development helper only');
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -32,9 +33,11 @@ try {
   if (error.code !== 'ENOENT') throw error;
 }
 if (!settings || typeof settings !== 'object' || Array.isArray(settings)
-  || Object.keys(settings).some((name) => !['coreJar', 'piHost'].includes(name))
+  || Object.keys(settings).some((name) => !['coreJar', 'piHost', 'coreLanManifest'].includes(name))
   || (settings.coreJar !== undefined && typeof settings.coreJar !== 'string')
-  || (settings.piHost !== undefined && typeof settings.piHost !== 'string')) throw new Error('Invalid local recovery settings');
+  || (settings.piHost !== undefined && typeof settings.piHost !== 'string')
+  || (settings.coreLanManifest !== undefined && (typeof settings.coreLanManifest !== 'string' || !path.isAbsolute(settings.coreLanManifest)))) throw new Error('Invalid local recovery settings');
+const coreLanManifest = settings.coreLanManifest;
 const piHost = process.env.KYRION_RECOVERY_PI_HOST ?? settings.piHost;
 if (piHost && !/^[a-zA-Z0-9.-]+$/.test(piHost)) throw new Error('Invalid configured Pi host');
 const coreArtifact = path.resolve(process.env.KYRION_RECOVERY_CORE_JAR ?? settings.coreJar ?? path.join(root, 'services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar'));
@@ -76,9 +79,8 @@ const services = [
   {
     id: 'core',
     port: 8080,
-    file: process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin/java.exe') : 'java.exe',
-    args: ['-jar', frozenCoreArtifact],
-    cwd: path.join(root, 'services/core')
+    ...coreLaunch({root, artifact: frozenCoreArtifact, manifest: coreLanManifest,
+      javaHome: process.env.JAVA_HOME, systemRoot: process.env.SystemRoot})
   },
   {
     id: 'ai',
@@ -160,7 +162,12 @@ async function run(action, correlationId, target) {
           job.results.push({id: service.id, result: healthy ? 'already_running' : 'failed'});
           continue;
         }
-        if (service.id === 'core') await copyFile(coreArtifact, frozenCoreArtifact);
+        if (service.id === 'core' && !coreLanManifest) {
+          // Building a newer candidate must never silently migrate the live DB.
+          await command(path.join(root, 'services/ai/.venv/Scripts/python.exe'),
+            [path.join(root, 'infrastructure/dev/Verify-CoreRuntime.py'), coreArtifact], 30000);
+          await copyFile(coreArtifact, frozenCoreArtifact);
+        }
         const output = openSync(path.join(stateDir, `${service.id}.log`), 'a');
         let launched;
         try {

@@ -1,5 +1,12 @@
 # Stabilization agent handover
 
+> October31 follow-up: [guarded LAN restart and partial Velora evidence](../status/2026-10-31-pi-velora-acceptance.md).
+> The lost process-only bind is corrected using the unchanged V39 runtime and an
+> operator pin. New guarded startup/source helper integration is prepared; the
+> already-running helper was not reloaded because of the documented WSL hazard.
+> IPv6 dialing and Core h2c compatibility remain runtime release gates; active
+> V40 migration, fresh Gateway heartbeat and complete physical Voice are not claimed.
+
 Date: 2026-10-30. Owner: Windows runtime, integration acceptance, Pi/Core network
 and existing Voice infrastructure. This is this agent's independent handover.
 Finalization is documentation-only: no new feature, runtime restart, migration,

@@ -1,5 +1,11 @@
 # Pi-to-Windows Core and Voice acceptance
 
+> Latest: [October31 network repair and measured partial hardware acceptance](status/2026-10-31-pi-velora-acceptance.md).
+> The guarded V39 LAN listener is active and restart-tested. IPv6-first Satellite
+> dialing and Core h2c/HTTP422 fixes are prepared in source, not deployed. Complete
+> physical Voice acceptance remains open. Use the pinned startup below; do not
+> start a V40 candidate against the active V39 database.
+
 > Sprint 04 activation succeeded after explicit approval. It supersedes the
 > historical activation instructions below. Read
 > [the Pi-hole protection and LAN approval plan](status/2026-10-30-stabilization-sprint-04.md).
@@ -28,10 +34,13 @@ Do not bind to a hardcoded current Windows LAN address or disable the firewall.
 ## Review and approved application
 
 ```powershell
-# Current reviewed parent PID was 38276; re-identify it if it has changed.
-& infrastructure/dev/Set-CoreLan.ps1 -CoreProcessId 38276
-# Only after explicit authorization of this network exposure and interruption:
-& infrastructure/dev/Set-CoreLan.ps1 -CoreProcessId 38276 -Apply
+# Re-identify the current Core PID/artifact; $coreProcessId is operator supplied.
+& infrastructure/dev/Activate-CoreLan.ps1 -CoreProcessId $coreProcessId
+# Authorized scoped activation; preserve the exact artifact and pin after success.
+& infrastructure/dev/Activate-CoreLan.ps1 -CoreProcessId $coreProcessId -Apply -Persist
+# Subsequent start with Core stopped; validate manifest/guards/migrations first.
+& infrastructure/dev/Start-CoreLan.ps1 -ValidateOnly
+& infrastructure/dev/Start-CoreLan.ps1
 & infrastructure/dev/Probe-PiCore.ps1
 ```
 
@@ -48,9 +57,9 @@ newly built parallel AI artifact merely to change the listener. A changed PID,
 artifact or firewall rule requires a fresh review. Failed starts leave private
 logs and a launch manifest under `.run/dev-recovery/sprint03/`; do not reset data.
 
-The automatic approval review rejected actual application in this session as a
-network security-boundary change plus a forced Core restart. Explicit user
-approval was requested. Until that arrives, the repair is prepared, not applied.
+Earlier approval-blocked preparation is historical. The later Sprint04 and
+October31 explicitly authorized guarded activations succeeded. This is not
+authorization to broaden the firewall, expose another runtime or migrate V40.
 
 ## Automated Voice checks after network approval
 
@@ -79,6 +88,14 @@ The configured production path here uses HTTP/JSON with streamed voice turns.
 Experimental PCM/WebSocket modes are not automatically enabled or substituted.
 
 ## Manual microphone/speaker acceptance
+
+The current full German LLM turn is blocked by the pinned binary's h2c request
+failure. After a separately controlled compatible runtime/client update, use
+`Invoke-VeloraProbe.ps1 -Mode capture -CaptureSeconds 15` for a real spoken wake
+and `-Mode manual -Play` for the bounded microphone/dialogue probe. These tools
+restore the previously active Satellite unit and do not replace its installed
+package. A person must verify first audible sound and quality; software timing
+is labelled separately. See the latest report before executing this checklist.
 
 1. Confirm all local services and `Probe-PiCore.ps1` are healthy. Check a fresh
    Gateway heartbeat in System services, not merely `systemctl active`.

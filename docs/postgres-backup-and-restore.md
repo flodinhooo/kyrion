@@ -27,9 +27,11 @@ Verify a specific backup without modifying the production database:
 .\infrastructure\postgres\verify-restore.ps1 -Backup "E:\Kyrion\Data\backups\postgres\kyrion-postgres-YYYYMMDDTHHMMSSZ.dump"
 ```
 
-The verifier checks the manifest checksum, restores into a randomly named
-temporary database, validates successful Flyway history and public tables, then
-removes the temporary database. On success it updates the manifest with the
+The verifier refuses missing manifests before contacting Docker, checks the
+manifest checksum, restores into a randomly named temporary database, validates
+successful Flyway history/public tables and removes the temporary database.
+See [V40 rollout and old-binary rollback boundaries](v40-rollout.md).
+On success it updates the manifest with the
 verification time and observed schema facts. Restore verification does not test
 application behaviour, credentials outside PostgreSQL, provider state or
 gateway/coordinator backups.

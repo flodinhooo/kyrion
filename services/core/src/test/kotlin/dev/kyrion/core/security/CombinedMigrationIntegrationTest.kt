@@ -180,6 +180,65 @@ class CombinedMigrationIntegrationTest {
     }
 
     @Test
+    fun `V40 rollout rehearses real dump restore and retains an unmodified V39 rollback database`() {
+        val suffix = UUID.randomUUID().toString().replace("-", "")
+        val original = "rollout_original_$suffix"
+        val restored = "rollout_restored_$suffix"
+        val dump = "/tmp/rollout_$suffix.dump"
+        val actor = UUID.randomUUID()
+        fun url(database: String) = "jdbc:postgresql://${postgres.host}:${postgres.getMappedPort(5432)}/$database"
+        fun config(database: String, version: String? = null) = Flyway.configure()
+            .dataSource(url(database), postgres.username, postgres.password)
+            .locations("classpath:db/migration").apply { if (version != null) target(version) }.load()
+        fun command(vararg args: String) {
+            val result = postgres.execInContainer(*args)
+            assertThat(result.exitCode).withFailMessage("Isolated rollout command failed: ${args.first()}").isZero()
+        }
+        command("createdb", "-U", postgres.username, original)
+        command("createdb", "-U", postgres.username, restored)
+        try {
+            config(original, "39").migrate()
+            DriverManager.getConnection(url(original), postgres.username, postgres.password).use { connection ->
+                connection.createStatement().use { sql ->
+                    sql.execute("INSERT INTO user_account(id,username,password_hash) VALUES('$actor','synthetic-rollout','fixture-hash')")
+                    sql.execute("""INSERT INTO ai_usage_attempt(id,actor_id,request_id,attempt,provider,profile_id,model_id,period,charged_tokens,estimated_cost,currency,state)
+                        VALUES(gen_random_uuid(),'$actor',gen_random_uuid(),0,'ollama','fixture','fixture','2026-09',116,0.000264,'USD','pending')""")
+                }
+            }
+            command("pg_dump", "-U", postgres.username, "-d", original, "--format=custom", "--file=$dump")
+            command("pg_restore", "-U", postgres.username, "-d", restored, "--exit-on-error", dump)
+            config(restored).migrate()
+            config(restored).validate()
+            for ((database, version) in listOf(original to "39", restored to "40")) {
+                DriverManager.getConnection(url(database), postgres.username, postgres.password).use { connection ->
+                    connection.createStatement().use { sql ->
+                        sql.executeQuery("SELECT MAX(version::int) FROM flyway_schema_history WHERE success").use {
+                            it.next(); assertThat(it.getString(1)).isEqualTo(version)
+                        }
+                        sql.executeQuery("SELECT id,username,password_hash FROM user_account").use {
+                            it.next(); assertThat(it.getObject(1, UUID::class.java)).isEqualTo(actor)
+                            assertThat(it.getString(2)).isEqualTo("synthetic-rollout")
+                            assertThat(it.getString(3)).isEqualTo("fixture-hash")
+                        }
+                        val projection = if (version == "40") "state,charged_tokens,reserved_tokens,estimated_cost,reserved_cost" else "state,charged_tokens,charged_tokens,estimated_cost,estimated_cost"
+                        sql.executeQuery("SELECT $projection FROM ai_usage_attempt").use {
+                            it.next(); assertThat(it.getString(1)).isEqualTo(if (version == "40") "uncertain" else "pending")
+                            assertThat(it.getLong(2)).isEqualTo(116); assertThat(it.getLong(3)).isEqualTo(116)
+                            assertThat(it.getBigDecimal(4)).isEqualByComparingTo("0.000264")
+                            assertThat(it.getBigDecimal(5)).isEqualByComparingTo("0.000264")
+                        }
+                    }
+                }
+            }
+            config(original, "39").validate() // Rollback means returning to preserved V39, never downgrading V40.
+        } finally {
+            command("dropdb", "-U", postgres.username, "--if-exists", restored)
+            command("dropdb", "-U", postgres.username, "--if-exists", original)
+            command("rm", "-f", dump)
+        }
+    }
+
+    @Test
     fun `incompatible already applied feature history fails validation without repair`() {
         val resources = Path.of(javaClass.getResource("/db/migration")!!.toURI())
         Files.list(resources).use { files ->

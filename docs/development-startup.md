@@ -6,6 +6,12 @@ For isolated worktrees and verified configuration loading, use the
 
 ## Single-command Windows development startup
 
+For the current [pinned guarded LAN start and partial Velora results](status/2026-10-31-pi-velora-acceptance.md),
+use `infrastructure/dev/Start-CoreLan.ps1`. It validates the operator manifest,
+unchanged artifact, installed migrations and existing restrictive firewall guards
+before starting. The shared bind remains loopback-safe. Do not select a newly
+built V40 JAR against the existing V39 database.
+
 For approved, firewall-scoped LAN access see [Sprint 04](status/2026-10-30-stabilization-sprint-04.md).
 The shared configuration intentionally stays on loopback: generic starts may use
 a different Java executable. Do not add a global LAN bind to `.env`.
@@ -155,11 +161,18 @@ artifact from a recovery worktree. Select an artifact matching the installed
 database; the helper never repairs Flyway history or disables validation.
 For persistent operator settings, create the ignored, local
 `.run/dev-recovery/settings.json` with optional string fields `coreJar` (absolute
-JAR path) and `piHost` (trusted node hostname/address). Environment overrides take
+JAR path), `piHost` (trusted node hostname/address) and `coreLanManifest` (absolute
+path to an operator-reviewed LAN pin). Environment overrides take
 precedence. These values are never accepted from Web. The helper restricts its
 local state directory and operator-key ACL to the invoking Windows account.
 Core starts from an immutable local copy, so subsequent builds do not replace
 resources beneath a running JVM. This avoids requiring Gradle during startup.
+An opted-in LAN manifest instead selects the fixed guarded Java/launcher and its
+pinned artifact, not the newest build. Both startup paths reject pending or
+mismatched migrations before application launch. Existing helpers retain their
+in-memory settings until a separately safe reload; use the dedicated guarded
+launcher in the meantime. Do not restart a shared helper/WSL stack merely to
+activate this source change. See [V40 rollout preparation](v40-rollout.md).
 Existing Spring environment-file loading remains in effect. The helper inherits
 operator environment variables, including any deliberately configured Core bind.
 

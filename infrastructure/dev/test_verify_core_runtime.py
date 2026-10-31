@@ -20,7 +20,7 @@ def test_read_only_gate_rejects_mismatches_new_migrations_and_active_leases(
 ):
     sql = "CREATE TABLE test(id INT);\r\n-- retained\r\n"
     crc = zlib.crc32("".join(sql.splitlines()).encode())
-    checksum = crc if crc < 2 ** 31 else crc - 2 ** 32
+    checksum = crc if crc < 2**31 else crc - 2**32
     artifact = tmp_path / "runtime.jar"
     with zipfile.ZipFile(artifact, "w") as archive:
         if failure != "missing":
@@ -39,3 +39,26 @@ def test_read_only_gate_rejects_mismatches_new_migrations_and_active_leases(
     monkeypatch.setattr(module, "query", query)
     summary = module.verify(artifact)
     assert summary["safe"] is (failure is None)
+
+
+@pytest.mark.parametrize("installed", [[39], [39, 40]])
+def test_v39_and_v40_artifacts_cannot_cross_the_rollout_boundary(
+    tmp_path, monkeypatch, installed
+):
+    artifact = tmp_path / "runtime.jar"
+    version = 40 if installed == [39] else 39
+    checksum = zlib.crc32(b"SELECT 1;")
+    with zipfile.ZipFile(artifact, "w") as archive:
+        for migration in range(39, version + 1):
+            archive.writestr(
+                f"BOOT-INF/classes/db/migration/V{migration}__synthetic.sql",
+                "SELECT 1;",
+            )
+
+    def query(statement):
+        if "flyway_schema_history" in statement:
+            return "\n".join(f"{migration}|{checksum}|t" for migration in installed)
+        return "0"
+
+    monkeypatch.setattr(module, "query", query)
+    assert module.verify(artifact)["safe"] is False

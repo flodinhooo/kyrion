@@ -9,6 +9,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from kyrion_voice_satellite.http_transport import open_core_url
+
 
 class CoreVoiceError(RuntimeError):
     pass
@@ -86,7 +88,7 @@ class CoreVoiceClient:
         restart_session = False
         pending_action = False
         try:
-            with urllib.request.urlopen(request, timeout=180) as response:
+            with open_core_url(request, timeout=180) as response:
                 for raw_line in response:
                     if not raw_line.strip():
                         continue
@@ -157,7 +159,7 @@ class CoreVoiceClient:
     ) -> dict:
         request = self._build_request(method, path, body, content_type, extra_headers)
         try:
-            with urllib.request.urlopen(request, timeout=90) as response:
+            with open_core_url(request, timeout=90) as response:
                 payload = response.read()
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as error:
             raise CoreVoiceError("Core voice request failed") from error

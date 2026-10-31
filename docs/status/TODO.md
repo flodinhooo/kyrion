@@ -1,5 +1,12 @@
 # Kyrion Development TODO
 
+Latest Pi/Velora work: [October31 guarded LAN repair and partial hardware results](2026-10-31-pi-velora-acceptance.md).
+Pi IPv4/Core health/authenticated sessions and a same-artifact guarded restart
+are verified. Physical capture works; full Voice is blocked by runtime h2c/IPv6
+compatibility fixes that are prepared but not deployed, plus on-site acoustic
+observation. [V40 rollout](../v40-rollout.md) is rehearsed with isolated synthetic
+dump/restore only; active V39 and cloud-spending boundaries remain intact.
+
 Current K-AI accounting/acceptance continuation:
 [durable accounting follow-up](2026-10-31-kai-accounting.md) and
 [operator investigation / Cloud / Velora checklists](../kai-accounting-and-acceptance.md).

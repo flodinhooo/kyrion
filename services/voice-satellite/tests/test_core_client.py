@@ -34,7 +34,7 @@ def test_open_session_calibrates_satellite_clock_to_core(tmp_path):
     }])
 
     with (
-        patch("urllib.request.urlopen", return_value=response),
+        patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response),
         patch("time.time_ns", return_value=1_100_000_000),
     ):
         session = CoreVoiceClient("http://core", "satellite", credential).open_session()
@@ -51,7 +51,7 @@ def test_greeting_returns_valid_server_resolved_wav(tmp_path):
         "audioBase64": base64.b64encode(wav).decode(),
     }])
 
-    with patch("urllib.request.urlopen", return_value=response):
+    with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         audio = CoreVoiceClient("http://core", "satellite", credential).greeting(
             "session", "de",
         )
@@ -68,7 +68,7 @@ def test_greeting_rejects_invalid_audio(tmp_path):
     }])
 
     with (
-        patch("urllib.request.urlopen", return_value=response),
+        patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response),
         pytest.raises(CoreVoiceError, match="invalid greeting"),
     ):
         CoreVoiceClient("http://core", "satellite", credential).greeting("session", "de")
@@ -93,7 +93,7 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
     )
     played: list[bytes] = []
 
-    with patch("urllib.request.urlopen", return_value=response):
+    with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
             "session", b"RIFF-audio", "de", played.append, "turn-id",
         )
@@ -133,7 +133,7 @@ def test_turn_acknowledges_required_playback_only_after_playing(tmp_path):
             return acknowledgement
         return response
 
-    with patch("urllib.request.urlopen", side_effect=urlopen):
+    with patch("kyrion_voice_satellite.core_client.open_core_url", side_effect=urlopen):
         CoreVoiceClient("http://core", "satellite", credential).turn(
             "session",
             b"RIFF-audio",
@@ -168,7 +168,7 @@ def test_pending_action_executes_only_after_processing_playback(tmp_path):
             return completion
         return response
 
-    with patch("urllib.request.urlopen", side_effect=urlopen):
+    with patch("kyrion_voice_satellite.core_client.open_core_url", side_effect=urlopen):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
             "session",
             b"RIFF-audio",
@@ -196,7 +196,7 @@ def test_turn_exposes_requested_session_restart(tmp_path):
         },
     ])
 
-    with patch("urllib.request.urlopen", return_value=response):
+    with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
             "session", b"RIFF-audio", "de", lambda _audio: None, "turn-id",
         )

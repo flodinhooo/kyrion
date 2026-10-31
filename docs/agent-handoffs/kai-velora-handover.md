@@ -1,5 +1,12 @@
 # K-AI / Velora agent handoff
 
+> Later October31 continuation: [Pi network / partial Velora acceptance](../status/2026-10-31-pi-velora-acceptance.md).
+> Guarded V39 LAN startup, Pi authentication, capture and controlled restart are
+> verified. Full speech-to-LLM output is blocked by the pinned binary's h2c422
+> issue; source fixes and IPv4-first bounded Satellite dialing are tested, not
+> deployed. Human wake/audibility and normal installed-client recovery remain
+> open. [V40 rollout preparation](../v40-rollout.md) uses isolated fixtures only.
+
 > Continuation, 2026-10-31: the integrated `master` checkpoint and subsequent
 > accounting fixes supersede the historical software-baseline/operational state
 > below. Read [the accounting continuation](../status/2026-10-31-kai-accounting.md)

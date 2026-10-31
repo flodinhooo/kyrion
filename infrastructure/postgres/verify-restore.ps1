@@ -13,6 +13,9 @@ $verificationId = [Guid]::NewGuid().ToString("N")
 $verificationDatabase = "kyrion_restore_verify_$verificationId"
 $containerBackup = "/tmp/$verificationDatabase.dump"
 
+if (!(Test-Path -LiteralPath $manifestPath)) {
+    throw 'BACKUP_MANIFEST_REQUIRED: checksum verification is mandatory before restore.'
+}
 if (Test-Path -LiteralPath $manifestPath) {
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $backupPath).Hash.ToLowerInvariant()

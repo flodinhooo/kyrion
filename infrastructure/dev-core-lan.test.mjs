@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {readFileSync, existsSync} from 'node:fs';
+import {readFileSync, existsSync, mkdtempSync, writeFileSync, unlinkSync, rmdirSync} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 
@@ -14,13 +16,44 @@ test('LAN preparation and activation guard parse without executing a network cha
     const result = powershell(`$ErrorActionPreference='Stop';
       foreach($file in @('infrastructure/dev/Prepare-CoreLan.ps1','infrastructure/dev/Set-CoreLan.ps1',
         'infrastructure/dev/Install-CoreLanGuards.ps1','infrastructure/dev/Invoke-CoreLanGuardsAdmin.ps1',
-        'infrastructure/dev/Activate-CoreLan.ps1')) {
+        'infrastructure/dev/Activate-CoreLan.ps1','infrastructure/dev/Start-CoreLan.ps1',
+        'infrastructure/dev/Test-CoreLanGuards.ps1','infrastructure/dev/Invoke-VeloraProbe.ps1')) {
         $errors=$null;
         [void][System.Management.Automation.Language.Parser]::ParseFile(
           (Join-Path $PWD $file),[ref]$null,[ref]$errors);
         if($errors){throw 'SCRIPT_PARSE_FAILED'}
       }; 'PARSED'`);
     assert.match(result, /PARSED/);
+  });
+
+test('guarded Core manifest refuses malformed versions and artifacts outside the runtime',
+  {skip: process.platform !== 'win32'}, () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'kyrion-pin-test-'));
+    const manifest = path.join(directory, 'manifest.json');
+    try {
+      for (const version of ['1', true, 1]) {
+        writeFileSync(manifest, JSON.stringify({version, artifact: path.join(root, 'README.md'), artifactSha256: 'a'.repeat(64)}));
+        const result = powershell(`. ./infrastructure/dev/Test-CoreLanGuards.ps1;
+          try { Read-CoreLanManifest -Root $PWD -Manifest '${manifest.replaceAll("'", "''")}'; throw 'ACCEPTED_INVALID_PIN' }
+          catch { if ($_.Exception.Message -notmatch 'INVALID_CORE_LAN_MANIFEST|PINNED_CORE_ARTIFACT_MISMATCH') {throw}; 'REJECTED' }`);
+        assert.match(result, /REJECTED/);
+      }
+    } finally { unlinkSync(manifest); rmdirSync(directory); }
+  });
+
+test('restore verification requires a checksum manifest before contacting any container',
+  {skip: process.platform !== 'win32'}, () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'kyrion-restore-test-'));
+    const backup = path.join(directory, 'synthetic.dump');
+    writeFileSync(backup, 'synthetic');
+    try {
+      const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-File',
+        'infrastructure/postgres/verify-restore.ps1', '-Backup', backup, '-Container', 'must-not-be-contacted'],
+        {cwd: root, encoding: 'utf8', timeout: 10000});
+      assert.equal(result.error, undefined);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /BACKUP_MANIFEST_REQUIRED/);
+    } finally { unlinkSync(backup); rmdirSync(directory); }
   });
 
 test('non-Pi guard covers all IPv4 except loopback and exactly the two Pi addresses', () => {

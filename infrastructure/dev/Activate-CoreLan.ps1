@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][int]$CoreProcessId, [switch]$Apply)
+param([Parameter(Mandatory=$true)][int]$CoreProcessId, [switch]$Apply, [switch]$Persist)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $review = & (Join-Path $PSScriptRoot 'Set-CoreLan.ps1') -CoreProcessId $CoreProcessId | ConvertFrom-Json
@@ -11,25 +11,8 @@ if (!$Apply) {
 }
 # Only the explicitly approved listener, same JAR and verified Core process.
 $names = @('Kyrion-CoreLan-Guard-NonPi-v1','Kyrion-CoreLan-Guard-NonPrivate-v1')
-$expectedRanges = Get-Content (Join-Path $PSScriptRoot 'core-lan-guard-addresses.json') -Raw | ConvertFrom-Json
-# Load the same normalization helper without installing or modifying any rule.
-. (Join-Path $PSScriptRoot 'Install-CoreLanGuards.ps1') | Out-Null
-foreach ($name in $names) {
-    $rule = Get-NetFirewallRule -PolicyStore ActiveStore -Name $name -ErrorAction Stop
-    $application = $rule | Get-NetFirewallApplicationFilter
-    $port = $rule | Get-NetFirewallPortFilter
-    $address = $rule | Get-NetFirewallAddressFilter
-    $expectedProfile = if ($name -eq $names[0]) { 'Any' } else { 'Domain, Public' }
-    $expectedRemote = if ($name -eq $names[0]) { $expectedRanges } else { @('Any') }
-    if ($rule.Enabled.ToString() -ne 'True' -or $rule.Action.ToString() -ne 'Block' -or $rule.Direction.ToString() -ne 'Inbound' -or
-        $rule.PrimaryStatus.ToString() -ne 'OK' -or $rule.Profile.ToString() -ne $expectedProfile -or
-        $application.Program -ine $java -or $port.Protocol -ne 'TCP' -or $port.LocalPort -ne '8080' -or
-        (Compare-Object @($address.RemoteAddress | ForEach-Object { ConvertTo-CoreFirewallAddress $_ } | Sort-Object) @($expectedRemote | ForEach-Object { ConvertTo-CoreFirewallAddress $_ } | Sort-Object))) {
-        throw 'EFFECTIVE_FIREWALL_GUARD_MISMATCH'
-    }
-}
-$profiles = Get-NetFirewallProfile -PolicyStore ActiveStore
-if ($profiles | Where-Object { $_.Enabled.ToString() -ne 'True' -or $_.DefaultInboundAction.ToString() -ne 'Block' }) { throw 'FIREWALL_DISABLED_OR_UNSAFE' }
+. (Join-Path $PSScriptRoot 'Test-CoreLanGuards.ps1')
+$java = Assert-CoreLanGuards -Root $root
 & python.exe (Join-Path $PSScriptRoot 'Verify-CoreRuntime.py') $review.artifact
 if ($LASTEXITCODE -ne 0) { throw 'RUNTIME_MIGRATION_OR_LEASE_CHECK_FAILED' }
 $current = Get-CimInstance Win32_Process -Filter "ProcessId=$CoreProcessId"
@@ -75,6 +58,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'PI_CORE_ACCEPTANCE_FAILED' }
     & node.exe (Join-Path $root 'infrastructure/dev-stack.mjs') status
     if ($LASTEXITCODE -ne 0) { throw 'LOCAL_STACK_ACCEPTANCE_FAILED' }
+    if ($Persist) {
+        $pin = @{version=1; artifact=$copy; artifactSha256=$review.artifactSha256} | ConvertTo-Json
+        [IO.File]::WriteAllText((Join-Path $root '.run/dev-recovery/core-lan.json'), $pin, [Text.UTF8Encoding]::new($false))
+    }
     # Scope the bind to this verified executable. The existing recovery helper
     # may launch a different Java; a global .env override would evade these
     # program-scoped guards on a later start. Default restarts stay on loopback.
