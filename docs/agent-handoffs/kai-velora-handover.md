@@ -1,5 +1,13 @@
 # K-AI / Velora agent handoff
 
+> Latest authorized continuation: [V39 local rollout](../status/2026-10-31-velora-local-rollout.md).
+> HTTP/1.1 is now active in V39 compatibility commit `a30321c`; the corrected
+> installed Satellite completed two digital German local-model dialogs with Pi
+> playback, usage and closure. Live schema remains39. Master/V40 tests pass but
+> V40 is not deployed. Human wake/audibility, Gateway's stale local heartbeat,
+> stream latency and full-host startup remain open. The report records exact
+> active hashes, helper reload interruption, measured timings and rollback paths.
+
 > Later October31 continuation: [Pi network / partial Velora acceptance](../status/2026-10-31-pi-velora-acceptance.md).
 > Guarded V39 LAN startup, Pi authentication, capture and controlled restart are
 > verified. Full speech-to-LLM output is blocked by the pinned binary's h2c422

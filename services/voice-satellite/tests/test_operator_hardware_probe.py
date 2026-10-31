@@ -45,3 +45,15 @@ def test_software_status_never_claims_audibility_or_first_model_token(monkeypatc
     assert result["firstAudibleAudioMs"] is None
     assert result["firstModelOutputMs"] is None
     assert result["microphoneOpened"] is False
+
+
+def test_processing_audio_does_not_mark_answer_or_first_model_output():
+    result = {}
+    module.observe_event(result, {"type": "audio.chunk"}, 10)
+    assert result == {}
+    module.observe_event(result, {"type": "transcript"}, 20)
+    module.observe_event(result, {"type": "model.first_delta"}, 30)
+    assert result == {"captureEndToTranscriptMs": 20, "firstModelOutputMs": 30}
+    module.observe_event(result, {"type": "answer.started"}, 40)
+    assert result["answerStarted"] is True
+    assert "captureEndToAnswerAudioMs" not in result

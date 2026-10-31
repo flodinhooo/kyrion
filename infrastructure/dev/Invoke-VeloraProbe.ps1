@@ -4,6 +4,7 @@ param(
     [ValidateSet(3,5,15)][int]$CaptureSeconds=3,
     [string]$Fixture,
     [switch]$Play,
+    [switch]$InstalledClient,
     [string]$PiHost
 )
 $ErrorActionPreference='Stop'
@@ -12,7 +13,7 @@ if (!$PiHost) { $PiHost=(Get-Content (Join-Path $root '.run/dev-recovery/setting
 if ($PiHost -notmatch '^[a-zA-Z0-9.-]+$') { throw 'INVALID_TRUSTED_HOST' }
 if ($Mode -eq 'fixture' -and !$Fixture) { throw 'FIXTURE_REQUIRED' }
 $files=@{}
-foreach ($name in @('core_client.py','http_transport.py')) {
+foreach ($name in $(if ($InstalledClient) { @() } else { @('core_client.py','http_transport.py') })) {
     $files[$name]=[IO.File]::ReadAllText((Join-Path $root "services/voice-satellite/src/kyrion_voice_satellite/$name"))
 }
 $scriptName=if ($Mode -eq 'session') { 'Probe-VoiceSession.py' } else { 'Probe-VeloraHardware.py' }
@@ -50,7 +51,7 @@ try:
   if payload['fixture']:
    fixture=path/'synthetic.wav'; fixture.write_bytes(base64.b64decode(payload['fixture']))
    sys.argv+=['--fixture',str(fixture)]
-  print(json.dumps({'sdkScope':'operator_process_only','installedPackageChanged':False}),flush=True)
+  print(json.dumps({'sdkScope':'operator_process_only' if payload['files'] else 'installed_client','installedPackageChanged':False}),flush=True)
   runpy.run_path(str(script),run_name='__main__')
 finally:
  if stopped: subprocess.run(['systemctl','--user','start',unit],check=True,timeout=10)

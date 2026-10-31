@@ -188,7 +188,8 @@ class VoiceDialogueService(
                     session.conversationId,
                     userMessage.id,
                     locale,
-                    turnId
+                    turnId,
+                    onFirstDelta = { emit(VoiceTurnEvent(type = "model.first_delta")) },
                 ) { satellites.activeSession(satelliteId, credential, sessionId) },
             )
         }
@@ -201,6 +202,7 @@ class VoiceDialogueService(
                 locale,
             ),
         )
+        emit(VoiceTurnEvent(type = "answer.started"))
         emitAudio(responsePlan, turnId, emit, playbackScope = sessionId.toString()) {
             satellites.activeSession(satelliteId, credential, sessionId)
         }
@@ -248,6 +250,7 @@ class VoiceDialogueService(
         userMessageId: UUID,
         locale: String,
         turnId: String,
+        onFirstDelta: () -> Unit,
         validateActive: () -> Unit,
     ): String {
         voiceEvent(turnId, "llm_request")
@@ -258,6 +261,7 @@ class VoiceDialogueService(
                 userMessageId,
                 locale,
                 personalContextAllowed = false,
+                onFirstDelta = onFirstDelta,
                 validateActive = validateActive
             )
                 .also { voiceEvent(turnId, "llm_complete") }

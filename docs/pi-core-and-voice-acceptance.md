@@ -1,5 +1,14 @@
 # Pi-to-Windows Core and Voice acceptance
 
+Current local runtime: [authorized V39 Voice rollout](status/2026-10-31-velora-local-rollout.md).
+Use `Invoke-VeloraProbe.ps1 -InstalledClient` for installed-client acceptance;
+the default temporary source overlay is only a diagnostic scope. Voice streams
+now add `model.first_delta` and `answer.started` events; clients ignore unknown
+events. The first marks the first nonempty model delta, the second separates
+answer audio from processing audio. Pi receipt timestamps can lag server events
+and are not acoustic timestamps. Human audibility/wake and a fresh authenticated
+Gateway heartbeat remain separate gates.
+
 > Latest: [October31 network repair and measured partial hardware acceptance](status/2026-10-31-pi-velora-acceptance.md).
 > The guarded V39 LAN listener is active and restart-tested. IPv6-first Satellite
 > dialing and Core h2c/HTTP422 fixes are prepared in source, not deployed. Complete

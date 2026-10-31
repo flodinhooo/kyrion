@@ -1,5 +1,17 @@
 # Kyrion Development TODO
 
+Latest authorized local rollout: [V39 Voice activation and digital dialogs](2026-10-31-velora-local-rollout.md).
+- [x] Activate the HTTP/1.1 fix in a clean pre-V40 Core artifact; retain schema39 and guarded hash pin.
+- [x] Install bounded IPv4-first Satellite dialing with a rollback backup and unchanged credentials/config.
+- [x] Complete two German digital STT/Gemma/TTS/Pi playback turns, persist usage once each, close sessions and verify idle reconnect without extra usage.
+- [x] Reload the helper and prove it restarts the pinned Core; recover its interrupted AI/STT/TTS children and verify all seven services.
+- [ ] Human wake word, two audible dialogs and acoustic latency/quality.
+- [ ] Privileged Gateway configuration diagnosis: journal success does not match this Core's stale heartbeat.
+- [ ] Investigate delayed Pi stream-event delivery; isolate helper child lifetime; full host cold-start proof.
+- [ ] Separately authorize V40 migration and real cloud spending/acceptance.
+
+The earlier October31 report below is historical; its inactive-fix statements are superseded.
+
 Latest Pi/Velora work: [October31 guarded LAN repair and partial hardware results](2026-10-31-pi-velora-acceptance.md).
 Pi IPv4/Core health/authenticated sessions and a same-artifact guarded restart
 are verified. Physical capture works; full Voice is blocked by runtime h2c/IPv6

@@ -327,6 +327,7 @@ class AiOrchestrationService(
         locale: String,
         knowledgeEnabled: Boolean = false,
         personalContextAllowed: Boolean = false,
+        onFirstDelta: () -> Unit = {},
         validateActive: () -> Unit = {}
     ): String {
         val prepared = prepare(
@@ -339,7 +340,11 @@ class AiOrchestrationService(
             validateActive()
             val event = aiJson.readTree(raw)
             if (event.path("type").asText() == "error") throw AiFailure(event.path("code").asText(), 503)
-            if (event.path("type").asText() == "message.delta") result.append(event.path("delta").asText())
+            if (event.path("type").asText() == "message.delta") {
+                val delta = event.path("delta").asText()
+                if (result.isEmpty() && delta.isNotEmpty()) onFirstDelta()
+                result.append(delta)
+            }
         }
         return result.toString().takeIf { it.isNotBlank() } ?: throw AiFailure("MODEL_UNAVAILABLE", 503)
     }

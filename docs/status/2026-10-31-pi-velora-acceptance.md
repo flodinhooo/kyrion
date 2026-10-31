@@ -1,5 +1,9 @@
 # Pi/Core network repair and bounded Velora acceptance
 
+Latest: [authorized V39 rollout and successful digital dialogs](2026-10-31-velora-local-rollout.md)
+supersedes the inactive Core/Satellite fixes and helper-runtime state below.
+This earlier report remains evidence for the initial network diagnosis.
+
 Date: 2026-10-31. Starting branch/revision: `master` / `4e31188`.
 The existing dirty Calendar/HA worktree and other worktrees were preserved.
 The active database remains V39; no candidate application, V40 migration or

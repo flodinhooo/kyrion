@@ -87,3 +87,6 @@ benchmark-outputs/
 /voice-streaming-boundary-optimization/**/*.json
 playwright-report/
 test-results/
+
+# Local pre-V40 compatibility build checkout; its source is committed on its branch.
+/.worktrees/core-v39-compat/

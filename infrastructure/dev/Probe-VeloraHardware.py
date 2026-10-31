@@ -43,6 +43,16 @@ def fixture_audio(path: Path) -> bytes:
     return data
 
 
+def observe_event(result: dict, event: dict, elapsed_ms: int) -> None:
+    event_type = event.get("type")
+    if event_type == "transcript":
+        result.setdefault("captureEndToTranscriptMs", elapsed_ms)
+    elif event_type == "model.first_delta":
+        result["firstModelOutputMs"] = elapsed_ms
+    elif event_type == "answer.started":
+        result["answerStarted"] = True
+
+
 def probe(args) -> dict:
     config = SatelliteConfig.load(Path.home() / ".config/kyrion/voice-satellite.json")
     result = {
@@ -52,6 +62,10 @@ def probe(args) -> dict:
         "audibilityVerified": False,
         "firstAudibleAudioMs": None,
         "firstModelOutputMs": None,
+        "modelTimingBasis": "pi_stream_event_received",
+        "inputTimingBoundary": "fixture_request_start"
+        if args.fixture
+        else "vad_capture_returned",
         "deviceExecutionPermitted": False,
         "inputSource": "synthetic_wav" if args.fixture else "microphone",
     }
@@ -95,6 +109,12 @@ def probe(args) -> dict:
     try:
         if args.fixture:
             wav = fixture_audio(args.fixture)
+            with wave.open(io.BytesIO(wav)) as source:
+                pcm = source.readframes(source.getnframes())
+            result["fixtureVadSpeechFrames"] = sum(
+                int(vad.is_speech(pcm[index : index + 2560]))
+                for index in range(0, len(pcm) - 2559, 2560)
+            )
         else:
             greeting = client.greeting(session.id, config.locale)
             if args.play:
@@ -131,9 +151,10 @@ def probe(args) -> dict:
 
             def __iter__(self):
                 for line in self.response:
-                    if line.strip() and json.loads(line).get("type") == "transcript":
-                        result.setdefault(
-                            "captureEndToTranscriptMs",
+                    if line.strip():
+                        observe_event(
+                            result,
+                            json.loads(line),
                             round((time.monotonic() - started) * 1000),
                         )
                     yield line
@@ -150,17 +171,39 @@ def probe(args) -> dict:
             )
 
         def play(audio):
+            with wave.open(io.BytesIO(audio)) as received:
+                if received.getnframes() < 1:
+                    raise ValueError("EMPTY_RESPONSE_AUDIO")
+            answer = result.get("answerStarted", False)
+            result["answerAudioChunks" if answer else "processingAudioChunks"] = (
+                result.get(
+                    "answerAudioChunks" if answer else "processingAudioChunks", 0
+                )
+                + 1
+            )
+            if answer:
+                result.setdefault(
+                    "captureEndToAnswerAudioMs",
+                    round((time.monotonic() - started) * 1000),
+                )
             result.setdefault(
                 "captureEndToFirstAudioReceivedMs",
                 round((time.monotonic() - started) * 1000),
             )
             if args.play:
+                if answer:
+                    result.setdefault(
+                        "captureEndToAnswerPlaybackMs",
+                        round((time.monotonic() - started) * 1000),
+                    )
                 result.setdefault(
                     "captureEndToPlaybackProcessMs",
                     round((time.monotonic() - started) * 1000),
                 )
                 PipeWirePlayback(config.playback_target).play(audio)
                 result["playbackCompleted"] = True
+                if answer:
+                    result["answerPlaybackCompleted"] = True
 
         turn_id = str(uuid.uuid4())
         result["turnId"] = turn_id
@@ -182,6 +225,9 @@ def probe(args) -> dict:
             turnCompleted=True,
             totalTurnMs=round((time.monotonic() - started) * 1000),
         )
+        if args.fixture:
+            result["syntheticTranscript"] = turn.transcript
+            result["syntheticResponse"] = turn.response_text
     finally:
         client.close_session(session.id, "explicit")
     return result
