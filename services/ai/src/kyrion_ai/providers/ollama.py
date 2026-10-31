@@ -20,6 +20,7 @@ from kyrion_ai.contracts import (
 from kyrion_ai.model_contracts import ModelProfile, TokenUsage, ToolCall
 from kyrion_ai.providers.http_stream import ProviderFailure, count, object_value, text
 from kyrion_ai.tools import validate_call
+from kyrion_ai.voice_trace import mark
 
 
 class _OllamaModelDetails(BaseModel):
@@ -262,6 +263,20 @@ class OllamaProvider:
                         seen_calls.add(call.id)
                         yield ChatEvent(type="tool.call", tool_call=call)
                     if chunk.get("done"):
+                        mark(
+                            "ollama.completed",
+                            **{
+                                key: chunk[key]
+                                for key in (
+                                    "load_duration",
+                                    "prompt_eval_duration",
+                                    "eval_duration",
+                                    "prompt_eval_count",
+                                    "eval_count",
+                                )
+                                if isinstance(chunk.get(key), int)
+                            },
+                        )
                         if "prompt_eval_count" in chunk or "eval_count" in chunk:
                             yield ChatEvent(
                                 type="usage",

@@ -2077,6 +2077,26 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `voice timing disconnect before invocation releases its reservation without calling provider`() {
+        val token = setupToken()
+        val actor = authentication.authenticate(token)!!.id
+        for (stage in listOf("context.completed", "model.dispatch")) {
+            val conversation = UUID.randomUUID()
+            val message = UUID.randomUUID()
+            startHttpTurn(token, conversation, message, "Synthetic timing cancellation", "2026-10-31T12:00:00Z")
+            assertThatThrownBy {
+                aiOrchestration.voice(actor, conversation, message, "de", onStage = {
+                    if (it == stage) throw java.io.IOException("synthetic timing disconnect")
+                })
+            }.isInstanceOf(java.io.IOException::class.java)
+            assertThat(aiUsage.summary(actor).chargedTokens).isZero()
+            assertThat(aiGateway.payloads).isEmpty()
+        }
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM ai_usage_attempt WHERE state='pending'")
+            .query(Int::class.java).single()).isZero()
+    }
+
+    @Test
     fun `AI generation observes usage server side prevents replay and uses actual local voice preference`() {
         val token = setupToken();
         val actor = authentication.authenticate(token)!!.id

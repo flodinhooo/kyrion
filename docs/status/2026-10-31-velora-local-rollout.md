@@ -1,5 +1,9 @@
 # Controlled V39 Voice compatibility rollout
 
+Later continuation: [Voice latency measurement and activated sentence TTS](2026-10-31-voice-latency.md)
+supersedes the active hash and unresolved stream-latency status below. This report
+remains the original V39/Satellite rollout and recovery evidence.
+
 Date: 2026-10-31. Primary checkout: `master`, starting at `e2ecdcc`.
 This report supersedes the inactive-fix/runtime sections of the earlier
 [Pi acceptance report](2026-10-31-pi-velora-acceptance.md), retaining its history.

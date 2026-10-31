@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import array
+import http.client
 import io
 import json
 import math
@@ -49,6 +50,15 @@ def observe_event(result: dict, event: dict, elapsed_ms: int) -> None:
         result.setdefault("captureEndToTranscriptMs", elapsed_ms)
     elif event_type == "model.first_delta":
         result["firstModelOutputMs"] = elapsed_ms
+    elif event_type == "timing":
+        result.setdefault("coreEvents", []).append(
+            {
+                "stage": event.get("stage"),
+                "coreElapsedMs": event.get("elapsedMs"),
+                "piReceivedMs": elapsed_ms,
+                "correlationId": event.get("correlationId"),
+            }
+        )
     elif event_type == "answer.started":
         result["answerStarted"] = True
 
@@ -137,6 +147,16 @@ def probe(args) -> dict:
             wav = pcm_to_wav(utterance.pcm)
         started = time.monotonic()
         original_open = core_client.open_core_url
+        original_send = http.client.HTTPConnection.send
+        sending_turn = False
+
+        def observed_send(connection, data):
+            original_send(connection, data)
+            if sending_turn:
+                result["inputUploadEndMs"] = round((time.monotonic() - started) * 1000)
+                result["inputUploadedBytes"] = result.get(
+                    "inputUploadedBytes", 0
+                ) + len(data)
 
         class ObservedResponse:
             def __init__(self, response):
@@ -163,7 +183,14 @@ def probe(args) -> dict:
                 return self.response.read(*values)
 
         def observed_open(request, **values):
-            response = original_open(request, **values)
+            nonlocal sending_turn
+            sending_turn = request.full_url.endswith("/turns")
+            try:
+                response = original_open(request, **values)
+            finally:
+                sending_turn = False
+            if request.full_url.endswith("/turns"):
+                result["responseHeadersMs"] = round((time.monotonic() - started) * 1000)
             return (
                 ObservedResponse(response)
                 if request.full_url.endswith("/turns")
@@ -204,10 +231,14 @@ def probe(args) -> dict:
                 result["playbackCompleted"] = True
                 if answer:
                     result["answerPlaybackCompleted"] = True
+            if answer and getattr(args, "abort_after_answer", False):
+                result["abortedAfterAnswer"] = True
+                raise core_client.CoreVoiceError("OPERATOR_ABORT_AFTER_FIRST_ANSWER")
 
         turn_id = str(uuid.uuid4())
         result["turnId"] = turn_id
         core_client.open_core_url = observed_open
+        http.client.HTTPConnection.send = observed_send
         try:
             turn = client.turn(session.id, wav, config.locale, play, turn_id)
         except (OSError, RuntimeError, ValueError) as error:
@@ -219,6 +250,7 @@ def probe(args) -> dict:
             return result
         finally:
             core_client.open_core_url = original_open
+            http.client.HTTPConnection.send = original_send
         result.update(
             transcriptChars=len(turn.transcript),
             responseChars=len(turn.response_text),
@@ -230,6 +262,7 @@ def probe(args) -> dict:
             result["syntheticResponse"] = turn.response_text
     finally:
         client.close_session(session.id, "explicit")
+        result["sessionClosed"] = True
     return result
 
 
@@ -241,6 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("--dialogue", action="store_true")
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--play", action="store_true")
+    parser.add_argument("--abort-after-answer", action="store_true")
     arguments = parser.parse_args()
     try:
         summary = probe(arguments)

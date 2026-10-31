@@ -33,6 +33,7 @@ from kyrion_ai.voice_responses import (
     VoiceResponseAudioResolver,
     VoiceResponseResolutionError,
 )
+from kyrion_ai.voice_trace import mark, measured_call, scope
 
 settings = Settings.from_environment()
 provider = OllamaProvider(settings)
@@ -123,8 +124,17 @@ async def transcribe(request: Request) -> Response:
             "Rejected speech container length=%d header=%s", len(audio), audio[:12].hex()
         )
         return JSONResponse({"code": "INVALID_AUDIO"}, status_code=400)
+    with scope(request.headers.get("x-kyrion-correlation-id")):
+        mark("stt.accepted", bytes=len(audio))
     try:
-        text = await run_in_threadpool(speech.transcribe, audio, locale)
+        text = await run_in_threadpool(
+            measured_call,
+            request.headers.get("x-kyrion-correlation-id"),
+            "stt",
+            speech.transcribe,
+            audio,
+            locale,
+        )
     except InvalidAudioError:
         logger.warning(
             "Rejected speech WAV structure length=%d header=%s", len(audio), audio[:12].hex()
@@ -151,9 +161,17 @@ async def synthesize(request: SynthesisRequest) -> Response:
 
 
 @app.post("/v1/speech/resolve-response")
-async def resolve_voice_response(request: VoiceResponsePlan) -> Response:
+async def resolve_voice_response(request: VoiceResponsePlan, http_request: Request) -> Response:
+    with scope(http_request.headers.get("x-kyrion-correlation-id")):
+        mark("tts.accepted", characters=len(request.rendered_text))
     try:
-        resolved = await run_in_threadpool(voice_responses.resolve, request)
+        resolved = await run_in_threadpool(
+            measured_call,
+            http_request.headers.get("x-kyrion-correlation-id"),
+            "tts",
+            voice_responses.resolve,
+            request,
+        )
     except (SpeechUnavailableError, VoiceResponseResolutionError):
         return JSONResponse({"code": "TTS_UNAVAILABLE"}, status_code=503)
     logger.info(
@@ -203,7 +221,7 @@ async def benchmark_model(request: ModelBenchmarkRequest) -> ModelBenchmarkResul
 
 
 @app.post("/v1/chat/stream", response_class=StreamingResponse)
-async def stream_chat(request: ChatRequest) -> Response:
+async def stream_chat(request: ChatRequest, http_request: Request) -> Response:
     if request.knowledge_context and request.cloud_consent:
         return JSONResponse({"code": "CONTEXT_NOT_ALLOWED"}, status_code=403)
     try:
@@ -212,8 +230,19 @@ async def stream_chat(request: ChatRequest) -> Response:
         return JSONResponse({"code": error.code}, status_code=400)
 
     async def events() -> AsyncIterator[bytes]:
-        async for event in models.stream_chat(request):
-            yield event.to_ndjson()
+        with scope(http_request.headers.get("x-kyrion-correlation-id")):
+            mark("model.dispatch")
+            first = True
+            async for event in models.stream_chat(request):
+                first_delta = event.type == "message.delta" and first
+                if first_delta:
+                    mark("model.first_delta")
+                    first = False
+                if event.type in {"message.completed", "error"}:
+                    mark("model." + event.type)
+                yield event.to_ndjson()
+                if first_delta:
+                    mark("model.first_delta.forwarded")
 
     return StreamingResponse(
         events(),

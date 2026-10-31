@@ -21,6 +21,7 @@ from kyrion_ai.streaming_tts import (
     TtsStreamAudio,
     ValidatedStreamingTts,
 )
+from kyrion_ai.voice_trace import correlation, mark
 
 logger = logging.getLogger("uvicorn.error.kyrion-ai.tts")
 
@@ -198,6 +199,18 @@ class SpeechService:
             "/v1/synthesize",
             force_batch=force_batch,
             json={"text": text, "voiceId": voice_id},
+            headers={"X-Kyrion-Correlation-Id": correlation.get()} if correlation.get() else {},
+        )
+        mark(
+            "tts.backend_completed",
+            **{
+                key: int(response.headers[header])
+                for key, header in (
+                    ("queue_ms", "x-kyrion-tts-queue-ms"),
+                    ("compute_ms", "x-kyrion-tts-compute-ms"),
+                )
+                if response.headers.get(header, "").isdigit()
+            },
         )
         if not response.content.startswith(b"RIFF"):
             raise SpeechUnavailableError("Local HTTP TTS returned invalid audio")

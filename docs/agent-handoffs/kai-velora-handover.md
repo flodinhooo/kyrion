@@ -1,5 +1,12 @@
 # K-AI / Velora agent handoff
 
+Latest latency continuation: [measured Voice timing and sentence TTS](../status/2026-10-31-voice-latency.md).
+Core/AI/TTS now carry UUID-only monotonic timing. Dynamic answers are synthesized
+as ordered sentences with explicit servlet flushing; selected model and voice
+are unchanged. Read the report for final active V39 pin, cold/warm timings,
+reservation-disconnect regression and rollback. Schema remains39; cloud and
+human wake/audibility acceptance remain open. Gateway's local heartbeat is stale.
+
 > Latest authorized continuation: [V39 local rollout](../status/2026-10-31-velora-local-rollout.md).
 > HTTP/1.1 is now active in V39 compatibility commit `a30321c`; the corrected
 > installed Satellite completed two digital German local-model dialogs with Pi

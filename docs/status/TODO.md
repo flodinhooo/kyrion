@@ -1,5 +1,13 @@
 # Kyrion Development TODO
 
+Latest Voice performance work: [latency evidence and local activation](2026-10-31-voice-latency.md).
+- [x] Trace upload, STT, context, first provider delta, stream publication, TTS queue/compute and Pi receipt using correlated process-local monotonic timing.
+- [x] Activate servlet framing/flush correction and ordered sentence TTS on a V39-compatible artifact; keep the model/voice, auth, budgets and schema unchanged.
+- [x] Verify a model-cold run, three comparable warm runs, valid answer playback, single usage settlement and controlled abort/reconnection.
+- [x] Guard against telemetry disconnects leaking uninvoked reservations, with full Core regression checks.
+- [ ] Under-three-second first-answer latency is not achieved; selected batch TTS remains the main measured limit.
+- [ ] Human wake, heard answer quality and sentence continuity; privileged Gateway target/heartbeat diagnosis and full-host cold-start proof remain open.
+
 Latest authorized local rollout: [V39 Voice activation and digital dialogs](2026-10-31-velora-local-rollout.md).
 - [x] Activate the HTTP/1.1 fix in a clean pre-V40 Core artifact; retain schema39 and guarded hash pin.
 - [x] Install bounded IPv4-first Satellite dialing with a rollback backup and unchanged credentials/config.

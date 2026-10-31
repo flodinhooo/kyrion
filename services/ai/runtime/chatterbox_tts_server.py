@@ -10,9 +10,10 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from uuid import UUID
 
 import soundfile as sf
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -154,12 +155,18 @@ def voices() -> dict[str, object]:
 
 
 @app.post("/v1/synthesize")
-def synthesize(request: SynthesisRequest) -> Response:
+def synthesize(request: SynthesisRequest, http_request: Request) -> Response:
     if model is None:
         raise HTTPException(status_code=503, detail=startup_error or "TTS_LOADING")
     if request.voice_id not in {"velora", "klar"}:
         raise HTTPException(status_code=400, detail="UNKNOWN_VOICE")
+    accepted = time.monotonic_ns()
+    try:
+        correlation = str(UUID(http_request.headers.get("x-kyrion-correlation-id", "")))
+    except ValueError:
+        correlation = None
     with generation_lock:
+        started = time.monotonic_ns()
         wav = model.generate(
             request.text,
             language_id="de",
@@ -167,9 +174,30 @@ def synthesize(request: SynthesisRequest) -> Response:
             temperature=0.65,
             repetition_penalty=2.0,
         )
+    generated = time.monotonic_ns()
+    queue_ms = (started - accepted) // 1_000_000
+    compute_ms = (generated - started) // 1_000_000
+    if correlation:
+        logging.getLogger("uvicorn.error").info(
+            "VOICE_TIMING id=%s stage=tts.completed accepted_ns=%s started_ns=%s "
+            "generated_ns=%s queue_ms=%s compute_ms=%s",
+            correlation,
+            accepted,
+            started,
+            generated,
+            queue_ms,
+            compute_ms,
+        )
     output = io.BytesIO()
     sf.write(output, wav.squeeze(0).detach().cpu().numpy(), model.sr, format="WAV")
-    return Response(output.getvalue(), media_type="audio/wav")
+    return Response(
+        output.getvalue(),
+        media_type="audio/wav",
+        headers={
+            "X-Kyrion-Tts-Queue-Ms": str(queue_ms),
+            "X-Kyrion-Tts-Compute-Ms": str(compute_ms),
+        },
+    )
 
 
 def main() -> None:

@@ -1,5 +1,10 @@
 # Pi-to-Windows Core and Voice acceptance
 
+Performance follow-up: [Voice latency and final runtime pin](status/2026-10-31-voice-latency.md).
+Timing events keep Core elapsed and Pi receipt clocks separate. Use the installed
+client option below; waiting audio is not the spoken answer. Human audibility
+and wake acceptance still require two live dialogs.
+
 Current local runtime: [authorized V39 Voice rollout](status/2026-10-31-velora-local-rollout.md).
 Use `Invoke-VeloraProbe.ps1 -InstalledClient` for installed-client acceptance;
 the default temporary source overlay is only a diagnostic scope. Voice streams

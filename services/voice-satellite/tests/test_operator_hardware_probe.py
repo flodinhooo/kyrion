@@ -57,3 +57,26 @@ def test_processing_audio_does_not_mark_answer_or_first_model_output():
     module.observe_event(result, {"type": "answer.started"}, 40)
     assert result["answerStarted"] is True
     assert "captureEndToAnswerAudioMs" not in result
+
+
+def test_server_timing_is_kept_separate_from_pi_receipt_time():
+    result = {}
+    module.observe_event(
+        result,
+        {
+            "type": "timing",
+            "stage": "model.first_delta",
+            "elapsedMs": 123,
+            "correlationId": "synthetic",
+        },
+        999,
+    )
+    assert result["coreEvents"] == [
+        {
+            "stage": "model.first_delta",
+            "coreElapsedMs": 123,
+            "piReceivedMs": 999,
+            "correlationId": "synthetic",
+        }
+    ]
+    assert "firstModelOutputMs" not in result

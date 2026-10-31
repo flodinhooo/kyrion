@@ -30,7 +30,10 @@ class HttpAiGatewayTest {
     fun `catalog and generation use HTTP 1 without h2c upgrades and retain the JSON body`() {
         val upgrades = mutableListOf<String>()
         val bodies = mutableListOf<String>()
+        val correlation = java.util.UUID.randomUUID()
+        var receivedCorrelation: String? = null
         server({ exchange ->
+            if (exchange.requestURI.path.endsWith("/stream")) receivedCorrelation = exchange.requestHeaders.getFirst("X-Kyrion-Correlation-Id")
             upgrades.add(exchange.requestHeaders.getFirst("Upgrade") ?: "")
             bodies.add(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
             val body = if (exchange.requestURI.path.endsWith("/models"))
@@ -41,7 +44,8 @@ class HttpAiGatewayTest {
             exchange.responseBody.write(bytes)
         }) { gateway ->
             assertEquals("fixture", gateway.catalog().defaultModelId)
-            gateway.stream("{}", 3) {}
+            gateway.streamTraced("{}", 3, correlation) {}
+            assertEquals(correlation.toString(), receivedCorrelation)
             assertEquals(listOf("", ""), upgrades)
             assertEquals(listOf("", "{}"), bodies)
         }
