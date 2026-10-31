@@ -1,5 +1,13 @@
 # K-AI / Velora agent handoff
 
+Human A/B decision received2026-10-31: choices A/B/A map to Chatterbox for all
+three texts. Keep the existing active path; do not promote the tested MOSS
+configuration. Chatterbox completeness/intelligibility/voice were5/5 throughout;
+selected MOSS list completeness was1/5. See the updated listening report for
+the technical summary. This closes pair listening, not physical Pi/Wake Word
+acceptance or separate hearing observations for the two anomaly runs. No runtime
+change or new optimization/benchmark was performed.
+
 Latest continuation: [blind listening pack and existing-sample audit](../status/2026-10-31-tts-listening-review.md).
 All24 original hashes match; all were transcribed with local STT. MOSS two-3 has
 16.90/20.48s below the−40dBFS RMS threshold; list-2 STT recognizes only item1,
@@ -9,7 +17,7 @@ No exact terminal token trace exists; no specific engine/config bug was proven,
 so no new audio was generated. The static A/B pack selects warm1 for both engines,
 has a closed mapping/time reveal, all original runs and local ratings export.
 Start `python -m http.server 8765 --bind 127.0.0.1 --directory .run/dev-recovery/tts-isolated/review`.
-Human completeness/voice decision is next. Active V39 `2488c1b`, schema39 and
+The human pair decision above supersedes the pending-review state. Active V39 `2488c1b`, schema39 and
 Chatterbox are unchanged. See the report for actual operator-stop commands;
 spoken barge-in remains missing, not an accepted cancellation feature.
 

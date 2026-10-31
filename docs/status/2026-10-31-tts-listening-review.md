@@ -1,5 +1,23 @@
 # Existing TTS samples: hearing review and anomaly investigation
 
+## Human A/B result received, 2026-10-31
+
+The owner returned ratings for comparison `a842b9e-existing-samples-first-warm-run`.
+Decoded choices: short A, two-sentence B, list A: **Chatterbox preferred in all
+three pairs**. Chatterbox received5/5 for completeness, intelligibility and
+suitable voice throughout; naturalness was3/5 for the short answer and5/5 for
+the other two. A noticeable short-answer pause was considered tolerable.
+MOSS received intelligibility1/5 and voice1/5 for the short answer, and
+completeness1/5 for the selected list sample. The two-sentence MOSS sample was
+rated complete, but Chatterbox was preferred there too.
+
+Decision: retain Chatterbox and do not promote MOSS in this tested configuration.
+The selected MOSS list's completeness problem now has human rating evidence,
+in addition to STT. The submitted form rates warm1 pairs only: it does not record
+separate hearing observations for the20.48s or2.80s outliers, nor a physical
+Pi/Wake Word/dialogue test. Raw owner notes/export were not copied into Git;
+only the technical result is recorded. No runtime or configuration changed.
+
 Continuation from master `a842b9e`. No new synthesis, benchmark, speed tuning,
 engine/voice change or active-stack restart was performed. Existing Chatterbox,
 F reference, model choice, guarded V39 Core `2488c1b` and schema39 are preserved.
@@ -106,11 +124,10 @@ After initial ratings, open the reveal for engine/time mappings and all24 origin
 runs, particularly `moss-two-3`, `moss-list-2` and the selected `moss-list-1`.
 No synthesis time is a full Pi-dialog or acoustic latency.
 
-Decision required after listening: are all intended contents actually spoken,
-is the voice suitable, and are the anomalies acceptable? If contents are missing
-or long unintended pauses are confirmed, reject MOSS **in this tested configuration**.
-A preferred isolated timbre alone does not justify production promotion; active
-Chatterbox remains the fallback pending a separate deliberate decision.
+The returned pair ratings resolve the engine decision: retain Chatterbox and
+reject promotion of MOSS **in this tested configuration**. Separate outlier
+hearing observations were not provided. Do not substitute faster synthesis
+times for the rejected completeness/voice result or start another tuning round.
 
 ## Immediate on-site test and real manual stop
 
@@ -182,7 +199,7 @@ no mismatches or pending versions. Guarded Core hash unchanged:
 No Core/AI/Satellite build is needed for static tooling/documentation changes.
 V39 branch stays `2488c1b`; there is no shared runtime fix to port.
 
-Human ratings and the two actual spoken/acoustic dialogues remain open. Gateway
+Human pair ratings are complete; the two actual spoken/acoustic dialogues remain open. Gateway
 privileged diagnosis and host startup proof remain separate operational items;
 cloud spending and V40 rollout remain unopened. No further automatic TTS round
 is scheduled as a substitute for the listening decision.

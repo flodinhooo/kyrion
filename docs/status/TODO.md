@@ -5,7 +5,7 @@ Latest hearing-review preparation: [A/B pack, local STT and anomaly findings](20
 - [x] Inspect termination and pure text preparation; no frame/token hard limit reached and no input-content truncation found. No proven engine defect, so no parameter change or new synthesis.
 - [x] Analyze quiet energy and transcribe all samples locally:20.48s includes16.90s below−40dBFS;2.80s list recognizes only item1; first-warm list also lacks item3 in STT. STT is diagnostic, not hearing acceptance.
 - [x] Prepare fixed-first-warm blind A/B page, DE/EN labels, ratings export, reveal/times and all24 runs; verify browser playback/served hashes without claiming audibility.
-- [ ] Human A/B decision on actual completeness, intelligibility, naturalness and suitable voice; check both outliers and selected list1. Keep Chatterbox until this review; no automatic benchmark/tuning round.
+- [x] Human A/B pair decision received: Chatterbox preferred in all three texts (A/B/A); selected MOSS list completeness1/5. Retain Chatterbox, do not promote this MOSS configuration. Separate hearing observations for both outliers were not supplied; no further automatic tuning round.
 - [ ] Two Hey Velora dialogues and acoustic/end-piece/pause review; operator cancellation commands are documented, spoken barge-in is absent. Gateway/host/cloud/V40 remain separate.
 
 Latest bounded TTS decision: [isolated CPU candidate and active-path preservation](2026-10-31-isolated-tts-decision.md).
