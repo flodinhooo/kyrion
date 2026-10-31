@@ -97,6 +97,13 @@ Successful proof is single-use and valid for 30 days. Failed/expired/unrelated
 records never mark a domain verified. Previous unexpired proof remains valid while
 a fresh challenge is being provisioned.
 
+The API and Identity settings expose `PENDING`, `VERIFIED` and `FAILED`. A failed
+check is persisted and audited without recording the TXT credential. Expired or
+invalidated evidence is failed when no current independent proof exists. Rotating
+a challenge clears its previous failure; it does not erase unexpired proof.
+Expected verification denials commit failure metadata and audit together; audit
+storage failure rolls both back. This additive outcome metadata requires V41.
+
 Trust the host's DNS resolver and its network path. Use a controlled DNSSEC-validating
 resolver where available. This implementation does not itself validate DNSSEC or
 provide continuous ownership monitoring. A domain can change ownership during the

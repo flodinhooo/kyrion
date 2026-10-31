@@ -1,5 +1,10 @@
 # Spaces Milestone 02 tenant-boundary audit
 
+Current continuation: [Spaces hardening handover](agent-handoffs/spaces-hardening-handover.md)
+records the combined-source boundary matrix, V41, revocation/stream fixes and
+current verification. Multi-Space runtime remains blocked. Historical branch-only
+absence/numbering statements below must not override that inventory.
+
 Combined-source update: personal K-Data is now integrated. Its real protected
 `/v1/knowledge/spaces` endpoint replaces the branch's absent-API assumption.
 Knowledge retains per-account ownership, uses current Spaces-aware RBAC, and
