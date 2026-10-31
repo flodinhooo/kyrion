@@ -1,5 +1,9 @@
 # Controlled V39 Voice compatibility rollout
 
+Latest active runtime: [Voice section-boundary continuation](2026-10-31-voice-section-boundary.md).
+Core2488c1b, AI HTTP pooling and a Satellite stream-error update are active on
+schema39; model and voice remain unchanged. Older hashes below are rollback history.
+
 Later continuation: [Voice latency measurement and activated sentence TTS](2026-10-31-voice-latency.md)
 supersedes the active hash and unresolved stream-latency status below. This report
 remains the original V39/Satellite rollout and recovery evidence.

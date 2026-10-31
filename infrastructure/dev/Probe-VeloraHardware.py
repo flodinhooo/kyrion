@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import array
+import hashlib
 import http.client
 import io
 import json
 import math
+import subprocess
+import threading
 import time
 import uuid
 import wave
@@ -42,6 +45,17 @@ def fixture_audio(path: Path) -> bytes:
         ):
             raise ValueError("FIXTURE_FORMAT_INVALID")
     return data
+
+
+def answer_audio_duration(data: bytes) -> float:
+    with wave.open(io.BytesIO(data)) as received:
+        frames = received.getnframes()
+        if frames < 1:
+            raise ValueError("EMPTY_RESPONSE_AUDIO")
+        expected = frames * received.getnchannels() * received.getsampwidth()
+        if len(received.readframes(frames)) != expected:
+            raise ValueError("TRUNCATED_RESPONSE_AUDIO")
+        return frames / received.getframerate()
 
 
 def observe_event(result: dict, event: dict, elapsed_ms: int) -> None:
@@ -148,7 +162,26 @@ def probe(args) -> dict:
         started = time.monotonic()
         original_open = core_client.open_core_url
         original_send = http.client.HTTPConnection.send
+        original_popen = subprocess.Popen
         sending_turn = False
+        active_segment = None
+
+        def observed_popen(*values, **options):
+            process = original_popen(*values, **options)
+            if active_segment is not None and values and values[0][0] == "pw-play":
+                active_segment["playerSpawnedMs"] = round(
+                    (time.monotonic() - started) * 1000
+                )
+                if (
+                    getattr(args, "abort_during_playback", False)
+                    and len(result.get("segments", [])) == 1
+                ):
+                    result["abortedDuringPlayback"] = True
+                    threading.Timer(
+                        0.3,
+                        lambda: process.terminate() if process.poll() is None else None,
+                    ).start()
+            return process
 
         def observed_send(connection, data):
             original_send(connection, data)
@@ -177,6 +210,19 @@ def probe(args) -> dict:
                             json.loads(line),
                             round((time.monotonic() - started) * 1000),
                         )
+                        event = json.loads(line)
+                        if event.get("type") == "audio.chunk":
+                            result["currentSectionCharacters"] = event.get(
+                                "textCharacters"
+                            )
+                        if (
+                            getattr(args, "abort_during_tts", False)
+                            and event.get("stage") == "answer.tts.start.0"
+                        ):
+                            result["abortedDuringTts"] = True
+                            raise core_client.CoreVoiceError(
+                                "OPERATOR_ABORT_DURING_TTS"
+                            )
                     yield line
 
             def read(self, *values):
@@ -198,9 +244,8 @@ def probe(args) -> dict:
             )
 
         def play(audio):
-            with wave.open(io.BytesIO(audio)) as received:
-                if received.getnframes() < 1:
-                    raise ValueError("EMPTY_RESPONSE_AUDIO")
+            nonlocal active_segment
+            seconds = answer_audio_duration(audio)
             answer = result.get("answerStarted", False)
             result["answerAudioChunks" if answer else "processingAudioChunks"] = (
                 result.get(
@@ -209,6 +254,14 @@ def probe(args) -> dict:
                 + 1
             )
             if answer:
+                segment = {
+                    "textCharacters": result.pop("currentSectionCharacters", None),
+                    "index": len(result.get("segments", [])),
+                    "receivedMs": round((time.monotonic() - started) * 1000),
+                    "audioSeconds": round(seconds, 4),
+                    "audioSha256": hashlib.sha256(audio).hexdigest(),
+                }
+                result.setdefault("segments", []).append(segment)
                 result.setdefault(
                     "captureEndToAnswerAudioMs",
                     round((time.monotonic() - started) * 1000),
@@ -218,6 +271,7 @@ def probe(args) -> dict:
                 round((time.monotonic() - started) * 1000),
             )
             if args.play:
+                active_segment = segment if answer else None
                 if answer:
                     result.setdefault(
                         "captureEndToAnswerPlaybackMs",
@@ -227,7 +281,14 @@ def probe(args) -> dict:
                     "captureEndToPlaybackProcessMs",
                     round((time.monotonic() - started) * 1000),
                 )
-                PipeWirePlayback(config.playback_target).play(audio)
+                try:
+                    PipeWirePlayback(config.playback_target).play(audio)
+                finally:
+                    if answer:
+                        segment["playerEndedMs"] = round(
+                            (time.monotonic() - started) * 1000
+                        )
+                    active_segment = None
                 result["playbackCompleted"] = True
                 if answer:
                     result["answerPlaybackCompleted"] = True
@@ -239,6 +300,7 @@ def probe(args) -> dict:
         result["turnId"] = turn_id
         core_client.open_core_url = observed_open
         http.client.HTTPConnection.send = observed_send
+        subprocess.Popen = observed_popen
         try:
             turn = client.turn(session.id, wav, config.locale, play, turn_id)
         except (OSError, RuntimeError, ValueError) as error:
@@ -251,6 +313,7 @@ def probe(args) -> dict:
         finally:
             core_client.open_core_url = original_open
             http.client.HTTPConnection.send = original_send
+            subprocess.Popen = original_popen
         result.update(
             transcriptChars=len(turn.transcript),
             responseChars=len(turn.response_text),
@@ -275,6 +338,8 @@ if __name__ == "__main__":
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--play", action="store_true")
     parser.add_argument("--abort-after-answer", action="store_true")
+    parser.add_argument("--abort-during-tts", action="store_true")
+    parser.add_argument("--abort-during-playback", action="store_true")
     arguments = parser.parse_args()
     try:
         summary = probe(arguments)

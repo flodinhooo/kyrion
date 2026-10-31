@@ -1,5 +1,14 @@
 # K-AI / Velora agent handoff
 
+Latest continuation: [section-boundary optimization and engine/playback limits](../status/2026-10-31-voice-section-boundary.md).
+Active V39 Core is `2488c1b` (hash50A8174C...), with whole-list-item segmentation
+and section metadata. AI pools bounded TTS HTTP connections; the installed
+Satellite handles incomplete later streams without retry/replay. Three before/
+after questions, engine phases, playback gaps, TTS/playback aborts and a real
+second-section503 were verified. The recovery run exposed a2793ms gap; no
+claim of gapless/acoustic acceptance or sub-three-second output is made.
+Schema39, selected model/voice and protected LAN startup remain unchanged.
+
 Latest latency continuation: [measured Voice timing and sentence TTS](../status/2026-10-31-voice-latency.md).
 Core/AI/TTS now carry UUID-only monotonic timing. Dynamic answers are synthesized
 as ordered sentences with explicit servlet flushing; selected model and voice

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import io
 import logging
 import os
@@ -154,6 +155,45 @@ def voices() -> dict[str, object]:
     }
 
 
+def measured_generate(loaded, text: str):
+    """Observe existing batch phases under generation_lock; restore even on failure.
+
+    Return times are wall durations, not CUDA kernel timings. The public model
+    returns CPU audio only after token generation, decoding and watermarking.
+    """
+    phases = {}
+    originals = []
+    for target, attribute, phase in (
+        (loaded.t3, "inference", "tokens"),
+        (loaded.s3gen, "inference", "decoder"),
+        (loaded, "prepare_conditionals", "conditioning"),
+    ):
+        original = getattr(target, attribute)
+        originals.append((target, attribute, original))
+
+        def observe(function, label):
+            @functools.wraps(function)
+            def wrapped(*args, **kwargs):
+                start = time.monotonic_ns()
+                try:
+                    return function(*args, **kwargs)
+                finally:
+                    phases[label + "_ms"] = (time.monotonic_ns() - start) // 1_000_000
+                    phases[label + "_calls"] = phases.get(label + "_calls", 0) + 1
+
+            return wrapped
+
+        setattr(target, attribute, observe(original, phase))
+    try:
+        wav = loaded.generate(
+            text, language_id="de", cfg_weight=0.5, temperature=0.65, repetition_penalty=2.0
+        )
+        return wav, phases
+    finally:
+        for target, attribute, original in reversed(originals):
+            setattr(target, attribute, original)
+
+
 @app.post("/v1/synthesize")
 def synthesize(request: SynthesisRequest, http_request: Request) -> Response:
     if model is None:
@@ -167,13 +207,7 @@ def synthesize(request: SynthesisRequest, http_request: Request) -> Response:
         correlation = None
     with generation_lock:
         started = time.monotonic_ns()
-        wav = model.generate(
-            request.text,
-            language_id="de",
-            cfg_weight=0.5,
-            temperature=0.65,
-            repetition_penalty=2.0,
-        )
+        wav, phases = measured_generate(model, request.text)
     generated = time.monotonic_ns()
     queue_ms = (started - accepted) // 1_000_000
     compute_ms = (generated - started) // 1_000_000
@@ -190,6 +224,19 @@ def synthesize(request: SynthesisRequest, http_request: Request) -> Response:
         )
     output = io.BytesIO()
     sf.write(output, wav.squeeze(0).detach().cpu().numpy(), model.sr, format="WAV")
+    encoded = time.monotonic_ns()
+    if correlation:
+        logging.getLogger("uvicorn.error").info(
+            "VOICE_SECTION id=%s chars=%s audio_ms=%s tokens_ms=%s decoder_ms=%s "
+            "conditioning_calls=%s package_ms=%s",
+            correlation,
+            len(request.text),
+            round(wav.numel() * 1000 / model.sr),
+            phases.get("tokens_ms", 0),
+            phases.get("decoder_ms", 0),
+            phases.get("conditioning_calls", 0),
+            (encoded - generated) // 1_000_000,
+        )
     return Response(
         output.getvalue(),
         media_type="audio/wav",

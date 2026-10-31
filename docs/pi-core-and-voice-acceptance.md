@@ -1,5 +1,11 @@
 # Pi-to-Windows Core and Voice acceptance
 
+Current acceptance limits and runnable on-site procedure:
+[section boundaries and playback safety](status/2026-10-31-voice-section-boundary.md).
+Use the new `-AbortDuringTts` / `-AbortDuringPlayback` options only for explicit
+operator cancellation tests. These are not spoken barge-in. Current gaps and
+acoustic acceptance remain open; a software player invocation is not audible onset.
+
 Performance follow-up: [Voice latency and final runtime pin](status/2026-10-31-voice-latency.md).
 Timing events keep Core elapsed and Pi receipt clocks separate. Use the installed
 client option below; waiting audio is not the spoken answer. Human audibility

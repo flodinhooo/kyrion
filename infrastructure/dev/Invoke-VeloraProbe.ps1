@@ -6,6 +6,8 @@ param(
     [switch]$Play,
     [switch]$InstalledClient,
     [switch]$AbortAfterAnswer,
+    [switch]$AbortDuringTts,
+    [switch]$AbortDuringPlayback,
     [string]$PiHost
 )
 $ErrorActionPreference='Stop'
@@ -23,6 +25,8 @@ if ($Mode -eq 'capture') { $arguments+=@('--capture-seconds',"$CaptureSeconds") 
 if ($Mode -in @('fixture','manual')) { $arguments+='--dialogue' }
 if ($Play) { $arguments+='--play' }
 if ($AbortAfterAnswer) { $arguments+='--abort-after-answer' }
+if ($AbortDuringTts) { $arguments+='--abort-during-tts' }
+if ($AbortDuringPlayback) { $arguments+='--abort-during-playback' }
 $fixtureBase64=$null
 if ($Mode -eq 'fixture') {
     $bytes=[IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $Fixture).Path)

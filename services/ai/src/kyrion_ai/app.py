@@ -1,5 +1,6 @@
 import logging
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import replace
 
 from fastapi import FastAPI, Request, Response
@@ -52,7 +53,17 @@ voice_responses = VoiceResponseAudioResolver(
 cloud_conversations = CloudConversationManager(settings, speech)
 logger = logging.getLogger("kyrion-ai")
 
-app = FastAPI(title="Kyrion AI", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        yield
+    finally:
+        speech.close()
+        short_response_fallback.close()
+
+
+app = FastAPI(title="Kyrion AI", version="0.1.0", lifespan=lifespan)
 
 
 class SynthesisRequest(BaseModel):

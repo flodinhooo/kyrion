@@ -1,4 +1,5 @@
 import base64
+import http.client
 import json
 from unittest.mock import patch
 
@@ -24,14 +25,60 @@ class StreamingResponse:
         return iter(self._lines)
 
 
+@pytest.mark.parametrize(
+    "failure", [http.client.IncompleteRead(b"partial"), ConnectionResetError()]
+)
+def test_later_segment_disconnect_closes_stream_without_retry_or_replay(tmp_path, failure):
+    credential = tmp_path / "credential"
+    credential.write_text("synthetic-secret")
+    closed = []
+
+    class Broken(StreamingResponse):
+        def __iter__(self):
+            yield from super().__iter__()
+            raise failure
+
+        def __exit__(self, *_args):
+            closed.append(True)
+
+    events = [
+        {"type": "transcript", "transcript": "Synthetic"},
+        {"type": "audio.chunk", "audioBase64": base64.b64encode(b"first").decode()},
+    ]
+    played = []
+    client = CoreVoiceClient("http://core", "synthetic", credential)
+    with patch(
+        "kyrion_voice_satellite.core_client.open_core_url", return_value=Broken(events)
+    ) as request:
+        with pytest.raises(CoreVoiceError):
+            client.turn("old-session", b"RIFF", "de", played.append, "old-turn")
+        assert request.call_count == 1
+    assert played == [b"first"]
+    assert closed == [True]
+    response = StreamingResponse(
+        [
+            {"type": "transcript", "transcript": "New synthetic"},
+            {"type": "audio.chunk", "audioBase64": base64.b64encode(b"new").decode()},
+            {"type": "completed", "responseText": "New response", "continueSession": True},
+        ]
+    )
+    with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
+        client.turn("new-session", b"RIFF", "de", played.append, "new-turn")
+    assert played == [b"first", b"new"]
+
+
 def test_open_session_calibrates_satellite_clock_to_core(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")
-    response = StreamingResponse([{
-        "sessionId": "session",
-        "conversationId": "conversation",
-        "serverTimeEpochMillis": 1_250,
-    }])
+    response = StreamingResponse(
+        [
+            {
+                "sessionId": "session",
+                "conversationId": "conversation",
+                "serverTimeEpochMillis": 1_250,
+            }
+        ]
+    )
 
     with (
         patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response),
@@ -46,14 +93,19 @@ def test_greeting_returns_valid_server_resolved_wav(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")
     wav = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 32
-    response = StreamingResponse([{
-        "responseText": "Hallo.",
-        "audioBase64": base64.b64encode(wav).decode(),
-    }])
+    response = StreamingResponse(
+        [
+            {
+                "responseText": "Hallo.",
+                "audioBase64": base64.b64encode(wav).decode(),
+            }
+        ]
+    )
 
     with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         audio = CoreVoiceClient("http://core", "satellite", credential).greeting(
-            "session", "de",
+            "session",
+            "de",
         )
 
     assert audio == wav
@@ -62,10 +114,14 @@ def test_greeting_returns_valid_server_resolved_wav(tmp_path):
 def test_greeting_rejects_invalid_audio(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")
-    response = StreamingResponse([{
-        "responseText": "Hallo.",
-        "audioBase64": base64.b64encode(b"not-a-wave").decode(),
-    }])
+    response = StreamingResponse(
+        [
+            {
+                "responseText": "Hallo.",
+                "audioBase64": base64.b64encode(b"not-a-wave").decode(),
+            }
+        ]
+    )
 
     with (
         patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response),
@@ -95,7 +151,11 @@ def test_turn_plays_audio_chunks_before_completion(tmp_path):
 
     with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
-            "session", b"RIFF-audio", "de", played.append, "turn-id",
+            "session",
+            b"RIFF-audio",
+            "de",
+            played.append,
+            "turn-id",
         )
 
     assert played == [first, second]
@@ -150,16 +210,22 @@ def test_pending_action_executes_only_after_processing_playback(tmp_path):
     credential.write_text("secret", encoding="utf-8")
     processing = b"processing-wave"
     final = b"final-wave"
-    response = StreamingResponse([
-        {"type": "transcript", "transcript": "Schalte das Licht an."},
-        {"type": "audio.chunk", "audioBase64": base64.b64encode(processing).decode()},
-        {"type": "action.pending", "pendingAction": True},
-    ])
-    completion = StreamingResponse([{
-        "responseText": "Erledigt.",
-        "audioBase64": base64.b64encode(final).decode(),
-        "continueSession": True,
-    }])
+    response = StreamingResponse(
+        [
+            {"type": "transcript", "transcript": "Schalte das Licht an."},
+            {"type": "audio.chunk", "audioBase64": base64.b64encode(processing).decode()},
+            {"type": "action.pending", "pendingAction": True},
+        ]
+    )
+    completion = StreamingResponse(
+        [
+            {
+                "responseText": "Erledigt.",
+                "audioBase64": base64.b64encode(final).decode(),
+                "continueSession": True,
+            }
+        ]
+    )
     order: list[str] = []
 
     def urlopen(request, timeout=0):
@@ -186,19 +252,25 @@ def test_pending_action_executes_only_after_processing_playback(tmp_path):
 def test_turn_exposes_requested_session_restart(tmp_path):
     credential = tmp_path / "credential"
     credential.write_text("secret", encoding="utf-8")
-    response = StreamingResponse([
-        {"type": "transcript", "transcript": "Hey Willorra!"},
-        {
-            "type": "completed",
-            "responseText": "Session restart",
-            "continueSession": False,
-            "restartSession": True,
-        },
-    ])
+    response = StreamingResponse(
+        [
+            {"type": "transcript", "transcript": "Hey Willorra!"},
+            {
+                "type": "completed",
+                "responseText": "Session restart",
+                "continueSession": False,
+                "restartSession": True,
+            },
+        ]
+    )
 
     with patch("kyrion_voice_satellite.core_client.open_core_url", return_value=response):
         turn = CoreVoiceClient("http://core", "satellite", credential).turn(
-            "session", b"RIFF-audio", "de", lambda _audio: None, "turn-id",
+            "session",
+            b"RIFF-audio",
+            "de",
+            lambda _audio: None,
+            "turn-id",
         )
 
     assert turn.restart_session is True

@@ -8,7 +8,7 @@ import tempfile
 import time
 import wave
 from pathlib import Path
-from threading import Event
+from threading import Event, Lock
 from uuid import uuid4
 
 import httpx
@@ -39,6 +39,26 @@ class SpeechService:
         self._settings = settings
         self._stt_model = None
         self._http_client = http_client
+        self._batch_client: httpx.Client | None = None
+        self._batch_client_lock = Lock()
+
+    def close(self) -> None:
+        # Injected clients belong to their caller; only close our owned pool.
+        with self._batch_client_lock:
+            if self._batch_client is not None:
+                self._batch_client.close()
+                self._batch_client = None
+
+    def _batch_request_client(self) -> httpx.Client:
+        if self._http_client is not None:
+            return self._http_client
+        with self._batch_client_lock:
+            if self._batch_client is None:
+                self._batch_client = httpx.Client(
+                    timeout=120.0,
+                    limits=httpx.Limits(max_connections=2, max_keepalive_connections=1),
+                )
+            return self._batch_client
 
     def transcribe(self, audio: bytes, locale: str) -> str:
         if not audio.startswith(b"RIFF") or b"WAVE" not in audio[:16]:
@@ -117,8 +137,9 @@ class SpeechService:
     def _http_tts_request(
         self, method: str, path: str, *, force_batch: bool = False, **kwargs
     ) -> httpx.Response:
-        client = self._http_client or httpx.Client(timeout=120.0)
-        owns_client = self._http_client is None
+        ready = time.monotonic_ns()
+        client = self._batch_request_client()
+        mark("tts.http.client_ready", setup_us=(time.monotonic_ns() - ready) // 1000)
         base_url = (
             self._settings.qwen_tts_url
             if self._settings.tts_provider == "qwen" and not force_batch
@@ -129,9 +150,6 @@ class SpeechService:
             response.raise_for_status()
         except httpx.HTTPError as error:
             raise SpeechUnavailableError("Local HTTP TTS request failed") from error
-        finally:
-            if owns_client:
-                client.close()
         return response
 
     def _require_xtts_opt_in(self) -> None:

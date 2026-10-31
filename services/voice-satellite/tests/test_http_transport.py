@@ -105,8 +105,10 @@ def test_http_failure_is_not_retried_and_request_host_and_auth_are_preserved(mon
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", "0")))
             received.append((self.headers["Host"], self.headers["Authorization"]))
             self.send_response(503)
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
         def log_message(self, *_args):

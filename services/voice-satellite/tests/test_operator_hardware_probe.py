@@ -15,6 +15,16 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
+def test_answer_audio_duration_requires_all_declared_samples():
+    output = io.BytesIO()
+    with wave.open(output, "wb") as audio:
+        audio.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+        audio.writeframes(b"\0" * 320)
+    assert module.answer_audio_duration(output.getvalue()) == 0.01
+    with pytest.raises(ValueError, match="TRUNCATED_RESPONSE_AUDIO"):
+        module.answer_audio_duration(output.getvalue()[:-10])
+
+
 def test_fixture_requires_mono_pcm16_at_16khz(tmp_path):
     fixture = tmp_path / "synthetic.wav"
     for rate in [16000, 24000]:

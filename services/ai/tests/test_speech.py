@@ -13,6 +13,44 @@ def settings() -> Settings:
     return Settings("http://127.0.0.1:11434", "model", ("model",), 1.0)
 
 
+def test_owned_batch_pool_is_bounded_reused_and_closed_without_retry(monkeypatch):
+    factory = httpx.Client
+    created = []
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if len(requests) == 3:
+            raise httpx.ConnectError("synthetic disconnect", request=request)
+        return httpx.Response(200, content=b"RIFF0000WAVE")
+
+    def build(**kwargs):
+        assert kwargs["limits"].max_connections == 2
+        assert kwargs["limits"].max_keepalive_connections == 1
+        client = factory(transport=httpx.MockTransport(handler), **kwargs)
+        created.append(client)
+        return client
+
+    monkeypatch.setattr(httpx, "Client", build)
+    service = LocalSpeechService(settings())
+    service.synthesize("Synthetic one")
+    service.synthesize("Synthetic two")
+    with pytest.raises(SpeechUnavailableError):
+        service.synthesize("Synthetic failure")
+    assert len(requests) == 3  # No generation retry after uncertain transport failure.
+    assert len(created) == 1
+    service.close()
+    service.close()
+    assert created[0].is_closed
+
+
+def test_injected_client_is_not_closed_by_service_shutdown():
+    client = httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200)))
+    LocalSpeechService(settings(), client).close()
+    assert not client.is_closed
+    client.close()
+
+
 def test_transcription_rejects_non_wav_before_loading_runtime() -> None:
     with pytest.raises(InvalidAudioError):
         LocalSpeechService(settings()).transcribe(b"not audio", "de")

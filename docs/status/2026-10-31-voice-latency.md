@@ -1,5 +1,9 @@
 # Local Voice latency investigation and activation
 
+Latest continuation: [list sections, engine-phase measurements and playback safety](2026-10-31-voice-section-boundary.md).
+That report supersedes the active artifact/hash below, adds three-question
+comparisons and records the remaining engine and inter-section pause limits.
+
 Starting points: `master` at `76e0edb`, active V39 compatibility branch at
 `a30321c`. Calendar/HA and other existing worktrees were preserved. This is an
 authorized local rollout only: no cloud requests, public deployment, V40

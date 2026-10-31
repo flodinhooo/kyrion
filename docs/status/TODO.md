@@ -1,5 +1,14 @@
 # Kyrion Development TODO
 
+Latest Voice continuation: [section boundaries, engine limits and playback safety](2026-10-31-voice-section-boundary.md).
+- [x] Release complete list items with their first meaningful content; keep the final item,32-character minimum and8-section cap.
+- [x] Measure T3/decoder/packaging and per-section text/audio lengths; selected Chatterbox0.1.7 remains a batch engine.
+- [x] Activate bounded TTS HTTP pooling, later-stream error handling and matching V39/master Core fixes.
+- [x] Compare three identical digital questions before/after; verify TTS/playback interruption, actual second-section503, recovery and single usage entries.
+- [ ] Gapless playback is not accepted: a recovery run had2793ms between player processes. Human word endings, continuity, wake and acoustic latency remain open.
+- [ ] Spoken barge-in is not supported by the current synchronous batch path; engine-bound first-section latency remains above three seconds.
+- [ ] Privileged Gateway destination/heartbeat diagnosis and a safe full-host restart remain separate operational gates.
+
 Latest Voice performance work: [latency evidence and local activation](2026-10-31-voice-latency.md).
 - [x] Trace upload, STT, context, first provider delta, stream publication, TTS queue/compute and Pi receipt using correlated process-local monotonic timing.
 - [x] Activate servlet framing/flush correction and ordered sentence TTS on a V39-compatible artifact; keep the model/voice, auth, budgets and schema unchanged.

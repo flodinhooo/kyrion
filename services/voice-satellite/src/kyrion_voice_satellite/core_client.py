@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import http.client
 import json
 import time
 import urllib.error
@@ -118,6 +119,8 @@ class CoreVoiceClient:
             TimeoutError,
             ValueError,
             KeyError,
+            http.client.HTTPException,
+            ConnectionError,
         ) as error:
             raise CoreVoiceError("Core voice stream failed") from error
         if pending_action:
