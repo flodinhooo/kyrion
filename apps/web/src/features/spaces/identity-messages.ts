@@ -1,5 +1,6 @@
 export const identityMessages = {
   en: {
+    domainFailed: "DNS verification failed, expired or invalidated", noDomains: "No domains configured. Create a DNS challenge to begin.", validUntil: "Verified until", challengeExpires: "Challenge expires", exactDomain: "Domains match exactly. Each subdomain requires its own DNS proof and allowlist entry.", loading: "Loading identity settings…",
     title: "Identity and recovery", voiceBlocked: "Business voice is disabled until person-level identity and policy enforcement are available.", email: "Email address", pending: "Pending email", send: "Send verification code", verify: "Verify code", code: "Email verification code",
     sent: "If delivery is available and the request is eligible, a code will arrive by email. Codes expire in 15 minutes. Resending invalidates the previous code.",
     smtpOff: "SMTP delivery is unavailable. A host administrator can record a distinct local identity attestation. This does not satisfy strict mailbox verification.",
@@ -20,6 +21,7 @@ export const identityMessages = {
     },
   },
   de: {
+    domainFailed: "DNS-Nachweis fehlgeschlagen, abgelaufen oder widerrufen", noDomains: "Keine Domains eingerichtet. Erstelle zuerst eine DNS-Challenge.", validUntil: "Bestätigt bis", challengeExpires: "Challenge gültig bis", exactDomain: "Domains müssen genau übereinstimmen. Jede Subdomain benötigt einen eigenen DNS-Nachweis und Freigabeeintrag.", loading: "Identitätseinstellungen werden geladen…",
     voiceBlocked: "Business-Sprachfunktionen sind bis zur personenbezogenen Identitäts- und Richtlinienprüfung deaktiviert.",
     title: "Identität und Wiederherstellung", email: "E-Mail-Adresse", pending: "Ausstehende E-Mail", send: "Bestätigungscode senden", verify: "Code bestätigen", code: "E-Mail-Bestätigungscode",
     sent: "Wenn die Zustellung verfügbar und die Anfrage zulässig ist, kommt ein Code per E-Mail. Er gilt 15 Minuten. Erneutes Senden macht den vorherigen Code ungültig.",

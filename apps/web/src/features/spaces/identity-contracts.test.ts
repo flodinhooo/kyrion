@@ -15,6 +15,10 @@ describe("Business identity contracts", () => {
     expect(isBusinessPolicy({ mode: "SSO", recoveryConfigured: true, domains: [] })).toBe(false);
     expect(isBusinessPolicy({ mode: "STRICT", recoveryConfigured: false, domains: [{}] })).toBe(false);
   });
+  it("accepts persisted failed DNS status without claiming verification", () => {
+    expect(isBusinessPolicy({ mode: "OFF", recoveryConfigured: false, domains: [{ domain: "company.ch", allowed: false, status: "FAILED", verifiedUntil: null }] })).toBe(true);
+    expect(isBusinessPolicy({ mode: "OFF", recoveryConfigured: false, domains: [{ domain: "company.ch", allowed: false, status: "SUCCESS", verifiedUntil: null }] })).toBe(false);
+  });
   it("requires an expiring DNS challenge", () => {
     expect(isDnsChallenge({ name: "_kyrion-verification.company.ch", value: "proof", expiresAt: "2026-11-01T12:00:00Z" })).toBe(true);
     expect(isDnsChallenge({ name: "record", value: "proof", expiresAt: "invalid" })).toBe(false);
