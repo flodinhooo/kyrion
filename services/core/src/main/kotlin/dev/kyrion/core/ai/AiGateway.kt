@@ -19,7 +19,10 @@ interface AiGateway {
 @Component
 class HttpAiGateway(@Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") url: String) : AiGateway {
     private val base = url.trimEnd('/')
-    private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+    // Uvicorn's HTTP/1.1 boundary must not receive a cleartext h2c upgrade.
+    // With the JDK default HTTP/2 negotiation it can discard the JSON body (422).
+    private val client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        .connectTimeout(Duration.ofSeconds(5)).build()
     override fun catalog(): AiCatalog {
         val response = try {
             client.send(

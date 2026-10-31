@@ -15,11 +15,35 @@ class HttpAiGatewayTest {
         server.createContext("/v1/chat/stream") { exchange ->
             exchange.use { runCatching { action(it) } }
         }
+        server.createContext("/v1/models") { exchange ->
+            exchange.use { runCatching { action(it) } }
+        }
         server.start()
         try {
             run(HttpAiGateway("http://127.0.0.1:${server.address.port}"))
         } finally {
             server.stop(0); executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `catalog and generation use HTTP 1 without h2c upgrades and retain the JSON body`() {
+        val upgrades = mutableListOf<String>()
+        val bodies = mutableListOf<String>()
+        server({ exchange ->
+            upgrades.add(exchange.requestHeaders.getFirst("Upgrade") ?: "")
+            bodies.add(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
+            val body = if (exchange.requestURI.path.endsWith("/models"))
+                """{"defaultModelId":"fixture","models":[{"id":"fixture","maxOutputTokens":16}]}"""
+            else """{"type":"message.completed"}""" + "\n"
+            val bytes = body.toByteArray()
+            exchange.sendResponseHeaders(200, bytes.size.toLong())
+            exchange.responseBody.write(bytes)
+        }) { gateway ->
+            assertEquals("fixture", gateway.catalog().defaultModelId)
+            gateway.stream("{}", 3) {}
+            assertEquals(listOf("", ""), upgrades)
+            assertEquals(listOf("", "{}"), bodies)
         }
     }
 

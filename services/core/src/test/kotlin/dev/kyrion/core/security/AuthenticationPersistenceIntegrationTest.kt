@@ -1813,7 +1813,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val alternate = aiGateway.model.copy(id = "voice-local")
         aiGateway.catalogValue = dev.kyrion.core.ai.AiCatalog(aiGateway.model.id, listOf(aiGateway.model, alternate))
         aiSettings.savePreferences(actor, dev.kyrion.core.ai.AiPreferences(voiceProfileId = alternate.id))
-        val output = aiOrchestration.voice(actor, conversation, message, "en")
+        var firstDeltas = 0
+        val output = aiOrchestration.voice(actor, conversation, message, "en", onFirstDelta = { firstDeltas++ })
+        assertThat(firstDeltas).isEqualTo(1)
         assertThat(output).isEqualTo("Synthetic answer")
         assertThat(aiGateway.payloads.single()).contains("voice-local").doesNotContain("gemma3:1b")
         assertThat(aiUsage.summary(actor).chargedTokens).isEqualTo(14)
