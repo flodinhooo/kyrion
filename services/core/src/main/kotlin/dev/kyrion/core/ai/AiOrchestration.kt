@@ -111,7 +111,11 @@ class AiOrchestrationService(
 
     fun stream(prepared: PreparedAiGeneration, emit: (String) -> Unit) = stream(prepared, {}, emit)
 
-    fun stream(prepared: PreparedAiGeneration, validateActive: () -> Unit, emit: (String) -> Unit) {
+    fun stream(prepared: PreparedAiGeneration, validateActive: () -> Unit, emit: (String) -> Unit) =
+        streamObserved(prepared, validateActive, prepared.request.turnId, {}, emit)
+
+    private fun streamObserved(prepared: PreparedAiGeneration, validateActive: () -> Unit,
+        correlationId: UUID, onStage: (String) -> Unit, emit: (String) -> Unit) {
         var reservation = prepared.reservation
         val expires =
             System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(prepared.timeoutSeconds.toLong())
@@ -208,7 +212,8 @@ class AiOrchestrationService(
                 val remaining = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(expires - System.nanoTime()).toInt()
                 if (remaining <= 0) throw AiFailure("REQUEST_TIMEOUT", 504)
                 invoked = true
-                gateway.stream(payload, remaining) { raw ->
+                onStage("model.dispatch")
+                gateway.streamTraced(payload, remaining, correlationId) { raw ->
                     validateActive()
                     rbac.require(prepared.actor, "conversations:create")
                     val event = aiJson.readTree(raw)
@@ -271,7 +276,7 @@ class AiOrchestrationService(
                                         )
                                     )
                                 )
-                                return@stream
+                                return@streamTraced
                             }
                             if (visible) emit(raw) else {
                                 if (buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502); buffered.add(raw)
@@ -316,15 +321,19 @@ class AiOrchestrationService(
         knowledgeEnabled: Boolean = false,
         personalContextAllowed: Boolean = false,
         onFirstDelta: () -> Unit = {},
+        correlationId: UUID = turnId,
+        onStage: (String) -> Unit = {},
         validateActive: () -> Unit = {}
     ): String {
+        onStage("context.start")
         val prepared = prepare(
             actor,
             AiGenerationRequest(conversationId, turnId, locale, task = "voice", knowledgeEnabled = knowledgeEnabled),
             personalContextAllowed
         )
+        onStage("context.completed")
         val result = StringBuilder()
-        stream(prepared, validateActive) { raw ->
+        streamObserved(prepared, validateActive, correlationId, onStage) { raw ->
             validateActive()
             val event = aiJson.readTree(raw)
             if (event.path("type").asText() == "error") throw AiFailure(event.path("code").asText(), 503)

@@ -40,6 +40,9 @@ data class VoiceTurnEvent(
     val pendingAction: Boolean? = null,
     val continueSession: Boolean? = null,
     val restartSession: Boolean? = null,
+    val stage: String? = null,
+    val elapsedMs: Long? = null,
+    val correlationId: String? = null,
 )
 
 data class AiTranscriptionResponse(val text: String, val locale: String)
@@ -61,6 +64,7 @@ class VoiceDialogueService(
     @Value("\${kyrion.ai.url:http://127.0.0.1:8000}") aiUrl: String,
     private val clock: Clock = Clock.systemUTC(),
     private val modelOrchestration: dev.kyrion.core.ai.AiOrchestrationService,
+    @Value("\${kyrion.voice.sentence-audio-enabled:true}") private val sentenceAudioEnabled: Boolean = true,
 ) {
     private val aiBaseUrl = aiUrl.trimEnd('/')
     private val ai = RestTemplate()
@@ -98,11 +102,20 @@ class VoiceDialogueService(
             throw VoiceAudioInvalidException()
         }
         val session = satellites.activeSession(satelliteId, credential, sessionId)
+        val started = System.nanoTime()
+        fun trace(stage: String) {
+            voiceEvent(turnId, stage)
+            emit(VoiceTurnEvent(type = "timing", stage = stage,
+                elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started), correlationId = turnId))
+        }
+        trace("core.accepted")
+        trace("stt.start")
         voiceEvent(turnId, "stt_start")
         val headers = HttpHeaders().apply {
             contentType = MediaType.parseMediaType("audio/wav")
             contentLength = audio.size.toLong()
             set("X-Kyrion-Locale", locale)
+            set("X-Kyrion-Correlation-Id", turnId)
         }
         val transcript = ai.postForEntity(
             "$aiBaseUrl/v1/speech/transcribe",
@@ -111,6 +124,7 @@ class VoiceDialogueService(
         ).body?.text?.trim().orEmpty()
         voiceEvent(turnId, "stt_first_result")
         voiceEvent(turnId, "stt_complete")
+        trace("stt.completed")
         if (transcript.isBlank()) throw VoiceAudioInvalidException()
         emit(VoiceTurnEvent(type = "transcript", transcript = transcript))
 
@@ -133,6 +147,7 @@ class VoiceDialogueService(
             session.ownerId, session.conversationId, "Voice conversation", userMessage, now,
         )
         val voiceTurnId = UUID.fromString(turnId)
+        trace("action.start")
         val actionAttempt = if (explicitEnd) null else voiceActions.interpret(
             ownerId = session.ownerId,
             satelliteId = satelliteId,
@@ -148,6 +163,7 @@ class VoiceDialogueService(
             validateActive = { satellites.activeSession(satelliteId, credential, sessionId) },
             deferExecution = true,
         )
+        trace("action.completed")
         if (actionAttempt is VoiceActionAttempt.Pending) {
             val processing = responsePolicies.resolve(
                 ActionProcessingOutcome,
@@ -189,7 +205,8 @@ class VoiceDialogueService(
                     userMessage.id,
                     locale,
                     turnId,
-                    onFirstDelta = { emit(VoiceTurnEvent(type = "model.first_delta")) },
+                    onFirstDelta = { trace("model.first_delta"); emit(VoiceTurnEvent(type = "model.first_delta")) },
+                    onStage = ::trace,
                 ) { satellites.activeSession(satelliteId, credential, sessionId) },
             )
         }
@@ -203,8 +220,19 @@ class VoiceDialogueService(
             ),
         )
         emit(VoiceTurnEvent(type = "answer.started"))
-        emitAudio(responsePlan, turnId, emit, playbackScope = sessionId.toString()) {
+        val audioPlans = if (sentenceAudioEnabled && responsePlan is DynamicResponsePlan)
+            spokenSentences(responsePlan.renderedText).map { responsePlan.copy(renderedText = it) }
+        else listOf(responsePlan)
+        audioPlans.forEachIndexed { index, plan ->
             satellites.activeSession(satelliteId, credential, sessionId)
+            trace("answer.tts.start.$index")
+            emitAudio(plan, turnId, { event ->
+                trace("answer.audio.ready.$index")
+                emit(event)
+                trace("answer.audio.flushed.$index")
+            }, playbackScope = sessionId.toString()) {
+                satellites.activeSession(satelliteId, credential, sessionId)
+            }
         }
         val responseText = responsePlan.renderedText
         conversations.finishTurn(
@@ -251,6 +279,7 @@ class VoiceDialogueService(
         locale: String,
         turnId: String,
         onFirstDelta: () -> Unit,
+        onStage: (String) -> Unit,
         validateActive: () -> Unit,
     ): String {
         voiceEvent(turnId, "llm_request")
@@ -262,9 +291,11 @@ class VoiceDialogueService(
                 locale,
                 personalContextAllowed = false,
                 onFirstDelta = onFirstDelta,
+                correlationId = UUID.fromString(turnId),
+                onStage = onStage,
                 validateActive = validateActive
             )
-                .also { voiceEvent(turnId, "llm_complete") }
+                .also { voiceEvent(turnId, "llm_complete"); onStage("model.completed") }
         } catch (_: dev.kyrion.core.ai.AiFailure) {
             throw VoiceSpeechUnavailableException()
         }
@@ -299,7 +330,7 @@ class VoiceDialogueService(
             "$aiBaseUrl/v1/speech/resolve-response",
             HttpEntity(
                 plan,
-                HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON },
+                HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON; set("X-Kyrion-Correlation-Id", turnId) },
             ),
             ByteArray::class.java,
         ).body ?: throw VoiceSpeechUnavailableException()
@@ -316,7 +347,7 @@ class VoiceDialogueService(
     }
 
     private fun voiceEvent(turnId: String, event: String) {
-        LOGGER.info("[VOICE] turn={} event={} ts_ms={}", turnId, event, System.currentTimeMillis())
+        LOGGER.info("[VOICE] turn={} event={} mono_ns={}", turnId, event, System.nanoTime())
     }
 
     companion object {
@@ -457,14 +488,17 @@ class VoiceDialogueController(
         @Pattern(regexp = "^(de|en)$") locale: String,
         @RequestHeader("X-Kyrion-Voice-Turn-Id") turnId: UUID,
         @RequestBody audio: ByteArray,
+        response: jakarta.servlet.http.HttpServletResponse,
     ): StreamingResponseBody {
         val credential = authorization.takeIf { it.startsWith("Bearer ") }?.substring(7)
             ?: throw VoiceSatelliteUnauthenticatedException()
         return StreamingResponseBody { output ->
             dialogue.streamTurn(satelliteId, credential, sessionId, locale, audio, turnId.toString()) { event ->
-                output.write(objectMapper.writeValueAsBytes(event))
-                output.write('\n'.code)
+                output.write(objectMapper.writeValueAsBytes(event) + byteArrayOf('\n'.code.toByte()))
                 output.flush()
+                response.flushBuffer()
+                if (event.type != "timing") LoggerFactory.getLogger(VoiceDialogueController::class.java)
+                    .info("[VOICE] turn={} event=published.{} mono_ns={}", turnId, event.type, System.nanoTime())
             }
         }
     }

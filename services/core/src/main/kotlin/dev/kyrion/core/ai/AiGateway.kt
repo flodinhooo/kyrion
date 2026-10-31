@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit
 interface AiGateway {
     fun catalog(): AiCatalog
     fun stream(payload: String, timeoutSeconds: Int, receive: (String) -> Unit)
+    fun streamTraced(payload: String, timeoutSeconds: Int, correlationId: java.util.UUID, receive: (String) -> Unit) =
+        stream(payload, timeoutSeconds, receive)
 }
 
 @Component
@@ -50,11 +52,15 @@ class HttpAiGateway(@Value("\${kyrion.ai.base-url:http://127.0.0.1:8000}") url: 
         }
     }
 
-    override fun stream(payload: String, timeoutSeconds: Int, receive: (String) -> Unit) {
+    override fun stream(payload: String, timeoutSeconds: Int, receive: (String) -> Unit) =
+        streamTraced(payload, timeoutSeconds, java.util.UUID.randomUUID(), receive)
+
+    override fun streamTraced(payload: String, timeoutSeconds: Int, correlationId: java.util.UUID, receive: (String) -> Unit) {
         val expires = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds.toLong())
         val response = try {
             client.send(
                 HttpRequest.newBuilder(URI("$base/v1/chat/stream")).timeout(Duration.ofSeconds(timeoutSeconds.toLong()))
+                    .header("X-Kyrion-Correlation-Id", correlationId.toString())
                     .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build(),
                 HttpResponse.BodyHandlers.ofInputStream()
