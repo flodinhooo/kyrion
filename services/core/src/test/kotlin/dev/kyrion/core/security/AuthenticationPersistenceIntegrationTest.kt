@@ -104,15 +104,15 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(identities.email(owner.id).status).isEqualTo("PENDING")
         assertThat(jdbc.sql("SELECT token_hash FROM business_email_challenge").query(String::class.java).single()).isEqualTo(SessionTokenService().hash(first)).isNotEqualTo(first)
         assertThatThrownBy { identities.requestEmail(owner.id,"owner@company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
-        jdbc.sql("UPDATE business_email_challenge SET created_at=CURRENT_TIMESTAMP-INTERVAL '61 seconds'").update()
+        jdbc.sql("UPDATE business_email_challenge SET created_at=:past").param("past", Timestamp.from(Instant.now().minusSeconds(61))).update()
         identities.requestEmail(owner.id,"owner@company.ch")
         assertThatThrownBy { identities.verifyEmail(owner.id,first) }.isInstanceOf(IdentityPolicyException::class.java)
         identities.verifyEmail(owner.id,deliveredCodes.getValue("owner@company.ch"))
         assertThatThrownBy { identities.verifyEmail(owner.id,deliveredCodes.getValue("owner@company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
-        jdbc.sql("UPDATE business_email_challenge SET created_at=CURRENT_TIMESTAMP-INTERVAL '61 seconds'").update()
+        jdbc.sql("UPDATE business_email_challenge SET created_at=:past").param("past", Timestamp.from(Instant.now().minusSeconds(61))).update()
         identities.requestEmail(owner.id,"replacement@company.ch")
         assertThat(identities.email(owner.id).email).isEqualTo("owner@company.ch")
-        jdbc.sql("UPDATE business_email_challenge SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE consumed_at IS NULL").update()
+        jdbc.sql("UPDATE business_email_challenge SET expires_at=TIMESTAMPTZ '2000-01-01 00:00:00+00' WHERE consumed_at IS NULL").update()
         assertThatThrownBy { identities.verifyEmail(owner.id,deliveredCodes.getValue("replacement@company.ch")) }.isInstanceOf(IdentityPolicyException::class.java)
         assertThat(identities.email(owner.id).email).isEqualTo("owner@company.ch")
     }
@@ -157,7 +157,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val user=authentication.register("dns_member",OTHER_PASSWORD,invite.code).user
         assertThatThrownBy { identities.challengeDomain(user.id,"company.ch") }.isInstanceOf(ForbiddenException::class.java)
         identities.challengeDomain(owner.id,"expired.company.ch")
-        jdbc.sql("UPDATE business_domain SET challenge_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE domain='expired.company.ch'").update()
+        jdbc.sql("UPDATE business_domain SET challenge_expires_at=TIMESTAMPTZ '2000-01-01 00:00:00+00' WHERE domain='expired.company.ch'").update()
         assertThatThrownBy { identities.verifyDomain(owner.id,"expired.company.ch") }.isInstanceOf(IdentityPolicyException::class.java)
         assertThat(identities.policy(owner.id).domains.first { it.domain == "expired.company.ch" }.status).isEqualTo("FAILED")
     }
