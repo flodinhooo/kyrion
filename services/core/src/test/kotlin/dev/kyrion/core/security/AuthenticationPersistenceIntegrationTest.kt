@@ -2551,7 +2551,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
 
         @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer("postgres:17-alpine")
+        val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
 
         @DynamicPropertySource
         @JvmStatic

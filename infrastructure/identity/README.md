@@ -1,5 +1,10 @@
 # Isolated Keycloak development environment
 
+For the complete real Website→Web→Core→Keycloak browser flow, including
+registration/mail verification and provider outage, use
+[full local acceptance](FULL_ACCEPTANCE.md). It has its own project, ports and
+disposable databases; the persistent environment below is separate.
+
 This optional Docker Compose project starts Keycloak 26.7.5, its own PostgreSQL,
 and a separate website-session PostgreSQL. It does not use installation data,
 change DNS, modify the installer, or deploy anything. Only loopback ports 8089

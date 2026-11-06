@@ -100,7 +100,8 @@ class KeycloakCentralIdentityProvider(
         val keys = JWKSet.parse(get(endpoint(metadata, "jwks_uri")).toString())
         val selector = JWSVerificationKeySelector<SecurityContext>(JWSAlgorithm.RS256, ImmutableJWKSet(keys))
         val validator = IDTokenValidator(Issuer(issuer), ClientID(clientId), selector, null)
-        validator.maxClockSkew = 0
+        // Bound issuer iat/nbf clock differences; expiry is still checked strictly below.
+        validator.maxClockSkew = 30
         // RFC 8628 has no browser callback/nonce; the confidential device code binds this response.
         val claims = validator.validate(jwt, null)
         val now = Instant.now()

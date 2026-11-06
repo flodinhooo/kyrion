@@ -249,6 +249,30 @@ class UnifiedIdentityIntegrationTest @Autowired constructor(
         assertThat(identities.status(owner.session.rawToken).linked).isFalse()
     }
 
+    @Test fun `HTTP polling and cancellation accept operation only while completion requires explicit confirmation`() {
+        val owner = owner()
+        val start = identities.start("LINK", owner.session.rawToken, PASSWORD)
+        testClock.now = testClock.now.plusSeconds(2)
+        mockMvc.perform(post("/v1/auth/central/poll").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"operationToken":"${start.operationToken}"}"""))
+            .andExpect(status().isOk).andExpect(jsonPath("$.status").value("CONFIRM"))
+        mockMvc.perform(post("/v1/auth/central/complete").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"operationToken":"${start.operationToken}"}"""))
+            .andExpect(status().isBadRequest)
+        for (invalid in listOf("null", "false", "\"true\"", "1", "{}", "[]")) {
+            mockMvc.perform(post("/v1/auth/central/complete").header("Authorization", "Bearer ${owner.session.rawToken}")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"operationToken":"${start.operationToken}","confirm":$invalid}"""))
+                .andExpect(status().isBadRequest)
+        }
+        mockMvc.perform(post("/v1/auth/central/complete").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"operationToken":"${start.operationToken}","confirm":true}"""))
+            .andExpect(status().isOk).andExpect(jsonPath("$.linked").value(true))
+        val cancel = identities.start("LOGIN", null, null)
+        mockMvc.perform(post("/v1/auth/central/cancel").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"operationToken":"${cancel.operationToken}"}"""))
+            .andExpect(status().isNoContent)
+    }
+
     @Test fun `HTTP rejects malformed operations requires authentication and never exposes device secret`() {
         val owner = owner()
         mockMvc.perform(get("/v1/auth/central/config")).andExpect(status().isOk).andExpect(jsonPath("$.enabled").value(true))
@@ -280,7 +304,7 @@ class UnifiedIdentityIntegrationTest @Autowired constructor(
         private val setupSecret = SessionTokenService().create().rawToken
         private val bootstrapPath = Files.createTempFile("unified-bootstrap", ".secret").also { Files.writeString(it, setupSecret) }
         private val auditPath = Files.createTempFile("unified-audit", ".key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
-        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine")
+        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
             .withEnv("POSTGRES_INITDB_ARGS", "--no-sync")
             .withStartupTimeout(java.time.Duration.ofMinutes(3))
         @DynamicPropertySource @JvmStatic fun properties(registry: DynamicPropertyRegistry) {

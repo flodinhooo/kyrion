@@ -10,7 +10,20 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 data class CentralStartRequest(@field:Pattern(regexp = "LOGIN|LINK") val mode: String, @field:Size(max = 200) val currentPassword: String? = null)
-data class CentralOperationRequest(@field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val operationToken: String, val confirm: Boolean = false)
+data class CentralOperationRequest(@field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val operationToken: String)
+data class CentralConfirmationRequest(
+    @field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val operationToken: String,
+    @field:tools.jackson.databind.annotation.JsonDeserialize(using = CentralConfirmationDeserializer::class)
+    val confirm: Boolean,
+)
+
+class CentralConfirmationDeserializer : tools.jackson.databind.ValueDeserializer<Boolean>() {
+    override fun deserialize(parser: tools.jackson.core.JsonParser, context: tools.jackson.databind.DeserializationContext): Boolean = when (parser.currentToken()) {
+        tools.jackson.core.JsonToken.VALUE_TRUE -> true
+        tools.jackson.core.JsonToken.VALUE_FALSE -> false
+        else -> throw CentralIdentityException("CENTRAL_OPERATION_INVALID")
+    }
+}
 data class CentralUnlinkRequest(@field:Size(min = 12, max = 200) val currentPassword: String)
 
 @RestController
@@ -21,7 +34,7 @@ class UnifiedIdentityController(private val identities: UnifiedIdentityService, 
     @GetMapping("/status") fun status(request: HttpServletRequest) = identities.status(request.sessionToken() ?: throw UnauthenticatedException())
     @PostMapping("/start") fun start(@Valid @RequestBody body: CentralStartRequest, request: HttpServletRequest) = identities.start(body.mode, request.sessionToken(), body.currentPassword)
     @PostMapping("/poll") fun poll(@Valid @RequestBody body: CentralOperationRequest, request: HttpServletRequest) = identities.poll(body.operationToken, request.sessionToken())
-    @PostMapping("/complete") fun complete(@Valid @RequestBody body: CentralOperationRequest, request: HttpServletRequest): Any {
+    @PostMapping("/complete") fun complete(@Valid @RequestBody body: CentralConfirmationRequest, request: HttpServletRequest): Any {
         val result = identities.complete(body.operationToken, request.sessionToken(), body.confirm) ?: return mapOf("linked" to true)
         return SessionResponse(UserResponse(result.user.id, result.user.username, "invitations:create" in rbac.permissions(result.user.id)), result.session.rawToken, result.session.session.expiresAt)
     }

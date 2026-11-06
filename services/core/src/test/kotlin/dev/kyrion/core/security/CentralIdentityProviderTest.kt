@@ -99,6 +99,15 @@ class CentralIdentityProviderTest {
         invalid.forEach { jwt = it; assertThrows(CentralIdentityException::class.java) { provider.pollDevice("device") } }
     }
 
+    @Test fun `small issuer clock skew is bounded without accepting an expired proof`() {
+        jwt = token { issueTime(Date.from(Instant.now().plusSeconds(2))); notBeforeTime(Date.from(Instant.now().plusSeconds(2))) }
+        assertNotNull(provider.pollDevice("device"))
+        jwt = token { issueTime(Date.from(Instant.now().plusSeconds(60))) }
+        assertThrows(CentralIdentityException::class.java) { provider.pollDevice("device") }
+        jwt = token { expirationTime(Date.from(Instant.now().minusSeconds(1))) }
+        assertThrows(CentralIdentityException::class.java) { provider.pollDevice("device") }
+    }
+
     @Test fun `unsigned token is rejected`() {
         jwt = com.nimbusds.jwt.PlainJWT(SignedJWT.parse(token()).jwtClaimsSet).serialize()
         assertThrows(CentralIdentityException::class.java) { provider.pollDevice("device") }

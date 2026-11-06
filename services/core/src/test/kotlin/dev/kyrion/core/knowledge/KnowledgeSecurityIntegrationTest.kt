@@ -330,7 +330,7 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer("postgres:17-alpine").withStartupTimeout(java.time.Duration.ofMinutes(3))
+        val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw")).withStartupTimeout(java.time.Duration.ofMinutes(3))
         @DynamicPropertySource
         @JvmStatic
         fun properties(registry: DynamicPropertyRegistry) {

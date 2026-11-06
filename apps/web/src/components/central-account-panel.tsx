@@ -128,11 +128,11 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
   if (login && !enabled) return null;
   const errorText = error in t.errors ? t.errors[error as keyof typeof t.errors] : t.error;
   return <section className={login ? "central-account-panel" : "settings-link-card profile-security-panel"} aria-label={t.title}>
-    {!login && <><h2>{t.title}</h2><p>{status?.linked ? t.connected : t.disconnected}</p><p>{t.localHelp}</p></>}
+    {!login && <><h2>{t.title}</h2><p>{status === null ? t.checking : status.linked ? t.connected : t.disconnected}</p><p>{t.localHelp}</p></>}
     {!login && !enabled && <p>{t.disabled}</p>}
     {error && <p role="alert" className="auth-error">{errorText}</p>}
     {notice && <p role="status">{notice}</p>}
-    {!device && !status?.linked && enabled && (login
+    {!device && !status?.linked && enabled && (login || status !== null) && (login
       ? <button type="button" disabled={busy} onClick={() => void start()}>{busy ? t.checking : t.login}</button>
       : <form className="auth-form" onSubmit={start}><label>{t.password}<input name="currentPassword" type="password" autoComplete="current-password" minLength={12} maxLength={200} required /></label><button type="submit" disabled={busy}>{busy ? t.checking : t.connect}</button></form>)}
     {device && <div className="auth-form">
