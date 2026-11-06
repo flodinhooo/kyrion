@@ -145,9 +145,14 @@ def run(args):
         (directory / "sql").mkdir()
         (directory / "lib").mkdir()
         if approved:
-            require(approved.get("targetVersion") == args.target_version, "PLAN_TARGET_VERSION_MISMATCH")
+            require(
+                approved.get("targetVersion") == args.target_version,
+                "PLAN_TARGET_VERSION_MISMATCH",
+            )
         catalog = extract_artifact(args.artifact, args.artifact_sha256, directory)
-        require(str(args.target_version) in catalog["migrations"], "ARTIFACT_TARGET_MISSING")
+        require(
+            str(args.target_version) in catalog["migrations"], "ARTIFACT_TARGET_MISSING"
+        )
         if approved:
             require(approved.get("catalog") == catalog, "PLAN_CATALOG_MISMATCH")
         source = Path(__file__).with_name("CoreSchemaMigration.java")

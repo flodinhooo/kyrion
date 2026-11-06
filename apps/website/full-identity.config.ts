@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+// Playwright's automatic failure DOM snapshots can contain password input values.
+process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
+
 const settings = Object.fromEntries(
   readFileSync(
     path.resolve(__dirname, "../../.run/stabilization/identity-acceptance.env"),
@@ -40,6 +43,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
+        KYRION_BUILD_DIRECTORY: ".next-identity-full-website",
         KYRION_WEBSITE_ACCOUNT_ENABLED: "true",
         KYRION_WEBSITE_ACCOUNT_DEV_HTTP: "true",
         KYRION_WEBSITE_ORIGIN: "http://localhost:3119",
@@ -55,7 +59,10 @@ export default defineConfig({
       url: "http://localhost:3219/login",
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { CORE_SERVICE_URL: "http://127.0.0.1:18092" },
+      env: {
+        CORE_SERVICE_URL: "http://127.0.0.1:18092",
+        KYRION_BUILD_DIRECTORY: ".next-identity-full-web",
+      },
     },
   ],
 });

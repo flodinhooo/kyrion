@@ -54,7 +54,9 @@ class SchemaToolTest(unittest.TestCase):
         self.assertEqual(48, sum(path.is_file() for path in self.extract.rglob("*")))
 
     def test_accepts_combined_v46_catalog(self):
-        catalog = TOOL.extract_artifact(self.jar, self.artifact(range(1, 47)), self.extract)
+        catalog = TOOL.extract_artifact(
+            self.jar, self.artifact(range(1, 47)), self.extract
+        )
         self.assertEqual(46, len(catalog["migrations"]))
 
     def test_rejects_wrong_hash_before_extraction(self):
@@ -64,11 +66,15 @@ class SchemaToolTest(unittest.TestCase):
         self.assertEqual([], list((self.extract / "sql").iterdir()))
 
     def test_rejects_missing_migrations(self):
-        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"):
+        with self.assertRaisesRegex(
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"
+        ):
             TOOL.extract_artifact(self.jar, self.artifact(range(1, 45)), self.extract)
 
     def test_rejects_future_migration(self):
-        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"):
+        with self.assertRaisesRegex(
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"
+        ):
             TOOL.extract_artifact(self.jar, self.artifact(range(1, 48)), self.extract)
 
     def test_rejects_callback_or_path_traversal(self):
@@ -172,6 +178,29 @@ class SchemaToolTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "CONNECTION_TLS_REQUIRED"):
                 TOOL.run(args)
             child.assert_not_called()
+
+    def test_plan_target_version_cannot_change_on_apply(self):
+        args = self.arguments()
+        args.java_home = self.root
+        args.expected_target = "1" * 64
+        args.plan.write_text(
+            json.dumps(
+                {
+                    "format": "kyrion-schema-plan-v1",
+                    "artifactSha256": args.artifact_sha256,
+                    "state": {"targetIdentity": args.expected_target},
+                    "targetVersion": 46,
+                }
+            ),
+            encoding="utf-8",
+        )
+        args.approve_plan_sha256 = hashlib.sha256(args.plan.read_bytes()).hexdigest()
+        with patch.object(TOOL.subprocess, "run") as child:
+            child.return_value.returncode = 0
+            child.return_value.stderr = b'openjdk version "21.0.13"'
+            with self.assertRaisesRegex(ValueError, "PLAN_TARGET_VERSION_MISMATCH"):
+                TOOL.run(args)
+            child.assert_called_once()  # Java version only; no compiler or database.
 
 
 if __name__ == "__main__":

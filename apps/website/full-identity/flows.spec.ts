@@ -240,8 +240,23 @@ test("real registration, verified email, website and local login/link/offline/un
           "utf8",
         ),
       );
+    const invalidFields = await page.locator("form").evaluate((form) =>
+      Array.from((form as HTMLFormElement).elements)
+        .filter(
+          (field) => field instanceof HTMLInputElement && !field.validity.valid,
+        )
+        .map((field) => (field as HTMLInputElement).name),
+    );
+    expect(invalidFields).toEqual([]);
+    const submitted = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/auth/setup" &&
+        response.request().method() === "POST",
+      { timeout: 30_000 },
+    );
     await page.locator('button[type="submit"]').click();
-    await expect(page).toHaveURL(`${web}/`);
+    expect((await submitted).status()).toBe(201);
+    await expect(page).toHaveURL(`${web}/`, { timeout: 30_000 });
   } else await localLogin(page, "acceptance-owner");
   const owner = await me(context);
   const invitation = await webMutation(page, "/api/auth/invitations");
