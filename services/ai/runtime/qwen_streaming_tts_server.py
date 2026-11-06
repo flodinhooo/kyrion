@@ -154,10 +154,7 @@ class PcmEmitter:
         self.frames.append(frame)
         count = len(self.frames)
         initial_batch_ready = self.decoded_until == 0 and count == INITIAL_CODEC_FRAMES
-        stride_ready = (
-            self.decoded_until > 0
-            and count - self.decoded_until == STRIDE_CODEC_FRAMES
-        )
+        stride_ready = self.decoded_until > 0 and count - self.decoded_until == STRIDE_CODEC_FRAMES
         if initial_batch_ready or stride_ready:
             self.decode(count)
 
@@ -181,12 +178,14 @@ class PcmEmitter:
         cut = context_frames * SAMPLES_PER_CODEC_FRAME
         audio = wav[cut : cut + new_count * SAMPLES_PER_CODEC_FRAME]
         payload = pcm_s16le(audio)
-        self.put({
-            "type": "audio",
-            "sequence": self.sequence,
-            "audioBase64": base64.b64encode(payload).decode("ascii"),
-            "producedAtEpochMillis": time.time_ns() // 1_000_000,
-        })
+        self.put(
+            {
+                "type": "audio",
+                "sequence": self.sequence,
+                "audioBase64": base64.b64encode(payload).decode("ascii"),
+                "producedAtEpochMillis": time.time_ns() // 1_000_000,
+            }
+        )
         self.sequence += 1
         self.pcm_bytes += len(payload)
         self.decoded_until = end
