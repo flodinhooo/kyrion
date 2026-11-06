@@ -131,6 +131,16 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
         denied(id, "AUTHORITY_PROVENANCE_MISSING")
     }
 
+    @Test fun `legacy non object payload cannot prevent provenance denial or block the next command`() {
+        val id = UUID.randomUUID()
+        jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at)
+            VALUES(:id,:node,:owner,'zigbee.power','[]','pending',CURRENT_TIMESTAMP)""")
+            .param("id", id).param("node", node).param("owner", owner).update()
+        denied(id, "AUTHORITY_PROVENANCE_MISSING")
+        val valid = queue.enqueue(human, node, "zigbee.power", payload)
+        assertThat(queue.next(node, token)?.id).isEqualTo(valid)
+    }
+
     @Test fun `cross node claim and completion cannot consume another nodes command`() {
         val enrollment = gateways.createEnrollment(owner, "Other node")
         val other = gateways.enroll(enrollment.enrollmentToken, "other-node", "test", "Test", "1", "test")

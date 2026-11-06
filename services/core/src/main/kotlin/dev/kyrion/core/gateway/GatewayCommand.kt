@@ -42,9 +42,13 @@ class GatewayCommandRepository(private val jdbc: JdbcClient) {
         RETURNING id,command_type,payload,owner_id,authority""")
         .param("nodeId", nodeId).param("now", Timestamp.from(now))
         .query { rs, _ ->
-            val payload = mapper.readValue(rs.getString("payload"), object : TypeReference<Map<String, Any>>() {})
+            val authority = rs.getString("authority")?.let { runCatching { mapper.readValue(it, GatewayAuthority::class.java) }.getOrNull() }
+            // Unknown historical authority is denied before payload interpretation.
+            // A malformed legacy payload must not roll back that denial and pin the queue head.
+            val payload = if (authority == null) emptyMap() else
+                mapper.readValue(rs.getString("payload"), object : TypeReference<Map<String, Any>>() {})
             ClaimedGatewayCommand(GatewayCommand(rs.getObject("id", UUID::class.java), rs.getString("command_type"), payload),
-                rs.getObject("owner_id", UUID::class.java), rs.getString("authority")?.let { runCatching { mapper.readValue(it, GatewayAuthority::class.java) }.getOrNull() })
+                rs.getObject("owner_id", UUID::class.java), authority)
         }
         .optional().orElse(null)
 

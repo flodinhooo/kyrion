@@ -4,6 +4,8 @@ This source slice implements [ADR 0036](adr/0036-gateway-command-authority.md).
 Verification and delivery evidence are tracked in
 [the Assignment B results](agent-handoffs/2026-11-06-gateway-authority-results.md).
 It does not authorize deployment or establish physical acceptance.
+The [rollout runbook](gateway-authority-rollout.md) records isolated acceptance,
+Windows/Pi prerequisites and the security limits of rollback after V42/V43.
 
 ## Authority and dispatch
 
@@ -32,7 +34,9 @@ device recreated at the same address does not inherit the old command.
 Denied claims commit a terminal `failed` result with `AUTHORITY_REVOKED`, or
 `AUTHORITY_PROVENANCE_MISSING` for missing/unreadable provenance, and a correlated
 denial event attributed to the original principal where known. No payload reaches
-the node. A suspended Space blocks authentication/polling before claiming; its
+the node. Missing/unreadable authority is checked before interpreting a historical
+payload, so a non-object legacy payload cannot prevent terminal denial and block
+later commands. A suspended Space blocks authentication/polling before claiming; its
 pending rows remain pending until it becomes active or an operator cancels them.
 
 Human commands are durable accepted intent. Logout/expiration blocks new HTTP
