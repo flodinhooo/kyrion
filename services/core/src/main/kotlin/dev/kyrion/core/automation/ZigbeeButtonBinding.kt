@@ -12,6 +12,7 @@ import dev.kyrion.core.capability.CommandedPowerStateStore
 import dev.kyrion.core.gateway.GatewayNode
 import dev.kyrion.core.integration.IntegrationConnectionRepository
 import dev.kyrion.core.security.workspaceOwnerId
+import dev.kyrion.core.security.authenticatedUserId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -39,6 +40,7 @@ data class ZigbeeButtonBinding(
     val targetDeviceId: UUID? = null,
     val targetRoomId: UUID? = null,
     val action: String,
+    val grantId: UUID? = null,
 )
 
 data class ReplaceZigbeeButtonBindingsRequest(val bindings: List<@Valid ZigbeeButtonBinding>)
@@ -46,28 +48,28 @@ data class ReplaceZigbeeButtonBindingsRequest(val bindings: List<@Valid ZigbeeBu
 @Repository
 class ZigbeeButtonBindingRepository(private val jdbc: JdbcClient) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> = jdbc.sql(
-        """SELECT gesture, target_connection_id, target_room_id, action FROM zigbee_button_binding
+        """SELECT gesture, target_connection_id, target_room_id, action, grant_id FROM zigbee_button_binding
            WHERE owner_id=:ownerId AND button_connection_id=:buttonId ORDER BY gesture""",
     ).param("ownerId", ownerId).param("buttonId", buttonId).query { rs, _ ->
         ZigbeeButtonBinding(
             rs.getString("gesture"), rs.getObject("target_connection_id", UUID::class.java),
-            rs.getObject("target_room_id", UUID::class.java), rs.getString("action"),
+            rs.getObject("target_room_id", UUID::class.java), rs.getString("action"), rs.getObject("grant_id", UUID::class.java),
         )
     }.list()
 
     @Transactional
-    fun replace(ownerId: UUID, buttonId: UUID, bindings: List<ZigbeeButtonBinding>, now: java.time.Instant) {
+    fun replace(ownerId: UUID, buttonId: UUID, bindings: List<ZigbeeButtonBinding>, now: java.time.Instant, actorId: UUID, nodeId: UUID) {
         jdbc.sql("DELETE FROM zigbee_button_binding WHERE owner_id=:ownerId AND button_connection_id=:buttonId")
             .param("ownerId", ownerId).param("buttonId", buttonId).update()
         bindings.forEach { binding ->
             jdbc.sql(
                 """INSERT INTO zigbee_button_binding
-                   (owner_id, button_connection_id, gesture, target_connection_id, target_room_id, action, updated_at)
-                   VALUES (:ownerId, :buttonId, :gesture, :targetId, :roomId, :action, :updatedAt)""",
+                   (owner_id, button_connection_id, gesture, target_connection_id, target_room_id, action, updated_at, grant_id, granted_by, source_node_id)
+                   VALUES (:ownerId, :buttonId, :gesture, :targetId, :roomId, :action, :updatedAt, :grant, :actor, :node)""",
             ).param("ownerId", ownerId).param("buttonId", buttonId).param("gesture", binding.gesture)
                 .param("targetId", binding.targetDeviceId).param("roomId", binding.targetRoomId)
                 .param("action", binding.action)
-                .param("updatedAt", Timestamp.from(now)).update()
+                .param("updatedAt", Timestamp.from(now)).param("grant", UUID.randomUUID()).param("actor", actorId).param("node", nodeId).update()
         }
     }
 }
@@ -83,13 +85,17 @@ class ZigbeeButtonBindingService(
     private val clock: Clock = Clock.systemUTC(),
     private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
+    private val rbac: dev.kyrion.core.security.RbacService? = null,
+    private val gateways: dev.kyrion.core.gateway.GatewayService? = null,
+    private val activity: dev.kyrion.core.activity.ActivityService? = null,
 ) {
     fun find(ownerId: UUID, buttonId: UUID): List<ZigbeeButtonBinding> {
         requireButton(ownerId, buttonId)
         return repository.find(ownerId, buttonId)
     }
 
-    fun replace(ownerId: UUID, buttonId: UUID, bindings: List<ZigbeeButtonBinding>): List<ZigbeeButtonBinding> {
+    @Transactional
+    fun replace(ownerId: UUID, buttonId: UUID, bindings: List<ZigbeeButtonBinding>, actorId: UUID): List<ZigbeeButtonBinding> {
         requireButton(ownerId, buttonId)
         if (bindings.size > 3 || bindings.map { it.gesture }.distinct().size != bindings.size ||
             bindings.any { it.gesture !in GESTURES || it.action !in ACTIONS }) throw ZigbeeButtonBindingInvalidException()
@@ -103,8 +109,29 @@ class ZigbeeButtonBindingService(
                     target.capabilities.none { it.id == DeviceCommandService.POWER_SET })) ||
                     (hasRoom && binding.targetRoomId !in roomIds)
             }) throw ZigbeeButtonBindingInvalidException()
-        repository.replace(ownerId, buttonId, bindings, clock.instant())
-        return repository.find(ownerId, buttonId)
+        boundary?.shared(actorId, ownerId)
+        rbac?.require(actorId, "devices:update")
+        rbac?.require(actorId, "devices:execute")
+        val button = connections.find(ownerId, buttonId) ?: throw ZigbeeButtonBindingInvalidException()
+        val node = gateways?.all(ownerId)?.singleOrNull { it.health?.zigbee?.devices?.any { device -> device.ieeeAddress == button.endpointHost } == true }
+            ?: throw ZigbeeButtonBindingInvalidException()
+        val previous = repository.find(ownerId, buttonId)
+        repository.replace(ownerId, buttonId, bindings, clock.instant(), actorId, node.id)
+        val current = repository.find(ownerId, buttonId)
+        previous.mapNotNull { it.grantId }.forEach { grantId ->
+            activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "automation.grant.revoked",
+                dev.kyrion.core.activity.ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+                "automation", buttonId.toString(), actorId.toString(), grantId, ownerId)
+        }
+        current.mapNotNull { it.grantId }.forEach { grantId ->
+            activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "automation.grant.issued",
+                dev.kyrion.core.activity.ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+                "automation", buttonId.toString(), actorId.toString(), grantId, ownerId)
+        }
+        activity?.record(dev.kyrion.core.activity.ActivityCategory.CAPABILITY, "automation.grants.replaced",
+            dev.kyrion.core.activity.ActivityStatus.SUCCEEDED, ActivityActorType.USER,
+            "automation", "automation.grants.replaced", actorId.toString(), buttonId, ownerId)
+        return current
     }
 
     fun handle(node: GatewayNode, ieeeAddress: String, gesture: String) {
@@ -114,6 +141,7 @@ class ZigbeeButtonBindingService(
         } ?: throw ZigbeeButtonBindingInvalidException()
         requireButton(node.ownerId, button.id)
         val binding = repository.find(node.ownerId, button.id).singleOrNull { it.gesture == gesture } ?: return
+        if (binding.grantId == null) return
         taskExecutor.execute { execute(node, button.id, binding) }
     }
 
@@ -141,7 +169,7 @@ class ZigbeeButtonBindingService(
         }
         orchestrator.execute(
             ActionContext(node.ownerId, ActivityActorType.INTEGRATION, buttonId.toString(), InteractionChannel.AUTOMATION,
-                Locale.GERMAN, UUID.randomUUID(), UUID.randomUUID()),
+                Locale.GERMAN, UUID.randomUUID(), UUID.randomUUID(), automationGrantId = binding.grantId, automationNodeId = node.id),
             DeviceActionProposal(null, DeviceCommandService.POWER_SET, DeviceCommandArguments(on = on), targets.map { it.id }),
         )
     }
@@ -165,7 +193,7 @@ class ZigbeeButtonBindingController(private val service: ZigbeeButtonBindingServ
     @GetMapping fun find(@PathVariable buttonId: UUID, request: HttpServletRequest) = service.find(request.ownerId(), buttonId)
 
     @PutMapping fun replace(@PathVariable buttonId: UUID, @Valid @RequestBody body: ReplaceZigbeeButtonBindingsRequest,
-        request: HttpServletRequest) = service.replace(request.ownerId(), buttonId, body.bindings)
+        request: HttpServletRequest) = service.replace(request.ownerId(), buttonId, body.bindings, request.authenticatedUserId())
 
     private fun HttpServletRequest.ownerId() = workspaceOwnerId()
 }

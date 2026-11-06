@@ -56,7 +56,7 @@ class DeviceActionHandlerTest {
                 ),
             ),
         )
-        `when`(commands.execute(context.ownerId, request, context.correlationId, false)).thenReturn(
+        `when`(commands.execute(dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability), request, context.correlationId, false)).thenReturn(
             DeviceCommandResult(
                 DeviceCommandService.POWER_SET,
                 "Office",
@@ -73,7 +73,7 @@ class DeviceActionHandlerTest {
         assertEquals(ActionOutcomeStatus.SUCCEEDED, outcome.status)
         assertEquals("action.succeeded", outcome.code)
         assertEquals(context.correlationId, outcome.correlationId)
-        verify(commands).execute(context.ownerId, request, context.correlationId, false)
+        verify(commands).execute(dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability), request, context.correlationId, false)
     }
 
     @Test
@@ -98,8 +98,8 @@ class DeviceActionHandlerTest {
 
     private fun context() = ActionContext(
         ownerId = UUID.randomUUID(),
-        actorType = ActivityActorType.AI,
-        actorId = "velora",
+        actorType = ActivityActorType.USER,
+        actorId = UUID.randomUUID().toString(),
         channel = InteractionChannel.VOICE,
         locale = Locale.GERMAN,
         correlationId = UUID.randomUUID(),

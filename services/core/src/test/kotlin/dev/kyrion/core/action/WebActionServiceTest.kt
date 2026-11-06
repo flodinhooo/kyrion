@@ -15,6 +15,28 @@ import java.util.UUID
 
 class WebActionServiceTest {
     @Test
+    fun `historical human request fingerprint replays completed outcome after upgrade`() {
+        val repository = InMemoryActionExecutions()
+        val handler = CountingWebActionHandler()
+        val owner = UUID.randomUUID()
+        val request = request()
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        // This is the pre-0036 persisted request format, without grant fields.
+        val legacyBytes = mapper.writeValueAsBytes(mapOf(
+            "channel" to "web", "actorId" to owner.toString(), "locale" to request.locale,
+            "sessionId" to null, "conversationId" to request.conversationId, "proposal" to request.proposal,
+        ))
+        val legacyHash = java.security.MessageDigest.getInstance("SHA-256").digest(legacyBytes)
+            .joinToString("") { "%02x".format(it) }
+        val saved = ActionOutcome(ActionOutcomeStatus.SUCCEEDED, "action.succeeded", UUID.randomUUID())
+        repository.claim(owner, request.idempotencyKey, saved.correlationId, legacyHash, Instant.EPOCH)
+        repository.complete(owner, request.idempotencyKey, mapper.writeValueAsString(saved), Instant.EPOCH)
+
+        assertEquals(saved, service(repository, handler).execute(owner, request, owner))
+        assertEquals(0, handler.executions)
+    }
+
+    @Test
     fun `completed request replays stored outcome without executing twice`() {
         val repository = InMemoryActionExecutions()
         val handler = CountingWebActionHandler()
@@ -22,8 +44,8 @@ class WebActionServiceTest {
         val owner = UUID.randomUUID()
         val request = request()
 
-        val first = service.execute(owner, request)
-        val replay = service.execute(owner, request)
+        val first = service.execute(owner, request, owner)
+        val replay = service.execute(owner, request, owner)
 
         assertEquals(first, replay)
         assertEquals(1, handler.executions)
@@ -36,10 +58,10 @@ class WebActionServiceTest {
         val service = service(repository, handler)
         val owner = UUID.randomUUID()
         val first = request()
-        service.execute(owner, first)
+        service.execute(owner, first, owner)
 
         assertThrows(ActionIdempotencyMismatchException::class.java) {
-            service.execute(owner, first.copy(proposal = proposal(on = false)))
+            service.execute(owner, first.copy(proposal = proposal(on = false)), owner)
         }
         assertEquals(1, handler.executions)
     }
@@ -55,7 +77,7 @@ class WebActionServiceTest {
         // A repository claim without completion models an in-flight transaction.
         assertThrows(ActionExecutionPendingException::class.java) {
             repository.forcePending(owner, request)
-            hashService.execute(owner, request)
+            hashService.execute(owner, request, owner)
         }
         assertEquals(0, handler.executions)
     }
@@ -67,8 +89,8 @@ class WebActionServiceTest {
         val service = service(repository, handler)
         val request = request()
 
-        val first = service.execute(UUID.randomUUID(), request)
-        val second = service.execute(UUID.randomUUID(), request)
+        val first = service.execute(UUID.randomUUID(), request, UUID.randomUUID())
+        val second = service.execute(UUID.randomUUID(), request, UUID.randomUUID())
 
         assertEquals(2, handler.executions)
         assertNotEquals(first.correlationId, second.correlationId)
@@ -120,7 +142,7 @@ private class InMemoryActionExecutions : ActionExecutionRepository {
         val service = WebActionService(ActionExecutionService(
             probe, ActionOrchestrator(listOf(handler), ActionPolicyService(), ActivityService(EmptyWebActionActivityRepository())),
         ))
-        service.execute(ownerId, request)
+        service.execute(ownerId, request, ownerId)
         val completed = probe.find(ownerId, request.idempotencyKey)!!
         values[Key(ownerId, request.idempotencyKey)] = completed.copy(status = "pending", outcomeJson = null)
     }

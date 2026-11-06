@@ -98,9 +98,12 @@ class ActionExecutionService(
     private val mapper: ObjectMapper = jacksonObjectMapper(),
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
     private val rbac: dev.kyrion.core.security.RbacService? = null,
+    private val gatewayAuthority: dev.kyrion.core.gateway.GatewayAuthorityService? = null,
 ) {
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
         context.requireCurrentAuthority(boundary, rbac)
+        if (proposal is DeviceActionProposal) gatewayAuthority?.validate(
+            dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability), null, null)
         val requestHash = sha256(mapper.writeValueAsBytes(mapOf(
             "channel" to context.channel.value,
             "actorId" to context.actorId,
@@ -108,7 +111,14 @@ class ActionExecutionService(
             "sessionId" to context.sessionId,
             "conversationId" to context.conversationId,
             "proposal" to proposal,
-        )))
+        ).let { fingerprint ->
+            // Keep historical human/Voice fingerprints compatible across upgrade.
+            // A renewed automation grant cannot replay a previous grant's outcome.
+            if (context.channel == InteractionChannel.AUTOMATION) fingerprint + mapOf(
+                "automationGrantId" to context.automationGrantId,
+                "automationNodeId" to context.automationNodeId,
+            ) else fingerprint
+        }))
         if (!executions.claim(context.ownerId, context.idempotencyKey, context.correlationId, requestHash, clock.instant())) {
             val existing = executions.find(context.ownerId, context.idempotencyKey) ?: throw ActionExecutionConflictException()
             if (existing.requestHash != requestHash) throw ActionIdempotencyMismatchException()
@@ -126,7 +136,7 @@ class ActionExecutionService(
 
 @Service
 class WebActionService(private val executions: ActionExecutionService) {
-    fun execute(ownerId: UUID, request: WebActionRequest, actorId: UUID = ownerId): ActionOutcome = executions.execute(
+    fun execute(ownerId: UUID, request: WebActionRequest, actorId: UUID): ActionOutcome = executions.execute(
         ActionContext(
             ownerId, ActivityActorType.USER, actorId.toString(), InteractionChannel.WEB,
             Locale.forLanguageTag(request.locale), UUID.randomUUID(), request.idempotencyKey,
@@ -143,7 +153,7 @@ class WebActionIntentService(
     private val renderer: ActionResultRenderer,
     private val activity: dev.kyrion.core.activity.ActivityService? = null,
 ) {
-    fun execute(ownerId: UUID, request: WebActionIntentRequest, actorId: UUID = ownerId): WebActionAttempt = when (
+    fun execute(ownerId: UUID, request: WebActionIntentRequest, actorId: UUID): WebActionAttempt = when (
         val result = proposals.propose(ownerId, request.message.trim(), request.locale, request.priorMessages)
     ) {
         is ProposalResult.Proposed -> actions.execute(ownerId, WebActionRequest(

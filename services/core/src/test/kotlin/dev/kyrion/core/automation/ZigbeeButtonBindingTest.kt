@@ -22,7 +22,7 @@ class ZigbeeButtonBindingTest {
     private val tasks = mutableListOf<Runnable>()
     private val service = ZigbeeButtonBindingService(repository, connections, catalog, orchestrator,
         TaskExecutor { tasks.add(it) })
-    private val binding = ZigbeeButtonBinding("single", targetDeviceId = target, action = "turn_on")
+    private val binding = ZigbeeButtonBinding("single", targetDeviceId = target, action = "turn_on", grantId = UUID.randomUUID())
     private val node = mock(GatewayNode::class.java)
 
     private fun queue() {

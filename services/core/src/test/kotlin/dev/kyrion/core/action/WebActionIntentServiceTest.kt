@@ -15,7 +15,7 @@ class WebActionIntentServiceTest {
         val actions = mock(WebActionService::class.java)
         val service = WebActionIntentService(FixedProposalProvider(ProposalResult.None), actions, ActionResultRenderer())
 
-        val result = service.execute(UUID.randomUUID(), request())
+        val result = service.execute(UUID.randomUUID(), request(), UUID.randomUUID())
 
         assertEquals("none", result.kind)
         assertNull(result.renderedText)
@@ -27,7 +27,7 @@ class WebActionIntentServiceTest {
         val actions = mock(WebActionService::class.java)
         val service = WebActionIntentService(FixedProposalProvider(ProposalResult.Unavailable), actions, ActionResultRenderer())
 
-        val result = service.execute(UUID.randomUUID(), request())
+        val result = service.execute(UUID.randomUUID(), request(), UUID.randomUUID())
 
         assertEquals("unavailable", result.kind)
         assertEquals("proposal.unavailable", result.code)
@@ -43,13 +43,13 @@ class WebActionIntentServiceTest {
         val request = request()
         val actionRequest = WebActionRequest(request.idempotencyKey, request.locale, proposal, request.conversationId)
         val actions = mock(WebActionService::class.java)
-        `when`(actions.execute(owner, actionRequest)).thenReturn(ActionOutcome(
+        `when`(actions.execute(owner, actionRequest, owner)).thenReturn(ActionOutcome(
             ActionOutcomeStatus.SUCCEEDED, "action.succeeded", UUID.randomUUID(), "power.set", 1, 1, 0,
             listOf(ActionTargetOutcome(target, "Bürolampe", "succeeded")),
         ))
 
         val result = WebActionIntentService(FixedProposalProvider(ProposalResult.Proposed(proposal)), actions, ActionResultRenderer())
-            .execute(owner, request)
+            .execute(owner, request, owner)
 
         assertEquals("action", result.kind)
         assertEquals("„Bürolampe“ ist jetzt eingeschaltet.", result.renderedText)

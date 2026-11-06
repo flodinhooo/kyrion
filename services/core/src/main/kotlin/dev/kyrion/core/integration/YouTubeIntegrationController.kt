@@ -66,12 +66,13 @@ class YouTubeIntegrationService(private val activity: ActivityService, private v
         return embed
     }
 
-    fun play(ownerId: UUID, request: PlayYouTubeRequest): GatewayPlaybackTarget {
+    fun play(authority: dev.kyrion.core.gateway.GatewayAuthority, request: PlayYouTubeRequest): GatewayPlaybackTarget {
+        val ownerId = authority.spaceId
         val embed = YouTubeLinks.resolve(request.url, request.source)
         val gateway = gateways.all(ownerId).singleOrNull { it.id == request.nodeId }
             ?: throw InvalidYouTubePlaybackTargetException()
         val output = gateway.health?.audio?.playback ?: throw InvalidYouTubePlaybackTargetException()
-        commands.enqueue(ownerId, gateway.id, "youtube.play", mapOf("url" to embed.watchUrl, "outputId" to output.id))
+        commands.enqueue(authority, gateway.id, "youtube.play", mapOf("url" to embed.watchUrl, "outputId" to output.id))
         activity.record(ActivityCategory.INTEGRATION, "youtube.play.requested", ActivityStatus.CONFIRMED,
             ActivityActorType.USER, "youtube", "YOUTUBE_PLAY_REQUESTED", gateway.id.toString(), ownerId = ownerId)
         return GatewayPlaybackTarget(gateway.id, gateway.displayName, output.displayName)
@@ -90,7 +91,7 @@ class YouTubeIntegrationController(private val service: YouTubeIntegrationServic
     @PostMapping("/play")
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun play(@Valid @RequestBody body: PlayYouTubeRequest, request: HttpServletRequest): GatewayPlaybackTarget =
-        service.play(request.workspaceOwnerId(), body)
+        service.play(dev.kyrion.core.gateway.GatewayAuthority.human(request, "integrations:create", "youtube.play"), body)
 }
 
 class InvalidYouTubeLinkException : RuntimeException()

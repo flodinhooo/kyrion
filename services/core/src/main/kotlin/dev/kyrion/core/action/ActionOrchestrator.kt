@@ -60,11 +60,14 @@ class ActionOrchestrator(
     private val activity: ActivityService,
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
     private val rbac: dev.kyrion.core.security.RbacService? = null,
+    private val gatewayAuthority: dev.kyrion.core.gateway.GatewayAuthorityService? = null,
 ) {
     private val handlers = handlers.toList()
 
     fun execute(context: ActionContext, proposal: ActionProposal): ActionOutcome {
         context.requireCurrentAuthority(boundary, rbac)
+        if (proposal is DeviceActionProposal) gatewayAuthority?.validate(
+            dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability), null, null)
         record(context, "action.proposed", ActivityStatus.PROPOSED, "action.proposed")
         if (proposal is DeviceActionProposal && proposal.capability in setOf(
                 DeviceCommandService.POWER_SET, DeviceCommandService.BRIGHTNESS_SET, DeviceCommandService.COLOR_SET)) {
@@ -144,6 +147,7 @@ class DeviceActionHandler(
     private val activity: ActivityService? = null,
     private val boundary: dev.kyrion.core.security.TenantBoundary? = null,
     private val rbac: dev.kyrion.core.security.RbacService? = null,
+    private val gatewayAuthority: dev.kyrion.core.gateway.GatewayAuthorityService? = null,
 ) : ActionHandler<DeviceActionProposal> {
     override fun supports(proposal: ActionProposal) = proposal is DeviceActionProposal
 
@@ -168,8 +172,9 @@ class DeviceActionHandler(
         }
         val results = targets.map { target ->
             context.requireCurrentAuthority(boundary, rbac)
+            gatewayAuthority?.validateTarget(dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability), target.id, proposal.arguments.on)
             commands.execute(
-                context.ownerId,
+                dev.kyrion.core.gateway.GatewayAuthority.action(context, proposal.capability),
                 ExecuteDeviceCommandRequest(
                     proposal.capability,
                     DeviceTargetSelector(provider = target.provider, deviceId = target.id),

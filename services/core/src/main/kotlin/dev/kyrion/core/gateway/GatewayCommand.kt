@@ -1,5 +1,6 @@
 package dev.kyrion.core.gateway
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.ActivityActorType
@@ -16,32 +17,34 @@ import java.time.Instant
 import java.util.UUID
 
 data class GatewayCommand(val id: UUID, val type: String, val payload: Map<String, Any>)
+data class ClaimedGatewayCommand(val command: GatewayCommand, val ownerId: UUID, val authority: GatewayAuthority?)
+
 data class GatewayCommandStatus(val id: UUID, val status: String, val errorCode: String?)
 
 @Repository
 class GatewayCommandRepository(private val jdbc: JdbcClient) {
     private val mapper: ObjectMapper = jacksonObjectMapper()
-    fun create(id: UUID, nodeId: UUID, ownerId: UUID, type: String, payload: Map<String, Any>, now: Instant, correlationId: UUID = id) {
-        jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at,correlation_id)
-            VALUES (:id,:nodeId,:ownerId,:type,CAST(:payload AS jsonb),'pending',:now,:correlation)""")
+    fun create(id: UUID, nodeId: UUID, ownerId: UUID, type: String, payload: Map<String, Any>, now: Instant, correlationId: UUID = id, authority: GatewayAuthority) {
+        jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at,correlation_id,authority)
+            VALUES (:id,:nodeId,:ownerId,:type,CAST(:payload AS jsonb),'pending',:now,:correlation,CAST(:authority AS jsonb))""")
             .param("id", id).param("nodeId", nodeId).param("ownerId", ownerId).param("type", type)
-            .param("payload", mapper.writeValueAsString(payload)).param("now", Timestamp.from(now)).param("correlation", correlationId).update()
+            .param("authority", mapper.writeValueAsString(authority)).param("payload", mapper.writeValueAsString(payload)).param("now", Timestamp.from(now)).param("correlation", correlationId).update()
     }
 
     fun correlation(ownerId: UUID, id: UUID): UUID = jdbc.sql("SELECT COALESCE(correlation_id,id) FROM gateway_command WHERE owner_id=:owner AND id=:id")
         .param("owner", ownerId).param("id", id).query(UUID::class.java).single()
 
     @Transactional
-    fun claim(nodeId: UUID, now: Instant): GatewayCommand? = jdbc.sql("""
+    fun claim(nodeId: UUID, now: Instant): ClaimedGatewayCommand? = jdbc.sql("""
         UPDATE gateway_command SET status='running', claimed_at=:now
         WHERE id=(SELECT id FROM gateway_command WHERE node_id=:nodeId AND status='pending'
           ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
-        RETURNING id,command_type,payload""")
+        RETURNING id,command_type,payload,owner_id,authority""")
         .param("nodeId", nodeId).param("now", Timestamp.from(now))
         .query { rs, _ ->
-            @Suppress("UNCHECKED_CAST")
-            val payload = mapper.readValue(rs.getString("payload"), Map::class.java) as Map<String, Any>
-            GatewayCommand(rs.getObject("id", UUID::class.java), rs.getString("command_type"), payload)
+            val payload = mapper.readValue(rs.getString("payload"), object : TypeReference<Map<String, Any>>() {})
+            ClaimedGatewayCommand(GatewayCommand(rs.getObject("id", UUID::class.java), rs.getString("command_type"), payload),
+                rs.getObject("owner_id", UUID::class.java), rs.getString("authority")?.let { runCatching { mapper.readValue(it, GatewayAuthority::class.java) }.getOrNull() })
         }
         .optional().orElse(null)
 
@@ -67,22 +70,26 @@ class GatewayCommandService(
     private val repository: GatewayCommandRepository,
     private val activity: ActivityService,
     private val clock: Clock = Clock.systemUTC(),
+    private val authorityService: GatewayAuthorityService,
 ) {
     fun gateway(ownerId: UUID, nodeId: UUID) =
         gateways.all(ownerId).singleOrNull { it.id == nodeId } ?: throw GatewayCommandInvalidException()
 
-    fun enqueue(ownerId: UUID, nodeId: UUID, type: String, payload: Map<String, Any>, correlationId: UUID? = null): UUID {
+    fun enqueue(provenance: GatewayAuthority, nodeId: UUID, type: String, payload: Map<String, Any>, correlationId: UUID? = null): UUID {
+        val authority = authorityService.bindTarget(provenance, type, payload)
+        val ownerId = authority.spaceId
+        authorityService.validate(authority, nodeId, type, payload)
         val node = gateway(ownerId, nodeId)
         if (node.availability == "offline") throw GatewayCommandUnavailableException()
         val id = UUID.randomUUID()
-        repository.create(id, nodeId, ownerId, type, payload, clock.instant(), correlationId ?: id)
-        activity.record(ActivityCategory.CAPABILITY, type, ActivityStatus.CONFIRMED, ActivityActorType.USER,
-            "kyrion-core", type, nodeId.toString(), id, ownerId)
+        repository.create(id, nodeId, ownerId, type, payload, clock.instant(), correlationId ?: id, authority)
+        activity.record(ActivityCategory.CAPABILITY, type, ActivityStatus.CONFIRMED, if (authority.kind == GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION,
+            "kyrion-core", type, authority.principalId.toString(), correlationId ?: id, ownerId)
         return id
     }
 
-    fun enqueueAndAwait(ownerId: UUID, nodeId: UUID, type: String, payload: Map<String, Any>): Boolean {
-        val id = enqueue(ownerId, nodeId, type, payload)
+    fun enqueueAndAwait(authority: GatewayAuthority, nodeId: UUID, type: String, payload: Map<String, Any>): Boolean {
+        val id = enqueue(authority, nodeId, type, payload)
         repeat(48) {
             when (repository.status(id)) {
                 "succeeded" -> return true
@@ -95,10 +102,10 @@ class GatewayCommandService(
 
     fun status(ownerId: UUID, id: UUID) = repository.status(ownerId, id) ?: throw GatewayCommandInvalidException()
 
-    fun executeConfirmed(ownerId: UUID, nodeId: UUID, type: String, payload: Map<String, Any>, correlationId: UUID) {
-        val id = enqueue(ownerId, nodeId, type, payload, correlationId)
+    fun executeConfirmed(authority: GatewayAuthority, nodeId: UUID, type: String, payload: Map<String, Any>, correlationId: UUID) {
+        val id = enqueue(authority, nodeId, type, payload, correlationId)
         repeat(48) {
-            val result = repository.status(ownerId, id) ?: throw GatewayExecutionException("adapter.invalid_result")
+            val result = repository.status(authority.spaceId, id) ?: throw GatewayExecutionException("adapter.invalid_result")
             when (result.status) {
                 "succeeded" -> return
                 "failed" -> throw GatewayExecutionException(gatewayDiagnosticCode(result.errorCode))
@@ -110,9 +117,30 @@ class GatewayCommandService(
         throw GatewayExecutionException("adapter.timeout")
     }
 
+    @Transactional
     fun next(nodeId: UUID, credential: String): GatewayCommand? {
-        gateways.authenticate(nodeId, credential)
-        return repository.claim(nodeId, clock.instant())
+        val node = gateways.authenticate(nodeId, credential)
+        val claimed = repository.claim(nodeId, clock.instant()) ?: return null
+        val authority = claimed.authority
+        val denied = try {
+            if (authority == null || authority.spaceId != node.ownerId || claimed.ownerId != node.ownerId) true
+            else { authorityService.validate(authority, nodeId, claimed.command.type, claimed.command.payload); false }
+        } catch (_: dev.kyrion.core.security.ForbiddenException) { true }
+          catch (_: dev.kyrion.core.security.IdentityPolicyException) { true }
+        if (!denied && authority != null) {
+            activity.record(ActivityCategory.CAPABILITY, "gateway.command.dispatched", ActivityStatus.CONFIRMED,
+                if (authority.kind == GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION,
+                "kyrion-core", authority.capability, authority.principalId.toString(),
+                repository.correlation(node.ownerId, claimed.command.id), node.ownerId)
+            return claimed.command
+        }
+        val code = if (authority == null) "AUTHORITY_PROVENANCE_MISSING" else "AUTHORITY_REVOKED"
+        check(repository.complete(claimed.command.id, nodeId, false, code, clock.instant()))
+        activity.record(ActivityCategory.CAPABILITY, "gateway.command.denied", ActivityStatus.DENIED,
+            if (authority?.kind == GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION,
+            "kyrion-core", code, authority?.principalId?.toString(),
+            repository.correlation(node.ownerId, claimed.command.id), node.ownerId)
+        return null
     }
 
     fun complete(nodeId: UUID, credential: String, id: UUID, succeeded: Boolean, error: String?) {
@@ -121,7 +149,7 @@ class GatewayCommandService(
         activity.record(ActivityCategory.CAPABILITY, "action.adapter.completed",
             if (succeeded) ActivityStatus.SUCCEEDED else ActivityStatus.FAILED,
               ActivityActorType.INTEGRATION, "kyrion-gateway", if (succeeded) "action.succeeded" else gatewayDiagnosticCode(error),
-              node.ownerId.toString(), repository.correlation(node.ownerId, id), node.ownerId)
+              node.id.toString(), repository.correlation(node.ownerId, id), node.ownerId)
     }
 }
 

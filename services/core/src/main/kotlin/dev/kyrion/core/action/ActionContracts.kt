@@ -51,6 +51,8 @@ data class ActionContext(
     val idempotencyKey: UUID,
     val sessionId: UUID? = null,
     val conversationId: UUID? = null,
+    val automationGrantId: UUID? = null,
+    val automationNodeId: UUID? = null,
 ) {
     init {
         require(locale.language in SUPPORTED_LANGUAGES) { "Unsupported action locale" }

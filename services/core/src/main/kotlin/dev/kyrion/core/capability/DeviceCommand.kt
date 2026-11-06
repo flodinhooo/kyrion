@@ -12,6 +12,7 @@ import dev.kyrion.core.gateway.GatewayCommandService
 import dev.kyrion.core.gateway.GatewayService
 import dev.kyrion.core.gateway.ZigbeeDeviceSyncService
 import dev.kyrion.core.gateway.BluetoothDeviceSyncService
+import dev.kyrion.core.gateway.GatewayAuthority
 import dev.kyrion.core.security.workspaceOwnerId
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
@@ -89,11 +90,16 @@ class DeviceCommandService(
     private val gatewayCommands: GatewayCommandService? = null,
     private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
     private val catalog: DeviceCatalogService? = null,
+    private val gatewayAuthority: dev.kyrion.core.gateway.GatewayAuthorityService? = null,
 ) {
-    fun enqueue(ownerId: UUID, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
+    fun enqueue(authority: GatewayAuthority, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
+        if (authority.capability != request.capability) throw DeviceCommandInvalidException()
+        val ownerId = authority.spaceId
+        val actorType = if (authority.kind == dev.kyrion.core.gateway.GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION
+        val actorId = authority.principalId.toString()
         val correlationId = UUID.randomUUID()
         activity.record(ActivityCategory.CAPABILITY, "action.request.received", ActivityStatus.PROPOSED,
-            ActivityActorType.USER, "web", "action.proposed", ownerId.toString(), correlationId, ownerId)
+            actorType, "web", "action.proposed", actorId, correlationId, ownerId)
         try {
             val provider = request.selector.provider.trim().lowercase()
             if (provider !in setOf(ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER)
@@ -121,24 +127,25 @@ class DeviceCommandService(
                 else -> throw DeviceCapabilityUnsupportedException()
             }
             activity.record(ActivityCategory.CAPABILITY, "action.capability", ActivityStatus.PROPOSED,
-                ActivityActorType.USER, "web", request.capability, ownerId.toString(), correlationId, ownerId)
+                actorType, "web", request.capability, actorId, correlationId, ownerId)
             activity.record(ActivityCategory.CAPABILITY, "action.target.resolved", ActivityStatus.CONFIRMED,
-                ActivityActorType.USER, "web", target.id.toString(), ownerId.toString(), correlationId, ownerId)
+                actorType, "web", target.id.toString(), actorId, correlationId, ownerId)
             activity.record(ActivityCategory.CAPABILITY, "action.policy.accepted", ActivityStatus.CONFIRMED,
-                ActivityActorType.USER, "web", "routine", ownerId.toString(), correlationId, ownerId)
+                actorType, "web", "routine", actorId, correlationId, ownerId)
             activity.record(ActivityCategory.CAPABILITY, "action.adapter.invoked", ActivityStatus.CONFIRMED,
-                ActivityActorType.USER, provider, target.id.toString(), ownerId.toString(), correlationId, ownerId)
-            val commandId = gatewayCommands?.enqueue(ownerId, node.id, type, payload, correlationId) ?: throw DeviceCommandInvalidException()
+                actorType, provider, target.id.toString(), actorId, correlationId, ownerId)
+            val commandId = gatewayCommands?.enqueue(authority, node.id, type, payload, correlationId) ?: throw DeviceCommandInvalidException()
             return AsyncDeviceCommandResult(commandId, target.id)
         } catch (exception: RuntimeException) {
             val code = when (exception) {
+                is dev.kyrion.core.security.ForbiddenException -> "action.denied"
                 is DeviceTargetNotFoundException -> "target.not_found"
                 is DeviceCapabilityUnsupportedException -> "action.unsupported"
                 is dev.kyrion.core.gateway.GatewayCommandUnavailableException -> "adapter.offline"
                 else -> "proposal.invalid"
             }
             activity.record(ActivityCategory.CAPABILITY, "action.rejected", ActivityStatus.DENIED,
-                ActivityActorType.USER, "web", code, ownerId.toString(), correlationId, ownerId)
+                actorType, "web", code, actorId, correlationId, ownerId)
             throw exception
         }
     }
@@ -146,11 +153,15 @@ class DeviceCommandService(
     fun status(ownerId: UUID, id: UUID) = gatewayCommands?.status(ownerId, id) ?: throw DeviceCommandInvalidException()
 
     fun execute(
-        ownerId: UUID,
+        authority: GatewayAuthority,
         request: ExecuteDeviceCommandRequest,
         correlationId: UUID = UUID.randomUUID(),
         recordProposal: Boolean = true,
     ): DeviceCommandResult {
+        if (authority.capability != request.capability) throw DeviceCommandInvalidException()
+        val ownerId = authority.spaceId
+        val actorType = if (authority.kind == dev.kyrion.core.gateway.GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION
+        val actorId = authority.principalId.toString()
         val provider = request.selector.provider.trim().lowercase()
         if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER)) {
             throw DeviceCapabilityUnsupportedException()
@@ -184,19 +195,20 @@ class DeviceCommandService(
             )
         }
         val outcomes = targets.map { target ->
+            gatewayAuthority?.validateTarget(authority, target.id, request.arguments.on)
             activity.record(ActivityCategory.CAPABILITY, "action.adapter.invoked", ActivityStatus.CONFIRMED,
-                ActivityActorType.USER, provider, target.id.toString(), ownerId.toString(), correlationId, ownerId)
+                actorType, provider, target.id.toString(), actorId, correlationId, ownerId)
             try {
                 when (request.capability) {
                     POWER_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
-                        executeGateway(ownerId, provider, target.endpointHost, "$provider.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!), correlationId)
+                        executeGateway(authority, provider, target.endpointHost, "$provider.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!), correlationId)
                     } else nanoleaf.power(ownerId, target.id, request.arguments.on!!, true, correlationId)
                     BRIGHTNESS_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
                         val value = if (provider == ZigbeeDeviceSyncService.PROVIDER) request.arguments.brightness!! * 254 / 100 else request.arguments.brightness!!
-                        executeGateway(ownerId, provider, target.endpointHost, "$provider.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to value), correlationId)
+                        executeGateway(authority, provider, target.endpointHost, "$provider.brightness", mapOf("deviceId" to target.endpointHost, "brightness" to value), correlationId)
                     } else nanoleaf.brightness(ownerId, target.id, request.arguments.brightness!!, true, correlationId)
                     COLOR_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
-                        executeGateway(ownerId, provider, target.endpointHost, "$provider.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!), correlationId)
+                        executeGateway(authority, provider, target.endpointHost, "$provider.color", mapOf("deviceId" to target.endpointHost, "hue" to request.arguments.hue!!, "saturation" to request.arguments.saturation!!), correlationId)
                     } else nanoleaf.color(ownerId, target.id, request.arguments.hue!! % 360, request.arguments.saturation!!, true, correlationId)
                 }
                 if (request.capability == POWER_SET) {
@@ -253,7 +265,8 @@ class DeviceCommandService(
         if (device.capabilities.none { it.id == capability }) throw DeviceCapabilityUnsupportedException()
     }
 
-    private fun executeGateway(ownerId: UUID, provider: String, deviceAddress: String, type: String, payload: Map<String, Any>, correlationId: UUID) {
+    private fun executeGateway(authority: GatewayAuthority, provider: String, deviceAddress: String, type: String, payload: Map<String, Any>, correlationId: UUID) {
+        val ownerId = authority.spaceId
         val node = gateways?.all(ownerId)?.singleOrNull { view ->
             if (provider == ZigbeeDeviceSyncService.PROVIDER) {
                 view.health?.zigbee?.devices?.any { it.ieeeAddress == deviceAddress } == true
@@ -262,7 +275,7 @@ class DeviceCommandService(
             }
         } ?: throw DeviceTargetNotFoundException()
         val commands = gatewayCommands ?: throw dev.kyrion.core.gateway.GatewayCommandUnavailableException()
-        commands.executeConfirmed(ownerId, node.id, type, payload, correlationId)
+        commands.executeConfirmed(authority, node.id, type, payload, correlationId)
     }
 
     private fun observe(ownerId: UUID, connectionId: UUID, availability: DeviceAvailability) {
@@ -296,12 +309,12 @@ class DeviceCommandService(
 class DeviceCommandController(private val commands: DeviceCommandService) {
     @PostMapping
     fun execute(@Valid @RequestBody body: ExecuteDeviceCommandRequest, request: HttpServletRequest) =
-        commands.execute(request.ownerId(), body)
+        commands.execute(GatewayAuthority.human(request, "devices:execute", body.capability), body)
 
     @PostMapping("/async")
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun enqueue(@Valid @RequestBody body: ExecuteDeviceCommandRequest, request: HttpServletRequest) =
-        commands.enqueue(request.ownerId(), body)
+        commands.enqueue(GatewayAuthority.human(request, "devices:execute", body.capability), body)
 
     @GetMapping("/{id}")
     fun status(@PathVariable id: UUID, request: HttpServletRequest) = commands.status(request.ownerId(), id)

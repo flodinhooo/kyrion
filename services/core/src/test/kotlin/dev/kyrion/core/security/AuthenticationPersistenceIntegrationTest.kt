@@ -263,13 +263,13 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val action = dev.kyrion.core.action.ActionContext(owner.id, ActivityActorType.USER, member.id.toString(), dev.kyrion.core.action.InteractionChannel.WEB, java.util.Locale.ENGLISH, UUID.randomUUID(), UUID.randomUUID())
         val proposal = dev.kyrion.core.action.DeviceActionProposal(null, "power.set", dev.kyrion.core.capability.DeviceCommandArguments(on = true), targets.map { it.id })
         val firstRequest = dev.kyrion.core.capability.ExecuteDeviceCommandRequest("power.set", dev.kyrion.core.capability.DeviceTargetSelector(provider = "nanoleaf", deviceId = targets.first().id), proposal.arguments)
-        `when`(commands.execute(owner.id, firstRequest, action.correlationId, false)).thenAnswer {
+        `when`(commands.execute(dev.kyrion.core.gateway.GatewayAuthority.action(action, firstRequest.capability), firstRequest, action.correlationId, false)).thenAnswer {
             rbac.assignRoles(owner.id, member.id, setOf(viewer.id))
             dev.kyrion.core.capability.DeviceCommandResult("power.set", "Synthetic", 1, 1, 0, emptyList(), action.correlationId)
         }
         val handler = dev.kyrion.core.action.DeviceActionHandler(scopedCatalog, commands, activity, tenantBoundary, rbac)
         assertThatThrownBy { handler.execute(action, proposal) }.isInstanceOf(ForbiddenException::class.java)
-        org.mockito.Mockito.verify(commands).execute(owner.id, firstRequest, action.correlationId, false)
+        org.mockito.Mockito.verify(commands).execute(dev.kyrion.core.gateway.GatewayAuthority.action(action, firstRequest.capability), firstRequest, action.correlationId, false)
         org.mockito.Mockito.verifyNoMoreInteractions(commands)
     }
 

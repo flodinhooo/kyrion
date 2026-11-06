@@ -27,7 +27,7 @@ class ZigbeeDeviceSyncService(
         }
     }
 
-    fun add(ownerId: UUID, nodeId: UUID, ieeeAddress: String, displayName: String, deviceClass: DeviceClass, commands: GatewayCommandService): IntegrationConnectionView {
+    fun add(ownerId: UUID, nodeId: UUID, ieeeAddress: String, displayName: String, deviceClass: DeviceClass, commands: GatewayCommandService, authority: GatewayAuthority): IntegrationConnectionView {
         val node = commands.gateway(ownerId, nodeId)
         val device = node.health?.zigbee?.devices?.singleOrNull {
             it.ieeeAddress == ieeeAddress && it.supported
@@ -46,7 +46,7 @@ class ZigbeeDeviceSyncService(
             connections.update(ownerId, existing.id, name, deviceClass, now) ?: throw GatewayCommandInvalidException()
         }
         if (device.vendor.contains("Philips", ignoreCase = true) || device.vendor.contains("Signify", ignoreCase = true)) {
-            commands.enqueue(ownerId, nodeId, "zigbee.hue_power_on_recover", mapOf("deviceId" to ieeeAddress))
+            commands.enqueue(authority, nodeId, "zigbee.hue_power_on_recover", mapOf("deviceId" to ieeeAddress))
         }
         observations.save(DeviceObservation(connection.id, ownerId, DeviceAvailability.ONLINE, now))
         return connection.view()

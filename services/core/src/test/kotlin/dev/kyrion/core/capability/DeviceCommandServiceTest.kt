@@ -23,6 +23,8 @@ import java.time.Instant
 import java.util.UUID
 
 class DeviceCommandServiceTest {
+    private fun authority(owner: UUID, capability: String) = dev.kyrion.core.gateway.GatewayAuthority(owner, dev.kyrion.core.gateway.GatewayPrincipalKind.HUMAN, owner, "devices:execute", capability)
+
     @TempDir lateinit var temp: Path
 
     @Test
@@ -37,10 +39,10 @@ class DeviceCommandServiceTest {
         val commands = DeviceCommandService(FakeRooms(owner, Room(UUID.randomUUID(), "Room", Instant.now(), Instant.now())), connections, nanoleaf, activity, CommandObservations())
         val correlation = UUID.randomUUID()
         val request = ExecuteDeviceCommandRequest(DeviceCommandService.COLOR_SET, DeviceTargetSelector(provider = "nanoleaf", deviceId = device), DeviceCommandArguments(hue = 120, saturation = 50))
-        assertEquals(1, commands.execute(owner, request, correlation).succeeded)
+        assertEquals(1, commands.execute(authority(owner, DeviceCommandService.COLOR_SET), request, correlation).succeeded)
         assertEquals(listOf(120 to 50), gateway.colors)
         assertTrue(events.any { it.correlationId == correlation && it.eventType == "action.device.confirmed" })
-        assertThrows(DeviceCommandInvalidException::class.java) { commands.execute(owner, request.copy(arguments = DeviceCommandArguments(hue = 999, saturation = 50))) }
+        assertThrows(DeviceCommandInvalidException::class.java) { commands.execute(authority(owner, DeviceCommandService.COLOR_SET), request.copy(arguments = DeviceCommandArguments(hue = 999, saturation = 50))) }
         assertEquals(1, gateway.colors.size)
     }
 
@@ -67,7 +69,7 @@ class DeviceCommandServiceTest {
         val commands = DeviceCommandService(rooms, connections, nanoleaf, activity, observations)
 
         val result = commands.execute(
-            owner,
+            authority(owner, DeviceCommandService.BRIGHTNESS_SET),
             ExecuteDeviceCommandRequest(
                 DeviceCommandService.BRIGHTNESS_SET,
                 DeviceTargetSelector("schlafzimmer", "nanoleaf"),
@@ -105,7 +107,7 @@ class DeviceCommandServiceTest {
 
         assertThrows(DeviceTargetNotFoundException::class.java) {
             commands.execute(
-                owner,
+                authority(owner, DeviceCommandService.POWER_SET),
                 ExecuteDeviceCommandRequest(
                     DeviceCommandService.POWER_SET,
                     DeviceTargetSelector("Schlafzimmer", "nanoleaf"),
@@ -133,7 +135,7 @@ class DeviceCommandServiceTest {
         )
 
         val result = commands.execute(
-            owner,
+            authority(owner, DeviceCommandService.POWER_SET),
             ExecuteDeviceCommandRequest(
                 DeviceCommandService.POWER_SET,
                 DeviceTargetSelector(provider = "nanoleaf", deviceId = selected),

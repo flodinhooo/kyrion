@@ -67,7 +67,7 @@ class RoomController(
         val node = gateways.all(ownerId).singleOrNull { view ->
             view.health?.zigbee?.devices?.any { it.ieeeAddress == connection.endpointHost } == true
         } ?: throw RoomAssignmentException()
-        if (!gatewayCommands.enqueueAndAwait(ownerId, node.id, "zigbee.remove", mapOf("deviceId" to connection.endpointHost))) {
+        if (!gatewayCommands.enqueueAndAwait(dev.kyrion.core.gateway.GatewayAuthority.human(request, "integrations:delete", "zigbee.remove"), node.id, "zigbee.remove", mapOf("deviceId" to connection.endpointHost))) {
             throw RoomAssignmentException()
         }
         if (!connections.delete(ownerId, id)) throw RoomNotFoundException()

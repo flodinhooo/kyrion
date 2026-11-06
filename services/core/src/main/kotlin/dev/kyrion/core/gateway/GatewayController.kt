@@ -84,12 +84,12 @@ class GatewayOwnerController(
     @PostMapping("/{id}/zigbee/pairing")
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun pairing(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeePairingRequest, request: HttpServletRequest) =
-        GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.permit_join", mapOf("duration" to body.duration)))
+        GatewayCommandResponse(commands.enqueue(GatewayAuthority.human(request, "gateways:execute", GatewayAuthorityService.capability("zigbee.permit_join")), id, "zigbee.permit_join", mapOf("duration" to body.duration)))
 
     @PostMapping("/{id}/zigbee/devices")
     @ResponseStatus(HttpStatus.CREATED)
     fun addZigbeeDevice(@PathVariable id: UUID, @Valid @RequestBody body: AddZigbeeDeviceRequest, request: HttpServletRequest) =
-        zigbeeDevices.add(request.ownerId(), id, body.deviceId, body.displayName, body.deviceClass, commands)
+        zigbeeDevices.add(request.ownerId(), id, body.deviceId, body.displayName, body.deviceClass, commands, GatewayAuthority.human(request, "gateways:execute", "zigbee.hue_power_on_recover"))
 
     @GetMapping("/{id}/zigbee/devices")
     fun zigbeeCandidates(@PathVariable id: UUID, request: HttpServletRequest) =
@@ -107,20 +107,20 @@ class GatewayOwnerController(
     @PostMapping("/{id}/zigbee/power") @ResponseStatus(HttpStatus.ACCEPTED)
     fun power(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeeCommandRequest, request: HttpServletRequest): GatewayCommandResponse {
         val on = body.on ?: throw GatewayCommandInvalidException()
-        return GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.power", mapOf("deviceId" to body.deviceId, "on" to on)))
+        return GatewayCommandResponse(commands.enqueue(GatewayAuthority.human(request, "gateways:execute", GatewayAuthorityService.capability("zigbee.power")), id, "zigbee.power", mapOf("deviceId" to body.deviceId, "on" to on)))
     }
 
     @PostMapping("/{id}/zigbee/brightness") @ResponseStatus(HttpStatus.ACCEPTED)
     fun brightness(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeeCommandRequest, request: HttpServletRequest): GatewayCommandResponse {
         val value = body.brightness ?: throw GatewayCommandInvalidException()
-        return GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.brightness", mapOf("deviceId" to body.deviceId, "brightness" to value)))
+        return GatewayCommandResponse(commands.enqueue(GatewayAuthority.human(request, "gateways:execute", GatewayAuthorityService.capability("zigbee.brightness")), id, "zigbee.brightness", mapOf("deviceId" to body.deviceId, "brightness" to value)))
     }
 
     @PostMapping("/{id}/zigbee/color") @ResponseStatus(HttpStatus.ACCEPTED)
     fun color(@PathVariable id: UUID, @Valid @RequestBody body: ZigbeeCommandRequest, request: HttpServletRequest): GatewayCommandResponse {
         val hue = body.hue ?: throw GatewayCommandInvalidException()
         val saturation = body.saturation ?: throw GatewayCommandInvalidException()
-        return GatewayCommandResponse(commands.enqueue(request.ownerId(), id, "zigbee.color", mapOf("deviceId" to body.deviceId, "hue" to hue, "saturation" to saturation)))
+        return GatewayCommandResponse(commands.enqueue(GatewayAuthority.human(request, "gateways:execute", GatewayAuthorityService.capability("zigbee.color")), id, "zigbee.color", mapOf("deviceId" to body.deviceId, "hue" to hue, "saturation" to saturation)))
     }
 
     private fun HttpServletRequest.ownerId() = workspaceOwnerId()
