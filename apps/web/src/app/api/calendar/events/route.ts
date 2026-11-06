@@ -1,5 +1,5 @@
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
-import { isCalendarEvent, normalizeGoogleEvents, normalizeLocalEvents } from "@/features/calendar/calendar-model";
+import { isCalendarEvent, normalizeGoogleEvents, normalizeLocalEvents, normalizeHouseholdEvents } from "@/features/calendar/calendar-model";
 
 export async function GET(request?: Request) {
   const auth = await requireApiSession();
@@ -9,9 +9,12 @@ export async function GET(request?: Request) {
     const query = new URLSearchParams();
     for (const key of ["calendarId", "start", "end"]) { const value = search.get(key); if (value) query.set(key, value); }
     const headers = { Authorization: `Bearer ${auth.token}` };
-    const [localResponse, googleResponse] = await Promise.all([
+    const householdQuery = new URLSearchParams();
+    for (const key of ["start", "end"]) { const value = search.get(key); if (value) householdQuery.set(key, value); }
+    const [localResponse, googleResponse, householdResponse] = await Promise.all([
       fetch(`${CORE_SERVICE_URL}/v1/calendar/events`, { headers, cache: "no-store", signal: AbortSignal.timeout(10_000) }),
       fetch(`${CORE_SERVICE_URL}/v1/integrations/google/calendar/events${query.size ? `?${query}` : ""}`, { headers, cache: "no-store", signal: AbortSignal.timeout(10_000) }).catch(() => null),
+      fetch(`${CORE_SERVICE_URL}/v1/calendar/household-events${householdQuery.size ? `?${householdQuery}` : ""}`, { headers, cache: "no-store", signal: AbortSignal.timeout(10_000) }).catch(() => null),
     ]);
     const localValue: unknown = await localResponse.json().catch(() => null);
     if (!localResponse.ok) return Response.json(localValue ?? { code: "CORE_UNAVAILABLE" }, { status: localResponse.status });
@@ -22,10 +25,13 @@ export async function GET(request?: Request) {
     const local = normalizeLocalEvents(localValue);
     if (!(Array.isArray(localValue) || (!!localValue && typeof localValue === "object" && "items" in localValue && Array.isArray(localValue.items))) || !local.every(isCalendarEvent)) return Response.json({ code: "CORE_INVALID_RESPONSE" }, { status: 502 });
     const remote = googleReady ? normalizeGoogleEvents(googleValue) : [];
+    const householdValue: unknown = householdResponse ? await householdResponse.json().catch(() => null) : null;
+    const household = householdResponse?.ok ? normalizeHouseholdEvents(householdValue) : null;
     const selected = search.get("calendarId") ?? "primary";
     const linked = new Set(local.filter(event => event.googleCalendarId === selected && event.googleEventId).map(event => `google:${event.googleEventId}`));
-    return Response.json({ items: [...local, ...remote.filter(event => !linked.has(event.id))],
+    return Response.json({ items: [...local, ...remote.filter(event => !linked.has(event.id)), ...(household ?? [])],
       google: { status: googleReady ? "ready" : googleCode === "GOOGLE_DISCONNECTED" ? "disconnected" : "error", code: googleReady ? null : googleCode },
+      household: { status: household !== null ? "ready" : "error" },
     }, { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503 }); }
 }

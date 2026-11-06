@@ -1,9 +1,36 @@
 # Calendar synchronization
 
-Planned extension: [Home family calendar](home-family-calendar-plan.md) adds
-voluntary personal-calendar grants, selected participants and jointly editable
-events. The owner approved joint editing; this is not yet implemented and does
-not remove the personal Google connection restrictions described below.
+The [Home family calendar plan](home-family-calendar-plan.md) separates native
+joint events from later personal-calendar grants and provider delivery. The first
+native slice is implemented and automatically tested; [Assignment A's results](agent-handoffs/2026-11-06-home-calendar-results.md)
+record its current evidence and deployment boundary. It does not remove the
+personal Google connection restrictions described below.
+
+## Native joint household events
+
+`/v1/calendar/household-events` is a separate HOME-only resource. New events carry
+explicit participants including their creator. With calendar update permission,
+either selected partner can edit the canonical event; other household members
+with calendar read permission can view it but cannot edit merely because they
+are OWNER. The creator alone may delete with delete permission, matching revision
+and Web confirmation. Participant lists are fixed in this initial slice.
+
+The existing Web calendar combines `local`, `google` and `household` sources.
+Shared-event creation offers an explicit participant list and an everyone shortcut;
+the person filter changes only the display of these shared events. No native
+joint event is written to a personal provider calendar. Those deliveries require
+separate voluntary destination grants in HOME-03/04. Calendar role permissions
+must already be assigned; this migration does not expand any existing role.
+For first use, the owner grants calendar read/create/update/delete operations as
+appropriate through the existing Roles UI. A selected read-only member can view
+the event but still needs calendar update permission before editing it.
+
+Every mutation revalidates current membership/permission, uses a revision and
+records the actual actor and Space atomically with the event. Stale writes fail
+with `HOUSEHOLD_CALENDAR_CONFLICT`; a foreign household event is not found.
+The separate tables and composite foreign keys are additive V43, following the
+concurrent Gateway V42. Legacy local rows, Google mappings and applied migrations
+are unchanged. No runtime rollout is implied by this source implementation.
 
 Implemented recovery slice, 2026-10-19. Live provider acceptance is separate from
 fixture and database verification. See [ADR 0024](adr/0024-calendar-sync-and-ha-refresh.md).

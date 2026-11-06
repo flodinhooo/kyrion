@@ -1,10 +1,29 @@
 # Kyrion Development TODO
 
-Next Home product slice: [family calendar plan](../home-family-calendar-plan.md),
+Current Home product slice: [family calendar plan](../home-family-calendar-plan.md),
 with owner-confirmed joint editing and [ADR 0035](../adr/0035-home-membership-and-family-calendar-direction.md).
 The [two-chat assignment](../agent-handoffs/2026-11-06-parallel-home-and-gateway.md)
 separates Home/Calendar work from Gateway authority, including shared-file,
-migration and Git/build coordination. It is prepared, not started automatically.
+migration and Git/build coordination. Both assignments were started explicitly by
+the owner and implemented on master without creating additional worktrees.
+
+Parallel source work has now been implemented and jointly verified: **370 Core
+tests**, zero failures/errors/skips, plus bootJar; Web **211 tests**, ESLint,
+TypeScript and production build. Recorded Core before/after source hashes match.
+See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md) and
+[Gateway results](../agent-handoffs/2026-11-06-gateway-authority-results.md).
+V42/V43 and the new runtime behavior have **not** been deployed.
+
+- [x] HOME-01/02 native slice: explicit participant selection, jointly editable
+  Kyrion household events, revision conflicts, creator-only deletion, person
+  display filter, transactional audit and DE/EN UI. Legacy local/Google behavior retained.
+- [ ] HOME-03: voluntary personal calendar visibility grants and Core-enforced
+  private/availability/details views; ownership is not implied by installation roles.
+- [ ] HOME-04: explicit participant provider destinations and owner-approved
+  writes, per-target status, idempotent retries and conflict handling.
+- [ ] Coordinate data-safe runtime rollout and real browser/household acceptance.
+  Gateway V42 requires explicit re-saving of historical button grants; legacy
+  pending commands must not acquire inferred authority during rollout.
 
 Current integration checkpoint: [master consolidation and worktree closeout](2026-11-06-master-worktree-closeout.md).
 Development continues on `master`; all four former worktree histories are integrated
@@ -17,7 +36,9 @@ security and physical/release acceptance work is tracked in the closeout.
 - [x] Cancel silent AI HTTP requests when captured session/permission/route/Knowledge authority is revoked; test both missing headers and incomplete events.
 - [x] Revalidate queued button bindings; test deleted, reconfigured and unchanged bindings.
 - [x] Verify the consolidated source: Core332, Web200, AI172; builds and configured static checks pass.
-- [ ] Persist originating human/capability authority through Gateway queue, claim and retry; define explicit automation grants.
+- [x] Persist originating human/capability authority through Gateway queue/claim
+  and define explicit automation grants: implemented and tested in Assignment B;
+  live rollout/physical acceptance remains separate.
 - [ ] Complete optional-context opt-out/content, multi-process worker/cache/stream lifecycle certification; retain the single-Space/Business Voice guards.
 
 Latest active fix: [empty recognition local V39 rollout](2026-10-31-voice-no-speech-rollout.md).

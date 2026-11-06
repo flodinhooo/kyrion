@@ -9,7 +9,8 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useWorkspace } from "@/components/app-shell";
 import { browserRequest } from "@/lib/browser-request";
 import { csrfHeader } from "@/features/auth/csrf";
-import { editorForCalendarDate, editorForEvent, isCalendarEvent, type CalendarEditor, type CalendarEvent } from "@/features/calendar/calendar-model";
+import { editorForCalendarDate, editorForEvent, isCalendarEvent, canEditCalendarEvent, canDeleteCalendarEvent,
+  householdMembers, householdEventPayload, type HouseholdMember, type CalendarEditor, type CalendarEvent } from "@/features/calendar/calendar-model";
 import { CalendarSyncSettings, type CalendarSchedule } from "@/features/calendar/sync-settings";
 import { calendarMessages } from "@/features/calendar/messages";
 
@@ -21,7 +22,7 @@ function calendarList(value: unknown): RemoteCalendar[] {
 }
 
 export default function CalendarPage() {
-  const { t, locale, permissions } = useWorkspace();
+  const { t, locale, permissions, userId } = useWorkspace();
   const text = calendarMessages[locale] ?? calendarMessages.en;
   const [schedule, setSchedule] = useState<CalendarSchedule | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -34,6 +35,10 @@ export default function CalendarPage() {
   const [calendars, setCalendars] = useState<RemoteCalendar[]>([]);
   const [calendarId, setCalendarId] = useState("primary");
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [membersReady, setMembersReady] = useState(false);
+  const [householdState, setHouseholdState] = useState("loading");
+  const [personFilter, setPersonFilter] = useState("");
   const sequence = useRef(0);
   const canCreate = permissions.includes("calendar:create");
   const canUpdate = permissions.includes("calendar:update");
@@ -54,6 +59,8 @@ export default function CalendarPage() {
     if (!response.ok || !value || typeof value !== "object" || !("items" in value) ||
         !Array.isArray(value.items) || !value.items.every(isCalendarEvent)) throw new Error();
     setEvents(value.items);
+    const household = "household" in value ? value.household : null;
+    setHouseholdState(household && typeof household === "object" && "status" in household && household.status === "ready" ? "ready" : "error");
     const google = "google" in value ? value.google : null;
     setGoogleState(google && typeof google === "object" && "status" in google && typeof google.status === "string" ? google.status : "error");
     setGoogleCode(google && typeof google === "object" && "code" in google && typeof google.code === "string" ? google.code : null);
@@ -74,6 +81,15 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    void browserRequest("/api/calendar/household-events/members", { cache: "no-store", signal: controller.signal })
+      .then(async response => response.ok ? householdMembers(await response.json()) : null)
+      .then(items => { if (!controller.signal.aborted) { setMembers(items ?? []); setMembersReady(items !== null); } })
+      .catch(() => { if (!controller.signal.aborted) { setMembers([]); setMembersReady(false); } });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     if(!schedule?.enabled) return;
     const interval = window.setInterval(() => { void load().catch(() => setState("error")); }, schedule.intervalSeconds * 1000);
     return () => window.clearInterval(interval);
@@ -84,25 +100,34 @@ export default function CalendarPage() {
     setSaving(true); setMessage(null);
     try {
       const remote = editor.source === "google";
-      const response = await browserRequest(remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id!.slice(7))}` : editor.id ? `/api/calendar/events/${editor.id}` : "/api/calendar/events", {
+      const household = editor.source === "household";
+      const url = household ? `/api/calendar/household-events${editor.id ? `/${encodeURIComponent(editor.id.slice(10))}` : ""}` :
+        remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id!.slice(7))}` : editor.id ? `/api/calendar/events/${editor.id}` : "/api/calendar/events";
+      const response = await browserRequest(url, {
         method: editor.id ? "PUT" : "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
-        body: JSON.stringify(remote ? { calendarId, summary: editor.title, description: editor.description || null,
+        body: JSON.stringify(household ? householdEventPayload(editor, Intl.DateTimeFormat().resolvedOptions().timeZone) : remote ? { calendarId, summary: editor.title, description: editor.description || null,
           start: new Date(editor.startsAt).toISOString(), end: new Date(editor.endsAt).toISOString(), etag: editor.etag } : { title: editor.title, description: editor.description || null,
           startsAt: new Date(editor.startsAt).toISOString(), endsAt: new Date(editor.endsAt).toISOString(),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, syncToGoogle: editor.syncToGoogle,
           googleCalendarId: editor.googleCalendarId || null, revision: editor.revision }),
       });
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const error: unknown = await response.json().catch(() => null);
+        const code = error && typeof error === "object" && "code" in error ? error.code : null;
+        setMessage(code === "HOUSEHOLD_CALENDAR_CONFLICT" ? text.jointConflict : code === "HOUSEHOLD_CALENDAR_INVALID" ? text.jointInvalid : text.saveError);
+        return;
+      }
       setEditor(null); await load();
     } catch { setMessage(text.saveError); } finally { setSaving(false); }
   }
   async function remove() {
-    if (!editor?.id || saving || !window.confirm(text.confirmDelete)) return;
+    if (!editor?.id || saving || !window.confirm(editor.source === "household" ? text.jointDelete : text.confirmDelete)) return;
     setSaving(true);
     try {
       const remote = editor.source === "google";
       const query = new URLSearchParams({ calendarId, etag: editor.etag ?? "" });
-      const url = remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id.slice(7))}?${query}` : `/api/calendar/events/${editor.id}${editor.revision == null ? "" : `?revision=${editor.revision}`}`;
+      const url = editor.source === "household" ? `/api/calendar/household-events/${encodeURIComponent(editor.id.slice(10))}?revision=${editor.revision}` :
+        remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id.slice(7))}?${query}` : `/api/calendar/events/${editor.id}${editor.revision == null ? "" : `?revision=${editor.revision}`}`;
       const response = await browserRequest(url, { method: "DELETE", headers: csrfHeader() });
       if (!response.ok) throw new Error();
       setEditor(null); await load();
@@ -116,9 +141,10 @@ export default function CalendarPage() {
       setMessage(text.syncDone); await load();
     } catch { setMessage(text.syncError); } finally { setSaving(false); }
   }
-  const visible = events.filter(event => !range || (event.allDay ? event.endsAt > range.start.slice(0, 10) && event.startsAt < range.end.slice(0, 10) : Date.parse(event.endsAt) > Date.parse(range.start) && Date.parse(event.startsAt) < Date.parse(range.end)));
-  const calendarEvents = events.map(event => ({ id: event.id,
-    title: `${event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
+  const filtered = events.filter(event => !personFilter || event.source !== "household" || event.participantIds?.includes(personFilter));
+  const visible = filtered.filter(event => !range || (event.allDay ? event.endsAt > range.start.slice(0, 10) && event.startsAt < range.end.slice(0, 10) : Date.parse(event.endsAt) > Date.parse(range.start) && Date.parse(event.startsAt) < Date.parse(range.end)));
+  const calendarEvents = filtered.map(event => ({ id: event.id,
+    title: `${event.source === "household" ? `${text.jointSource} · ` : event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
     start: event.startsAt, end: event.endsAt, allDay: event.allDay,
     classNames: event.source === "google" ? ["calendar-event-google"] : ["calendar-event-local"],
   }));
@@ -126,12 +152,16 @@ export default function CalendarPage() {
     <header className="plugins-header"><div><h1>{t.calendarTitle}</h1><p>{text.subtitle}</p></div>
       <div className="calendar-actions">
         {canCreate && <button className="calendar-primary" type="button" onClick={() => setEditor(editorForCalendarDate(new Date()))}>+ {text.create}</button>}
+        {canCreate && householdState === "ready" && membersReady && <button className="calendar-primary" type="button" onClick={() => setEditor({ ...editorForCalendarDate(new Date()), source: "household", participantIds: [userId] })}>+ {text.jointCreate}</button>}
         <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void load().catch(() => setState("error"))}>{text.refresh}</button>
         {canSync && <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void sync()}>{saving ? text.syncing : text.sync}</button>}
         <Link className="calendar-secondary" href="/plugins/google">{text.googleSettings}</Link>
       </div>
     </header>
     {canSync && <CalendarSyncSettings schedule={schedule} onChange={setSchedule} />}
+    {membersReady && householdState === "ready" && <label>{text.participantFilter}<select value={personFilter} onChange={event => setPersonFilter(event.target.value)}>
+      <option value="">{text.allPeople}</option>{members.map(member => <option key={member.id} value={member.id}>{member.username}</option>)}
+    </select></label>}
     {calendars.length > 0 && <label>{text.viewCalendar}<select value={calendarId} onChange={event => { setState("loading"); setCalendarId(event.target.value); }}>
       <option value="primary">Google · {text.select}</option>{calendars.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
     </select></label>}
@@ -141,29 +171,39 @@ export default function CalendarPage() {
         buttonText={{ today: text.today, month: text.month, week: text.week, day: text.day }}
         datesSet={info => { setRange(current => current?.start === info.startStr && current?.end === info.endStr ? current : { start: info.startStr, end: info.endStr }); }}
         dateClick={info => { if (canCreate) setEditor(editorForCalendarDate(info.date)); }} events={calendarEvents}
-        eventClick={info => { const found = events.find(event => event.id === info.event.id); if (found && canUpdate && (found.source === "local" || (!found.allDay && !found.recurring && !!found.etag))) setEditor(editorForEvent(found)); else setMessage(found?.source === "google" ? text.readOnly : text.localStatus); }} />
+        eventClick={info => { const found = events.find(event => event.id === info.event.id); if (found && canEditCalendarEvent(found, canUpdate)) setEditor(editorForEvent(found)); else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
       {state === "loading" && <p role="status">{text.loading}</p>}
       {state === "error" && <p role="alert">{text.loadError}</p>}
       {state === "ready" && visible.length === 0 && <p>{text.empty}</p>}
       {googleState === "error" && <p role="alert">{googleCode === "GOOGLE_REAUTHORIZATION_REQUIRED" ? text.reauthorize : text.googleError}</p>}
       {googleState === "disconnected" && <p role="status">{text.disconnected}</p>}
+      {householdState === "error" && <p role="status">{text.jointUnavailable}</p>}
+      {householdState === "ready" && !membersReady && <p role="status">{text.membersUnavailable}</p>}
       {message && <p role="status">{message}</p>}
     </article>
     {editor && <div className="calendar-dialog-backdrop"><form className="calendar-dialog" onSubmit={event => { event.preventDefault(); void save(); }}>
       <h2>{editor.id ? text.edit : text.create}</h2>
-      {selectedEvent && <p>{text.source}: {selectedEvent.source === "google" ? "Google" : text.local} · {selectedEvent.source === "google" ? calendars.find(item => item.id === calendarId)?.summary : selectedEvent.pendingDeletion ? text.deletion : statuses[selectedEvent.syncStatus ?? "local"]}</p>}
+      {selectedEvent && <p>{text.source}: {selectedEvent.source === "household" ? text.jointSource : selectedEvent.source === "google" ? "Google" : text.local} · {selectedEvent.source === "google" ? calendars.find(item => item.id === calendarId)?.summary : selectedEvent.pendingDeletion ? text.deletion : statuses[selectedEvent.syncStatus ?? "local"]}</p>}
+      {editor.source === "household" && <fieldset><legend>{text.participants}</legend><p>{text.jointInfo}</p>
+        {editor.id ? <p>{(editor.participantIds ?? []).map(id => members.find(member => member.id === id)?.username ?? text.formerParticipant).join(", ")}<br />{text.participantsFixed}</p> : <>
+          <button className="calendar-secondary" type="button" onClick={() => setEditor({ ...editor, participantIds: members.map(member => member.id) })}>{text.selectEveryone}</button>
+          {members.map(member => <label className="calendar-checkbox" key={member.id}><input type="checkbox" checked={editor.participantIds?.includes(member.id) ?? false} disabled={member.id === userId}
+            onChange={event => setEditor({ ...editor, participantIds: event.target.checked ? [...(editor.participantIds ?? []), member.id] : editor.participantIds?.filter(id => id !== member.id) })} />{member.username}</label>)}
+        </>}
+      </fieldset>}
       <label>{text.title}<input required maxLength={500} value={editor.title} onChange={event => setEditor({ ...editor, title: event.target.value })} /></label>
       <label>{text.description}<textarea maxLength={10000} value={editor.description} onChange={event => setEditor({ ...editor, description: event.target.value })} /></label>
       <label>{text.start}<input required type="datetime-local" value={editor.startsAt} onChange={event => setEditor({ ...editor, startsAt: event.target.value })} /></label>
       <label>{text.end}<input required type="datetime-local" min={editor.startsAt} value={editor.endsAt} onChange={event => setEditor({ ...editor, endsAt: event.target.value })} /></label>
-      {editor.source !== "google" && <label className="calendar-checkbox"><input type="checkbox" checked={editor.syncToGoogle} disabled={!canSync} onChange={event => setEditor({ ...editor, syncToGoogle: event.target.checked })} />{text.export}</label>}
-      {editor.source !== "google" && editor.syncToGoogle && <label>{text.target}<select required value={editor.googleCalendarId ?? ""} onChange={event => setEditor({ ...editor, googleCalendarId: event.target.value })}>
+      {editor.source !== "google" && editor.source !== "household" && <label className="calendar-checkbox"><input type="checkbox" checked={editor.syncToGoogle} disabled={!canSync} onChange={event => setEditor({ ...editor, syncToGoogle: event.target.checked })} />{text.export}</label>}
+      {editor.source !== "google" && editor.source !== "household" && editor.syncToGoogle && <label>{text.target}<select required value={editor.googleCalendarId ?? ""} onChange={event => setEditor({ ...editor, googleCalendarId: event.target.value })}>
         <option value="">{text.select}</option>{writable.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
       </select>{writable.length === 0 && <small>{text.unavailable}</small>}</label>}
       <div className="calendar-dialog-actions"><button className="calendar-secondary" type="button" onClick={() => setEditor(null)}>{text.cancel}</button>
-        {editor.id && canDelete && <button className="calendar-danger" type="button" onClick={() => void remove()} disabled={saving || selectedEvent?.pendingDeletion}>{text.remove}</button>}
+        {editor.id && selectedEvent && canDeleteCalendarEvent(selectedEvent, canDelete) && <button className="calendar-danger" type="button" onClick={() => void remove()} disabled={saving || selectedEvent?.pendingDeletion}>{text.remove}</button>}
         <button className="calendar-primary" type="submit" disabled={saving || (selectedEvent?.pendingDeletion && editor.syncToGoogle)}>{saving ? text.saving : text.save}</button>
       </div>
+      {message && <p role="alert">{message}</p>}
     </form></div>}
   </section>;
 }

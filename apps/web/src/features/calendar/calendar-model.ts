@@ -1,4 +1,4 @@
-export type CalendarSource = "local" | "google";
+export type CalendarSource = "local" | "google" | "household";
 
 export type CalendarEvent = {
   id: string;
@@ -18,6 +18,10 @@ export type CalendarEvent = {
   etag?: string;
   recurring?: boolean;
   revision?: number;
+  participantIds?: string[];
+  createdBy?: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 };
 
 export type CalendarEditor = {
@@ -31,6 +35,7 @@ export type CalendarEditor = {
   source?: CalendarSource;
   revision?: number;
   etag?: string;
+  participantIds?: string[];
 };
 
 export function localDateTimeValue(date: Date): string {
@@ -66,7 +71,8 @@ export function normalizeGoogleEvents(value: unknown): CalendarEvent[] {
 export function editorForEvent(event: CalendarEvent): CalendarEditor {
   return { id: event.id, title: event.title, description: event.description ?? "",
     startsAt: localDateTimeValue(new Date(event.startsAt)), endsAt: localDateTimeValue(new Date(event.endsAt)),
-    syncToGoogle: event.syncToGoogle ?? false, googleCalendarId: event.googleCalendarId ?? "", source: event.source, revision: event.revision, etag: event.etag };
+    syncToGoogle: event.syncToGoogle ?? false, googleCalendarId: event.googleCalendarId ?? "", source: event.source, revision: event.revision, etag: event.etag,
+    participantIds: event.participantIds };
 }
 
 export function isCalendarEvent(value: unknown): value is CalendarEvent {
@@ -75,5 +81,44 @@ export function isCalendarEvent(value: unknown): value is CalendarEvent {
   return typeof item.id === "string" && typeof item.title === "string" &&
     typeof item.startsAt === "string" && Number.isFinite(Date.parse(item.startsAt)) &&
     typeof item.endsAt === "string" && Number.isFinite(Date.parse(item.endsAt)) &&
-    (item.source === "local" || item.source === "google");
+    (item.source === "local" || item.source === "google" || (item.source === "household" &&
+      Array.isArray(item.participantIds) && item.participantIds.every(id => typeof id === "string") &&
+      typeof item.createdBy === "string" && typeof item.canEdit === "boolean" && typeof item.canDelete === "boolean" &&
+      Number.isSafeInteger(item.revision) && (item.revision ?? -1) >= 0));
+}
+
+export type HouseholdMember = { id: string; username: string };
+
+export function householdMembers(value: unknown): HouseholdMember[] | null {
+  if (!Array.isArray(value) || !value.every(item => !!item && typeof item === "object" &&
+      typeof item.id === "string" && typeof item.username === "string")) return null;
+  return value;
+}
+
+export function normalizeHouseholdEvents(value: unknown): CalendarEvent[] | null {
+  if (!Array.isArray(value)) return null;
+  const events: CalendarEvent[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") return null;
+    const event: unknown = { ...item, id: `household:${item.id}`, source: "household" };
+    if (typeof item.id !== "string" || !isCalendarEvent(event)) return null;
+    events.push(event);
+  }
+  return events;
+}
+
+export function canEditCalendarEvent(event: CalendarEvent, hasUpdate: boolean): boolean {
+  if (!hasUpdate) return false;
+  if (event.source === "household") return event.canEdit === true;
+  return event.source === "local" || (!event.allDay && !event.recurring && !!event.etag);
+}
+
+export function canDeleteCalendarEvent(event: CalendarEvent, hasDelete: boolean): boolean {
+  return hasDelete && (event.source !== "household" || event.canDelete === true);
+}
+
+export function householdEventPayload(editor: CalendarEditor, timeZone: string) {
+  const fields = { title: editor.title, description: editor.description || null,
+    startsAt: new Date(editor.startsAt).toISOString(), endsAt: new Date(editor.endsAt).toISOString(), timeZone };
+  return editor.id ? { ...fields, revision: editor.revision } : { ...fields, participantIds: editor.participantIds ?? [] };
 }

@@ -1,6 +1,8 @@
 # Home Spaces and family calendar implementation plan
 
-Status: planned; owner-confirmed requirements recorded on 2026-11-06.
+Status: HOME-01 contract specified and HOME-02 native source implemented/tested;
+HOME-03 onward remains planned. No runtime rollout. Owner-confirmed requirements
+recorded on 2026-11-06.
 Decision: [ADR 0035](adr/0035-home-membership-and-family-calendar-direction.md).
 Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-home-and-gateway.md).
 
@@ -41,6 +43,47 @@ Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-h
 HOME-02 is the recommended first implementation after HOME-01. It delivers a
 jointly editable household event without relying on another person's OAuth grant.
 Provider destination delivery follows only after personal grant semantics exist.
+
+## HOME-01 implementation contract (first native slice)
+
+The first slice adds a separate Core-owned `household_calendar_event` resource,
+not a reinterpretation of legacy shared local events or personal Google links.
+It is HOME-only and appears in the existing combined calendar as source
+`household`. Existing local/Google contracts and sync workers stay unchanged.
+
+- API base: `/v1/calendar/household-events`; authenticated GET list, POST create,
+  PUT `/{id}` update, DELETE `/{id}?revision=N`, and GET `/members` returning only
+  active eligible household account IDs/usernames, not emails, roles or secrets.
+- Create: title, optional description, startsAt/endsAt instants, timeZone and
+  participantIds (up to 50, unique). Core always includes the creator and rejects
+  disabled, foreign or calendar-read-ineligible participants. No provider target
+  or external-write field is accepted.
+- Update: title, description, startsAt, endsAt, timeZone and mandatory nonnegative
+  integer revision. Participants are fixed for this slice; no participant mutation
+  route or silent reassignment is provided. Participant-list management is later
+  work with explicit removal/copy-retention decisions.
+- Read: household calendar read permission and active HOME membership. Events are
+  household-visible; participation controls editing, not a private visibility ACL.
+  Returns participantIds, createdBy, revision and server-derived canEdit/canDelete.
+- Edit: active selected participant plus calendar:update permission. Creator is
+  a participant. Owner/admin status alone does not override participation.
+- Delete: conservative first-slice policy is creator-only plus calendar:delete,
+  required revision and existing UI confirmation. Joint editing does not authorize
+  destructive deletion by another participant. Creator deactivation does not
+  prevent remaining eligible participants editing; no owner recovery bypass is
+  added. There are no remote copies to delete in this slice.
+- All mutations serialize through existing workspace authorization locks and the
+  event row, use optimistic revision checks, and audit actor/Space/event/correlation
+  atomically. Conflict is HTTP409 `HOUSEHOLD_CALENDAR_CONFLICT`; bad input is
+  HTTP400 `HOUSEHOLD_CALENDAR_INVALID`; foreign/missing event HTTP404
+  `HOUSEHOLD_CALENDAR_NOT_FOUND`; authorization uses existing HTTP403 `FORBIDDEN`.
+- GET accepts a bounded start/end range; oversized result ranges fail explicitly
+  rather than silently hiding additional events. Participant filters in Web are
+  display-only and never authorize access.
+
+Additive migration V43 is reserved for these new tables and ownership FKs. V42
+belongs to the concurrent Gateway assignment. No V1-V42 changes, no new role
+grants, no live migration and no runtime replacement occur in this source slice.
 
 ## Design questions still open
 
