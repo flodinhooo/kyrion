@@ -123,7 +123,10 @@ not delivered. Security prerequisites, existing-installation preservation,
 trusted setup and isolated recovery are explicit acceptance gates.
 
 Installation-wide RBAC and local Calendar CRUD/read-only Google display are
-implemented. Remaining permissions, audit, privacy and reliability gaps are
+implemented. Explicit per-event timed Google synchronization and refreshed HA
+snapshots are described in [calendar synchronization](docs/calendar-synchronization.md)
+and [HA import](docs/home-assistant-import.md); physical acceptance remains separate.
+Remaining permissions, audit, privacy and reliability gaps are
 documented separately. Existing HA/Voice acceptance remains open; this handoff
 does not claim new deployment or physical verification or reopen TTS discovery.
 
@@ -240,7 +243,9 @@ for starting missing services and restarting helper-managed processes, including
 three optional Pi user services. This is a development workflow, not production
 lifecycle management; see the startup guide for its boundaries.
 
-Start with [Local Development Startup](docs/development-startup.md). Hardware
+Start with [Local Development Startup](docs/development-startup.md), or the
+[Windows worktree workflow](docs/windows-development.md) when validating isolated
+changes against existing local configuration. Hardware
 integrations additionally require owner-controlled devices, private local
 configuration and explicit enrolment. Never commit credentials, model caches,
 private recordings or generated training data.
