@@ -12,6 +12,7 @@ export default defineConfig({
     timeout: 30_000,
     // Never send real mail from browser tests, even if a local .env is configured.
     env: {
+      KYRION_WEBSITE_ACCOUNT_ENABLED: "false",
       CONTACT_FORM_ORIGIN: "http://127.0.0.1:3101",
       SMTP_HOST: "",
       SMTP_PORT: "",

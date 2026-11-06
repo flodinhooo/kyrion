@@ -1,5 +1,23 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Optional Kyrion account
+
+Local sign-in remains independent of the internet. When Core enables central
+identity, the login page also offers the standard device authorization flow.
+Core verifies the provider identity; the browser presents the user code and an
+explicit completion button. A central identity requires an existing linked local
+account. Protected first setup and invitation redemption remain the only local
+account enrollment paths.
+
+Profile and Settings → Identity expose connection status, password-confirmed
+connection and disconnection. First setup can proceed locally or lead to the
+connection panel after creating the protected local account. No local rights or
+passwords are synchronized. Device operation credentials stay in a path-scoped
+HttpOnly cookie; mutating BFF endpoints require the existing CSRF proof and reject
+foreign Origins. Session credentials stay server-side/HttpOnly. See
+`docs/agent-handoffs/unified-identity-handover.md` for provider configuration,
+security boundaries and acceptance evidence.
+
 ## Getting Started
 
 First, run the development server:

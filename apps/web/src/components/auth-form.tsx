@@ -6,11 +6,14 @@ import { messages, type Locale } from "@/lib/messages";
 
 import { identityMessages } from "@/features/spaces/identity-messages";
 import { spaceMessages } from "@/features/spaces/messages";
+import { centralMessages } from "@/features/auth/central-messages";
 
 export function AuthForm({ setup, locale, registration = false }: { setup: boolean; locale: Locale; registration?: boolean }) {
   const t = messages[locale];
   const st = spaceMessages[locale];
   const it = identityMessages[locale];
+  const ct = centralMessages[locale];
+  const [connectAfterSetup, setConnectAfterSetup] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const invitationInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -53,7 +56,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
           body.code === "CORE_UNAVAILABLE" ? "authCoreUnavailable" : "authInvalidInput");
         return;
       }
-      router.replace("/"); router.refresh();
+      router.replace(setup && connectAfterSetup ? "/settings/identity#kyrion-account" : "/"); router.refresh();
     } catch { setError("authNetworkError"); }
     finally { setPending(false); }
   }
@@ -72,6 +75,8 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
         <label>{t.authConfirmPassword}<input name="passwordConfirmation" type="password" autoComplete="new-password" minLength={12} maxLength={200} aria-describedby="password-hint" required /></label>
       </>}
       {setup && <>
+        <label>{ct.setupChoice}<select value={connectAfterSetup ? "connect" : "local"} onChange={(event) => setConnectAfterSetup(event.target.value === "connect")}><option value="local">{ct.localOnly}</option><option value="connect">{ct.connect}</option></select></label>
+        <small>{ct.setupHelp}</small>
         <label>{st.name}<input name="spaceName" minLength={1} maxLength={120} required /></label>
         <label>{st.type}<select name="spaceType" defaultValue="HOME"><option value="HOME">{st.home}</option><option value="BUSINESS">{st.business}</option></select></label>
       </>}
@@ -94,7 +99,7 @@ export function AuthForm({ setup, locale, registration = false }: { setup: boole
         {verificationSent && <p role="status">{it.sent}</p>}
       </>}
       {error && <p className="auth-error" role="alert">{t[error]}</p>}
-      <button disabled={pending} type="submit">{pending ? t.authPending : setup ? t.authSetup : registration ? t.authSignupTitle : t.authLogin}</button>
+      <button disabled={pending} type="submit">{pending ? t.authPending : setup ? t.authSetup : registration ? t.authSignupTitle : ct.localLogin}</button>
     </form>
   );
 }
