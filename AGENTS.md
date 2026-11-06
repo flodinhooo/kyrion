@@ -18,6 +18,20 @@ The project documentation is the source of truth for product direction. If the
 implementation and documentation conflict, identify the conflict explicitly
 instead of silently choosing one.
 
+## Git workflow
+
+- The owner-selected development branch in the primary checkout is `master`.
+  Continue on it; do not create or switch to another branch or create a worktree
+  unless the owner explicitly requests that workflow.
+- Check the current branch before making changes. If another task changed it,
+  inspect and preserve its commits before returning the primary checkout to
+  `master`; never reset or discard work to change branches.
+- Local linked checkouts belong in the ignored `.worktrees/` directory. Never
+  stage them as gitlinks or treat them as repository submodules.
+- Integrate and verify outstanding source changes before closing a worktree.
+  Preserve commits and private configuration; keep hardware/release acceptance
+  separate from source integration.
+
 ## Product foundations
 
 Kyrion is a local-first, modular and auditable platform. Preserve these

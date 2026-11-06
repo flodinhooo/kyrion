@@ -1,5 +1,10 @@
 # Runtime and worktree handoff
 
+Historical snapshot from the service-start session. Subsequently the owner
+activated the Pi on V41 and restored its local hostname; the worktrees were
+consolidated on master. See the [current closeout](2026-11-06-master-worktree-closeout.md)
+and its linked activation records before using the blockers or branch table below.
+
 Date: 2026-11-06. Primary checkout: `fix/spaces-hardening`, `0eb44f6`.
 This record separates live observations from historical software verification.
 

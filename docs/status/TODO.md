@@ -1,5 +1,12 @@
 # Kyrion Development TODO
 
+Current integration checkpoint: [master consolidation and worktree closeout](2026-11-06-master-worktree-closeout.md).
+Development continues on `master`; all four former worktree histories are integrated
+and no secondary worktree remains registered. The [Pi V41 activation](2026-11-06-pi-update-activation.md)
+supersedes the earlier V30 activation blocker. Historical handoff integration
+checkboxes below must not be interpreted as missing source changes. Remaining
+security and physical/release acceptance work is tracked in the closeout.
+
 Latest active fix: [empty recognition local V39 rollout](2026-10-31-voice-no-speech-rollout.md).
 - [x] Activate explicit terminal no_speech/inactivity closure on master/V39 and installed batch client; no model/action/TTS/usage for blank input, no retry or double close.
 - [x] Full Core315/296, Satellite77 and lint/build checks; actual Pi blank-audio close plus complete normal local-model/Chatterbox playback and single usage attempt verified. Schema39 and guards retained.

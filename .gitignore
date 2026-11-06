@@ -88,5 +88,5 @@ benchmark-outputs/
 playwright-report/
 test-results/
 
-# Local pre-V40 compatibility build checkout; its source is committed on its branch.
-/.worktrees/core-v39-compat/
+# Local linked checkouts are development state, never repository submodules.
+/.worktrees/
