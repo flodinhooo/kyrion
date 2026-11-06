@@ -9,9 +9,10 @@ import { ActiveSessionsPanel } from "@/components/active-sessions-panel";
 import { InvitationPanel } from "@/components/invitation-panel";
 import { RetentionPolicyPanel } from "@/components/retention-policy-panel";
 import { PersonalBackupPanel } from "@/components/personal-backup-panel";
+import { CentralAccountPanel } from "@/components/central-account-panel";
 
 export default function ProfilePage() {
-  const { username, t } = useWorkspace();
+  const { username, t, locale } = useWorkspace();
   return (
     <section className="settings-stage">
       <div className="settings-card profile-card">
@@ -35,6 +36,7 @@ export default function ProfilePage() {
             <div className="settings-link-card profile-security-panel"><span><strong>{t.changePassword}</strong><small>{t.profileSecurityDescription}</small></span><PasswordChangeForm /></div>
             <ActiveSessionsPanel />
             <InvitationPanel />
+            <CentralAccountPanel locale={locale} />
           </div>
         </section>
 

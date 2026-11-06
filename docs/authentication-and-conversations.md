@@ -72,7 +72,9 @@ No production deployment or hardware acceptance is implied by automated checks.
 Core hashes passwords with Argon2id and stores only SHA-256 hashes of opaque
 256-bit session tokens. The raw token crosses the trusted localhost boundary
 once, from Core to the Next.js server. Next.js removes it from the response and
-sets `kyrion_session` as an `HttpOnly`, `SameSite=Strict` cookie. The cookie is
+sets `kyrion_session` as an `HttpOnly`, `SameSite=Lax` cookie so existing provider
+GET callbacks can receive it. Mutations still require the separate Strict CSRF
+cookie and header. The cookie is
 marked `Secure` in production or when `KYRION_HTTPS=true`.
 For a deliberately trusted local development LAN only,
 `KYRION_INSECURE_LAN_HTTP=true` permits a production Web build to issue the
@@ -88,7 +90,33 @@ server rendering. Private Next.js API routes repeat that check. Core separately
 requires a bearer session on protected `/v1` resources, so bypassing the Web UI
 does not bypass the authority boundary.
 
-## Optional Business identity
+## Optional central Kyrion identity
+
+[ADR 0037](adr/0037-optional-central-identity.md) adds optional Keycloak OIDC.
+Local passwords, setup, invitations, membership and permissions remain Core-owned
+and usable offline. Central identity links use unique `(issuer, subject)` pairs,
+never matching email or username. The public website has a separate central
+session database and cannot read installation data or create local memberships.
+
+Local clients use RFC 8628 device authorization without shared client secrets or
+LAN callbacks. An existing local user reauthenticates with their password,
+authorizes the displayed code at Keycloak, then explicitly confirms linking.
+Unknown identities must first enroll using the existing protected local setup or
+invitation and retain a local password. A central login never assigns OWNER or
+any Space role. Local status/link removal live in Profile and Identity settings.
+Removing a link reauthenticates the password and revokes central-created sessions
+without altering local credentials or membership. Central sessions last at most
+15 minutes and no longer than their identity proof; renewal requires new online
+authorization. Ordinary local session middleware never contacts the provider.
+
+Core endpoints under `/v1/auth/central`: `GET /config`, authenticated `GET /status`,
+`POST /start`, `/poll`, `/complete`, `/cancel`, and authenticated `DELETE /link`.
+Web proxies them with same-origin CSRF protection and an HttpOnly operation
+cookie. Device secrets and OIDC tokens never reach browser JSON or persistence.
+See [the handover](agent-handoffs/unified-identity-handover.md) and the development
+provider configuration for setup, verification and external acceptance boundaries.
+
+## Optional Business identity (local policy)
 
 [Business identity and local recovery](business-identity-and-recovery.md) adds
 pending/SMTP-verified email, domain-control proof and exact-domain enrollment

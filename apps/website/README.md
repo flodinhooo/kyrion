@@ -1,8 +1,9 @@
 # Kyrion public website
 
 Standalone public Next.js App Router website for kyrion.ch. It presents the
-Kyrion development prototype without authentication, device APIs, databases,
-private installation data or a dependency on `apps/web`.
+Kyrion development prototype without device APIs, private installation data or
+a dependency on `apps/web`. Optional central OIDC website accounts use a separate
+central session database; see [account configuration and security](ACCOUNT.md).
 
 ## Pages and content
 

@@ -1,0 +1,43 @@
+{
+  "realm": "kyrion",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "defaultSignatureAlgorithm": "RS256",
+  "accessTokenLifespan": 300,
+  "oauth2DeviceCodeLifespan": 300,
+  "oauth2DevicePollingInterval": 5,
+  "clients": [
+    {
+      "clientId": "kyrion-website",
+      "name": "Kyrion website development",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${WEBSITE_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:3001/api/account/callback", "http://localhost:3109/api/account/callback"],
+      "webOrigins": [],
+      "attributes": {"pkce.code.challenge.method": "S256", "id.token.signed.response.alg": "RS256"}
+    },
+    {
+      "clientId": "kyrion-local",
+      "name": "Kyrion local installations",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {"oauth2.device.authorization.grant.enabled": "true", "id.token.signed.response.alg": "RS256"}
+    }
+  ]
+}

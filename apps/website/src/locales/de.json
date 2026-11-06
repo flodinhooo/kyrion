@@ -102,7 +102,8 @@
     "switchLight": "Zum hellen Modus wechseln",
     "switchDark": "Zum dunklen Modus wechseln",
     "private": "Für Privatkunden",
-    "business": "Für Unternehmen"
+    "business": "Für Unternehmen",
+    "account": "Kyrion-Account"
   },
   "status": {
     "available": "Im Prototyp umgesetzt",
@@ -716,5 +717,19 @@
     "ctaDescription": "Wir suchen den Austausch über konkrete Anforderungen kleiner Unternehmen und Teams. Eine Anfrage begründet weder ein Serviceangebot noch einen zugesicherten Zugang.",
     "cta": "Anwendungsfall besprechen",
     "setupLink": "Entwicklungsstand ansehen"
+  },
+  "account": {
+    "title": "Kyrion-Account",
+    "description": "Verwende deinen optionalen zentralen Kyrion-Account auf dieser Website.",
+    "boundary": "Lokale Installationen bleiben eigenständig. Diese Anmeldung erteilt keine lokalen Space-Mitgliedschaften oder OWNER-Rechte.",
+    "disabled": "Die zentrale Anmeldung ist auf dieser Website nicht aktiviert. Kyrion bleibt lokal nutzbar.",
+    "login": "Mit Kyrion-Account anmelden",
+    "signedIn": "Du bist auf der Kyrion-Website angemeldet.",
+    "expiry": "Diese Sitzung läuft innerhalb von 15 Minuten ab. Melde dich erneut an, um den aktuellen zentralen Kontostatus zu prüfen.",
+    "logout": "Von dieser Website abmelden",
+    "logoutScope": "Abmelden beendet diese Website-Sitzung. Es sperrt weder deinen zentralen Account noch meldet es lokale Installationen ab.",
+    "unavailable": "Der Account-Dienst ist nicht erreichbar. Versuche es später erneut.",
+    "cancelled": "Die Anmeldung wurde abgebrochen.",
+    "failed": "Die Anmeldung konnte nicht bestätigt werden. Bitte starte sie erneut."
   }
 }

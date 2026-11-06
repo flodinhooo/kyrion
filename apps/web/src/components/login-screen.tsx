@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AuthForm } from "@/components/auth-form";
+import { CentralAccountPanel } from "@/components/central-account-panel";
 import { BrandAsset } from "@/components/brand-asset";
 import { messages, type Locale } from "@/lib/messages";
 import { readPreference, writePreference } from "@/lib/browser-preferences";
@@ -37,6 +38,7 @@ export function LoginScreen({ setupRequired, registration = false }: { setupRequ
       {setupRequired === null
         ? <button className="auth-retry" type="button" disabled={pending} onClick={() => startTransition(() => router.refresh())}>{pending ? t.authPending : t.authRetry}</button>
         : <AuthForm setup={setupRequired} registration={registration} locale={locale} />}
+      {!registration && setupRequired === false && <CentralAccountPanel locale={locale} login />}
       {registration && <p className="auth-footer"><Link href="/login">{t.authBackToLogin}</Link></p>}
       {!registration && setupRequired === false && <p className="auth-footer"><Link href="/signup">{t.authSignupTitle}</Link></p>}
       {process.env.NODE_ENV === "development" &&
