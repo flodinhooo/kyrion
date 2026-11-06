@@ -1,5 +1,9 @@
 # Pi platform update activated
 
+Later continuation: [local hostname recovery](2026-11-06-local-web-name-recovery.md)
+restored ordinary DNS/mDNS and verified Windows HTTPS access using
+`https://kyrion-node.local`; the earlier DNS limitation below is historical.
+
 Date: 2026-11-06. Source: `0eb44f6` plus the previously tested Core Docker/secret
 loader deployment fixes. The unrelated Calendar/HA worktree and other handoff
 documents were preserved.
