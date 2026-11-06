@@ -1,5 +1,10 @@
 # Calendar synchronization
 
+Planned extension: [Home family calendar](home-family-calendar-plan.md) adds
+voluntary personal-calendar grants, selected participants and jointly editable
+events. The owner approved joint editing; this is not yet implemented and does
+not remove the personal Google connection restrictions described below.
+
 Implemented recovery slice, 2026-10-19. Live provider acceptance is separate from
 fixture and database verification. See [ADR 0024](adr/0024-calendar-sync-and-ha-refresh.md).
 

@@ -1,5 +1,10 @@
 # Kyrion Spaces
 
+New accepted product direction, not implemented multi-membership:
+[Home identity and family calendar ADR 0035](adr/0035-home-membership-and-family-calendar-direction.md)
+and [implementation plan](home-family-calendar-plan.md). HOME is the current
+priority; existing single-Space and Business protections below remain enforced.
+
 Integration note: the combined main checkout includes Spaces and personal K-Data.
 Canonical migration numbers are V38 (Spaces) and V39 (Business identity), following
 the existing calendar-context V37. Historical branch numbering below is superseded

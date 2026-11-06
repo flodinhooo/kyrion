@@ -1,5 +1,11 @@
 # Kyrion Development TODO
 
+Next Home product slice: [family calendar plan](../home-family-calendar-plan.md),
+with owner-confirmed joint editing and [ADR 0035](../adr/0035-home-membership-and-family-calendar-direction.md).
+The [two-chat assignment](../agent-handoffs/2026-11-06-parallel-home-and-gateway.md)
+separates Home/Calendar work from Gateway authority, including shared-file,
+migration and Git/build coordination. It is prepared, not started automatically.
+
 Current integration checkpoint: [master consolidation and worktree closeout](2026-11-06-master-worktree-closeout.md).
 Development continues on `master`; all four former worktree histories are integrated
 and no secondary worktree remains registered. The [Pi V41 activation](2026-11-06-pi-update-activation.md)
