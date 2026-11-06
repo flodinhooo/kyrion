@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
+import { Client } from "pg";
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -61,6 +62,28 @@ writeFileSync(bootstrap, randomBytes(32).toString("base64url"), {
 });
 if (!process.env.JAVA_HOME)
   throw new Error("Set JAVA_HOME to Java 21 before isolated acceptance");
+let ready = false;
+const deadline = Date.now() + 90_000;
+while (!ready && Date.now() < deadline) {
+  const probe = new Client({
+    host: "127.0.0.1",
+    port: 15559,
+    database: "kyrion_acceptance",
+    user: "kyrion_acceptance",
+    password: settings.CORE_DB_PASSWORD,
+    connectionTimeoutMillis: 2000,
+  });
+  try {
+    await probe.connect();
+    await probe.query("SELECT 1");
+    ready = true;
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  } finally {
+    await probe.end().catch(() => {});
+  }
+}
+if (!ready) throw new Error("Isolated Core PostgreSQL did not become ready");
 const child = spawn(
   path.join(
     process.env.JAVA_HOME,
@@ -83,6 +106,8 @@ const child = spawn(
       KYRION_CREDENTIAL_KEY_FILE: secretFile("identity-credential.key", false),
       KYRION_AUDIT_INTEGRITY_KEY_FILE: secretFile("identity-audit.key", false),
       KYRION_KNOWLEDGE_ROOT: path.join(privateDir, "identity-knowledge"),
+      KYRION_AI_BASE_URL: "http://127.0.0.1:18999",
+      KYRION_KNOWLEDGE_EMBEDDING_URL: "http://127.0.0.1:18999",
       KYRION_CENTRAL_ENABLED: "true",
       KYRION_CENTRAL_ISSUER: "http://localhost:18089/realms/kyrion",
       KYRION_CENTRAL_CLIENT_ID: "kyrion-local",

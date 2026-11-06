@@ -7,13 +7,13 @@ records the provider and deployment decision.
 
 ## Ownership and identifiers
 
-| Data | Authority | Transfer |
-| --- | --- | --- |
-| Central subject, authentication methods, verified email | Keycloak | Only issuer and subject imported into a local link |
-| Website account/session | Separate central website PostgreSQL | No local database access |
-| Local username and password | Local Core | Never sent to Keycloak or website |
-| Space membership, roles, permissions | Local Core | Never inferred from central claims |
-| Devices, automations, documents, reminders and other content | Local installation | No identity synchronization |
+| Data                                                         | Authority                           | Transfer                                           |
+| ------------------------------------------------------------ | ----------------------------------- | -------------------------------------------------- |
+| Central subject, authentication methods, verified email      | Keycloak                            | Only issuer and subject imported into a local link |
+| Website account/session                                      | Separate central website PostgreSQL | No local database access                           |
+| Local username and password                                  | Local Core                          | Never sent to Keycloak or website                  |
+| Space membership, roles, permissions                         | Local Core                          | Never inferred from central claims                 |
+| Devices, automations, documents, reminders and other content | Local installation                  | No identity synchronization                        |
 
 `(issuer, subject)` is the external identity key, unique per local database. A
 local user has at most one central link. Equal email addresses or usernames are
@@ -105,8 +105,8 @@ device codes nor opaque Core sessions are returned to browser JavaScript.
 V46 adds `central_identity_link` and `central_auth_session` only. Unique keys and
 a transaction advisory lock serialize mapping/login/removal; audit and mutation
 share the transaction. Committed master's historical migrations are untouched:
-V42 is Gateway, V43 joint Calendar and V44 personal disclosure. V45 is reserved
-for pending household delivery; integrate it before any V46 rollout. The earlier
+V42 is Gateway, V43 joint Calendar, V44 personal disclosure and V45 household
+delivery. The earlier
 isolated Identity V44 is retained as a historical test fixture outside active
 Flyway locations. An installation with that divergent history fails validation
 and needs a separately reviewed compatibility plan. See

@@ -24,9 +24,9 @@ class IdentityCombinedMigrationTest {
     @Test fun `fresh database has unique ordered canonical migrations and repeated startup is a no-op`() {
         val schema = "fresh_" + UUID.randomUUID().toString().replace("-", "")
         val flyway = migrate(schema)
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(45)
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(46)
         flyway.validate()
-        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..44).map(Int::toString) + "46")
+        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..46).map(Int::toString))
         assertThat(flyway.migrate().migrationsExecuted).isZero()
     }
 
@@ -63,8 +63,12 @@ class IdentityCombinedMigrationTest {
                 migrate(schema, "44").migrate()
                 sql.execute("INSERT INTO integration_connection(id,owner_id,provider,display_name,endpoint_host,credential_ciphertext,credential_nonce,created_at,updated_at) VALUES('$google','$owner','google','fixture','google-fixture',decode('010203','hex'),decode('0405','hex'),now(),now())")
                 sql.execute("INSERT INTO personal_calendar_disclosure(id,space_id,user_id,connection_id,calendar_id,visibility,revision) VALUES(gen_random_uuid(),'$owner','$owner','$google','synthetic-calendar','AVAILABILITY',1)")
+                migrate(schema, "45").migrate()
+                val destination = UUID.randomUUID()
+                sql.execute("INSERT INTO household_calendar_destination(id,space_id,user_id,connection_id,calendar_id,active,revision) VALUES('$destination','$owner','$owner','$google','synthetic-calendar',TRUE,1)")
+                sql.execute("INSERT INTO household_calendar_delivery(id,space_id,event_id,target_user_id,grant_id,destination_key,remote_id,etag,delivered_revision,state,attempt_id,lease_until) VALUES(gen_random_uuid(),'$owner','$event','$owner','$destination','synthetic-key','synthetic-remote','synthetic-etag',0,'SYNCED',gen_random_uuid(),now())")
                 val before = linkedMapOf<String, String>()
-                val tables = listOf("user_account", "kyrion_space", "rbac_role", "rbac_user_role", "rbac_role_permission", "auth_session", "integration_connection", "local_calendar_event", "gateway_node", "gateway_command", "household_calendar_event", "household_calendar_participant", "personal_calendar_disclosure", "installation_bootstrap_state")
+                val tables = listOf("user_account", "kyrion_space", "rbac_role", "rbac_user_role", "rbac_role_permission", "auth_session", "integration_connection", "local_calendar_event", "gateway_node", "gateway_command", "household_calendar_event", "household_calendar_participant", "personal_calendar_disclosure", "household_calendar_destination", "household_calendar_delivery", "installation_bootstrap_state")
                 fun snapshot(table: String): String = sql.executeQuery("SELECT COALESCE(jsonb_agg(row ORDER BY row::text),'[]'::jsonb)::text FROM (SELECT to_jsonb(t) AS row FROM $table t) rows").use { it.next(); it.getString(1) }
                 tables.forEach { before[it] = snapshot(it) }
                 val checksums = migrate(schema).info().applied().filter { it.version != null }.associate { it.version.version to it.checksum }
@@ -89,12 +93,16 @@ class IdentityCombinedMigrationTest {
         }
         Flyway.configure().dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
             .schemas(schema).defaultSchema(schema).locations("filesystem:$temporary").load().migrate()
-        assertThatThrownBy { migrate(schema).migrate() }.isInstanceOf(org.flywaydb.core.api.exception.FlywayValidateException::class.java)
         DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
             connection.schema = schema
             connection.createStatement().use { statement ->
+                val owner = UUID.randomUUID()
+                statement.execute("INSERT INTO user_account(id,username,password_hash) VALUES('$owner','legacy-owner','preserved-legacy-hash')")
+                statement.execute("INSERT INTO central_identity_link(user_id,issuer,subject,linked_at) VALUES('$owner','https://synthetic.invalid','preserved-subject',now())")
+                assertThatThrownBy { migrate(schema).migrate() }.isInstanceOf(org.flywaydb.core.api.exception.FlywayValidateException::class.java)
                 statement.executeQuery("SELECT count(*) FROM flyway_schema_history WHERE version='46'").use { it.next(); assertThat(it.getInt(1)).isZero() }
-                statement.executeQuery("SELECT count(*) FROM central_identity_link").use { it.next(); assertThat(it.getInt(1)).isZero() }
+                statement.executeQuery("SELECT subject FROM central_identity_link WHERE user_id='$owner'").use { it.next(); assertThat(it.getString(1)).isEqualTo("preserved-subject") }
+                statement.executeQuery("SELECT password_hash FROM user_account WHERE id='$owner'").use { it.next(); assertThat(it.getString(1)).isEqualTo("preserved-legacy-hash") }
                 statement.executeQuery("SELECT count(*) FROM information_schema.tables WHERE table_schema='$schema' AND table_name='personal_calendar_disclosure'").use { it.next(); assertThat(it.getInt(1)).isZero() }
             }
         }
