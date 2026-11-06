@@ -2,6 +2,13 @@
 
 Date: 2026-11-06. Source integration and isolated acceptance only.
 
+Follow-up: both Identity worktrees have since been retired at the owner's
+request. Their full directories and Git metadata were preserved under ignored
+`.run/stabilization/identity-worktree-archives/2026-11-06-closeout/`; only their
+old registrations were pruned. Both branches remain ancestors of master. The
+preservation/retention paragraphs below record the earlier integration checkpoint;
+see the updated unified Identity handover for the retirement procedure.
+
 ## Complete source integration and preservation
 
 The owner authorized integration into primary `master` using the existing

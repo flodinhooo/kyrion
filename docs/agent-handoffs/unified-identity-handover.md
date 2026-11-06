@@ -1,5 +1,26 @@
 # Unified identity handover
 
+## Worktree retirement after complete master integration
+
+The owner requested that the integrated Identity checkouts no longer be needed
+as worktrees. Both branches were rechecked as ancestors of master `170889c`, and
+both checkouts still had clean tracked/untracked source. Their complete directory
+trees, including private configuration, ignored files and caches, were moved
+without deletion to ignored local archives:
+`.run/stabilization/identity-worktree-archives/2026-11-06-closeout/identity-integration/`
+and the sibling `unified-identity/`. Original Git worktree metadata was copied
+alongside them; the archived `.git` pointers were renamed to
+`.git.worktree-pointer.txt` so these are archives rather than active checkouts.
+
+Only the two now-missing original registrations were pruned after inspecting the
+dry run. `git worktree list` now contains only the primary master checkout. Both
+branch refs and every commit remain intact. The verified final history bundle
+also remains at `.run/final-integration/identity-master-final.bundle`.
+No source/runtime configuration changed and no service or database was restarted.
+The older retention statements below describe the preceding checkpoint; the
+archives now replace those worktree directories. Deleting private archive data
+or reclaiming its cache space is a separate retention decision.
+
 ## Master closeout after chats A/B (2026-11-06)
 
 The owner explicitly authorized integration into primary `master` after the A/B
