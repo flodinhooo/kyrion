@@ -7,18 +7,22 @@ separates Home/Calendar work from Gateway authority, including shared-file,
 migration and Git/build coordination. Both assignments were started explicitly by
 the owner and implemented on master without creating additional worktrees.
 
-Parallel source work has now been implemented and jointly verified: **370 Core
-tests**, zero failures/errors/skips, plus bootJar; Web **211 tests**, ESLint,
+Latest parallel source work is implemented and jointly verified: **386 Core
+tests**, zero failures/errors/skips, plus bootJar; Web **218 tests**, ESLint,
 TypeScript and production build. Recorded Core before/after source hashes match.
-See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md) and
+See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md),
+[personal calendar disclosure](../agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md) and
 [Gateway results](../agent-handoffs/2026-11-06-gateway-authority-results.md).
-V42/V43 and the new runtime behavior have **not** been deployed.
+V42–V44 and the new runtime behavior have **not** been deployed. The Gateway
+dump/restore rehearsal targets V43; the full source suite and artifact include V44.
 
 - [x] HOME-01/02 native slice: explicit participant selection, jointly editable
   Kyrion household events, revision conflicts, creator-only deletion, person
   display filter, transactional audit and DE/EN UI. Legacy local/Google behavior retained.
-- [ ] HOME-03: voluntary personal calendar visibility grants and Core-enforced
-  private/availability/details views; ownership is not implied by installation roles.
+- [x] HOME-03 first Google slice: voluntary per-calendar visibility, Core-enforced
+  private/availability/details projections, revisioned consent/revocation,
+  connection-bound grants and read-only Web overlay. Installation roles imply no
+  personal access. Further providers and simultaneous source overlays remain follow-up.
 - [ ] HOME-04: explicit participant provider destinations and owner-approved
   writes, per-target status, idempotent retries and conflict handling.
 - [ ] Coordinate data-safe runtime rollout and real browser/household acceptance.

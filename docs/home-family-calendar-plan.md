@@ -1,7 +1,8 @@
 # Home Spaces and family calendar implementation plan
 
 Status: HOME-01 contract specified and HOME-02 native source implemented/tested;
-HOME-03 onward remains planned. No runtime rollout. Owner-confirmed requirements
+HOME-03 Google disclosure source is implemented/tested; HOME-04 onward remains planned.
+No runtime rollout. Owner-confirmed requirements
 recorded on 2026-11-06.
 Decision: [ADR 0035](adr/0035-home-membership-and-family-calendar-direction.md).
 Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-home-and-gateway.md).
@@ -35,7 +36,7 @@ Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-h
 | --- | --- | --- |
 | HOME-01 | Specify calendar contracts, privacy and event lifecycle | Concrete request/response/error/state models; decide deletion, participant removal and copy retention before mutation implementation; record migration/data-preservation plan. |
 | HOME-02 | Kyrion-native shared event participants and joint editing | Two household members can create/read/edit a joint event; stale revisions conflict; a nonparticipant cannot edit merely because they can see the household calendar; foreign households cannot read/write; deactivated membership and revoked permissions deny access. Changes audit actual actor and Space. Existing local events retain their existing shared behavior without reclassifying private data. |
-| HOME-03 | Voluntary personal-calendar visibility | Owner controls private / availability-only / details; UI filters are independent; redaction is enforced in Core list/detail/context paths, not only the browser. Revocation removes future access and cached authorized representations. |
+| HOME-03 | Voluntary personal-calendar visibility (Google first slice implemented/tested) | Credential owner controls private / availability-only / details; UI filters are independent; Core enforces redaction. No new context consumer was added; future consumers must use this boundary. Revocation blocks subsequent reads and Web clears prior authorized representations; already seen/copied information cannot be recalled. |
 | HOME-04 | Selected-recipient provider delivery | Each target owner opted in and selected a writable calendar; canonical shared event plus per-target status, revisions/ETags and idempotency; participant editor and credential owner are separate; partial failure, retry, edits and revocation are tested. Start with existing Google adapter. |
 | HOME-05 | Calendar usability and real acceptance | DE/EN, month/week/day, DST, timezones, all-day boundaries, offline/provider failures, external edits, duplicate suppression and disposable live-provider tests. Series/all-day authoring and further providers are separate scoped decisions. |
 | HOME-06 | Multiple HOME memberships | Separate account/membership/role scope, safe current-Space selection and complete isolation; reviewed migration, no implicit resource movement. Cross-installation authentication remains its own milestone. |
@@ -107,6 +108,7 @@ sync actors are personal. Existing linked sync refuses another account's provide
 connection. Do not remove that check to implement joint editing: introduce a
 Core-owned shared event and explicit target authorization instead.
 
-No schema or runtime behavior changes are delivered by this plan. Never edit
+Implementation slices add new source migrations; this plan itself never applies
+them to a running installation. Never edit
 V1-V41 or migrate the running V39 Windows database implicitly. Existing Pi V41
 and Windows V39 are separate runtime targets, each needing deliberate deployment.

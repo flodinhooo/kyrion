@@ -1,5 +1,11 @@
 export const calendarMessages = {
   en: {
+    disclosureTitle: "Share my personal calendars", disclosureConsent: "Private by default. Availability shares event times; details also shares titles and descriptions with all current household members who have calendar read access. This does not permit editing or write to other calendars.",
+    disclosurePrivate: "Private", disclosureAvailability: "Event times only", disclosureDetails: "Event details", disclosureSave: "Save sharing", disclosureConfirm: "Share this personal calendar with all household members who have calendar read access?",
+    disclosureUnavailable: "Calendar sharing is unavailable. Check connection, calendar permissions and server version.", disclosureError: "Sharing could not be saved. Reload settings before trying again.", disclosureSaved: "Sharing saved.",
+    disclosureConflict: "Sharing changed in another session. Reload settings and review the current setting.", disclosureReload: "Reload sharing", disclosureUnknown: "Previously selected calendar (currently unavailable)",
+    sharedCalendar: "Personal calendar shared with me", sharedNone: "Do not display a shared personal calendar", sharedSource: "Shared personal calendar", sharedBusy: "Occupied", sharedReadOnly: "This personal calendar is shared read-only.",
+    sharedError: "Shared personal calendar unavailable or sharing revoked. Previous shared data has been cleared.", sharedAudience: "Changes take effect on subsequent reads. Other open views refresh while visible; already seen or copied information cannot be recalled.",
     jointCreate: "Create shared event", jointSource: "Shared household event", participants: "Participants",
     jointInfo: "Selected participants can edit this Kyrion event. It is visible to the household. No personal calendar is written to.",
     participantsFixed: "Participants are fixed after creation. Only the creator can delete this event.",
@@ -34,6 +40,12 @@ export const calendarMessages = {
     readOnly: "External event (read only)", source: "Source", localStatus: "Local event", unavailable: "No writable calendar available",
   },
   de: {
+    disclosureTitle: "Meine persönlichen Kalender freigeben", disclosureConsent: "Standardmäßig privat. Belegte Zeiten teilt nur Terminzeiten; Termindetails teilt zusätzlich Titel und Beschreibungen mit allen aktuellen Haushaltsmitgliedern mit Kalender-Leserecht. Das erlaubt kein Bearbeiten und schreibt nicht in andere Kalender.",
+    disclosurePrivate: "Privat", disclosureAvailability: "Nur belegte Zeiten", disclosureDetails: "Termindetails", disclosureSave: "Freigabe speichern", disclosureConfirm: "Diesen persönlichen Kalender für alle Haushaltsmitglieder mit Kalender-Leserecht freigeben?",
+    disclosureUnavailable: "Kalenderfreigaben sind nicht verfügbar. Verbindung, Kalenderrechte und Serverversion prüfen.", disclosureError: "Freigabe konnte nicht gespeichert werden. Vor dem nächsten Versuch Einstellungen neu laden.", disclosureSaved: "Freigabe gespeichert.",
+    disclosureConflict: "Die Freigabe wurde in einer anderen Sitzung geändert. Einstellungen neu laden und den aktuellen Stand prüfen.", disclosureReload: "Freigaben neu laden", disclosureUnknown: "Zuvor ausgewählter Kalender (derzeit nicht verfügbar)",
+    sharedCalendar: "Für mich freigegebener persönlicher Kalender", sharedNone: "Keinen freigegebenen persönlichen Kalender anzeigen", sharedSource: "Freigegebener persönlicher Kalender", sharedBusy: "Belegt", sharedReadOnly: "Dieser persönliche Kalender ist nur zum Lesen freigegeben.",
+    sharedError: "Persönlicher Kalender nicht verfügbar oder Freigabe widerrufen. Zuvor geladene freigegebene Daten wurden entfernt.", sharedAudience: "Änderungen gelten bei nachfolgenden Abrufen. Andere geöffnete Ansichten aktualisieren sich, solange sie sichtbar sind. Bereits gelesene oder kopierte Informationen lassen sich nicht zurückrufen.",
     jointCreate: "Gemeinsamen Termin erstellen", jointSource: "Gemeinsamer Haushaltstermin", participants: "Teilnehmer",
     jointInfo: "Ausgewählte Teilnehmer können diesen Kyrion-Termin bearbeiten. Er ist im Haushalt sichtbar. Persönliche Kalender werden nicht beschrieben.",
     participantsFixed: "Die Teilnehmer stehen nach dem Erstellen fest. Nur der Ersteller kann diesen Termin löschen.",

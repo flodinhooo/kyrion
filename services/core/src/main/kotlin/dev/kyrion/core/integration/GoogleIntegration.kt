@@ -136,11 +136,11 @@ class GoogleIntegrationService(
     fun status(ownerId: UUID): GoogleStatus { val connection = connection(ownerId) ?: return GoogleStatus(configured(), false); val enabled = grants.findAll(ownerId, connection.id).any { it.capability == CALENDAR_READ && it.granted }; return GoogleStatus(configured(), true, connection.displayName, !enabled || stored(connection).reauthorizationRequired) }
     fun authorize(ownerId: UUID): GoogleAuthorization { if (!configured()) throw GoogleNotConfiguredException(); val bytes = ByteArray(32).also(random::nextBytes); val state = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); pending[state] = ownerId to clock.instant().plusSeconds(600); val query = mapOf("client_id" to clientId, "redirect_uri" to redirectUri, "response_type" to "code", "scope" to "openid email profile $GOOGLE_CALENDAR_SCOPE", "access_type" to "offline", "prompt" to "consent", "state" to state).entries.joinToString("&") { "${enc(it.key)}=${enc(it.value)}" }; return GoogleAuthorization("https://accounts.google.com/o/oauth2/v2/auth?$query") }
     fun complete(ownerId: UUID, code: String, state: String): GoogleStatus { val request = pending[state] ?: throw GoogleInvalidStateException(); if (request.first != ownerId || request.second.isBefore(clock.instant()) || !pending.remove(state, request)) throw GoogleInvalidStateException(); val token = client.exchange(code, redirectUri, clientId, clientSecret); val now = clock.instant(); val accounts = repository.findAll(ownerId).filter { it.provider == GOOGLE_PROVIDER }; if(accounts.size > 1 || accounts.singleOrNull()?.let { it.displayName != token.accountName && it.displayName != "Google account" } == true) throw GoogleDifferentAccountException(); val existing = accounts.singleOrNull(); val id = existing?.id ?: UUID.randomUUID(); val payload = mapper.writeValueAsString(StoredGoogleToken(token.accessToken, token.refreshToken, token.expiresAt.toString(), token.accountName)); val protected = cipher.protect(payload, "$ownerId:$id:$GOOGLE_PROVIDER"); if (existing == null) repository.save(IntegrationConnection(id, ownerId, GOOGLE_PROVIDER, token.accountName, token.accountName, protected.ciphertext, protected.nonce, protected.version, now, now)) else { repository.updateCredential(ownerId, id, protected, now); if(existing.displayName != token.accountName) repository.rename(ownerId,id,token.accountName,now) }; grants.replace(ownerId, id, setOf(CALENDAR_READ, CALENDAR_EVENT_CREATE, CALENDAR_EVENT_UPDATE, CALENDAR_EVENT_DELETE), now); return GoogleStatus(true, true, token.accountName) }
-    fun events(ownerId: UUID, calendarId: String = "primary", start: String? = null, end: String? = null): GoogleCalendarEvents {
+    fun events(ownerId: UUID, calendarId: String = "primary", start: String? = null, end: String? = null, expectedConnection: UUID? = null): GoogleCalendarEvents {
         val from = start?.let { parseInstant(it) } ?: clock.instant().minus(Duration.ofDays(31))
         val until = end?.let { parseInstant(it) } ?: clock.instant().plus(Duration.ofDays(366))
         if (!until.isAfter(from) || Duration.between(from, until) > Duration.ofDays(400)) throw GoogleInvalidRequestException()
-        return withToken(ownerId, CALENDAR_READ) { client.rangedEvents(it, calendarId, from.toString(), until.toString()) }
+        return withToken(ownerId, CALENDAR_READ, expectedConnection) { client.rangedEvents(it, calendarId, from.toString(), until.toString()) }
     }
     private fun parseInstant(value: String): Instant = try { Instant.parse(value) } catch (_: Exception) { throw GoogleInvalidRequestException() }
     fun remoteEvent(ownerId: UUID, calendarId: String, eventId: String) = withToken(ownerId, CALENDAR_READ) { client.getEvent(it, calendarId, eventId) }
@@ -175,8 +175,9 @@ class GoogleIntegrationService(
         if (!parseInstant(body.end).isAfter(parseInstant(body.start))) throw GoogleInvalidRequestException()
     }
     @Synchronized
-    private fun <T> withToken(ownerId: UUID, capability: String, action: (String) -> T): T {
+    private fun <T> withToken(ownerId: UUID, capability: String, expectedConnection: UUID? = null, action: (String) -> T): T {
         val connection = connection(ownerId) ?: throw GoogleDisconnectedException()
+        if (expectedConnection != null && connection.id != expectedConnection) throw GoogleDisconnectedException()
         if (!grants.findAll(ownerId, connection.id).any { it.capability == capability && it.granted }) throw GoogleCapabilityDisabledException()
         if (stored(connection).reauthorizationRequired) throw GoogleReauthorizationException()
         var current = token(connection)
