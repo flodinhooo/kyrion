@@ -119,6 +119,10 @@ class ZigbeeButtonBindingService(
 
     private fun execute(node: GatewayNode, buttonId: UUID, binding: ZigbeeButtonBinding) {
         boundary?.workspace(node.ownerId)
+        // A queued event is not authority to execute a binding that the user has
+        // since removed or changed. Resolve its current configuration again.
+        if (repository.find(node.ownerId, buttonId).singleOrNull { it.gesture == binding.gesture } != binding) return
+        requireButton(node.ownerId, buttonId)
         val allDevices = catalog.devices(node.ownerId)
         val targets = if (binding.targetDeviceId != null) {
             allDevices.filter { it.id == binding.targetDeviceId }

@@ -7,6 +7,13 @@ supersedes the earlier V30 activation blocker. Historical handoff integration
 checkboxes below must not be interpreted as missing source changes. Remaining
 security and physical/release acceptance work is tracked in the closeout.
 
+- [x] Consolidate every former worktree branch tip on master, preserve open Calendar/HA work, and remove accidental gitlinks and active secondary worktrees.
+- [x] Cancel silent AI HTTP requests when captured session/permission/route/Knowledge authority is revoked; test both missing headers and incomplete events.
+- [x] Revalidate queued button bindings; test deleted, reconfigured and unchanged bindings.
+- [x] Verify the consolidated source: Core332, Web200, AI172; builds and configured static checks pass.
+- [ ] Persist originating human/capability authority through Gateway queue, claim and retry; define explicit automation grants.
+- [ ] Complete optional-context opt-out/content, multi-process worker/cache/stream lifecycle certification; retain the single-Space/Business Voice guards.
+
 Latest active fix: [empty recognition local V39 rollout](2026-10-31-voice-no-speech-rollout.md).
 - [x] Activate explicit terminal no_speech/inactivity closure on master/V39 and installed batch client; no model/action/TTS/usage for blank input, no retry or double close.
 - [x] Full Core315/296, Satellite77 and lint/build checks; actual Pi blank-audio close plus complete normal local-model/Chatterbox playback and single usage attempt verified. Schema39 and guards retained.

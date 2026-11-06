@@ -131,6 +131,17 @@ tool execution loop is still follow-up work.
 
 ## Verification
 
+The Core HTTP transport also checks captured session, permissions, conversation,
+Knowledge revision and route authority while an upstream request is silent,
+including before response headers or during a partial NDJSON frame. Its owned
+virtual-thread monitor polls every 250 ms and cancels the pending HTTP request or
+closes its body on denial. Each complete frame is checked synchronously before
+delivery; completion interrupts the monitor and closes owned resources. Existing
+total deadlines and conservative uncertain-usage settlement remain in effect.
+The interval is a polling cadence, not a hard real-time revocation guarantee:
+authority lookups themselves can take time. Optional context content/opt-out
+changes and all multi-process/cache/worker races still require separate work.
+
 Core unit and disposable PostgreSQL integration tests cover routing, preferences,
 administrator overrides, cloud gates, capability filtering, concurrent budget
 reservations, replay protection, usage settlement, voice selection, controlled

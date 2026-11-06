@@ -168,16 +168,22 @@ class AiOrchestrationService(
             var error: String? = null
             var explicitError = false
             val buffered = mutableListOf<String>()
-            try {
-                if (attempt == 0) onStage("context.completed")
+            fun validateAuthority() {
                 validateActive()
                 rbac.require(prepared.actor, "conversations:create")
                 rbac.require(prepared.actor, "conversations:read")
                 if (prepared.context.usedMemories.isNotEmpty()) rbac.require(prepared.actor, "personal_memories:read")
-                if (conversations.find(prepared.actor, prepared.request.conversationId) == null) throw AiFailure("CONVERSATION_NOT_FOUND",404)
-                val current = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor), settings.effectivePolicy(prepared.actor), prepared.route)
-                if ((listOf(current.model) + current.alternatives).none { it.id == model.id }) throw AiFailure("PROVIDER_BLOCKED",403)
+                if (conversations.find(prepared.actor, prepared.request.conversationId) == null)
+                    throw AiFailure("CONVERSATION_NOT_FOUND", 404)
                 knowledgeContext.verify(prepared.actor, prepared.knowledgeSources)
+                val current = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor),
+                    settings.effectivePolicy(prepared.actor), prepared.route)
+                if ((listOf(current.model) + current.alternatives).none { it.id == model.id })
+                    throw AiFailure("PROVIDER_BLOCKED", 403)
+            }
+            try {
+                if (attempt == 0) onStage("context.completed")
+                validateAuthority()
                 if (prepared.knowledgeSources.isNotEmpty() && model.contextLength != null &&
                     prepared.context.estimatedTokens + aiJson.writeValueAsBytes(prepared.knowledgeSources).size / 3 +
                     model.maxOutputTokens + 512 > model.contextLength) throw AiFailure("CONTEXT_LIMIT_EXCEEDED")
@@ -217,14 +223,7 @@ class AiOrchestrationService(
                 onStage("model.dispatch")
                 usage.begin(prepared.actor, reservation)
                 invoked = true
-                gateway.streamTraced(payload, remaining, correlationId) { raw ->
-                    validateActive()
-                    rbac.require(prepared.actor, "conversations:create")
-                    rbac.require(prepared.actor, "conversations:read")
-                    if (prepared.context.usedMemories.isNotEmpty()) rbac.require(prepared.actor, "personal_memories:read")
-                    knowledgeContext.verify(prepared.actor, prepared.knowledgeSources)
-                    val activeRoute = ModelRouter.select(prepared.catalog, settings.repository.preferences(prepared.actor), settings.effectivePolicy(prepared.actor), prepared.route)
-                    if ((listOf(activeRoute.model) + activeRoute.alternatives).none { it.id == model.id }) throw AiFailure("PROVIDER_BLOCKED", 403)
+                gateway.streamGuarded(payload, remaining, correlationId, ::validateAuthority) { raw ->
                     val event = aiJson.readTree(raw)
                     if (prepared.knowledgeSources.isNotEmpty() && event.path("type").asText().startsWith("message.")) {
                         val id = event.path("messageId").asText()
@@ -296,7 +295,7 @@ class AiOrchestrationService(
                                         )
                                     )
                                 )
-                                return@streamTraced
+                                return@streamGuarded
                             }
                             if (visible) emit(raw) else {
                                 if (buffered.size >= 100) throw AiFailure("STREAM_FAILED", 502); buffered.add(raw)

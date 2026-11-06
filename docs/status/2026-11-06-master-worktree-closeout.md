@@ -45,6 +45,19 @@ prohibit accidental worktree gitlinks. This does not authorize automatic pushes.
 
 ## Remaining product work
 
+Two bounded security follow-ups were implemented on master:
+
+- The HTTP AI transport periodically revalidates captured authority even when
+  the provider sends no response headers or only a partial event. Denial cancels
+  the request/body instead of waiting for the provider's next event. Synthetic
+  HTTP tests cover both silent states, frame handling, downstream cancellation
+  and the existing total deadline.
+- Queued Zigbee button work reloads the binding and validates that its button
+  still exists before target resolution. Deleted/reconfigured bindings cannot
+  execute their captured old action; unchanged bindings still enter the shared
+  Action Orchestrator once. This is not the missing persisted integration grant
+  or originating-human authorization through the downstream Gateway queue.
+
 Source integration and worktree closure do not certify every historical TODO.
 The original handoffs remain evidence; this record supersedes their outstanding
 branch-integration instructions. The Pi activation and local-hostname recovery
@@ -62,3 +75,22 @@ Real embedding/RAG, complete document recovery, Business SMTP/DNS/interactive
 recovery, clean-room installer release and physical Voice/device/Calendar checks
 remain distinct acceptance work. Paid cloud calls, destructive reboot drills and
 audible hardware acceptance are not implied by source integration.
+
+## Final verification
+
+- Core: **332 tests**, zero failures/errors/skips; `bootJar` passed. The preceding
+  run failed only during startup of the disposable PostgreSQL fixture at its
+  default 60-second log-readiness deadline; the full rerun after parallel builds
+  completed passed, including all 88 authentication/persistence integration tests.
+  No wait strategy, assertion or production database was weakened to obtain a pass.
+- Web: **200 tests**, ESLint, TypeScript and production build passed. Build output
+  used `.next-master-closeout-build` to preserve the active dev server. Next's
+  generated tsconfig additions were removed after validation.
+- AI: **172 tests**, Ruff lint and formatting passed. One inherited formatting
+  deviation in the experimental Qwen runtime was normalized; before/after Python
+  ASTs are identical. No speech runtime or model configuration was changed.
+- `git diff --check` passed. Core has no separately configured formatter/linter.
+- All seven local service readiness probes passed after verification. These
+  source fixes were built/tested, not deployed over the pinned Windows V39 or Pi
+  runtime by this consolidation. No migration, paid provider request, hardware
+  action or host reboot was performed.

@@ -65,6 +65,45 @@ class HttpAiGatewayTest {
     }
 
     @Test
+    fun `revocation cancels a silent provider before headers and inside a partial frame`() {
+        for (headersSent in listOf(false, true)) {
+            val started = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
+            val worker = Executors.newSingleThreadExecutor()
+            try {
+                server({ exchange ->
+                    if (headersSent) {
+                        exchange.sendResponseHeaders(200, 0)
+                        exchange.responseBody.write("{\"type\":".toByteArray())
+                        exchange.responseBody.flush()
+                    }
+                    started.countDown()
+                    release.await(10, java.util.concurrent.TimeUnit.SECONDS)
+                }) { gateway ->
+                    val result = worker.submit<Throwable?> {
+                        try {
+                            gateway.streamGuarded("{}", 10, java.util.UUID.randomUUID(), {
+                                if (revoked.get()) throw AiFailure("CONTEXT_NOT_ALLOWED", 403)
+                            }) { fail("Revoked or incomplete provider frame must not be released") }
+                            null
+                        } catch (failure: Throwable) { failure }
+                    }
+                    assertTrue(started.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                    revoked.set(true)
+                    val failure = result.get(3, java.util.concurrent.TimeUnit.SECONDS)
+                    assertTrue(failure is AiFailure)
+                    assertEquals("CONTEXT_NOT_ALLOWED", (failure as AiFailure).code)
+                    release.countDown()
+                }
+            } finally {
+                release.countDown()
+                worker.shutdownNow()
+            }
+        }
+    }
+
+    @Test
     fun `total deadline bounds a stalled response body with a stable timeout code`() = server({ exchange ->
         exchange.sendResponseHeaders(200, 0)
         exchange.responseBody.write(" ".toByteArray())
