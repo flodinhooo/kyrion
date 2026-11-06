@@ -1,5 +1,7 @@
 # Kyrion Development TODO
 
+Chat continuation: [consolidated A/B closeout and Chat 3 Identity integration assignment](../agent-handoffs/2026-11-06-chats-a-b-closeout.md).
+
 Current Home product slice: [family calendar plan](../home-family-calendar-plan.md),
 with owner-confirmed joint editing and [ADR 0035](../adr/0035-home-membership-and-family-calendar-direction.md).
 The [two-chat assignment](../agent-handoffs/2026-11-06-parallel-home-and-gateway.md)
