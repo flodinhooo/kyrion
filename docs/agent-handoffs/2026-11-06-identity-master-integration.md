@@ -2,6 +2,13 @@
 
 Date: 2026-11-06. Source integration and isolated acceptance only.
 
+Subsequent owner-authorized execution: [Windows and Pi live V46 rollout](2026-11-06-v46-live-rollout.md).
+Both installations are now activated on V46 after protected original-key/data
+restore drills. The live task also fixed cross-JVM timestamp normalization and
+passed 449 Core tests plus real DE/EN production browser checks. Earlier runtime
+V39/V41/no-deployment statements in this source-integration record are historical;
+central-provider setup and physical/family acceptance remain separate.
+
 Latest follow-up: the owner authorized deletion of redundant full archives.
 Checkout/build/dependency copies were removed after separately retaining and
 SHA-256-verifying all 530 historical runtime files and private configurations.

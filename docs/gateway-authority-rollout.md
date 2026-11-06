@@ -1,5 +1,19 @@
 # Gateway authority acceptance and rollout runbook
 
+## Executed follow-up
+
+The owner later authorized [Windows and Pi V46 activation](agent-handoffs/2026-11-06-v46-live-rollout.md).
+Original-key/data recovery, protected destinations, target-bound schema apply,
+reviewed Windows/ARM64 artifacts, normal HTTPS, healthy runtimes and fresh intended
+Pi-Core heartbeat have now been verified for the actual installations. No sudo,
+group, host ACL or authentication policy was changed. Existing Docker
+administration supplied the narrowly scoped privileged Pi operations.
+
+Three old bindings per installation still have NULL grants and remain inactive;
+there was no inferred consent or bulk resave. Human binding review and controlled
+hardware/provider outcomes remain open. The preparatory evidence below retains
+its historical scope and does not grant future rollout/physical permission.
+
 Status: preparation only, 2026-11-06. No deployment, production migration,
 restart, provider write, physical action or automatic grant activation is
 authorized by this document. See [authority design](gateway-command-authority.md),

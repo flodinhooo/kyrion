@@ -1,5 +1,13 @@
 # Kyrion Development TODO
 
+Latest operational checkpoint: [Windows/Pi V46 live rollout](../agent-handoffs/2026-11-06-v46-live-rollout.md).
+Both personal databases and Core/Web runtimes are on V46. Protected real-data/key
+restore, exact target/artifact checks and DE/EN anonymous production browser checks
+passed. Core449 (zero failures/errors, one opt-in smoke skip), Web262 and Website40
+are the current relevant source checks. Original accounts/Space/roles/grants are
+unchanged. Productive central IdP configuration, owner password-login check, explicit
+legacy-binding review and controlled provider/family/hardware acceptance remain open.
+
 Chat continuation: [consolidated A/B closeout and Chat 3 Identity integration assignment](../agent-handoffs/2026-11-06-chats-a-b-closeout.md).
 
 Current Home product slice: [family calendar plan](../home-family-calendar-plan.md),
@@ -9,7 +17,7 @@ separates Home/Calendar work from Gateway authority, including shared-file,
 migration and Git/build coordination. Both assignments were started explicitly by
 the owner and implemented on master without creating additional worktrees.
 
-Latest source work is implemented and jointly verified: **422 Core
+Earlier A/B source work was implemented and jointly verified: **422 Core
 tests**, zero failures/errors/skips, plus bootJar; Web **246 tests**, ESLint,
 TypeScript and production build. Recorded Core before/after source hashes match.
 See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md),
@@ -21,8 +29,9 @@ The latest [Calendar usability/browser-fixture results](../agent-handoffs/2026-1
 and [V45 migration/restore results](../agent-handoffs/2026-11-06-core-schema-v45-results.md)
 close additional software gaps. [First HOME use readiness](../home-first-use-readiness.md)
 separates this evidence from remaining operational and live acceptance.
-V42–V45 and the new runtime behavior have **not** been deployed. The Gateway
-dump/restore rehearsal targets V43; the full source suite and artifact include V45.
+At that historical closeout V42–V45 had not been deployed. The subsequent linked
+V46 execution now supersedes that deployment boundary; the older synthetic
+Gateway/V45 results retain their original scope.
 
 - [x] HOME-01/02 native slice: explicit participant selection, jointly editable
   Kyrion household events, revision conflicts, creator-only deletion, person
@@ -41,15 +50,20 @@ dump/restore rehearsal targets V43; the full source suite and artifact include V
   dialogs and synthetic two-user edit/conflict/delivery/revocation flows in DE/EN.
 - [x] Artifact-bound schema-only migration tool and actual synthetic V39/V41/V43/V44
   upgrade + V45 data restore rehearsal, without application/provider execution.
-- [ ] Complete disposable live-provider/family acceptance and original-data/key
-  restore, protected targets and controlled runtime rollout; synthetic checks alone
-  do not close these gates. Wider private overlays/ambiguous-time authoring remain
+- [x] Independently restore the real current Windows/Pi datasets with original
+  audit/credential keys, preserve protected recovery sets, and activate scoped V46
+  Core/Web runtimes against exact target-bound plans.
+- [ ] Complete disposable live-provider/family acceptance and owner-authenticated
+  production journey; healthy runtimes/anonymous browser checks do not close
+  these gates. Wider private overlays/ambiguous-time authoring remain
   separate scoped usability work; recurrence/all-day authoring stays planned.
-- [ ] Coordinate data-safe runtime rollout and real browser/household acceptance.
-  Gateway V42 requires explicit re-saving of historical button grants; legacy
-  pending commands must not acquire inferred authority during rollout.
+- [x] Complete data-safe Windows/Pi rollout and anonymous production DE/EN browser
+  checks, with no inferred authority or automatic central membership.
+- [ ] Explicitly review/resave the three legacy button bindings per installation
+  and complete controlled real household/hardware acceptance. All their grants
+  remain NULL; no bulk activation was performed.
 
-Current integration checkpoint: [master consolidation and worktree closeout](2026-11-06-master-worktree-closeout.md).
+Earlier integration checkpoint: [master consolidation and worktree closeout](2026-11-06-master-worktree-closeout.md).
 Development continues on `master`; all four former worktree histories are integrated
 and no secondary worktree remains registered. The [Pi V41 activation](2026-11-06-pi-update-activation.md)
 supersedes the earlier V30 activation blocker. Historical handoff integration
@@ -62,7 +76,7 @@ security and physical/release acceptance work is tracked in the closeout.
 - [x] Verify the consolidated source: Core332, Web200, AI172; builds and configured static checks pass.
 - [x] Persist originating human/capability authority through Gateway queue/claim
   and define explicit automation grants: implemented and tested in Assignment B;
-  live rollout/physical acceptance remains separate.
+  V46 live activation is recorded above; physical acceptance remains separate.
 - [ ] Complete optional-context opt-out/content, multi-process worker/cache/stream lifecycle certification; retain the single-Space/Business Voice guards.
 
 Latest active fix: [empty recognition local V39 rollout](2026-10-31-voice-no-speech-rollout.md).

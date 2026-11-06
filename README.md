@@ -11,6 +11,10 @@ Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-1
 
 # Kyrion
 
+Latest operational checkpoint: [Windows and Pi V46 live rollout](docs/agent-handoffs/2026-11-06-v46-live-rollout.md).
+Both Core/Web installations are activated; central-provider setup and controlled
+hardware/provider acceptance remain separate.
+
 Current engineering checkpoint: [recovery integration and startup stabilization](docs/status/2026-10-30-stabilization.md).
 [K-AI Milestone 01](docs/ai-model-providers.md) implements model profiles and
 Ollama/OpenAI/Anthropic/Gemini adapters with explicit cloud disclosure controls.

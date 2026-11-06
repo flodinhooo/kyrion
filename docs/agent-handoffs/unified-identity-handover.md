@@ -1,5 +1,26 @@
 # Unified identity handover
 
+## Live Windows and Pi activation (latest checkpoint)
+
+The owner subsequently authorized live rollout. Both personal installations are
+now on **V46** with the reviewed Core JAR; Windows production Web and native ARM64
+Pi Core/Web are running. Original databases/keys were independently restored and
+verified before final target-bound apply. Existing accounts, Space, roles and
+grants were verified unchanged after activation. No central links were created.
+
+The migration tool needed a cross-JVM timezone normalization fix, reproduced with
+a failing real PostgreSQL test and followed by **449 Core tests, zero errors,
+one opt-in smoke skip**. Real production DE/EN browser checks passed on Windows
+and Pi with normal TLS verification. Gateway/Voice are active with preserved
+destinations; all three legacy bindings per installation still have zero grants.
+Central login remains unconfigured/disabled, and physical/provider acceptance
+and explicit binding review remain open. No password-authenticated production
+owner journey or hardware action was claimed.
+
+Full exact artifacts, protected backup locations, recovery boundaries and results:
+[V46 live rollout](2026-11-06-v46-live-rollout.md). Older V39/V41/no-deployment
+observations below are historical checkpoints, superseded by this execution.
+
 ## Redundant archive cleanup and personal runtime check
 
 After retirement, the owner authorized removal of unnecessary archives. The full

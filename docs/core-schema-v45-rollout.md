@@ -13,6 +13,13 @@ own reviewed compatibility plan; validation is not bypassed.
 
 Combined evidence: [Identity master integration](agent-handoffs/2026-11-06-identity-master-integration.md).
 
+Actual subsequent execution: [owner-authorized Windows/Pi V46 rollout](agent-handoffs/2026-11-06-v46-live-rollout.md).
+Both personal installations have now been upgraded after original-data/key
+recovery checks. This reusable runbook itself grants no future apply permission.
+Snapshots explicitly normalize transaction-local UTC; the new cross-JVM
+regression covers timestamp fingerprints on Windows and Linux. Old plan/tool
+hashes must not be edited or reused after a tool change.
+
 Status: implementation and synthetic rehearsal, not permission to apply to an
 installation. This supplements, without replacing, the original-data/key and
 hardware gates in [Gateway rollout](gateway-authority-rollout.md). The earlier
@@ -23,14 +30,29 @@ V43-only rehearsal does not establish V45 acceptance. Decision:
 
 ## Operator tool and prerequisites
 
+`VerifyOriginalData.java` is a separate read-only recovery verifier, not the DDL
+entry point. Compile it against the reviewed artifact's extracted
+`BOOT-INF/classes` and `BOOT-INF/lib/*`, then run with those libraries/classes
+and the verifier class directory on the classpath (Windows separator `;`, Linux
+separator `:`). Its protected JSON input contains `host` (literal127.0.0.1 only),
+`port`, `database`, `user`, `password`, `auditKey`, `credentialKey`, and
+`knowledgeRoot`. Use a separate input from the migration tool's strictly bounded
+connection file. Key/root paths refer to the original protected recovery copies.
+It uses the actual domain audit/AEAD verifiers without booting Spring, enforces
+read-only database connections, emits only counts/machine codes, and rejects
+invalid keys/credentials or missing/mismatching originals. Intentional zero-byte
+device references are counted separately; legacy unsealed events are reported
+separately from cryptographically verified events. Do not treat an empty current
+Knowledge dataset as a nonempty document recovery test.
+
 `infrastructure/dev/Migrate-CoreSchema.py` uses Python's standard library, JDK 21
 (`java` and `javac`), and **only the selected Core JAR's** Flyway, PostgreSQL JDBC,
 Jackson and commons-logging libraries. Nothing is downloaded. Application classes,
 Spring libraries, configuration and callbacks are not extracted or loaded. SQL
 comes only from that same byte-for-byte SHA-256 checked artifact. The supported
-catalog is exactly V1–V45; later catalogs require a reviewed tool/test change.
+catalog is exactly V1–V45 or V1–V46; later catalogs require a reviewed tool/test change.
 No Core boot, HTTP server, scheduler, queue poller, provider or device client runs.
-It supports successful, contiguous starting histories V39/V41/V43/V44/V45 only.
+It supports successful, contiguous starting histories V39/V41/V43/V44/V45/V46 only.
 The final V45 case supports independent restored-data validation/no-op, not a
 downgrade. Flyway validates real stored checksums; there is no history emulation.
 
@@ -74,6 +96,7 @@ unknown build and treat that alone as provenance. Windows, from repository root:
 
 ```powershell
 python infrastructure/dev/Migrate-CoreSchema.py `
+  --target-version 46 `
   --java-home '<absolute JDK 21 directory>' `
   --artifact '<immutable reviewed Core JAR>' --artifact-sha256 '<approved SHA-256>' `
   --connection-file '<protected target connection JSON>' --plan '<new protected plan JSON>'
@@ -83,6 +106,7 @@ Linux/Pi uses the same tool and a JDK 21 for ARM64, not just a JRE:
 
 ```sh
 python3 infrastructure/dev/Migrate-CoreSchema.py \
+  --target-version 46 \
   --java-home '<absolute ARM64 JDK 21 directory>' \
   --artifact '<immutable reviewed Core JAR>' --artifact-sha256 '<approved SHA-256>' \
   --connection-file '<protected Pi-local connection JSON>' --plan '<new protected plan JSON>'
@@ -103,7 +127,9 @@ until done. Every Flyway connection rechecks the target identity before any
 migration SQL, including connections opened after the initial check. Plan and
 apply do not execute connection-file contents as code. Only
 Flyway `migrate` performs schema writes; no repair/clean/baseline/out-of-order or
-user-selected target exists. Capture its sanitized JSON result in protected
+arbitrary target exists. Only explicit target45/46 is accepted (default45), bound
+to the plan and checked against the artifact. Use target46 for current integrated
+releases; a V46 source cannot be operated on with target45. Capture sanitized JSON in protected
 evidence. A V45 no-op does not consume a calendar lease or start pending commands.
 
 The session check and advisory lock are **not a writer fence**. They coordinate

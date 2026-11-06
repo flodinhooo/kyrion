@@ -2,6 +2,15 @@
 
 Status: accepted for implementation, 2026-11-06. No operational apply authorized.
 
+Follow-up: the owner separately authorized the recorded
+[Windows/Pi V46 live rollout](../agent-handoffs/2026-11-06-v46-live-rollout.md).
+The integrated tool accepts exact V1–V45 or V1–V46 catalogs and explicitly binds
+target45/46 in the plan. Cross-JVM snapshots execute transaction-local UTC
+normalization because JDBC startup TimeZone can override datasource options.
+The real PostgreSQL UTC/Zurich regression failed before and passed after this
+fix; existing SQL and database timestamps are not changed. Future operations still
+require their own target/recovery/maintenance approval.
+
 ## Decision
 
 Use a separate Python/JDK 21 operator tool. Verify an explicitly supplied SHA-256
