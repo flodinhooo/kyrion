@@ -161,6 +161,19 @@ class GoogleIntegrationService(
         validateEvent(body)
         return withToken(ownerId, CALENDAR_EVENT_CREATE) { client.createEvent(it, body) }
     }
+    // Household delivery must always bind both the concrete connection and current
+    // Core authority. The callback runs again on a token-refresh retry.
+    fun deliveryEvent(ownerId: UUID, connectionId: UUID, calendarId: String, eventId: String, authorize: () -> Unit) =
+        withToken(ownerId, CALENDAR_READ, connectionId) { authorize(); client.getEvent(it, calendarId, eventId) }
+    fun createDelivery(ownerId: UUID, connectionId: UUID, body: GoogleCalendarEventRequest, authorize: () -> Unit): GoogleCalendarEvent {
+        validateEvent(body)
+        return withToken(ownerId, CALENDAR_EVENT_CREATE, connectionId) { authorize(); client.createEvent(it, body) }
+    }
+    fun patchDelivery(ownerId: UUID, connectionId: UUID, eventId: String, body: GoogleCalendarEventRequest, etag: String, authorize: () -> Unit): GoogleCalendarEvent {
+        validateEvent(body)
+        if (etag.isBlank() || etag.length > 512 || etag.any { it == '\r' || it == '\n' }) throw GoogleInvalidRequestException()
+        return withToken(ownerId, CALENDAR_EVENT_UPDATE, connectionId) { authorize(); client.patchEvent(it, eventId, body, etag) }
+    }
     fun updateEvent(ownerId: UUID, eventId: String, body: GoogleCalendarEventRequest): GoogleCalendarEvent {
         validateEvent(body)
         val etag = body.etag?.takeIf { it.isNotBlank() && it.length <= 512 && !it.contains('\n') && !it.contains('\r') } ?: throw GoogleInvalidRequestException()

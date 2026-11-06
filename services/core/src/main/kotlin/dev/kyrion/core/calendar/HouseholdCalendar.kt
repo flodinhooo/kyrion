@@ -98,6 +98,7 @@ class HouseholdCalendarRepository(private val jdbc: JdbcClient) {
 @Service
 class HouseholdCalendarService(
     private val repository: HouseholdCalendarRepository, private val rbac: RbacService, private val activity: ActivityService,
+    private val deliveries: HouseholdDeliveryRepository,
 ) {
     fun members(actor: UUID): List<HouseholdCalendarMember> {
         val space = readSpace(actor)
@@ -142,12 +143,14 @@ class HouseholdCalendarService(
     }
 
     @Transactional
-    fun delete(actor: UUID, id: UUID, revision: Long) {
+    fun delete(actor: UUID, id: UUID, revision: Long, retainExternalCopies: Boolean = false) {
         val space = mutationSpace(actor, "calendar:delete")
         rbac.require(actor, "calendar:read")
         val event = repository.find(space, id, true) ?: notFound()
         if (actor != event.createdBy) throw ForbiddenException()
         if (revision < 0) invalid()
+        if (revision != event.revision) throw HouseholdCalendarFailure("HOUSEHOLD_CALENDAR_CONFLICT", HttpStatus.CONFLICT)
+        deliveries.retainedCopies(space, id, retainExternalCopies).forEach { delivery -> audit(space, actor, delivery, "copy_retained") }
         repository.delete(space, id, revision)
         audit(space, actor, id, "deleted")
     }
@@ -210,9 +213,10 @@ class HouseholdCalendarController(private val service: HouseholdCalendarService)
     @PutMapping("/{id}")
     fun update(request: HttpServletRequest, @PathVariable id: UUID, @RequestBody raw: String) = service.update(request.authenticatedUserId(), id, parse(raw, HouseholdEventUpdate::class.java))
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun delete(request: HttpServletRequest, @PathVariable id: UUID, @RequestParam revision: String) {
+    fun delete(request: HttpServletRequest, @PathVariable id: UUID, @RequestParam revision: String, @RequestParam(required = false) retainExternalCopies: String?) {
         val value = revision.takeIf { it.matches(Regex("0|[1-9][0-9]*")) }?.toLongOrNull() ?: invalid()
-        service.delete(request.authenticatedUserId(), id, value)
+        if (retainExternalCopies != null && retainExternalCopies !in setOf("true", "false")) invalid()
+        service.delete(request.authenticatedUserId(), id, value, retainExternalCopies == "true")
     }
     private fun instant(value: String?): Instant? = value?.let { try { Instant.parse(it) } catch (_: Exception) { invalid() } }
     private fun <T> parse(raw: String, type: Class<T>): T {

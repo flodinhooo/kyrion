@@ -1,7 +1,8 @@
 # Home Spaces and family calendar implementation plan
 
 Status: HOME-01 contract specified and HOME-02 native source implemented/tested;
-HOME-03 Google disclosure source is implemented/tested; HOME-04 onward remains planned.
+HOME-03 Google disclosure and the first HOME-04 manual Google delivery slice are
+implemented/tested. HOME-05 onward and wider delivery automation remain planned.
 No runtime rollout. Owner-confirmed requirements
 recorded on 2026-11-06.
 Decision: [ADR 0035](adr/0035-home-membership-and-family-calendar-direction.md).
@@ -37,7 +38,7 @@ Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-h
 | HOME-01 | Specify calendar contracts, privacy and event lifecycle | Concrete request/response/error/state models; decide deletion, participant removal and copy retention before mutation implementation; record migration/data-preservation plan. |
 | HOME-02 | Kyrion-native shared event participants and joint editing | Two household members can create/read/edit a joint event; stale revisions conflict; a nonparticipant cannot edit merely because they can see the household calendar; foreign households cannot read/write; deactivated membership and revoked permissions deny access. Changes audit actual actor and Space. Existing local events retain their existing shared behavior without reclassifying private data. |
 | HOME-03 | Voluntary personal-calendar visibility (Google first slice implemented/tested) | Credential owner controls private / availability-only / details; UI filters are independent; Core enforces redaction. No new context consumer was added; future consumers must use this boundary. Revocation blocks subsequent reads and Web clears prior authorized representations; already seen/copied information cannot be recalled. |
-| HOME-04 | Selected-recipient provider delivery | Each target owner opted in and selected a writable calendar; canonical shared event plus per-target status, revisions/ETags and idempotency; participant editor and credential owner are separate; partial failure, retry, edits and revocation are tested. Start with existing Google adapter. |
+| HOME-04 | Selected-recipient provider delivery (manual Google slice implemented/tested) | Each target owner opts in and selects a writable calendar; participant editor and credential owner are separate. Explicit manual delivery of saved revisions has per-target status, ETags, stable copy identity, conflict/uncertainty handling and revocation. Native deletion requires explicit copy retention. Automatic delivery and provider-copy deletion remain separate. |
 | HOME-05 | Calendar usability and real acceptance | DE/EN, month/week/day, DST, timezones, all-day boundaries, offline/provider failures, external edits, duplicate suppression and disposable live-provider tests. Series/all-day authoring and further providers are separate scoped decisions. |
 | HOME-06 | Multiple HOME memberships | Separate account/membership/role scope, safe current-Space selection and complete isolation; reviewed migration, no implicit resource movement. Cross-installation authentication remains its own milestone. |
 
@@ -88,12 +89,14 @@ grants, no live migration and no runtime replacement occur in this source slice.
 
 ## Design questions still open
 
-These are not already approved features or reasons to invent provider writes:
+These remain separate decisions; manual writes are bounded by
+[ADR 0038](adr/0038-selected-household-calendar-delivery.md):
 
 - May every participant delete a joint event, or does deletion need a different
   role/confirmation? Joint edit consent alone does not answer destructive deletion.
 - What happens to a removed participant's previously delivered provider copy?
-  What happens when a shared event is deleted or its creator leaves the household?
+  What happens when its creator leaves the household? Native deletion now requires
+  explicit retention of existing/uncertain external copies, without remote deletion.
 - How should new provider-side edits to linked copies reconcile to the canonical
   event? Preserve conflicts until a bounded policy is agreed.
 - Should availability-only calendars contribute to conflict/free-slot suggestions?
