@@ -2,7 +2,8 @@
 
 Status: HOME-01 contract specified and HOME-02 native source implemented/tested;
 HOME-03 Google disclosure and the first HOME-04 manual Google delivery slice are
-implemented/tested. HOME-05 onward and wider delivery automation remain planned.
+implemented/tested. A first HOME-05 usability/source/browser-fixture slice is
+verified; live household/provider acceptance and HOME-06 remain open.
 No runtime rollout. Owner-confirmed requirements
 recorded on 2026-11-06.
 Decision: [ADR 0035](adr/0035-home-membership-and-family-calendar-direction.md).
@@ -39,7 +40,7 @@ Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-h
 | HOME-02 | Kyrion-native shared event participants and joint editing | Two household members can create/read/edit a joint event; stale revisions conflict; a nonparticipant cannot edit merely because they can see the household calendar; foreign households cannot read/write; deactivated membership and revoked permissions deny access. Changes audit actual actor and Space. Existing local events retain their existing shared behavior without reclassifying private data. |
 | HOME-03 | Voluntary personal-calendar visibility (Google first slice implemented/tested) | Credential owner controls private / availability-only / details; UI filters are independent; Core enforces redaction. No new context consumer was added; future consumers must use this boundary. Revocation blocks subsequent reads and Web clears prior authorized representations; already seen/copied information cannot be recalled. |
 | HOME-04 | Selected-recipient provider delivery (manual Google slice implemented/tested) | Each target owner opts in and selects a writable calendar; participant editor and credential owner are separate. Explicit manual delivery of saved revisions has per-target status, ETags, stable copy identity, conflict/uncertainty handling and revocation. Native deletion requires explicit copy retention. Automatic delivery and provider-copy deletion remain separate. |
-| HOME-05 | Calendar usability and real acceptance | DE/EN, month/week/day, DST, timezones, all-day boundaries, offline/provider failures, external edits, duplicate suppression and disposable live-provider tests. Series/all-day authoring and further providers are separate scoped decisions. |
+| HOME-05 | Calendar usability and real acceptance (first source/browser-fixture slice verified; live acceptance open) | Confirmed own-copy merge, DE/EN month/week/day controls, unchanged-time/DST preservation, spring-gap rejection and scrollable dialogs are verified. Availability privacy is not weakened for deduplication. Disposable live-provider/family acceptance remains open; recurrence/all-day authoring and further providers are separate. |
 | HOME-06 | Multiple HOME memberships | Separate account/membership/role scope, safe current-Space selection and complete isolation; reviewed migration, no implicit resource movement. Cross-installation authentication remains its own milestone. |
 
 HOME-02 is the recommended first implementation after HOME-01. It delivers a

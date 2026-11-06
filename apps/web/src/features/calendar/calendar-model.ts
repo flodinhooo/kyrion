@@ -38,6 +38,7 @@ export type CalendarEditor = {
   revision?: number;
   etag?: string;
   participantIds?: string[];
+  originalTime?: { startsAt: string; endsAt: string; startsAtInput: string; endsAtInput: string };
 };
 
 export function localDateTimeValue(date: Date): string {
@@ -71,10 +72,27 @@ export function normalizeGoogleEvents(value: unknown): CalendarEvent[] {
 }
 
 export function editorForEvent(event: CalendarEvent): CalendarEditor {
+  const startsAt = localDateTimeValue(new Date(event.startsAt));
+  const endsAt = localDateTimeValue(new Date(event.endsAt));
   return { id: event.id, title: event.title, description: event.description ?? "",
-    startsAt: localDateTimeValue(new Date(event.startsAt)), endsAt: localDateTimeValue(new Date(event.endsAt)),
+    startsAt, endsAt,
     syncToGoogle: event.syncToGoogle ?? false, googleCalendarId: event.googleCalendarId ?? "", source: event.source, revision: event.revision, etag: event.etag,
-    participantIds: event.participantIds };
+    participantIds: event.participantIds,
+    originalTime: { startsAt: event.startsAt, endsAt: event.endsAt, startsAtInput: startsAt, endsAtInput: endsAt } };
+}
+
+export class CalendarTimeError extends Error { constructor() { super("CALENDAR_TIME_INVALID"); } }
+export function editorInstant(editor: CalendarEditor, field: "startsAt" | "endsAt"): string {
+  const input = editor[field];
+  const initial = field === "startsAt" ? editor.originalTime?.startsAtInput : editor.originalTime?.endsAtInput;
+  if (editor.originalTime && input === initial) return editor.originalTime[field];
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(input);
+  if (!parts) throw new CalendarTimeError();
+  const value = new Date(input);
+  const expected = [Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), Number(parts[4]), Number(parts[5]), Number(parts[6] ?? 0), Number((parts[7] ?? "").padEnd(3, "0"))];
+  const actual = [value.getFullYear(), value.getMonth(), value.getDate(), value.getHours(), value.getMinutes(), value.getSeconds(), value.getMilliseconds()];
+  if (!Number.isFinite(value.getTime()) || actual.some((part, index) => part !== expected[index])) throw new CalendarTimeError();
+  return value.toISOString();
 }
 
 export function isCalendarEvent(value: unknown): value is CalendarEvent {
@@ -123,6 +141,6 @@ export function canDeleteCalendarEvent(event: CalendarEvent, hasDelete: boolean)
 
 export function householdEventPayload(editor: CalendarEditor, timeZone: string) {
   const fields = { title: editor.title, description: editor.description || null,
-    startsAt: new Date(editor.startsAt).toISOString(), endsAt: new Date(editor.endsAt).toISOString(), timeZone };
+    startsAt: editorInstant(editor, "startsAt"), endsAt: editorInstant(editor, "endsAt"), timeZone };
   return editor.id ? { ...fields, revision: editor.revision } : { ...fields, participantIds: editor.participantIds ?? [] };
 }

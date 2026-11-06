@@ -37,6 +37,7 @@ class HouseholdCalendarDeliveryIntegrationTest @Autowired constructor(
     private val rbac: RbacService, private val household: HouseholdCalendarService, private val service: HouseholdCalendarDelivery,
     private val google: GoogleIntegrationService, private val fake: DeliveryGoogleFake, private val mvc: MockMvc,
     private val deliveries: HouseholdDeliveryRepository,
+    private val copyLinks: HouseholdCopyLinksService,
 ) {
     private lateinit var owner: AuthenticatedOwner
     private lateinit var partner: AuthenticatedOwner
@@ -307,6 +308,67 @@ class HouseholdCalendarDeliveryIntegrationTest @Autowired constructor(
         assertThat(send(event, target).state).isEqualTo("SYNCED")
         assertThat(deliveries.finish(owner.user.id, old, "ERROR", "STALE", null, null)).isFalse()
         assertThat(fake.writes).isEqualTo(1)
+    }
+    @Test fun `copy links belong only to the authenticated credential owner and selected actual calendar`() {
+        val event = event(); val first = grant(owner); val second = grant()
+        send(event, first); send(event, second)
+        val mine = copyLinks.links(owner.user.id, "delivery-calendar").single()
+        val theirs = copyLinks.links(partner.user.id, "delivery-calendar").single()
+        assertThat(mine.eventId).isEqualTo(event.id)
+        assertThat(theirs.eventId).isEqualTo(event.id)
+        assertThat(mine.remoteId).isNotEqualTo(theirs.remoteId)
+        assertThat(copyLinks.links(partner.user.id, "delivery-alternative")).isEmpty()
+        assertThat(copyLinks.links(partner.user.id, "primary")).isEmpty()
+    }
+    @Test fun `copy links require confirmed current revision and vanish for outdated or conflicting attempts`() {
+        val initial = event(); val target = grant(); send(initial, target)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).hasSize(1)
+        val changed = edit(initial)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+        send(changed, target)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar").single().revision).isEqualTo(1)
+        fake.remote.replaceAll { _, value -> value.copy(summary = "External", etag = "external") }
+        assertThat(send(changed, target).state).isEqualTo("CONFLICT")
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+    }
+    @Test fun `revocation and changed destination retain independent copies without suppression links`() {
+        val event = event(); val target = grant(); send(event, target)
+        grant(calendar = null)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+        val next = grant(calendar = "delivery-alternative"); send(event, next)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+        assertThat(copyLinks.links(partner.user.id, "delivery-alternative")).hasSize(1)
+        assertThat(fake.remote).hasSize(2)
+    }
+    @Test fun `read only role or lost connection preserves calendar copy visibility by returning no links`() {
+        val event = event(); val target = grant(); send(event, target)
+        val role = rbac.createRole(owner.user.id, RoleRequest("copy-read-only", "Read only", setOf("calendar:read")))
+        rbac.assignRoles(owner.user.id, partner.user.id, setOf(role.id))
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+        val original = rbac.roles(owner.user.id).first { it.key == "delivery-calendar" }
+        rbac.assignRoles(owner.user.id, partner.user.id, setOf(original.id))
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).hasSize(1)
+        jdbc.sql("DELETE FROM integration_connection WHERE owner_id=:user AND provider='google'").param("user", partner.user.id).update()
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar")).isEmpty()
+    }
+    @Test fun `copy links reject disabled actors and Business spaces`() {
+        val event = event(); val target = grant(); send(event, target)
+        rbac.deactivate(owner.user.id, partner.user.id, false)
+        assertThatThrownBy { copyLinks.links(partner.user.id, "delivery-calendar") }.isInstanceOf(ForbiddenException::class.java)
+        jdbc.sql("UPDATE kyrion_space SET type='BUSINESS' WHERE id=:space").param("space", owner.user.id).update()
+        assertThatThrownBy { copyLinks.links(owner.user.id, "delivery-calendar") }.isInstanceOf(ForbiddenException::class.java)
+    }
+    @Test fun `copy link range is bounded and original provider identifiers never enter another owners response`() {
+        val event = event(); val target = grant(); send(event, target)
+        assertThat(copyLinks.links(partner.user.id, "delivery-calendar", start.plusSeconds(7200), start.plusSeconds(10800))).isEmpty()
+        assertThatThrownBy { copyLinks.links(partner.user.id, "delivery-calendar", start, null) }.hasMessage("HOUSEHOLD_COPY_LINKS_INVALID")
+        assertThatThrownBy { copyLinks.links(partner.user.id, "delivery-calendar", start, start.plus(Duration.ofDays(401))) }.hasMessage("HOUSEHOLD_COPY_LINKS_INVALID")
+        mvc.perform(get("/v1/calendar/household-copy-links").param("calendarId", "delivery-calendar").param("userId", partner.user.id.toString())
+            .header("Authorization", "Bearer ${owner.session.rawToken}")).andExpect(status().isOk)
+            .andExpect(content().json("[]")).andExpect(header().string("Cache-Control", "no-store"))
+        mvc.perform(get("/v1/calendar/household-copy-links").param("calendarId", "delivery-calendar")).andExpect(status().isUnauthorized)
+        mvc.perform(get("/v1/calendar/household-copy-links").header("Authorization", "Bearer ${partner.session.rawToken}"))
+            .andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("HOUSEHOLD_COPY_LINKS_INVALID"))
     }
     @TestConfiguration(proxyBeanMethods = false)
     class ProviderConfiguration { @Bean @Primary fun deliveryGoogleFake() = DeliveryGoogleFake() }

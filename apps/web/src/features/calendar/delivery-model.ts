@@ -1,4 +1,4 @@
-import type { CalendarEditor, CalendarEvent } from "./calendar-model";
+import { editorInstant, type CalendarEditor, type CalendarEvent } from "./calendar-model";
 export type DestinationSetting = { id: string | null; calendarId: string | null; enabled: boolean; revision: number };
 export type DeliveryState = "RUNNING" | "SYNCED" | "OUTDATED" | "ERROR" | "CONFLICT" | "BLOCKED" | "NEEDS_REVIEW";
 export type DeliveryView = { revision: number; targets: { userId: string; username: string; targetId: string | null }[];
@@ -23,6 +23,7 @@ export function deliveryView(value: unknown): DeliveryView | null {
       deliveredRevision: item.deliveredRevision, errorCode: item.errorCode })) };
 }
 export function householdEditorIsDirty(editor: CalendarEditor, event: CalendarEvent): boolean {
-  return editor.title !== event.title || editor.description !== (event.description ?? "") ||
-    Date.parse(editor.startsAt) !== Date.parse(event.startsAt) || Date.parse(editor.endsAt) !== Date.parse(event.endsAt);
+  try { return editor.title !== event.title || editor.description !== (event.description ?? "") ||
+    Date.parse(editorInstant(editor, "startsAt")) !== Date.parse(event.startsAt) || Date.parse(editorInstant(editor, "endsAt")) !== Date.parse(event.endsAt);
+  } catch { return true; }
 }

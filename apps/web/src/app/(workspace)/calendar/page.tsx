@@ -10,6 +10,7 @@ import { useWorkspace } from "@/components/app-shell";
 import { browserRequest } from "@/lib/browser-request";
 import { csrfHeader } from "@/features/auth/csrf";
 import { editorForCalendarDate, editorForEvent, isCalendarEvent, canEditCalendarEvent, canDeleteCalendarEvent,
+  editorInstant, CalendarTimeError,
   householdMembers, householdEventPayload, type HouseholdMember, type CalendarEditor, type CalendarEvent } from "@/features/calendar/calendar-model";
 import { CalendarSyncSettings, type CalendarSchedule } from "@/features/calendar/sync-settings";
 import { calendarMessages } from "@/features/calendar/messages";
@@ -44,6 +45,7 @@ export default function CalendarPage() {
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [membersReady, setMembersReady] = useState(false);
   const [householdState, setHouseholdState] = useState("loading");
+  const [copiesUnavailable, setCopiesUnavailable] = useState(false);
   const [personFilter, setPersonFilter] = useState("");
   const sequence = useRef(0);
   const canCreate = permissions.includes("calendar:create");
@@ -68,6 +70,8 @@ export default function CalendarPage() {
     setEvents(value.items);
     const household = "household" in value ? value.household : null;
     setHouseholdState(household && typeof household === "object" && "status" in household && household.status === "ready" ? "ready" : "error");
+    const copies = "copies" in value ? value.copies : null;
+    setCopiesUnavailable(!!copies && typeof copies === "object" && "status" in copies && copies.status === "unavailable");
     const google = "google" in value ? value.google : null;
     setGoogleState(google && typeof google === "object" && "status" in google && typeof google.status === "string" ? google.status : "error");
     setGoogleCode(google && typeof google === "object" && "code" in google && typeof google.code === "string" ? google.code : null);
@@ -113,8 +117,8 @@ export default function CalendarPage() {
       const response = await browserRequest(url, {
         method: editor.id ? "PUT" : "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
         body: JSON.stringify(household ? householdEventPayload(editor, Intl.DateTimeFormat().resolvedOptions().timeZone) : remote ? { calendarId, summary: editor.title, description: editor.description || null,
-          start: new Date(editor.startsAt).toISOString(), end: new Date(editor.endsAt).toISOString(), etag: editor.etag } : { title: editor.title, description: editor.description || null,
-          startsAt: new Date(editor.startsAt).toISOString(), endsAt: new Date(editor.endsAt).toISOString(),
+          start: editorInstant(editor, "startsAt"), end: editorInstant(editor, "endsAt"), etag: editor.etag } : { title: editor.title, description: editor.description || null,
+          startsAt: editorInstant(editor, "startsAt"), endsAt: editorInstant(editor, "endsAt"),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, syncToGoogle: editor.syncToGoogle,
           googleCalendarId: editor.googleCalendarId || null, revision: editor.revision }),
       });
@@ -125,7 +129,7 @@ export default function CalendarPage() {
         return;
       }
       setEditor(null); await load();
-    } catch { setMessage(text.saveError); } finally { setSaving(false); }
+    } catch (error) { setMessage(error instanceof CalendarTimeError ? text.invalidLocalTime : text.saveError); } finally { setSaving(false); }
   }
   async function remove() {
     if (!editor?.id || saving || !window.confirm(editor.source === "household" ? text.jointDelete : text.confirmDelete)) return;
@@ -159,8 +163,8 @@ export default function CalendarPage() {
   return <section className="plugins-stage integration-detail calendar-page">
     <header className="plugins-header"><div><h1>{t.calendarTitle}</h1><p>{text.subtitle}</p></div>
       <div className="calendar-actions">
-        {canCreate && <button className="calendar-primary" type="button" onClick={() => setEditor(editorForCalendarDate(new Date()))}>+ {text.create}</button>}
-        {canCreate && householdState === "ready" && membersReady && <button className="calendar-primary" type="button" onClick={() => setEditor({ ...editorForCalendarDate(new Date()), source: "household", participantIds: [userId] })}>+ {text.jointCreate}</button>}
+        {canCreate && <button className="calendar-primary" type="button" onClick={() => { setMessage(null); setEditor(editorForCalendarDate(new Date())); }}>+ {text.create}</button>}
+        {canCreate && householdState === "ready" && membersReady && <button className="calendar-primary" type="button" onClick={() => { setMessage(null); setEditor({ ...editorForCalendarDate(new Date()), source: "household", participantIds: [userId] }); }}>+ {text.jointCreate}</button>}
         <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void load().catch(() => setState("error"))}>{text.refresh}</button>
         {canSync && <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void sync()}>{saving ? text.syncing : text.sync}</button>}
         <Link className="calendar-secondary" href="/plugins/google">{text.googleSettings}</Link>
@@ -180,8 +184,8 @@ export default function CalendarPage() {
         height="auto" expandRows headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
         buttonText={{ today: text.today, month: text.month, week: text.week, day: text.day }}
         datesSet={info => { setRange(current => current?.start === info.startStr && current?.end === info.endStr ? current : { start: info.startStr, end: info.endStr }); }}
-        dateClick={info => { if (canCreate) setEditor(editorForCalendarDate(info.date)); }} events={calendarEvents}
-        eventClick={info => { const found = combinedEvents.find(event => event.id === info.event.id); if (found?.source === "shared") setSharedDetailId(found.id); else if (found && canEditCalendarEvent(found, canUpdate)) setEditor(editorForEvent(found)); else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
+        dateClick={info => { if (canCreate) { setMessage(null); setEditor(editorForCalendarDate(info.date)); } }} events={calendarEvents}
+        eventClick={info => { const found = combinedEvents.find(event => event.id === info.event.id); if (found?.source === "shared") setSharedDetailId(found.id); else if (found && canEditCalendarEvent(found, canUpdate)) { setMessage(null); setEditor(editorForEvent(found)); } else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
       {state === "loading" && <p role="status">{text.loading}</p>}
       {state === "error" && <p role="alert">{text.loadError}</p>}
       {state === "ready" && visible.length === 0 && <p>{text.empty}</p>}
@@ -189,6 +193,7 @@ export default function CalendarPage() {
       {googleState === "disconnected" && <p role="status">{text.disconnected}</p>}
       {householdState === "error" && <p role="status">{text.jointUnavailable}</p>}
       {householdState === "ready" && !membersReady && <p role="status">{text.membersUnavailable}</p>}
+      {copiesUnavailable && <p role="status">{text.copiesUnavailable}</p>}
       {message && <p role="status">{message}</p>}
     </article>
     {sharedDetail && <div className="calendar-dialog-backdrop"><article className="calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="shared-calendar-detail-title">
@@ -211,7 +216,7 @@ export default function CalendarPage() {
       <label>{text.title}<input required maxLength={500} value={editor.title} onChange={event => setEditor({ ...editor, title: event.target.value })} /></label>
       <label>{text.description}<textarea maxLength={10000} value={editor.description} onChange={event => setEditor({ ...editor, description: event.target.value })} /></label>
       <label>{text.start}<input required type="datetime-local" value={editor.startsAt} onChange={event => setEditor({ ...editor, startsAt: event.target.value })} /></label>
-      <label>{text.end}<input required type="datetime-local" min={editor.startsAt} value={editor.endsAt} onChange={event => setEditor({ ...editor, endsAt: event.target.value })} /></label>
+      <label>{text.end}<input required type="datetime-local" value={editor.endsAt} onChange={event => setEditor({ ...editor, endsAt: event.target.value })} /></label>
       {editor.source === "household" && editor.id && selectedEvent && <HouseholdDeliveriesPanel key={`${editor.id}:${editor.revision}`}
         eventId={editor.id.slice(10)} revision={editor.revision ?? 0} dirty={householdEditorIsDirty(editor, selectedEvent)}
         disabled={saving} locale={locale} onBusyChange={setSaving} />}

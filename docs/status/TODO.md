@@ -7,14 +7,18 @@ separates Home/Calendar work from Gateway authority, including shared-file,
 migration and Git/build coordination. Both assignments were started explicitly by
 the owner and implemented on master without creating additional worktrees.
 
-Latest source work is implemented and jointly verified: **410 Core
-tests**, zero failures/errors/skips, plus bootJar; Web **225 tests**, ESLint,
+Latest source work is implemented and jointly verified: **422 Core
+tests**, zero failures/errors/skips, plus bootJar; Web **246 tests**, ESLint,
 TypeScript and production build. Recorded Core before/after source hashes match.
 See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md),
 [personal calendar disclosure](../agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md) and
 [Gateway results](../agent-handoffs/2026-11-06-gateway-authority-results.md).
 See also [manual household delivery](../agent-handoffs/2026-11-06-household-calendar-delivery-results.md)
 and the [Gateway rollout preparation](../agent-handoffs/2026-11-06-gateway-rollout-results.md).
+The latest [Calendar usability/browser-fixture results](../agent-handoffs/2026-11-06-calendar-usability-results.md)
+and [V45 migration/restore results](../agent-handoffs/2026-11-06-core-schema-v45-results.md)
+close additional software gaps. [First HOME use readiness](../home-first-use-readiness.md)
+separates this evidence from remaining operational and live acceptance.
 V42–V45 and the new runtime behavior have **not** been deployed. The Gateway
 dump/restore rehearsal targets V43; the full source suite and artifact include V45.
 
@@ -30,8 +34,15 @@ dump/restore rehearsal targets V43; the full source suite and artifact include V
   stable copy identity, conditional updates and in-flight revocation checks.
   Native deletion explicitly retains personal copies; no provider DELETE or
   automatic delivery is supplied.
-- [ ] HOME-05: duplicate suppression of managed provider copies, real family/browser
-  and disposable-provider acceptance, DST/all-day/recurrence usability as scoped.
+- [x] HOME-05 first source/browser-fixture slice: confirmed own-copy suppression,
+  unchanged-time/DST preservation, spring-gap rejection, scrollable desktop/mobile
+  dialogs and synthetic two-user edit/conflict/delivery/revocation flows in DE/EN.
+- [x] Artifact-bound schema-only migration tool and actual synthetic V39/V41/V43/V44
+  upgrade + V45 data restore rehearsal, without application/provider execution.
+- [ ] Complete disposable live-provider/family acceptance and original-data/key
+  restore, protected targets and controlled runtime rollout; synthetic checks alone
+  do not close these gates. Wider private overlays/ambiguous-time authoring remain
+  separate scoped usability work; recurrence/all-day authoring stays planned.
 - [ ] Coordinate data-safe runtime rollout and real browser/household acceptance.
   Gateway V42 requires explicit re-saving of historical button grants; legacy
   pending commands must not acquire inferred authority during rollout.

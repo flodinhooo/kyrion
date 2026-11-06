@@ -1,5 +1,6 @@
 import { CORE_SERVICE_URL, csrfIsValid, requireApiSession } from "@/lib/server-auth";
 import { isCalendarEvent, normalizeGoogleEvents, normalizeLocalEvents, normalizeHouseholdEvents } from "@/features/calendar/calendar-model";
+import { ownedCopyLinks, confirmedOwnedCopies } from "@/features/calendar/owned-copy-presentation";
 
 export async function GET(request?: Request) {
   const auth = await requireApiSession();
@@ -29,9 +30,21 @@ export async function GET(request?: Request) {
     const household = householdResponse?.ok ? normalizeHouseholdEvents(householdValue) : null;
     const selected = search.get("calendarId") ?? "primary";
     const linked = new Set(local.filter(event => event.googleCalendarId === selected && event.googleEventId).map(event => `google:${event.googleEventId}`));
-    return Response.json({ items: [...local, ...remote.filter(event => !linked.has(event.id)), ...(household ?? [])],
+    let copyStatus = "not_needed";
+    let copies = new Set<string>();
+    if (household?.length && remote.length) {
+      const copyQuery = new URLSearchParams(householdQuery); copyQuery.set("calendarId", selected);
+      const response = await fetch(`${CORE_SERVICE_URL}/v1/calendar/household-copy-links?${copyQuery}`, {
+        headers, cache: "no-store", signal: AbortSignal.timeout(2_000),
+      }).catch(() => null);
+      const links = response?.ok ? ownedCopyLinks(await response.json().catch(() => null)) : null;
+      copyStatus = links === null ? "unavailable" : "ready";
+      copies = confirmedOwnedCopies(googleValue, household, links);
+    }
+    return Response.json({ items: [...local, ...remote.filter(event => !linked.has(event.id) && !copies.has(event.id)), ...(household ?? [])],
       google: { status: googleReady ? "ready" : googleCode === "GOOGLE_DISCONNECTED" ? "disconnected" : "error", code: googleReady ? null : googleCode },
       household: { status: household !== null ? "ready" : "error" },
+      copies: { status: copyStatus },
     }, { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503 }); }
 }

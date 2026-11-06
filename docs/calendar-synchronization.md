@@ -18,6 +18,16 @@ are OWNER. The creator alone may delete with delete permission, matching revisio
 and Web confirmation. Participant lists are fixed in this initial slice.
 
 The existing Web calendar combines `local`, `google` and `household` sources.
+Confirmed owned Google copies are conservatively merged with a present native
+event as [ADR 0039](adr/0039-owned-calendar-copy-presentation.md) describes. Core
+`GET /v1/calendar/household-copy-links` returns only the acting credential owner's
+current confirmed links for an actual selected calendar, with optional bounded
+start/end. Web also checks identity/private marker, ETag, revision, content and
+exact instants; linkage is not returned in the combined browser payload. Changed,
+revoked, uncertain, independent or unverifiable copies remain visible. If optional
+link lookup fails, both representations remain and Web explains possible copies.
+Other members' private/availability projections are not expanded with correlations.
+
 Shared-event creation offers an explicit participant list and an everyone shortcut;
 the person filter changes only display. Saving a native event never writes a
 personal calendar. Separate manual delivery requires a voluntary destination grant
@@ -48,6 +58,12 @@ a local event linked to someone else's Google connection.
 
 Local CRUD uses `local_calendar_event` independently of Google. The editor converts
 stored instants to browser-local inputs before converting edits back to instants.
+Unchanged existing fields preserve their original absolute instants, seconds and
+precision, including the second occurrence of an autumn clock-change hour. Newly
+entered nonexistent spring times are rejected with localized feedback instead of
+silently shifted. End ordering is validated against absolute instants in Core,
+not a misleading datetime-local minimum across a repeated hour. Explicit choice
+between both occurrences of a newly authored ambiguous time remains later work.
 Web sends the local revision on edits/deletion; stale revisions produce
 `CALENDAR_SYNC_CONFLICT`. Legacy clients may omit the revision.
 
@@ -188,8 +204,9 @@ with a blanket success. Existing RBAC denials remain 403.
 
 This first slice is manual Google delivery of timed native events. Remote-copy
 deletion, participant changes, provider-to-native reconciliation, automatic delivery,
-additional providers and duplicate suppression in Google overlays remain separate
-work. No live provider write or rollout is implied. A V45 original-data restore /
+additional providers and wider private-overlay presentation remain separate work.
+Confirmed owned-copy suppression is described above. No live provider write or
+rollout is implied. A V45 original-data restore /
 upgrade rehearsal is still required; the Gateway migration rehearsal through V43
 does not certify it. Older Core binaries do not enforce the new destination or
 retention policies: an in-place binary downgrade is not an accepted rollback.

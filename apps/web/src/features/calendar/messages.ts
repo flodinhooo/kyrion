@@ -1,5 +1,7 @@
 export const calendarMessages = {
   en: {
+    invalidLocalTime: "This local time is invalid or does not exist because the clocks change. Choose a valid time in your browser time zone.",
+    copiesUnavailable: "Some personal calendar copies may appear separately. Calendar entries have been retained.",
     destinationTitle: "Receive shared events in my Google calendar", destinationConsent: "Opting in lets selected participants manually publish your joint household events into this calendar. Both you and the editor must retain the required calendar permissions. This is separate from sharing your personal calendar for reading.",
     destinationEnable: "Allow joint event copies in my selected calendar", destinationSave: "Save destination", destinationConfirm: "Allow participants of your joint household events to create and update their copies in this selected Google calendar?",
     destinationRetention: "Revoking or changing the destination stops future writes to the old destination. Existing copies remain in your personal calendar.",
@@ -49,6 +51,8 @@ export const calendarMessages = {
     readOnly: "External event (read only)", source: "Source", localStatus: "Local event", unavailable: "No writable calendar available",
   },
   de: {
+    invalidLocalTime: "Diese lokale Uhrzeit ist ungültig oder existiert wegen der Zeitumstellung nicht. Bitte eine gültige Uhrzeit in deiner Browser-Zeitzone wählen.",
+    copiesUnavailable: "Einzelne persönliche Kalenderkopien können zusätzlich erscheinen. Die Kalendereinträge bleiben sichtbar.",
     destinationTitle: "Gemeinsame Termine in meinem Google-Kalender empfangen", destinationConsent: "Mit deiner Freigabe dürfen ausgewählte Teilnehmer eure gemeinsamen Haushaltstermine manuell in diesen Kalender übertragen. Du und der Bearbeiter benötigen weiterhin die entsprechenden Kalenderrechte. Das ist unabhängig von der Lesefreigabe deines persönlichen Kalenders.",
     destinationEnable: "Kopien gemeinsamer Termine im ausgewählten Kalender erlauben", destinationSave: "Zielkalender speichern", destinationConfirm: "Teilnehmern eurer gemeinsamen Haushaltstermine erlauben, deren Kopien im ausgewählten Google-Kalender anzulegen und zu aktualisieren?",
     destinationRetention: "Widerruf oder Wechsel des Zielkalenders stoppt zukünftige Schreibzugriffe auf das alte Ziel. Bereits vorhandene Kopien bleiben im persönlichen Kalender.",
