@@ -350,11 +350,11 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val host=SessionTokenService().create().rawToken
         val code=recovery.provision(owner.id,OLD_PASSWORD,host)
         val opened=recovery.open(owner.id,host,code)
-        jdbc.sql("UPDATE space_recovery_session SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+        jdbc.sql("UPDATE space_recovery_session SET expires_at=TIMESTAMPTZ '2000-01-01 00:00:00+00'").update()
         assertThatThrownBy { recovery.complete(owner.id,host,opened.session,NEW_PASSWORD) }.isInstanceOf(LocalRecoveryException::class.java)
         val retry=recovery.open(owner.id,host,opened.nextCode)
         val completedCode=recovery.complete(owner.id,host,retry.session,NEW_PASSWORD)
-        jdbc.sql("UPDATE space_recovery_material SET code_expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'").update()
+        jdbc.sql("UPDATE space_recovery_material SET code_expires_at=TIMESTAMPTZ '2000-01-01 00:00:00+00'").update()
         assertThatThrownBy { recovery.open(owner.id,host,completedCode) }.isInstanceOf(LocalRecoveryException::class.java)
     }
 
@@ -514,7 +514,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         spaces.revoke(owner.user.id, revoked.id)
         assertThatThrownBy { authentication.register("revoked", OTHER_PASSWORD, revoked.code) }.isInstanceOf(InvalidInvitationException::class.java)
         val expired = spaces.createInvitation(owner.user.id, InvitationOptions())
-        jdbc.sql("UPDATE registration_invitation SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second' WHERE id=:id").param("id", expired.id).update()
+        jdbc.sql("UPDATE registration_invitation SET expires_at=TIMESTAMPTZ '2000-01-01 00:00:00+00' WHERE id=:id").param("id", expired.id).update()
         assertThatThrownBy { authentication.register("expired", OTHER_PASSWORD, expired.code) }.isInstanceOf(InvalidInvitationException::class.java)
         assertThat(spaces.invitations(owner.user.id).first { it.id == expired.id }.status).isEqualTo("EXPIRED")
     }
@@ -1768,7 +1768,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         repository.configure(actor,dev.kyrion.core.calendar.CalendarScheduleRequest(true,60))
         assertThat(repository.claim(actor,false)).isNull()
         assertThat(repository.due()).doesNotContain(actor)
-        jdbc.sql("UPDATE calendar_sync_schedule SET next_attempt_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE actor_id=:actor").param("actor",actor).update()
+        jdbc.sql("UPDATE calendar_sync_schedule SET next_attempt_at=TIMESTAMPTZ '2000-01-01 00:00:00+00' WHERE actor_id=:actor").param("actor",actor).update()
         val next = repository.claim(actor,true)!!
         assertThat(repository.renew(actor,next)).isTrue()
         repository.finish(actor,lease,null)
