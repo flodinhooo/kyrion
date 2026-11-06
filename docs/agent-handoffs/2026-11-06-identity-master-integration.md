@@ -2,6 +2,15 @@
 
 Date: 2026-11-06. Source integration and isolated acceptance only.
 
+Latest follow-up: the owner authorized deletion of redundant full archives.
+Checkout/build/dependency copies were removed after separately retaining and
+SHA-256-verifying all 530 historical runtime files and private configurations.
+Branches/commits and complete Git bundles remain. A read-only personal database
+check found **V39**, with V40–V46 still pending. Core/Ollama/STT/TTS were reachable;
+Web/Website/AI did not return successful probe responses. No live migration or
+restart was performed. See the latest unified Identity handover section; older
+full-archive retention statements below describe previous checkpoints.
+
 Follow-up: both Identity worktrees have since been retired at the owner's
 request. Their full directories and Git metadata were preserved under ignored
 `.run/stabilization/identity-worktree-archives/2026-11-06-closeout/`; only their

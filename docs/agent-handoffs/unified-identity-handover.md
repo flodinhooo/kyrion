@@ -1,5 +1,29 @@
 # Unified identity handover
 
+## Redundant archive cleanup and personal runtime check
+
+After retirement, the owner authorized removal of unnecessary archives. The full
+checkout/build/dependency copies and redundant worktree Git metadata were removed.
+Before deletion, all 530 historical `.run` files were moved into ignored
+`.run/stabilization/identity-worktree-preservation/historical-runtime/`, recorded
+in `historical-runtime-manifest.json` and verified against SHA-256 hashes.
+Private environment/key copies and the independent complete Git bundles remain.
+No private runtime data, branch ref, commit or Docker/database resource was deleted.
+This supersedes the full-archive retention statement in the preceding checkpoint.
+
+A read-only check of personal `kyrion-postgres` (`kyrion` database) found successful
+Flyway history through **V39**, not current source V46. Canonical V40–V46 are still
+pending there. Core `8080/actuator/health` returned HTTP200; Ollama11434, STT8040
+and TTS8020 probes returned HTTP200. Web3000/login, Website3001 and AI8000/health
+did not return successful responses within the bounded probes. These observations
+are a runtime snapshot, not deployment acceptance or proof of current runtime
+artifact identity. No personal migration, deployment or service restart occurred.
+
+Source integration and isolated V1–V46 verification are complete; updating the
+personal installation still requires the separate protected backup/independent
+restore, target/artifact review, writer fence and rollout gates recorded in the
+A/B closeout and schema runbook. Do not infer live readiness from current master.
+
 ## Worktree retirement after complete master integration
 
 The owner requested that the integrated Identity checkouts no longer be needed
