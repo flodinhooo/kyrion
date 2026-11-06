@@ -54,6 +54,11 @@ public final class CoreSchemaMigration {
         db.setAutoCommit(false);
         db.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
         try {
+            // JDBC's startup TimeZone can override the options string with the JVM zone.
+            // Normalize inside every snapshot transaction, including Windows vs Linux plans.
+            try (Statement settings = db.createStatement()) {
+                settings.execute("SET LOCAL TIME ZONE 'UTC'");
+            }
             Map<String, Object> state = new TreeMap<>();
             state.put("targetIdentity", identity(db));
             List<Map<String, Object>> history = new ArrayList<>();

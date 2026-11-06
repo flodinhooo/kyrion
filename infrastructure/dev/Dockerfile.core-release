@@ -1,0 +1,15 @@
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/kyrion
+COPY --chown=10001:10001 core-runtime.jar app.jar
+COPY --chown=10001:10001 knowledge-parser.jar knowledge-parser.jar
+ENV KYRION_KNOWLEDGE_PARSER_JAR=/opt/kyrion/knowledge-parser.jar
+ENV KYRION_KNOWLEDGE_ROOT=/var/lib/kyrion/knowledge
+ARG SOURCE_REVISION
+ARG CORE_SHA256
+LABEL org.opencontainers.image.revision=$SOURCE_REVISION
+LABEL io.kyrion.core.jar.sha256=$CORE_SHA256
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70.0", "-jar", "/opt/kyrion/app.jar"]

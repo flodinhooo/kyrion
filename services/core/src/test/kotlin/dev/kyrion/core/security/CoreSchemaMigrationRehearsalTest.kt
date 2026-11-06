@@ -60,14 +60,16 @@ class CoreSchemaMigrationRehearsalTest {
             "user" to postgres.username, "password" to postgres.password, "sslmode" to "disable")))
         return file
     }
-    private fun tool(database: String, plan: Path, apply: Boolean = false, success: Boolean = true, target: String? = null, version: Int = 46): JsonNode {
+    private fun tool(database: String, plan: Path, apply: Boolean = false, success: Boolean = true, target: String? = null, version: Int = 46, timeZone: String? = null): JsonNode {
         val args = mutableListOf(System.getenv("KYRION_MIGRATION_PYTHON") ?: "python", root.resolve("infrastructure/dev/Migrate-CoreSchema.py").toString(),
             "--artifact", artifact.toString(), "--artifact-sha256", hash(Files.readAllBytes(artifact)),
             "--target-version", version.toString(), "--connection-file", connection(database).toString(), "--plan", plan.toString(), "--java-home", System.getProperty("java.home"))
         if (apply) args.addAll(listOf("--apply", "--approve-plan-sha256", hash(Files.readAllBytes(plan)),
             "--expected-target", target ?: json.readTree(Files.readString(plan))["state"]["targetIdentity"].asText()))
         val output = directory.resolve("tool-${UUID.randomUUID()}.json")
-        val process = ProcessBuilder(args).redirectErrorStream(true).redirectOutput(output.toFile()).start()
+        val builder = ProcessBuilder(args).redirectErrorStream(true).redirectOutput(output.toFile())
+        if (timeZone != null) builder.environment()["JAVA_TOOL_OPTIONS"] = "-Duser.timezone=$timeZone"
+        val process = builder.start()
         assertThat(process.waitFor(180, TimeUnit.SECONDS)).isTrue()
         val content = Files.readString(output)
         assertThat(process.exitValue()).withFailMessage("Schema-only tool result: %s", content).isEqualTo(if (success) 0 else 1)
@@ -163,6 +165,17 @@ class CoreSchemaMigrationRehearsalTest {
     @Test fun `V41 restore migrates only schema through V46`() = rehearse(41)
     @Test fun `V43 restore migrates only schema through V46`() = rehearse(43)
     @Test fun `V44 restore migrates only schema through V46`() = rehearse(44)
+
+    @Test fun `plans normalize timestamps across JVM timezones`() {
+        val source = create(45)
+        sql(source, "INSERT INTO user_account(id,username,password_hash) VALUES('${UUID.randomUUID()}','timezone-fixture','synthetic-hash')")
+        val utc = directory.resolve("timezone-utc.json")
+        val zurich = directory.resolve("timezone-zurich.json")
+        tool(source, utc, timeZone = "UTC")
+        tool(source, zurich, timeZone = "Europe/Zurich")
+        assertThat(json.readTree(Files.readString(utc))["state"])
+            .isEqualTo(json.readTree(Files.readString(zurich))["state"])
+    }
 
     @Test fun `V45 independent restore retains disclosures grants and every delivery state without resume`() {
         val source = create(45)
