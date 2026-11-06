@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import { useWorkspace } from "@/components/app-shell";
 import { isCoreConnectionList, isCoreProviderList, type CoreConnection, type CoreProvider } from "@/features/integrations/catalog-contracts";
 import { csrfHeader } from "@/features/auth/csrf";
+import { calendarMessages } from "@/features/calendar/messages";
 import { HomeAssistantConnection } from "@/features/integrations/home-assistant-connection";
 
 const customRoutes: Record<string, string> = { spotify: "/plugins/spotify", nanoleaf: "/plugins/nanoleaf", zigbee: "/settings/gateways" };
 
 export default function IntegrationProviderPage() {
-  const { t } = useWorkspace();
+  const { t, locale, permissions } = useWorkspace();
+  const calendarText = calendarMessages[locale] ?? calendarMessages.en;
   const { providerId } = useParams<{ providerId: string }>();
   const [provider, setProvider] = useState<CoreProvider | null>(null);
   const [connection, setConnection] = useState<CoreConnection | null>(null);
@@ -45,7 +47,7 @@ export default function IntegrationProviderPage() {
       <article className="connection-card"><p className="eyebrow">{t.integrationAuthentication}</p><h2>{provider.authentication}</h2><p>{provider.locality === "LOCAL" ? t.integrationLocal : t.integrationCloud}</p></article>
     </div>
     <article className="connection-card"><p className="eyebrow">{t.integrationCapabilities}</p>{provider.capabilities.length === 0 ? <p>{planned ? t.integrationPlanned : t.integrationNoCapabilities}</p> : <div className="integration-capabilities">{provider.capabilities.map((capability) => <span className={`capability-pill ${connection?.enabledCapabilities.includes(capability.id) ? "enabled" : ""}`} key={capability.id}>{connection?.enabledCapabilities.includes(capability.id) ? "✓" : "○"} {capability.name}<small> {capability.id}</small></span>)}</div>}</article>
-    {provider.id === "google" && !planned && !connection && <div><button className="catalog-reload" type="button" disabled={oauthState === "starting"} onClick={() => void connect()}>{oauthState === "starting" ? "Google wird geöffnet …" : "Mit Google verbinden"}</button>{oauthError && <p className="auth-error" role="alert">{oauthError}</p>}</div>}
+    {provider.id === "google" && !planned && permissions.includes("integrations:create") && <div><button className="catalog-reload" type="button" disabled={oauthState === "starting"} onClick={() => void connect()}>{oauthState === "starting" ? calendarText.loading : connection ? calendarText.reconnect : calendarText.connect}</button>{oauthError && <p className="auth-error" role="alert">{oauthError}</p>}</div>}
     {connection && <button className="catalog-reload" type="button" onClick={() => void disconnect()}>{t.spotifyDisconnect}</button>}
     {route && provider.id !== "google" && <Link className="catalog-reload" href={route}>{t.integrationConfigure}</Link>}
   </section>;

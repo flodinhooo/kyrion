@@ -14,6 +14,12 @@ describe("device presentation", () => {
     expect(deriveDevicePresentation(device(["occupancy.read"]), { on: null, brightness: null, hue: null, saturation: null, colorTemperature: null, occupancy: true, battery: 50, illuminance: null, action: null, illumination: null }, text).primaryValue).toBe("Bewegung erkannt");
     expect(deriveDevicePresentation(device(["temperature.read", "humidity.read"]), { on: null, brightness: null, hue: null, saturation: null, colorTemperature: null, occupancy: null, battery: null, illuminance: null, action: null, illumination: null, temperatureCelsius: 21.5, relativeHumidity: 45 }, text).primaryValue).toContain("21.5");
   });
+  it("displays read-only HA power and brightness without inventing battery", () => {
+    const state = { on: true, brightness: 50, hue: null, saturation: null, colorTemperature: null, occupancy: null, battery: null, illuminance: null, action: null, illumination: null };
+    const presentation = deriveDevicePresentation(device(["power.read"]), state, text);
+    expect(presentation.primaryValue).toBe(text.on);
+    expect(presentation.secondaryMetrics).toEqual([{ label: text.brightness, value: "50%" }]);
+  });
   it("falls back to unknown without inventing state", () => {
     expect(deriveDevicePresentation(device([]), null, text).hasPrimaryValue).toBe(false);
   });

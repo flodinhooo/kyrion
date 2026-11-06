@@ -9,6 +9,15 @@ export type CalendarEvent = {
   timeZone?: string;
   syncToGoogle?: boolean;
   source: CalendarSource;
+  googleCalendarId?: string | null;
+  googleEventId?: string | null;
+  syncStatus?: string;
+  syncError?: string | null;
+  pendingDeletion?: boolean;
+  allDay?: boolean;
+  etag?: string;
+  recurring?: boolean;
+  revision?: number;
 };
 
 export type CalendarEditor = {
@@ -18,9 +27,13 @@ export type CalendarEditor = {
   startsAt: string;
   endsAt: string;
   syncToGoogle: boolean;
+  googleCalendarId?: string;
+  source?: CalendarSource;
+  revision?: number;
+  etag?: string;
 };
 
-function localDateTimeValue(date: Date): string {
+export function localDateTimeValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -46,6 +59,21 @@ export function normalizeGoogleEvents(value: unknown): CalendarEvent[] {
     const startsAt = typeof item.start === "string" ? item.start : null;
     const endsAt = typeof item.end === "string" ? item.end : null;
     if (!id || !startsAt || !endsAt) return [];
-    return [{ id: `google:${id}`, title: typeof item.summary === "string" ? item.summary : "(untitled)", startsAt, endsAt, source: "google" as const }];
+    return [{ id: `google:${id}`, title: typeof item.summary === "string" ? item.summary : "(untitled)", startsAt, endsAt, etag: typeof item.etag === "string" ? item.etag : undefined, recurring: item.recurring === true, description: typeof item.description === "string" ? item.description : null, allDay: /^\d{4}-\d{2}-\d{2}$/.test(startsAt), source: "google" as const }];
   });
+}
+
+export function editorForEvent(event: CalendarEvent): CalendarEditor {
+  return { id: event.id, title: event.title, description: event.description ?? "",
+    startsAt: localDateTimeValue(new Date(event.startsAt)), endsAt: localDateTimeValue(new Date(event.endsAt)),
+    syncToGoogle: event.syncToGoogle ?? false, googleCalendarId: event.googleCalendarId ?? "", source: event.source, revision: event.revision, etag: event.etag };
+}
+
+export function isCalendarEvent(value: unknown): value is CalendarEvent {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<CalendarEvent>;
+  return typeof item.id === "string" && typeof item.title === "string" &&
+    typeof item.startsAt === "string" && Number.isFinite(Date.parse(item.startsAt)) &&
+    typeof item.endsAt === "string" && Number.isFinite(Date.parse(item.endsAt)) &&
+    (item.source === "local" || item.source === "google");
 }

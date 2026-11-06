@@ -58,7 +58,9 @@ intent and outcome with one correlation ID outside long database transactions;
 a provider success followed by local audit failure leaves an intent requiring
 operator reconciliation. Appointment text and secrets are never audit summaries.
 `syncToGoogle` is an optional Boolean (missing/null means false); strings, numbers
-and containers are rejected. It stores intent only, without bidirectional sync.
+and containers are rejected. Without a target calendar it stores intent only.
+Explicit per-event mapping enables the bounded [calendar synchronization](calendar-synchronization.md)
+flow, with acting-account isolation, provider preconditions and pending deletion.
 
 Personal sessions, conversations, memories, exports and retention stay scoped to
 the individual account. No existing sealed audit rows are rewritten or data moved.

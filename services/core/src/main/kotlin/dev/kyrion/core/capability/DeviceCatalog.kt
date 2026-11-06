@@ -68,20 +68,25 @@ class DeviceCatalogService(
     private val clock: Clock = Clock.systemUTC(),
     private val gateways: GatewayService? = null,
     private val shellyReadings: dev.kyrion.core.integration.ShellySensorRepository? = null,
+    private val homeAssistant: dev.kyrion.core.integration.HomeAssistantImportService? = null,
     private val importedReadings: dev.kyrion.core.integration.ImportedDeviceRepository? = null,
 ) {
     fun devices(ownerId: UUID): List<DeviceCatalogItem> {
         val ownerRooms = rooms.all(ownerId).associateBy { it.id }
         val ownerObservations = observations.findAll(ownerId).associateBy { it.connectionId }
         val sensorReadings = shellyReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
+        val haStatus = try { homeAssistant?.status(ownerId) } catch (_: Exception) {
+            dev.kyrion.core.integration.HomeAssistantSyncStatus(true, "degraded", reason = "configuration_invalid", lastError = "configuration_invalid")
+        }
         val imported = importedReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
         val zigbeeDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.zigbee?.devices.orEmpty() }
             .associateBy { it.ieeeAddress }
         val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
             .associateBy { it.address }
-        return connections.findAll(ownerId).filter { it.provider != "google" }.map { connection ->
+        return connections.findAll(ownerId).filter { it.provider !in setOf("google", "spotify") && !(it.provider == "home_assistant" && it.credentialCiphertext.isNotEmpty()) }.map { connection ->
             val observation = ownerObservations[connection.id]
-            val currentAvailability = observation?.takeIf { isFresh(it.observedAt) }?.availability
+            val haFailure = connection.provider == "home_assistant" && haStatus != null && (!haStatus.configured || haStatus.lastError != null)
+            val currentAvailability = observation?.takeUnless { haFailure }?.takeIf { isFresh(it.observedAt) }?.availability
                 ?: DeviceAvailability.UNKNOWN
             val zigbee = zigbeeDevices[connection.endpointHost]
             val bluetooth = bluetoothDevices[connection.endpointHost]
@@ -98,11 +103,12 @@ class DeviceCatalogService(
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,
                 diagnosticReason = when {
+                    haFailure -> if (haStatus?.configured == false) "integration.disconnected" else "integration.unreachable"
                     observation == null -> "no_observation"
                     !isFresh(observation.observedAt) -> "stale_observation"
                     currentAvailability == DeviceAvailability.OFFLINE -> "device.offline"
                     currentAvailability == DeviceAvailability.DEGRADED -> "provider.degraded"
-                    currentAvailability == DeviceAvailability.UNKNOWN -> "no_observation"
+                    currentAvailability == DeviceAvailability.UNKNOWN -> "provider.unknown"
                     else -> null
                 },
                 state = imported[connection.id]?.state ?: sensorReadings[connection.id]?.takeIf { connection.provider == "shelly" }?.let {
@@ -166,9 +172,16 @@ class DeviceCatalogService(
 class DeviceCatalogController(
     private val catalog: DeviceCatalogService,
     private val observations: DeviceObservationService,
+    private val homeAssistant: dev.kyrion.core.integration.HomeAssistantImportService? = null,
 ) {
     @GetMapping
-    fun devices(request: HttpServletRequest) = catalog.devices(request.ownerId())
+    fun devices(request: HttpServletRequest): List<DeviceCatalogItem> {
+        val owner = request.ownerId()
+        try { homeAssistant?.refreshIfDue(owner) } catch (_: Exception) {
+            // Keep the catalog readable even when integration configuration fails.
+        }
+        return catalog.devices(owner)
+    }
 
     @PostMapping("/observations/refresh")
     fun refresh(request: HttpServletRequest): List<DeviceCatalogItem> {

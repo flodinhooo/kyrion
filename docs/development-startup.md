@@ -1,6 +1,8 @@
 # Local Development Startup
 
 This guide starts the complete local Kyrion stack on Windows.
+For isolated worktrees and verified configuration loading, use the
+[Windows worktree workflow](windows-development.md).
 
 ## Installed locations
 
@@ -205,8 +207,9 @@ docker compose -f infrastructure\compose.yml ps
 $env:KYRION_DATABASE_PASSWORD = 'the-same-local-password'
 ```
 
-Flyway currently applies the activity-log schema (V1) and the prepared identity
-and session schema (V2). No login user is created automatically.
+Flyway validates and applies the migration chain through the checked-out version
+(currently V33 in this recovery worktree). No login user is created automatically.
+Never edit an already-applied migration, including formatting-only edits.
 
 ### A model is missing
 

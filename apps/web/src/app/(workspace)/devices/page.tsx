@@ -2,7 +2,7 @@
 
 import { browserRequest } from "@/lib/browser-request";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, ChevronUp, Cpu, GripVertical, LampDesk, Pencil, Plus, RadioTower, ScanLine, Trash2 } from "lucide-react";
 import { Dialog } from "radix-ui";
@@ -16,6 +16,7 @@ import { csrfHeader } from "@/features/auth/csrf";
 import { diagnosticsMessages } from "@/features/system-services/messages";
 import { isAsyncDeviceCommand, isButtonBindingList, isDeviceCommandResult, isDeviceCommandStatus, isMotionEventList, isRuntimeDeviceList, type ButtonAction, type ButtonBinding, type ButtonGesture, type DeviceClass, type MotionEvent, type RuntimeDevice } from "@/features/devices/contracts";
 import { hsvToHex } from "@/features/devices/color";
+import { mergeDeviceSnapshots } from "@/features/devices/snapshot";
 import { deriveDevicePresentation } from "@/features/devices/presentation";
 import { isRoomList, roomTypes, type Room, type RoomType } from "@/features/home/contracts";
 import {
@@ -24,7 +25,7 @@ import {
 } from "@/features/integrations/contracts";
 
 export default function DevicesPage() {
-  const { t, locale } = useWorkspace();
+  const { t, locale, permissions } = useWorkspace();
   const [filters, setFilters] = useState<DeviceFilters>({ query: "", availability: "all", deviceClass: "all" });
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [reloading, setReloading] = useState(false);
@@ -80,7 +81,9 @@ export default function DevicesPage() {
     window.localStorage.setItem("kyrion.devices.rooms.order", JSON.stringify(ordered));
   }
 
+  const loadSequence = useRef(0);
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     const [roomResponse, connectionResponse, deviceResponse] = await Promise.all([
       browserRequest("/api/home/rooms", { cache: "no-store" }),
       browserRequest("/api/integrations/nanoleaf/connections", { cache: "no-store" }),
@@ -89,10 +92,11 @@ export default function DevicesPage() {
     const roomValue: unknown = await roomResponse.json().catch(() => null);
     const connectionValue: unknown = await connectionResponse.json().catch(() => null);
     const deviceValue: unknown = await deviceResponse.json().catch(() => null);
+    if (sequence !== loadSequence.current) return;
     if (!deviceResponse.ok || !isRuntimeDeviceList(deviceValue)) throw new Error();
     setRooms(roomResponse.ok && isRoomList(roomValue) ? roomValue : []);
     setConnections(connectionResponse.ok && isConnectionList(connectionValue) ? connectionValue : []);
-    setDevices(deviceValue);
+    setDevices(current => mergeDeviceSnapshots(current, deviceValue));
     setLoaded(true);
     setError(!roomResponse.ok || !isRoomList(roomValue)
       || !connectionResponse.ok || !isConnectionList(connectionValue));
@@ -206,7 +210,7 @@ export default function DevicesPage() {
       });
       const value: unknown = await response.json();
       if (!response.ok || !isRuntimeDeviceList(value)) throw new Error();
-      setDevices(value);
+      setDevices(current => mergeDeviceSnapshots(current, value));
     } catch {
       setError(true);
     } finally {
@@ -368,7 +372,8 @@ export default function DevicesPage() {
   ];
 
   function availabilityText(device: RuntimeDevice | undefined) {
-    if (!device || device.availability === "unknown") return t.homeUnknown;
+    if (!device) return t.homeUnknown;
+    if (device.availability === "unknown") return device.observedAt ? diagnosticsMessages[locale].unknown : t.homeUnknown;
     if (device.availability === "offline") return t.homeOffline;
     if (device.availability === "degraded") return t.homeDegraded;
     return t.homeOnline;
@@ -461,10 +466,10 @@ export default function DevicesPage() {
             measuredAt: null,
           } : device.state;
           const hardwareName = nanoleafState?.name || device.hardwareName;
-          const controllable = device.deviceClass === "light" && device.capabilities.some((capability) => capability.id === "power.set");
+          const controllable = permissions.includes("devices:execute") && device.deviceClass === "light" && device.capabilities.some((capability) => capability.id === "power.set");
           const buttonDevice = device.capabilities.some((capability) => capability.id === "button.events");
           const powerTargets = devices.filter((candidate) => candidate.id !== device.id && candidate.capabilities.some((capability) => capability.id === "power.set"));
-          const presentation = deriveDevicePresentation(device, liveState, { closed: t.sensorClosed, open: t.sensorOpen, motionDetected: t.sensorDetected, noMotion: t.sensorClear, on: t.zigbeeOn, off: t.zigbeeOff, unknown: t.homeUnknown, temperature: t.sensorTemperature, humidity: t.sensorHumidity, battery: t.sensorBattery, brightness: t.homeCurrentBrightness, color: t.homeCurrentColor, lastAction: t.sensorLastAction });
+          const presentation = deriveDevicePresentation(device, liveState, { closed: t.sensorClosed, open: t.sensorOpen, motionDetected: t.sensorDetected, noMotion: t.sensorClear, on: t.zigbeeOn, off: t.zigbeeOff, unknown: diagnosticsMessages[locale].unknown, temperature: t.sensorTemperature, humidity: t.sensorHumidity, battery: t.sensorBattery, brightness: t.homeCurrentBrightness, color: t.homeCurrentColor, lastAction: t.sensorLastAction });
           const hasLiveState = !!liveState && Object.values(liveState).some((value) => value !== null);
           const currentColor = liveState?.hue !== null && liveState?.hue !== undefined
             && liveState?.saturation !== null && liveState?.saturation !== undefined
@@ -475,6 +480,8 @@ export default function DevicesPage() {
             <div>
               <div className="device-card-title"><span><DeviceIcon aria-hidden="true" /></span><strong>{device.displayName}</strong></div>
               <span className={`device-status ${availability}`}>{availabilityText(device)}</span>
+              {device.diagnosticReason && <small>{diagnosticsMessages[locale][device.diagnosticReason]}</small>}
+              {device.observedAt && <small>{diagnosticsMessages[locale].observation}: <time dateTime={device.observedAt}>{new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(device.observedAt))}</time></small>}
               {device.capabilities.every((capability) => capability.id.endsWith(".read")) && <small>{(diagnosticsMessages[locale] ?? diagnosticsMessages.en).readOnly}</small>}
               {presentation.hasPrimaryValue && <div className={`device-primary-state ${presentation.primaryTone}`}><small>{presentation.primaryLabel || t.homeCurrentState}</small><strong>{presentation.primaryValue}</strong></div>}
               {presentation.secondaryMetrics.length > 0 && <div className="device-secondary-metrics">{presentation.secondaryMetrics.map((metric) => <span key={metric.label}>{metric.label}: <strong>{metric.value}</strong></span>)}</div>}
@@ -495,7 +502,7 @@ export default function DevicesPage() {
               {liveState.on != null && !presentation.hasPrimaryValue && <span>{t.homeCurrentState}: <strong>{liveState.on ? t.zigbeeOn : t.zigbeeOff}</strong></span>}
               {liveState.temperatureCelsius != null && <span>{t.sensorTemperature}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.temperatureCelsius)} °C</strong></span>}
               {liveState.relativeHumidity != null && <span>{t.sensorHumidity}: <strong>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(liveState.relativeHumidity)}%</strong></span>}
-              {liveState.measuredAt && <small>{t.sensorMeasuredAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(liveState.measuredAt))}</small>}
+              {liveState.measuredAt && <small>{device.provider === "home_assistant" ? diagnosticsMessages[locale].oldestProviderUpdate : t.sensorMeasuredAt}: {new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "medium" }).format(new Date(liveState.measuredAt))}</small>}
               {liveState.occupancy !== null && <span>{t.sensorMotion}: <strong>{liveState.occupancy ? t.sensorDetected : t.sensorClear}</strong></span>}
               {liveState.illuminance !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illuminance} lx</strong></span>}
               {liveState.illumination !== null && <span>{t.sensorIlluminance}: <strong>{liveState.illumination === "dim" ? t.sensorDim : t.sensorBright}</strong></span>}

@@ -78,6 +78,7 @@ class ZigbeeButtonBindingService(
     private val connections: IntegrationConnectionRepository,
     private val catalog: DeviceCatalogService,
     private val orchestrator: ActionOrchestrator,
+    @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor")
     private val taskExecutor: TaskExecutor,
     private val clock: Clock = Clock.systemUTC(),
     private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),

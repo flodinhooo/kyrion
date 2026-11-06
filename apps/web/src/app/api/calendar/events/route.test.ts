@@ -30,7 +30,7 @@ describe("GET /api/calendar/events", () => {
       "http://core.test/v1/calendar/events",
       expect.objectContaining({ headers: { Authorization: "Bearer server-only-token" } }),
     );
-    expect(await response.json()).toEqual({ items: [
+    expect(await response.json()).toMatchObject({ items: [
       expect.objectContaining({ id: "local-1", source: "local" }),
       expect.objectContaining({ id: "google:same-id", source: "google" }),
     ] });
@@ -64,6 +64,30 @@ describe("GET /api/calendar/events", () => {
     const response = await GET();
     expect(response.status).toBe(200);
     expect((await response.json()).items).toHaveLength(1);
+  });
+
+  it("forwards the selected range and calendar and excludes linked duplicate events", async () => {
+    vi.mocked(requireApiSession).mockResolvedValue({ token: "token", user: { id: "owner", username: "Owner" } });
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json([{ id: "local", title: "Linked", startsAt: "2026-09-17T09:00:00Z", endsAt: "2026-09-17T10:00:00Z", googleCalendarId: "selected", googleEventId: "remote" }]))
+      .mockResolvedValueOnce(Response.json({ items: [{ id: "remote", summary: "Linked", start: "2026-09-17T09:00:00Z", end: "2026-09-17T10:00:00Z" }] }));
+    const query = new URLSearchParams({ calendarId: "selected", start: "2026-09-01T00:00:00Z", end: "2026-10-01T00:00:00Z" });
+    const response = await GET(new Request(`http://web.test/api/calendar/events?${query}`));
+    expect((await response.json()).items).toHaveLength(1);
+    expect(fetchMock.mock.calls[1][0]).toBe(`http://core.test/v1/integrations/google/calendar/events?${query}`);
+  });
+
+  it("distinguishes a provider error from an empty connected calendar", async () => {
+    vi.mocked(requireApiSession).mockResolvedValue({ token: "token", user: { id: "owner", username: "Owner" } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(Response.json({ code: "GOOGLE_REAUTHORIZATION_REQUIRED" }, { status: 409 }));
+    expect(await (await GET()).json()).toMatchObject({ items: [], google: { status: "error", code: "GOOGLE_REAUTHORIZATION_REQUIRED" } });
+  });
+
+  it("rejects malformed local responses instead of reporting an empty calendar", async () => {
+    vi.mocked(requireApiSession).mockResolvedValue({ token: "token", user: { id: "owner", username: "Owner" } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ unexpected: [] })).mockResolvedValueOnce(Response.json({ items: [] }));
+    expect((await GET()).status).toBe(502);
   });
 
   it("returns 401 without calling Core when the session is missing", async () => {

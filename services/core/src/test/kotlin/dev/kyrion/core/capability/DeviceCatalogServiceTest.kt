@@ -18,7 +18,7 @@ class DeviceCatalogServiceTest {
         val owner = UUID.randomUUID()
         val now = Instant.now()
         val devices = listOf("nanoleaf", "zigbee", "bluetooth", "shelly", "home_assistant").map { provider ->
-            connection(owner, provider, null).copy(provider = provider)
+            connection(owner, provider, null).copy(provider = provider, credentialCiphertext = if (provider == "home_assistant") byteArrayOf() else byteArrayOf(1))
         }
         val ha = devices.last()
         val readings = object : dev.kyrion.core.integration.ImportedDeviceRepository {
@@ -38,6 +38,24 @@ class DeviceCatalogServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(items.getValue("shelly").capabilities.all { it.id.endsWith(".read") })
         org.junit.jupiter.api.Assertions.assertTrue(items.values.all { it.availability == DeviceAvailability.UNKNOWN && it.diagnosticReason == "stale_observation" })
         assertEquals(emptyList<DeviceCatalogItem>(), catalog.devices(UUID.randomUUID()))
+    }
+
+    @Test
+    fun `HA credentials never appear as a physical device and disconnect preserves cached readings`() {
+        val owner = UUID.randomUUID()
+        val now = Instant.now()
+        val imported = connection(owner, "HA lamp", null).copy(provider = "home_assistant", credentialCiphertext = byteArrayOf())
+        val credential = connection(owner, "HA connection", null).copy(provider = "home_assistant")
+        val ha = org.mockito.Mockito.mock(dev.kyrion.core.integration.HomeAssistantImportService::class.java)
+        org.mockito.Mockito.`when`(ha.status(owner)).thenReturn(dev.kyrion.core.integration.HomeAssistantSyncStatus(false, "unknown"))
+        val catalog = DeviceCatalogService(CatalogConnections(listOf(imported, credential, credential.copy(id=UUID.randomUUID(),provider="spotify"))),
+            CatalogRooms(owner, Room(UUID.randomUUID(), "Room", now, now)),
+            CatalogObservations(listOf(DeviceObservation(imported.id, owner, DeviceAvailability.ONLINE, now))),
+            Clock.fixed(now, ZoneOffset.UTC), homeAssistant = ha)
+        val items = catalog.devices(owner)
+        assertEquals(1, items.size)
+        assertEquals(DeviceAvailability.UNKNOWN, items.single().availability)
+        assertEquals("integration.disconnected", items.single().diagnosticReason)
     }
 
     @Test

@@ -61,6 +61,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
     private val nanoleaf: NanoleafIntegrationService,
     private val rbac: RbacService,
     private val google: dev.kyrion.core.integration.GoogleIntegrationService,
+    private val scheduler: org.springframework.scheduling.TaskScheduler,
 ) {
     @MockitoBean
     lateinit var nanoleafGateway: NanoleafGateway
@@ -169,8 +170,10 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         val login = authentication.setup("flo", OLD_PASSWORD, setupSecret)
         val owner = login.user.id
         var failure: String? = null
+        var snapshots = 0
         val gateway = object : dev.kyrion.core.integration.HomeAssistantGateway {
             override fun snapshot(ownerId: UUID): List<dev.kyrion.core.integration.HomeAssistantDevice> {
+                snapshots++
                 failure?.let { throw dev.kyrion.core.integration.HomeAssistantException(it) }
                 return emptyList()
             }
@@ -185,6 +188,9 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(success.status).isEqualTo("healthy")
         assertThat(success.lastSuccessAt).isNotNull()
         assertThat(success.correlationId).isEqualTo(result.correlationId)
+        service.refreshIfDue(owner)
+        service.refreshIfDue(owner)
+        assertThat(snapshots).isEqualTo(1)
         for (code in listOf("authentication_failed", "dependency_unreachable", "invalid_response")) {
             failure = code
             assertThat(service.sync(owner).reason).isEqualTo(code)
@@ -197,6 +203,12 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .param("owner", owner).update()
         assertThat(service.status(owner).reason).isEqualTo("stale_observation")
         assertThat(service.status(owner).lastError).isEqualTo("invalid_response")
+        failure = null
+        service.refreshIfDue(owner)
+        assertThat(snapshots).isEqualTo(5)
+        assertThat(service.status(owner).status).isEqualTo("healthy")
+        assertThat(service.status(owner).lastError).isNull()
+        assertThat(activity.recent(owner,100).first { it.correlationId == service.status(owner).correlationId }.actorType).isEqualTo(ActivityActorType.SYSTEM)
         mockMvc.perform(get("/v1/integrations/platform-diagnostics/database").header("Authorization", "Bearer ${login.session.rawToken}"))
             .andExpect(status().isOk).andExpect(jsonPath("$.status").value("healthy"))
     }
@@ -223,7 +235,8 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(updated.id).isEqualTo(imported.id)
         assertThat(updated.displayName).isEqualTo("Renamed")
         assertThat(updated.room).isNull()
-        assertThat(updated.availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.OFFLINE)
+        assertThat(updated.availability).isEqualTo(dev.kyrion.core.capability.DeviceAvailability.UNKNOWN)
+        assertThat(updated.diagnosticReason).isEqualTo("integration.disconnected")
         assertThat(rooms.all(owner)).hasSize(1)
         val another = insertAdditionalOwner("another")
         assertThat(catalog.devices(another)).isEmpty()
@@ -316,6 +329,11 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(status().isNotFound)
         mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", "Bearer ${other.session.rawToken}"))
             .andExpect(status().isNotFound)
+        mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}")
+            .contentType(MediaType.APPLICATION_JSON).content(body.dropLast(1) + ",\"revision\":0}"))
+            .andExpect(status().isConflict).andExpect(jsonPath("$.code").value("CALENDAR_SYNC_CONFLICT"))
+        mockMvc.perform(delete("/v1/calendar/events/$id").param("revision","0").header("Authorization", "Bearer ${owner.session.rawToken}"))
+            .andExpect(status().isConflict)
         mockMvc.perform(put("/v1/calendar/events/$id").header("Authorization", "Bearer ${owner.session.rawToken}")
             .contentType(MediaType.APPLICATION_JSON).content(body.replace("Installer review", "Updated review")))
             .andExpect(status().isOk).andExpect(jsonPath("$.title").value("Updated review"))
@@ -1006,12 +1024,33 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
                 connection.prepareStatement("INSERT INTO rbac_role_permission(role_id, permission_key) VALUES (?, 'devices:read')").use {
                     it.setObject(1, roleId); it.executeUpdate()
                 }
+                val eventId = UUID.randomUUID()
+                connection.prepareStatement("""INSERT INTO local_calendar_event(id,owner_id,title,starts_at,ends_at,time_zone,content_fingerprint,sync_to_google,created_at,updated_at)
+                    VALUES(?,?,'Preserved event','2026-10-19T09:00:00Z','2026-10-19T10:00:00Z','Europe/Zurich','legacy',TRUE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""").use {
+                    it.setObject(1,eventId); it.setObject(2,id); it.executeUpdate()
+                }
+                val deviceId = UUID.randomUUID()
+                connection.prepareStatement("""INSERT INTO integration_connection(id,owner_id,provider,display_name,endpoint_host,credential_ciphertext,credential_nonce,created_at,updated_at)
+                    VALUES(?,?,'home_assistant','Preserved HA','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',decode('0102','hex'),decode('0304','hex'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""").use {
+                    it.setObject(1,deviceId); it.setObject(2,id); it.executeUpdate()
+                }
+                connection.prepareStatement("INSERT INTO home_assistant_device(connection_id,owner_id,hardware_name,battery,capabilities) VALUES(?,?,'Sensor',NULL,'battery.read')").use {
+                    it.setObject(1,deviceId); it.setObject(2,id); it.executeUpdate()
+                }
                 flyway(null).migrate()
                 connection.createStatement().use { statement ->
                     statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
                     statement.executeQuery("SELECT permission_key FROM rbac_role_permission").use { it.next(); assertThat(it.getString(1)).isEqualTo("devices:read"); assertThat(it.next()).isFalse() }
                     statement.executeQuery("SELECT COUNT(*) FROM user_account").use { it.next(); assertThat(it.getInt(1)).isEqualTo(1) }
                     statement.executeQuery("SELECT COUNT(*) FROM rbac_permission WHERE resource='calendar'").use { it.next(); assertThat(it.getInt(1)).isEqualTo(4) }
+                    statement.executeQuery("SELECT title,sync_to_google,sync_status,google_event_id FROM local_calendar_event").use {
+                        it.next(); assertThat(it.getString(1)).isEqualTo("Preserved event"); assertThat(it.getBoolean(2)).isTrue()
+                        assertThat(it.getString(3)).isEqualTo("configuration_required"); assertThat(it.getString(4)).isNull()
+                    }
+                    statement.executeQuery("SELECT battery,brightness FROM home_assistant_device").use {
+                        it.next(); assertThat(it.getObject(1)).isNull(); assertThat(it.getObject(2)).isNull()
+                    }
+                    statement.executeQuery("SELECT encode(credential_ciphertext,'hex') FROM integration_connection").use { it.next(); assertThat(it.getString(1)).isEqualTo("0102") }
                     statement.executeUpdate("DELETE FROM user_account")
                     statement.executeQuery("SELECT initialized FROM installation_bootstrap_state").use { it.next(); assertThat(it.getBoolean(1)).isTrue() }
                 }
@@ -1037,7 +1076,7 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
             .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
         mockMvc.perform(get("/v1/devices").header("Authorization", "Bearer ${owner.session.rawToken}"))
             .andExpect(status().isOk).andExpect(jsonPath("$").isEmpty)
-        `when`(googleClient.events("temporary-access")).thenReturn(dev.kyrion.core.integration.GoogleCalendarEvents(emptyList()))
+        `when`(googleClient.rangedEvents((org.mockito.ArgumentMatchers.eq("temporary-access") ?: "temporary-access"), (org.mockito.ArgumentMatchers.eq("primary") ?: "primary"), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(dev.kyrion.core.integration.GoogleCalendarEvents(emptyList()))
         mockMvc.perform(get("/v1/integrations/google/calendar/events").header("Authorization", "Bearer ${member.session.rawToken}"))
             .andExpect(status().isConflict).andExpect(jsonPath("$.code").value("GOOGLE_DISCONNECTED"))
         mockMvc.perform(get("/v1/integrations/google").header("Authorization", "Bearer ${member.session.rawToken}"))
@@ -1053,6 +1092,94 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         assertThat(events.map { it.status }).containsExactlyInAnyOrder(ActivityStatus.PROPOSED, ActivityStatus.SUCCEEDED)
         assertThat(events.map { it.correlationId }.distinct()).hasSize(1)
         assertThat(events).allMatch { it.actorId == owner.user.id.toString() && !it.summaryCode.contains("Private") }
+    }
+
+    @Test
+    fun `calendar synchronization persists remote identity imports changes and confirms deletion through HTTP`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val header = "Bearer ${owner.session.rawToken}"
+        val authorization = google.authorize(owner.user.id)
+        val state = java.net.URI(authorization.authorizationUrl).rawQuery.split("&").single { it.startsWith("state=") }.substringAfter("=")
+        `when`(googleClient.exchange("fixture-code", "http://localhost.test/callback", "test-only-client", "test-only-secret"))
+            .thenReturn(dev.kyrion.core.integration.GoogleToken("fixture-access", "fixture-refresh", Instant.now().plusSeconds(3600), "fixture@test.invalid"))
+        google.complete(owner.user.id, "fixture-code", state)
+        `when`(googleClient.calendars("fixture-access")).thenReturn(dev.kyrion.core.integration.GoogleCalendars(listOf(
+            dev.kyrion.core.integration.GoogleCalendar("fixture-calendar", "Fixture", "Europe/Zurich", "writer"))))
+        val payload = """{"title":"Local appointment","startsAt":"2026-10-19T09:00:00Z","endsAt":"2026-10-19T10:00:00Z","timeZone":"Europe/Zurich","syncToGoogle":true,"googleCalendarId":"fixture-calendar"}"""
+        val created = mockMvc.perform(post("/v1/calendar/events").header("Authorization", header).contentType(MediaType.APPLICATION_JSON).content(payload))
+            .andExpect(status().isOk).andExpect(jsonPath("$.syncStatus").value("pending")).andReturn()
+        val id = UUID.fromString(com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(created.response.contentAsString).path("id").asText())
+        val remoteId = id.toString().replace("-", "")
+        var remote: dev.kyrion.core.integration.GoogleCalendarEvent? = null
+        `when`(googleClient.getEvent("fixture-access", "fixture-calendar", remoteId)).thenAnswer {
+            remote ?: throw dev.kyrion.core.integration.GoogleProviderException(404)
+        }
+        val write = dev.kyrion.core.integration.GoogleCalendarEventRequest("fixture-calendar", "Local appointment", "2026-10-19T09:00:00Z", "2026-10-19T10:00:00Z", id = remoteId)
+        `when`(googleClient.createEvent("fixture-access", write)).thenAnswer {
+            dev.kyrion.core.integration.GoogleCalendarEvent(remoteId, "Local appointment", write.start, write.end, "v1", kyrionId = remoteId).also { remote = it }
+        }
+        fun synchronize() = mockMvc.perform(post("/v1/calendar/sync").header("Authorization", header))
+            .andExpect(status().isOk).andExpect(jsonPath("$.failed").value(0)).andExpect(jsonPath("$.conflicts").value(0))
+        synchronize().andExpect(jsonPath("$.synchronized").value(1))
+        synchronize()
+        verify(googleClient, org.mockito.Mockito.times(1)).createEvent("fixture-access", write)
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].googleEventId").value(remoteId)).andExpect(jsonPath("$[0].syncStatus").value("synced"))
+        remote = remote!!.copy(summary = "Remote change", etag = "v2")
+        synchronize()
+        mockMvc.perform(get("/v1/calendar/events").header("Authorization", header)).andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].title").value("Remote change"))
+            .andExpect(jsonPath("$[0].startsAt").value("2026-10-19T09:00:00Z"))
+        mockMvc.perform(delete("/v1/calendar/events/$id").header("Authorization", header)).andExpect(status().isOk)
+        assertThat(jdbc.sql("SELECT pending_deletion FROM local_calendar_event WHERE id=:id").param("id",id).query(Boolean::class.java).single()).isTrue()
+        synchronize()
+        verify(googleClient).removeEvent("fixture-access", "fixture-calendar", remoteId, "v2")
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM local_calendar_event WHERE id=:id").param("id",id).query(Int::class.java).single()).isZero()
+        assertThat(activity.recent(owner.user.id,100).filter { it.eventType == "calendar.event.synchronized" }).isNotEmpty
+    }
+
+    @Test
+    fun `calendar schedule is opt in durable leased and preserves rate limit backoff`() {
+        val owner = authentication.setup("owner", OLD_PASSWORD, setupSecret)
+        val actor = owner.user.id
+        val repository = dev.kyrion.core.calendar.CalendarScheduleRepository(jdbc)
+        assertThat(repository.get(actor).enabled).isFalse()
+        assertThat(repository.claim(actor,true)).isNull()
+        val lease = repository.claim(actor,false)!!
+        assertThat(repository.claim(actor,false)).isNull()
+        assertThat(repository.renew(actor,UUID.randomUUID())).isFalse()
+        repository.finish(actor,lease,"GOOGLE_RATE_LIMITED",120)
+        val failed = repository.get(actor)
+        assertThat(failed.failureCount).isEqualTo(1)
+        assertThat(failed.nextAttemptAt).isAfter(Instant.now().plusSeconds(110))
+        repository.configure(actor,dev.kyrion.core.calendar.CalendarScheduleRequest(true,60))
+        assertThat(repository.claim(actor,false)).isNull()
+        assertThat(repository.due()).doesNotContain(actor)
+        jdbc.sql("UPDATE calendar_sync_schedule SET next_attempt_at=CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE actor_id=:actor").param("actor",actor).update()
+        val next = repository.claim(actor,true)!!
+        assertThat(repository.renew(actor,next)).isTrue()
+        repository.finish(actor,lease,null)
+        assertThat(repository.get(actor).running).isTrue()
+        repository.finish(actor,next,null)
+        assertThat(repository.get(actor).lastError).isNull()
+        assertThat(repository.get(actor).lastSuccessAt).isNotNull()
+        repository.suspend(actor)
+        assertThat(repository.get(actor).enabled).isFalse()
+        assertThat(repository.get(actor).lastError).isEqualTo("FORBIDDEN")
+    }
+
+    @Test
+    fun `a blocked scheduled provider does not starve independent state refresh work`() {
+        val entered=java.util.concurrent.CountDownLatch(1)
+        val release=java.util.concurrent.CountDownLatch(1)
+        val independent=java.util.concurrent.CountDownLatch(1)
+        val slow=scheduler.schedule(Runnable { entered.countDown(); release.await(5,java.util.concurrent.TimeUnit.SECONDS) },Instant.now())
+        try {
+            assertThat(entered.await(2,java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+            val other=scheduler.schedule(Runnable { independent.countDown() },Instant.now())
+            try { assertThat(independent.await(2,java.util.concurrent.TimeUnit.SECONDS)).isTrue() }
+            finally { other?.cancel(true) }
+        } finally { release.countDown(); slow?.cancel(true) }
     }
 
     @Test
@@ -1142,6 +1269,8 @@ class AuthenticationPersistenceIntegrationTest @Autowired constructor(
         @DynamicPropertySource
         @JvmStatic
         fun databaseProperties(registry: DynamicPropertyRegistry) {
+            registry.add("kyrion.calendar.sync.scheduler-enabled") { "false" }
+            registry.add("kyrion.home-assistant.refresh-enabled") { "false" }
             registry.add("kyrion.google.client-id") { "test-only-client" }
             registry.add("kyrion.google.client-secret") { "test-only-secret" }
             registry.add("kyrion.google.redirect-uri") { "http://localhost.test/callback" }

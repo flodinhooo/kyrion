@@ -78,6 +78,51 @@ class HomeAssistantImportTest {
     }
 
     @Test
+    fun `light and contact mappings remain read only and unavailable values are never invented`() {
+        val lamp = row("on") + mapOf("entity" to "light.hue", "class" to null, "brightness" to 128, "hue" to 215.0, "saturation" to 80.0)
+        val light = client.parse(mapper.valueToTree(listOf(lamp))).single()
+        assertEquals(true, light.state.on)
+        assertEquals(50, light.state.brightness)
+        assertEquals(215.0, light.state.hue)
+        assertNull(light.state.battery)
+        assertEquals(listOf("power.read"), light.capabilities)
+        val unavailable = client.parse(mapper.valueToTree(listOf(lamp + mapOf("state" to "unavailable")))).single()
+        assertEquals(DeviceAvailability.OFFLINE, unavailable.availability)
+        assertNull(unavailable.state.on)
+        assertNull(unavailable.state.brightness)
+        val contact = client.parse(mapper.valueToTree(listOf(row("on") + mapOf("entity" to "binary_sensor.door", "class" to "door")))).single()
+        assertEquals(listOf("contact.read"), contact.capabilities)
+        assertEquals(true, contact.state.on)
+    }
+
+    @Test
+    fun `unknown missing and mixed sensor data remain semantically distinct`() {
+        val unknown = client.parse(mapper.valueToTree(listOf(row("unknown")))).single()
+        assertEquals(DeviceAvailability.UNKNOWN, unknown.availability)
+        assertNull(unknown.state.temperatureCelsius)
+        val mixed = client.parse(mapper.valueToTree(listOf(row(), row("unavailable") + mapOf("entity" to "sensor.battery", "class" to "battery", "unit" to "%")))).single()
+        assertEquals(DeviceAvailability.DEGRADED, mixed.availability)
+        assertEquals(21.5, mixed.state.temperatureCelsius)
+        assertNull(mixed.state.battery)
+        val fahrenheit = client.parse(mapper.valueToTree(listOf(row("68") + mapOf("unit" to "\u00b0F")))).single()
+        assertEquals(20.0, fahrenheit.state.temperatureCelsius)
+        assertEquals(Instant.parse("2026-09-06T10:00:00Z"), fahrenheit.state.measuredAt)
+    }
+
+    @Test
+    fun `credential connection is not reconciled as a missing physical device`() {
+        val owner = UUID.randomUUID()
+        val config = IntegrationConnection(UUID.randomUUID(), owner, HOME_ASSISTANT_PROVIDER, "Home Assistant", "192.168.1.5", byteArrayOf(1), byteArrayOf(2), 1, Instant.now(), Instant.now())
+        val connections = mock(IntegrationConnectionRepository::class.java)
+        val rooms = mock(RoomRepository::class.java)
+        val observations = mock(DeviceObservationRepository::class.java)
+        `when`(connections.findAll(owner)).thenReturn(listOf(config))
+        `when`(rooms.all(owner)).thenReturn(emptyList())
+        HomeAssistantReconciler(connections, rooms, observations, mock(ImportedDeviceRepository::class.java)).reconcile(owner, emptyList())
+        verifyNoInteractions(observations)
+    }
+
+    @Test
     fun `configuration is owner scoped and rejects unsafe destinations`() {
         val owner = UUID.randomUUID()
         val config = HomeAssistantConfiguration("http://192.168.1.10:8123", "test-token", owner.toString())
