@@ -196,7 +196,7 @@ class PersonalCalendarDisclosureIntegrationTest @Autowired constructor(
         private val temp = Files.createTempDirectory("kyrion-disclosure-test-")
         private val bootstrap = temp.resolve("bootstrap").also { Files.writeString(it, secret) }
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
-        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withStartupTimeout(Duration.ofMinutes(3))
+        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw")).withStartupTimeout(Duration.ofMinutes(3))
         @DynamicPropertySource @JvmStatic fun properties(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)

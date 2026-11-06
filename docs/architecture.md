@@ -191,7 +191,7 @@ website for kyrion.ch. It statically renders English/German landing, product,
 about, development, documentation-preview and contact pages. Optional central
 OIDC login uses a website-only BFF and separate central session database; it
 does not depend on a local Core or grant local access. See
-[ADR 0037](adr/0037-optional-central-identity.md). Its public content
+[ADR 0039](adr/0039-optional-central-identity.md). Its public content
 distinguishes implemented prototype capabilities from experimental/planned work.
 
 The website uses Tailwind CSS, a local shadcn/ui Button and its own theme tokens.

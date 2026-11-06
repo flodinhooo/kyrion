@@ -2,7 +2,7 @@
 
 The central account is optional. Existing local users retain their usernames,
 Argon2id credentials, sessions, membership and roles. Enabling central login does
-not enroll or migrate anyone. [ADR 0037](adr/0037-optional-central-identity.md)
+not enroll or migrate anyone. [ADR 0039](adr/0039-optional-central-identity.md)
 records the provider and deployment decision.
 
 ## Ownership and identifiers
@@ -102,12 +102,16 @@ the operation credential in a path-scoped HttpOnly cookie and requires CSRF and
 same-origin mutation checks, including anonymous device-login requests. Neither
 device codes nor opaque Core sessions are returned to browser JavaScript.
 
-V44 adds `central_identity_link` and `central_auth_session` only. Unique keys and
+V46 adds `central_identity_link` and `central_auth_session` only. Unique keys and
 a transaction advisory lock serialize mapping/login/removal; audit and mutation
-share the transaction. Historical migrations are untouched. V42/V43 belong to
-parallel Gateway/calendar work: integrate all migrations before installing this
-branch, because installing V44 alone and later introducing lower migrations is
-not an approved upgrade path. No Flyway repair or out-of-order bypass is provided.
+share the transaction. Committed master's historical migrations are untouched:
+V42 is Gateway, V43 joint Calendar and V44 personal disclosure. V45 is reserved
+for pending household delivery; integrate it before any V46 rollout. The earlier
+isolated Identity V44 is retained as a historical test fixture outside active
+Flyway locations. An installation with that divergent history fails validation
+and needs a separately reviewed compatibility plan. See
+[ADR0040](adr/0040-central-identity-canonical-migration-integration.md). No checksum
+repair or out-of-order bypass is provided.
 
 ## Installer and operational interfaces
 

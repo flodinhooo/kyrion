@@ -92,7 +92,7 @@ does not bypass the authority boundary.
 
 ## Optional central Kyrion identity
 
-[ADR 0037](adr/0037-optional-central-identity.md) adds optional Keycloak OIDC.
+[ADR 0039](adr/0039-optional-central-identity.md) adds optional Keycloak OIDC.
 Local passwords, setup, invitations, membership and permissions remain Core-owned
 and usable offline. Central identity links use unique `(issuer, subject)` pairs,
 never matching email or username. The public website has a separate central

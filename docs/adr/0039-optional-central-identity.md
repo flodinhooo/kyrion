@@ -1,4 +1,4 @@
-# ADR 0037: Optional central identity with explicit local links
+# ADR 0039: Optional central identity with explicit local links
 
 Status: accepted for implementation; no production infrastructure is implied.
 
@@ -8,8 +8,11 @@ At `fe5e65a`, Core implements Argon2id passwords, opaque hashed sessions,
 one-time host-secret OWNER setup, invitations, local recovery, active Space
 membership and a single-Space runtime guard. The website is public with no
 accounts or identity database. No OIDC provider exists in source or configured
-infrastructure. Uncommitted primary-checkout V42/V43 belong to Gateway/calendar
-work and are excluded; this change reserves additive V44 and ADR 0037.
+infrastructure. The initial isolated branch excluded parallel V42/V43 and used
+feature V44/ADR0037. Canonical integration now includes committed master and
+uses additive V46/ADR0039. [ADR0040](0040-central-identity-canonical-migration-integration.md)
+supersedes that initial numbering and defines strict rejection of divergent
+feature V44 histories; no production rollout of that branch was performed.
 
 ## Decision
 

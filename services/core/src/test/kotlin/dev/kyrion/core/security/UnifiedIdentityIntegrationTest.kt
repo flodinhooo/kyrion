@@ -74,7 +74,7 @@ class UnifiedIdentityIntegrationTest @Autowired constructor(
         verify(provider, never()).startDevice()
     }
 
-    @Test fun `additive V44 upgrade preserves local credential session membership and bootstrap`() {
+    @Test fun `additive identity upgrade preserves local credential session membership and bootstrap`() {
         val schema = "identity_upgrade_" + java.util.UUID.randomUUID().toString().replace("-", "")
         fun flyway(target: String? = null) = org.flywaydb.core.Flyway.configure()
             .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
