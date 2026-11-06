@@ -1,5 +1,9 @@
 # Isolated Keycloak development environment
 
+For the separate, gated home-hosted pilot (production mode, fixed HTTPS issuer,
+loopback-only staging), see [PILOT.md](PILOT.md). Do not publish this development
+Compose project or development realm to the internet.
+
 For the complete real Website→Web→Core→Keycloak browser flow, including
 registration/mail verification and provider outage, use
 [full local acceptance](FULL_ACCEPTANCE.md). It has its own project, ports and
