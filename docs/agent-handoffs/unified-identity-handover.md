@@ -1,5 +1,42 @@
 # Unified identity handover
 
+## Master closeout after chats A/B (2026-11-06)
+
+The owner explicitly authorized integration into primary `master` after the A/B
+closeout. This supersedes older statements that master was not updated. Starting
+HEAD was `b0932ab`, clean; both Identity worktrees had clean tracked/untracked
+source at `dcc2dee` (integration) and `fe25b0d` (original feature).
+
+- `3ea5179` merges the complete integration branch, preserving all later Calendar
+  own-copy/time/dialog work and artifact-bound schema tooling from A/B.
+- `4df369c` preserves original feature ancestry. Its source was already
+  cherry-picked, reviewed and corrected in integration; no duplicate source or
+  obsolete feature-only V44 is reintroduced.
+- `73ee902` records final build isolation, cold-start acceptance assertions and
+  the regression preventing a migration plan's approved target-version change.
+- Both complete source histories belong to master. Worktrees and branch refs
+  remain intact with private configurations and historical ignored evidence.
+  No dirty or untracked source was discarded. A verified complete Git bundle is
+  under ignored `.run/final-integration/identity-source-history.bundle`; private
+  configuration copies and hashes are under ignored
+  `.run/stabilization/identity-worktree-preservation/`. Originals remain in place.
+  Credentials, caches and builds are not committed or copied over personal runtime
+  configuration. Retained worktrees do not imply outstanding source integration.
+- Calendar keeps ADR0039 and schema tooling ADR0040. Identity now uses ADR0041
+  and the canonical-history decision ADR0042, with references updated.
+- All master V1–V45 SQL and Identity V46 remain unchanged. Schema-only tooling
+  retains default target45 and adds explicit `--target-version 46`; plans bind
+  that choice. Only exact V1–V45 or V1–V46 catalogs are supported. Divergent old
+  Identity V44 still fails validation without repair.
+- Website supports an isolated `KYRION_BUILD_DIRECTORY`; full real-service
+  acceptance uses independent Website/Web dev build directories.
+- Personal services, databases and private runtime settings are not replaced.
+  Live rollout, original-data restore and hardware/provider acceptance retain
+  the separate gates in the A/B closeout.
+
+Final verification and remaining work:
+[master integration results](2026-11-06-identity-master-integration.md).
+
 ## Current integration — 2026-11-06
 
 This section supersedes the earlier isolated-feature integration blockers below.

@@ -1,5 +1,18 @@
 # Schema-only V45 upgrade and recovery
 
+## Identity integration supplement
+
+Master now also contains optional Identity V46. Earlier V45 artifact hashes and
+evidence remain specific to those artifacts. The tool retains target45 as default
+and supports explicit `--target-version 46` with an exact V1–V46 catalog. A plan
+binds the target version and must be recreated and reviewed for a changed artifact,
+tool or target. All maintenance-fence, original-key, backup/restore, provenance
+and hardware gates below remain required. No live rollout is authorized or
+performed by source integration. Divergent feature-only Identity V44 needs its
+own reviewed compatibility plan; validation is not bypassed.
+
+Combined evidence: [Identity master integration](agent-handoffs/2026-11-06-identity-master-integration.md).
+
 Status: implementation and synthetic rehearsal, not permission to apply to an
 installation. This supplements, without replacing, the original-data/key and
 hardware gates in [Gateway rollout](gateway-authority-rollout.md). The earlier

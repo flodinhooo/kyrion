@@ -31,12 +31,12 @@ provides a local SMTP catcher, requires a password and issues 60-second tokens
 to exercise actual expiry. Password setup can occur after email verification;
 the browser suite handles that actual provider flow and remembered-user reauth.
 
-Build the current combined Core before acceptance:
+Build and verify the current combined Core before acceptance. The runner pins
+the boot JAR required by the schema-only rehearsal and holds the shared Core
+verification lock; an unconfigured plain `gradlew test` cannot supply that proof:
 
 ```powershell
-Push-Location services/core
-./gradlew.bat test bootJar --console=plain
-Pop-Location
+& infrastructure/dev/Test-CoreSchemaMigration.ps1 -JavaHome $env:JAVA_HOME -FullCoreSuite
 Push-Location apps/website
 pnpm exec playwright test --config full-identity.config.ts
 Pop-Location
@@ -44,7 +44,8 @@ Pop-Location
 
 The Playwright configuration starts this checkout's Core JAR on loopback 18092,
 Website on localhost 3119 and Web on localhost 3219; each refuses to reuse an
-unrelated existing process. The wrapper provisions a separate test bootstrap
+unrelated existing process. Both Next applications use separate acceptance build
+directories, leaving personal dev/build output in place. The wrapper provisions a separate test bootstrap
 proof and credential/audit keys under ignored `.run/stabilization/` and selects
 only the acceptance Core database at 15559. The website session DB is at 15549;
 the provider DB has no published port. Mailpit's UI/API is localhost 18025, and
@@ -68,7 +69,8 @@ used: local login uses the real public client's outbound device grant.
   works without the provider. The local user and OWNER grants survive. `finally`
   starts that test provider again.
 
-Tracing, video and screenshots are disabled; navigation logs omit query strings,
+Tracing, video, screenshots and automatic failure DOM snapshots are disabled;
+navigation logs omit query strings,
 and central response logs include machine status/code only. Test usernames/mail
 are synthetic. The acceptance script uses SQL only against its fixed isolated
 database to inspect user/role/link preservation, not to manufacture credentials,
