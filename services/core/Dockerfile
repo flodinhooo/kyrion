@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /workspace
 COPY gradle gradle
 COPY gradlew settings.gradle.kts build.gradle.kts ./
-RUN chmod +x gradlew
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 COPY src src
 RUN ./gradlew bootJar --no-daemon
 
