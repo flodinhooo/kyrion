@@ -1,10 +1,12 @@
 # Calendar synchronization
 
 The [Home family calendar plan](home-family-calendar-plan.md) separates native
-joint events from later personal-calendar grants and provider delivery. The first
-native slice is implemented and automatically tested; [Assignment A's results](agent-handoffs/2026-11-06-home-calendar-results.md)
-record its current evidence and deployment boundary. It does not remove the
-personal Google connection restrictions described below.
+joint events, personal read disclosure and explicit selected-recipient delivery.
+Each source slice has its own consent boundary and deployment evidence. The
+[native results](agent-handoffs/2026-11-06-home-calendar-results.md),
+[read-disclosure results](agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md)
+and [delivery results](agent-handoffs/2026-11-06-household-calendar-delivery-results.md)
+record them separately. Personal Google credentials remain server-side.
 
 ## Native joint household events
 
@@ -17,9 +19,9 @@ and Web confirmation. Participant lists are fixed in this initial slice.
 
 The existing Web calendar combines `local`, `google` and `household` sources.
 Shared-event creation offers an explicit participant list and an everyone shortcut;
-the person filter changes only the display of these shared events. No native
-joint event is written to a personal provider calendar. Those deliveries require
-separate voluntary destination grants in HOME-03/04. Calendar role permissions
+the person filter changes only display. Saving a native event never writes a
+personal calendar. Separate manual delivery requires a voluntary destination grant
+and explicit recipient selection/confirmation as described below. Calendar role permissions
 must already be assigned; this migration does not expand any existing role.
 For first use, the owner grants calendar read/create/update/delete operations as
 appropriate through the existing Roles UI. A selected read-only member can view
@@ -116,6 +118,81 @@ preserving fields outside the bounded editor. All-day events and recurring
 instances are displayed read-only in this slice.
 
 ## Explicit linked synchronization
+
+### Manual delivery of native household events (HOME-04)
+
+This is separate from legacy local-event synchronization below and personal read
+disclosure above. It follows [ADR 0038](adr/0038-selected-household-calendar-delivery.md).
+In Calendar, expand **Receive shared events in my Google calendar**, select one
+actual writable calendar and explicitly enable/save the destination. This permits
+eligible participants to publish only joint events in which the credential owner
+is also a participant. The destination owner needs calendar read/create/update;
+an editor needs read/update. HOME membership must remain active. No destination
+is opted in by migration, and OWNER cannot configure another account's destination.
+
+Save a shared event first, then reopen it and select recipients under **Send saved
+event to selected calendars**. Missing destinations are visible. Confirm sending.
+Web makes one explicit Core request per selected destination, in sequence, and
+shows each result. It never sends unsaved form changes or automatically publishes
+on creation, local edit, refresh, polling or startup. Closing a view stops requests
+not yet sent; an already accepted HTTP request may still finish. On an interrupted
+response, refresh statuses before retrying. Calendar edits and per-target delivery
+are separate operations, so one recipient's failure does not undo another's copy.
+
+- `GET/PUT /v1/calendar/household-destination`: own current setting. PUT requires
+  exactly `{calendarId: string|null, revision: nonnegative integer}`. Null revokes
+  without provider contact. Positive consent validates the actual current writable
+  calendar; aliases such as `primary` are not accepted. Same unchanged active
+  destination is idempotent. Revoke/re-enable rotates the grant but reuses an
+  existing copy for the same concrete connection/calendar pair.
+- `GET /v1/calendar/household-events/{id}/deliveries`: participant-editor-only
+  saved revision, current recipient usernames/opaque target IDs and prior statuses.
+- `POST` on that path requires exactly `{targetId: UUID, revision: integer}`.
+  Core authorizes/reserves one attempt and performs its provider work outside DB
+  transactions. Each provider operation and token-refresh retry rechecks the actual
+  actor, participant, recipient role/Space, consent, connection, revision and lease.
+  A five-minute lease and per-attempt fencing token block concurrent attempts and
+  superseded finalization. Expired work is never automatically resumed.
+- Result states: `RUNNING`, `SYNCED`, `OUTDATED` (derived from a newer native
+  revision), `ERROR`, `CONFLICT`, `BLOCKED`, `NEEDS_REVIEW`. Only a verified matching
+  provider copy records the delivered revision. Revocation/change during a write
+  cannot recall that HTTP call; it never reports the changed authority as success.
+  A missing/disabled destination does not silently redirect to another calendar.
+- Stable provider IDs/markers and stored ETags prevent duplicate inserts and blind
+  overwrites. A matching desired remote copy can recover a lost create/PATCH
+  response without another write. Foreign markers, divergent external changes,
+  converted recurrence/all-day events and missing confirmed copies are conflicts.
+  A missing copy after an uncertain first insert requires review, not recreation.
+  Definitive provider denials preserve a safe manual retry; rate limits are not
+  automatically retried. No remote-to-native merge is performed.
+- Deleting a native event remains creator-only and revisioned. Live delivery leases
+  block deletion. If tracking exists, Core requires `retainExternalCopies=true`
+  and Web explicitly confirms that all existing/uncertain personal copies remain
+  independent and receive no further updates. Retained-copy audit is atomic with
+  deleting local tracking. No external DELETE is called by this feature.
+
+V45 contains only new destination-generation and delivery tables with account,
+Space, connection and grant constraints. Destination changes/revocation preserve
+old copy history; disconnect nulls the old connection, and a new connection needs
+fresh consent. Browser delivery responses contain no provider IDs, ETags or
+credentials and use no-store. Core audits configuring credential owner, actual
+publishing editor, attempt/copy and correlation without event content or tokens.
+
+`CALENDAR_DELIVERY_INVALID` is 400; unavailable/private/foreign targets use
+`CALENDAR_DELIVERY_UNAVAILABLE` (404), stale revisions use
+`CALENDAR_DELIVERY_STALE` (409), concurrent attempts use `CALENDAR_DELIVERY_BUSY`
+(409), and native deletion without retention acknowledgement uses
+`CALENDAR_DELIVERY_RETENTION_REQUIRED` (409). Provider/conflict/revocation outcomes
+are persisted per target with stable codes, rather than replacing partial failure
+with a blanket success. Existing RBAC denials remain 403.
+
+This first slice is manual Google delivery of timed native events. Remote-copy
+deletion, participant changes, provider-to-native reconciliation, automatic delivery,
+additional providers and duplicate suppression in Google overlays remain separate
+work. No live provider write or rollout is implied. A V45 original-data restore /
+upgrade rehearsal is still required; the Gateway migration rehearsal through V43
+does not certify it. Older Core binaries do not enforce the new destination or
+retention policies: an in-place binary downgrade is not an accepted rollback.
 
 For a local timed event, select **Synchronize this event with Google**, select a
 writable target calendar, save, then choose **Synchronize**. Each opted-in event

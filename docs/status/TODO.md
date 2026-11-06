@@ -7,14 +7,16 @@ separates Home/Calendar work from Gateway authority, including shared-file,
 migration and Git/build coordination. Both assignments were started explicitly by
 the owner and implemented on master without creating additional worktrees.
 
-Latest parallel source work is implemented and jointly verified: **386 Core
-tests**, zero failures/errors/skips, plus bootJar; Web **218 tests**, ESLint,
+Latest source work is implemented and jointly verified: **410 Core
+tests**, zero failures/errors/skips, plus bootJar; Web **225 tests**, ESLint,
 TypeScript and production build. Recorded Core before/after source hashes match.
 See [Home results](../agent-handoffs/2026-11-06-home-calendar-results.md),
 [personal calendar disclosure](../agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md) and
 [Gateway results](../agent-handoffs/2026-11-06-gateway-authority-results.md).
-V42–V44 and the new runtime behavior have **not** been deployed. The Gateway
-dump/restore rehearsal targets V43; the full source suite and artifact include V44.
+See also [manual household delivery](../agent-handoffs/2026-11-06-household-calendar-delivery-results.md)
+and the [Gateway rollout preparation](../agent-handoffs/2026-11-06-gateway-rollout-results.md).
+V42–V45 and the new runtime behavior have **not** been deployed. The Gateway
+dump/restore rehearsal targets V43; the full source suite and artifact include V45.
 
 - [x] HOME-01/02 native slice: explicit participant selection, jointly editable
   Kyrion household events, revision conflicts, creator-only deletion, person
@@ -23,8 +25,13 @@ dump/restore rehearsal targets V43; the full source suite and artifact include V
   private/availability/details projections, revisioned consent/revocation,
   connection-bound grants and read-only Web overlay. Installation roles imply no
   personal access. Further providers and simultaneous source overlays remain follow-up.
-- [ ] HOME-04: explicit participant provider destinations and owner-approved
-  writes, per-target status, idempotent retries and conflict handling.
+- [x] HOME-04 first manual Google slice: credential-owner opt-in destinations,
+  explicit saved-event recipient selection, separate per-target status and retry,
+  stable copy identity, conditional updates and in-flight revocation checks.
+  Native deletion explicitly retains personal copies; no provider DELETE or
+  automatic delivery is supplied.
+- [ ] HOME-05: duplicate suppression of managed provider copies, real family/browser
+  and disposable-provider acceptance, DST/all-day/recurrence usability as scoped.
 - [ ] Coordinate data-safe runtime rollout and real browser/household acceptance.
   Gateway V42 requires explicit re-saving of historical button grants; legacy
   pending commands must not acquire inferred authority during rollout.

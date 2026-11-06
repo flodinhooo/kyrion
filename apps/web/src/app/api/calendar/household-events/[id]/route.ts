@@ -10,6 +10,8 @@ async function mutate(request: Request, context: Context, method: "PUT" | "DELET
   if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return Response.json({ code: "HOUSEHOLD_CALENDAR_INVALID" }, { status: 400 });
   const query = new URLSearchParams();
   if (method === "DELETE") query.set("revision", new URL(request.url).searchParams.get("revision") ?? "");
+  if (method === "DELETE" && new URL(request.url).searchParams.has("retainExternalCopies"))
+    query.set("retainExternalCopies", new URL(request.url).searchParams.get("retainExternalCopies") ?? "");
   try {
     const response = await fetch(`${CORE_SERVICE_URL}/v1/calendar/household-events/${id}${query.size ? `?${query}` : ""}`, {
       method, headers: { Authorization: `Bearer ${auth.token}`, ...(method === "PUT" ? { "Content-Type": "application/json" } : {}) },

@@ -14,6 +14,9 @@ import { editorForCalendarDate, editorForEvent, isCalendarEvent, canEditCalendar
 import { CalendarSyncSettings, type CalendarSchedule } from "@/features/calendar/sync-settings";
 import { calendarMessages } from "@/features/calendar/messages";
 import { PersonalCalendarDisclosure } from "@/features/calendar/personal-disclosure";
+import { HouseholdDestination } from "@/features/calendar/household-destination";
+import { HouseholdDeliveriesPanel } from "@/features/calendar/household-deliveries";
+import { householdEditorIsDirty } from "@/features/calendar/delivery-model";
 
 type RemoteCalendar = { id: string; summary: string; accessRole: string; primary?: boolean };
 function calendarList(value: unknown): RemoteCalendar[] {
@@ -130,7 +133,7 @@ export default function CalendarPage() {
     try {
       const remote = editor.source === "google";
       const query = new URLSearchParams({ calendarId, etag: editor.etag ?? "" });
-      const url = editor.source === "household" ? `/api/calendar/household-events/${encodeURIComponent(editor.id.slice(10))}?revision=${editor.revision}` :
+      const url = editor.source === "household" ? `/api/calendar/household-events/${encodeURIComponent(editor.id.slice(10))}?revision=${editor.revision}&retainExternalCopies=true` :
         remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id.slice(7))}?${query}` : `/api/calendar/events/${editor.id}${editor.revision == null ? "" : `?revision=${editor.revision}`}`;
       const response = await browserRequest(url, { method: "DELETE", headers: csrfHeader() });
       if (!response.ok) throw new Error();
@@ -165,6 +168,7 @@ export default function CalendarPage() {
     </header>
     {canSync && <CalendarSyncSettings schedule={schedule} onChange={setSchedule} />}
     <PersonalCalendarDisclosure locale={locale} canUpdate={canUpdate} calendars={calendars} range={range} onEvents={setSharedEvents} />
+    <HouseholdDestination locale={locale} canUpdate={canUpdate} canEnable={canCreate && canUpdate} calendars={calendars} />
     {membersReady && householdState === "ready" && <label>{text.participantFilter}<select value={personFilter} onChange={event => setPersonFilter(event.target.value)}>
       <option value="">{text.allPeople}</option>{members.map(member => <option key={member.id} value={member.id}>{member.username}</option>)}
     </select></label>}
@@ -208,6 +212,9 @@ export default function CalendarPage() {
       <label>{text.description}<textarea maxLength={10000} value={editor.description} onChange={event => setEditor({ ...editor, description: event.target.value })} /></label>
       <label>{text.start}<input required type="datetime-local" value={editor.startsAt} onChange={event => setEditor({ ...editor, startsAt: event.target.value })} /></label>
       <label>{text.end}<input required type="datetime-local" min={editor.startsAt} value={editor.endsAt} onChange={event => setEditor({ ...editor, endsAt: event.target.value })} /></label>
+      {editor.source === "household" && editor.id && selectedEvent && <HouseholdDeliveriesPanel key={`${editor.id}:${editor.revision}`}
+        eventId={editor.id.slice(10)} revision={editor.revision ?? 0} dirty={householdEditorIsDirty(editor, selectedEvent)}
+        disabled={saving} locale={locale} onBusyChange={setSaving} />}
       {editor.source !== "google" && editor.source !== "household" && <label className="calendar-checkbox"><input type="checkbox" checked={editor.syncToGoogle} disabled={!canSync} onChange={event => setEditor({ ...editor, syncToGoogle: event.target.checked })} />{text.export}</label>}
       {editor.source !== "google" && editor.source !== "household" && editor.syncToGoogle && <label>{text.target}<select required value={editor.googleCalendarId ?? ""} onChange={event => setEditor({ ...editor, googleCalendarId: event.target.value })}>
         <option value="">{text.select}</option>{writable.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
