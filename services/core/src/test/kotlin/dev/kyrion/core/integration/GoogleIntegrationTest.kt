@@ -82,6 +82,24 @@ class GoogleIntegrationTest {
         assertEquals(0,oauth.writes)
     }
 
+    @Test
+    fun `disclosure expected connection mismatch never refreshes or reads another connection`() {
+        val owner = UUID.randomUUID()
+        val repository = GoogleConnections()
+        val grants = mock(JdbcIntegrationCapabilityGrantRepository::class.java)
+        val oauth = FakeGoogleOAuth()
+        val service = GoogleIntegrationService(repository, grants, CredentialCipher(temp.resolve("disclosure-key").toString()), oauth,
+            "client", "secret", "http://localhost.test/callback")
+        service.complete(owner, "code", query(service.authorize(owner).authorizationUrl, "state"))
+        val connection = repository.findAll(owner).single()
+        `when`(grants.findAll(owner, connection.id)).thenReturn(listOf(IntegrationCapabilityGrant(owner, connection.id, "calendar.read", true, Instant.now(), Instant.now())))
+        assertThrows<GoogleDisconnectedException> { service.events(owner, expectedConnection = UUID.randomUUID()) }
+        assertEquals(0, oauth.refreshes)
+        assertTrue(oauth.readTokens.isEmpty())
+        service.events(owner, expectedConnection = connection.id)
+        assertEquals(1, oauth.readTokens.size)
+    }
+
     private fun query(url: String, key: String) = java.net.URI(url).rawQuery!!.split("&").map { it.split("=", limit = 2) }.associate { it[0] to it[1] }.getValue(key)
 }
 

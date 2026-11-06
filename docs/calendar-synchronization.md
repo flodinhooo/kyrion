@@ -51,6 +51,51 @@ Web sends the local revision on edits/deletion; stale revisions produce
 
 ## Reading external calendars
 
+### Voluntary household disclosure (HOME-03)
+
+The new personal disclosure slice follows [ADR 0037](adr/0037-voluntary-personal-calendar-disclosure.md).
+On Calendar, expand **Share my personal calendars**, select Private, Event times
+only or Event details for each actual Google calendar, and explicitly save. Sharing
+requires confirmation and applies to all current active HOME members with calendar
+read permission; it is not a per-recipient grant. No calendar is shared by default.
+Only the connecting account may change its settings, with calendar read/update
+permissions. OWNER has no override. Positive sharing requires a readable actual
+Google calendar ID; the `primary` alias is rejected. Existing roles are unchanged.
+
+Select one **Personal calendar shared with me** to overlay its events on the
+combined calendar. Person filtering changes display only. Shared events are always
+read-only; joint native event editing remains separate. Availability returns only
+opaque IDs and event time boundaries, with a localized Occupied label in Web.
+Details additionally returns title/description. No provider IDs, ETags, calendar
+names, emails, token or provider marker are exposed in either shared projection.
+All-day dates retain their exclusive end date. This event-interval view is not yet
+an authoritative free/busy or free-slot suggestion API.
+
+Endpoints are `/v1/calendar/personal-disclosure` (GET own settings, PUT revisioned
+change), `/sources` (GET visible sources) and `/sources/{id}/events?start=...&end=...`
+(GET redacted range, at most 400 days). Existing own Google endpoints stay personal;
+no other-member credential proxy or shared mutation endpoint is added. Invalid
+inputs use `CALENDAR_DISCLOSURE_INVALID` (400), stale settings or in-flight changes
+use `CALENDAR_DISCLOSURE_CONFLICT` (409), and absent/private/foreign sources use
+`CALENDAR_DISCLOSURE_NOT_FOUND` (404). Missing permissions use existing 403 errors.
+
+V44 stores explicit opt-ins bound to the credential owner, Space, actual connection
+and calendar, with optimistic revisions and transactional audit. Disconnect deletes
+grants through a foreign key; a new connection requires fresh consent. Setting
+Private does not contact Google and works during a provider outage. Removing the
+source owner's or reader's calendar permission, deactivating accounts or suspending
+the Space prevents subsequent access. Re-enabling roles can restore an existing
+opt-in; use Private or disconnect to revoke the opt-in itself.
+
+Core checks authorization before HTTP and again afterwards under the existing
+workspace mutation lock. A changed grant invalidates the in-flight result. Shared
+representations are never persisted/cached. Web clears previous shared data before
+refresh and on errors, polls every 30 seconds while visible, and refreshes on focus.
+Revocation cannot erase information already read or copied. No AI/Voice context
+consumer was added; future consumers must use the same redacted boundary. Further
+providers, multiple simultaneous overlays, destination writes and real provider
+acceptance remain follow-up work. Source delivery does not imply a runtime rollout.
+
 The direct Web Google event GET forwards `calendarId`, `start` and `end` to Core
 without dropping calendar selection or timezone offsets. Only these bounded
 filters are forwarded and reads are uncached. Live October 30 acceptance after

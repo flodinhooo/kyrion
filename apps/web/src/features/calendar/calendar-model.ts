@@ -1,4 +1,4 @@
-export type CalendarSource = "local" | "google" | "household";
+export type CalendarSource = "local" | "google" | "household" | "shared";
 
 export type CalendarEvent = {
   id: string;
@@ -22,6 +22,8 @@ export type CalendarEvent = {
   createdBy?: string;
   canEdit?: boolean;
   canDelete?: boolean;
+  sharedBy?: string;
+  disclosure?: "AVAILABILITY" | "DETAILS";
 };
 
 export type CalendarEditor = {
@@ -81,7 +83,8 @@ export function isCalendarEvent(value: unknown): value is CalendarEvent {
   return typeof item.id === "string" && typeof item.title === "string" &&
     typeof item.startsAt === "string" && Number.isFinite(Date.parse(item.startsAt)) &&
     typeof item.endsAt === "string" && Number.isFinite(Date.parse(item.endsAt)) &&
-    (item.source === "local" || item.source === "google" || (item.source === "household" &&
+    (item.source === "local" || item.source === "google" || (item.source === "shared" && typeof item.sharedBy === "string" &&
+      (item.disclosure === "AVAILABILITY" || item.disclosure === "DETAILS")) || (item.source === "household" &&
       Array.isArray(item.participantIds) && item.participantIds.every(id => typeof id === "string") &&
       typeof item.createdBy === "string" && typeof item.canEdit === "boolean" && typeof item.canDelete === "boolean" &&
       Number.isSafeInteger(item.revision) && (item.revision ?? -1) >= 0));
@@ -108,13 +111,14 @@ export function normalizeHouseholdEvents(value: unknown): CalendarEvent[] | null
 }
 
 export function canEditCalendarEvent(event: CalendarEvent, hasUpdate: boolean): boolean {
+  if (event.source === "shared") return false;
   if (!hasUpdate) return false;
   if (event.source === "household") return event.canEdit === true;
   return event.source === "local" || (!event.allDay && !event.recurring && !!event.etag);
 }
 
 export function canDeleteCalendarEvent(event: CalendarEvent, hasDelete: boolean): boolean {
-  return hasDelete && (event.source !== "household" || event.canDelete === true);
+  return hasDelete && event.source !== "shared" && (event.source !== "household" || event.canDelete === true);
 }
 
 export function householdEventPayload(editor: CalendarEditor, timeZone: string) {

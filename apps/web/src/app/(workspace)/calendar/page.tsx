@@ -13,6 +13,7 @@ import { editorForCalendarDate, editorForEvent, isCalendarEvent, canEditCalendar
   householdMembers, householdEventPayload, type HouseholdMember, type CalendarEditor, type CalendarEvent } from "@/features/calendar/calendar-model";
 import { CalendarSyncSettings, type CalendarSchedule } from "@/features/calendar/sync-settings";
 import { calendarMessages } from "@/features/calendar/messages";
+import { PersonalCalendarDisclosure } from "@/features/calendar/personal-disclosure";
 
 type RemoteCalendar = { id: string; summary: string; accessRole: string; primary?: boolean };
 function calendarList(value: unknown): RemoteCalendar[] {
@@ -26,6 +27,8 @@ export default function CalendarPage() {
   const text = calendarMessages[locale] ?? calendarMessages.en;
   const [schedule, setSchedule] = useState<CalendarSchedule | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [sharedEvents, setSharedEvents] = useState<CalendarEvent[]>([]);
+  const [sharedDetailId, setSharedDetailId] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [googleState, setGoogleState] = useState("loading");
   const [googleCode, setGoogleCode] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export default function CalendarPage() {
   const canSync = canCreate && canUpdate && canDelete;
   const writable = calendars.filter(item => ["owner", "writer"].includes(item.accessRole));
   const selectedEvent = events.find(item => item.id === editor?.id);
+  const sharedDetail = sharedEvents.find(item => item.id === sharedDetailId);
   const statuses: Record<string, string> = { local: text.localStatus, pending: text.pending, synced: text.synced,
     read_error: text.error, error: text.error, conflict: text.conflict, configuration_required: text.configuration_required };
 
@@ -141,10 +145,11 @@ export default function CalendarPage() {
       setMessage(text.syncDone); await load();
     } catch { setMessage(text.syncError); } finally { setSaving(false); }
   }
-  const filtered = events.filter(event => !personFilter || event.source !== "household" || event.participantIds?.includes(personFilter));
+  const combinedEvents = [...events, ...sharedEvents];
+  const filtered = combinedEvents.filter(event => !personFilter || (event.source === "shared" ? event.sharedBy === personFilter : event.source !== "household" || event.participantIds?.includes(personFilter)));
   const visible = filtered.filter(event => !range || (event.allDay ? event.endsAt > range.start.slice(0, 10) && event.startsAt < range.end.slice(0, 10) : Date.parse(event.endsAt) > Date.parse(range.start) && Date.parse(event.startsAt) < Date.parse(range.end)));
   const calendarEvents = filtered.map(event => ({ id: event.id,
-    title: `${event.source === "household" ? `${text.jointSource} · ` : event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
+    title: `${event.source === "shared" ? `${text.sharedSource} · ` : event.source === "household" ? `${text.jointSource} · ` : event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
     start: event.startsAt, end: event.endsAt, allDay: event.allDay,
     classNames: event.source === "google" ? ["calendar-event-google"] : ["calendar-event-local"],
   }));
@@ -159,6 +164,7 @@ export default function CalendarPage() {
       </div>
     </header>
     {canSync && <CalendarSyncSettings schedule={schedule} onChange={setSchedule} />}
+    <PersonalCalendarDisclosure locale={locale} canUpdate={canUpdate} calendars={calendars} range={range} onEvents={setSharedEvents} />
     {membersReady && householdState === "ready" && <label>{text.participantFilter}<select value={personFilter} onChange={event => setPersonFilter(event.target.value)}>
       <option value="">{text.allPeople}</option>{members.map(member => <option key={member.id} value={member.id}>{member.username}</option>)}
     </select></label>}
@@ -171,7 +177,7 @@ export default function CalendarPage() {
         buttonText={{ today: text.today, month: text.month, week: text.week, day: text.day }}
         datesSet={info => { setRange(current => current?.start === info.startStr && current?.end === info.endStr ? current : { start: info.startStr, end: info.endStr }); }}
         dateClick={info => { if (canCreate) setEditor(editorForCalendarDate(info.date)); }} events={calendarEvents}
-        eventClick={info => { const found = events.find(event => event.id === info.event.id); if (found && canEditCalendarEvent(found, canUpdate)) setEditor(editorForEvent(found)); else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
+        eventClick={info => { const found = combinedEvents.find(event => event.id === info.event.id); if (found?.source === "shared") setSharedDetailId(found.id); else if (found && canEditCalendarEvent(found, canUpdate)) setEditor(editorForEvent(found)); else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
       {state === "loading" && <p role="status">{text.loading}</p>}
       {state === "error" && <p role="alert">{text.loadError}</p>}
       {state === "ready" && visible.length === 0 && <p>{text.empty}</p>}
@@ -181,6 +187,13 @@ export default function CalendarPage() {
       {householdState === "ready" && !membersReady && <p role="status">{text.membersUnavailable}</p>}
       {message && <p role="status">{message}</p>}
     </article>
+    {sharedDetail && <div className="calendar-dialog-backdrop"><article className="calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="shared-calendar-detail-title">
+      <h2 id="shared-calendar-detail-title">{sharedDetail.title}</h2><p>{text.sharedReadOnly}</p>
+      {sharedDetail.description && <p style={{ whiteSpace: "pre-wrap" }}>{sharedDetail.description}</p>}
+      <p>{text.start}: {sharedDetail.allDay ? sharedDetail.startsAt : new Date(sharedDetail.startsAt).toLocaleString(locale)}</p>
+      <p>{text.end}: {sharedDetail.allDay ? sharedDetail.endsAt : new Date(sharedDetail.endsAt).toLocaleString(locale)}</p>
+      <button className="calendar-secondary" type="button" onClick={() => setSharedDetailId(null)}>{text.cancel}</button>
+    </article></div>}
     {editor && <div className="calendar-dialog-backdrop"><form className="calendar-dialog" onSubmit={event => { event.preventDefault(); void save(); }}>
       <h2>{editor.id ? text.edit : text.create}</h2>
       {selectedEvent && <p>{text.source}: {selectedEvent.source === "household" ? text.jointSource : selectedEvent.source === "google" ? "Google" : text.local} · {selectedEvent.source === "google" ? calendars.find(item => item.id === calendarId)?.summary : selectedEvent.pendingDeletion ? text.deletion : statuses[selectedEvent.syncStatus ?? "local"]}</p>}
