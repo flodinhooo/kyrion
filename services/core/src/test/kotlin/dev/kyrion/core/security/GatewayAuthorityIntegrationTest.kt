@@ -423,7 +423,7 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
         private val directory = Files.createTempDirectory("kyrion-gateway-authority-test")
         private val key = directory.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         private val bootstrap = directory.resolve("bootstrap").also { Files.writeString(it, "test-only-bootstrap-secret") }
-        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine")
+        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
         @DynamicPropertySource @JvmStatic fun properties(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
             registry.add("spring.datasource.username", postgres::getUsername)

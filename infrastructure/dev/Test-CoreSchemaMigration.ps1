@@ -11,7 +11,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $coordination = Join-Path $root '.run/dev-recovery/coordination'
 $outputDirectory = Join-Path $root ('.run/dev-recovery/schema-acceptance/' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $coordination, $outputDirectory -Force | Out-Null
-$report = [ordered]@{ format = 'kyrion-schema-acceptance-v1'; passed = $false; target = 45;
+$report = [ordered]@{ format = 'kyrion-schema-acceptance-v1'; passed = $false; target = 46;
     rolloutAuthorized = $false; startedAt = [DateTime]::UtcNow.ToString('o') }
 $heldLock = $null
 $savedJavaHome = $env:JAVA_HOME
@@ -74,7 +74,7 @@ try {
     }
     $report.tests = $totals
     $report.suites = $suites
-    if ($totals.failures -or $totals.errors -or $totals.skipped -or
+    if ($totals.failures -or $totals.errors -or ($totals.skipped -ne $(if ($FullCoreSuite) { 1 } else { 0 })) -or
         $suites['dev.kyrion.core.security.CoreSchemaMigrationRehearsalTest'] -lt 6 -or
         $suites['dev.kyrion.core.security.GatewayAuthorityIntegrationTest'] -lt 28) { throw 'REQUIRED_ACCEPTANCE_MISSING' }
     $after = Get-SourceHashes

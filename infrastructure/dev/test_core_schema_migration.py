@@ -53,6 +53,10 @@ class SchemaToolTest(unittest.TestCase):
         self.assertEqual(45, len(catalog["migrations"]))
         self.assertEqual(48, sum(path.is_file() for path in self.extract.rglob("*")))
 
+    def test_accepts_combined_v46_catalog(self):
+        catalog = TOOL.extract_artifact(self.jar, self.artifact(range(1, 47)), self.extract)
+        self.assertEqual(46, len(catalog["migrations"]))
+
     def test_rejects_wrong_hash_before_extraction(self):
         self.artifact()
         with self.assertRaisesRegex(ValueError, "ARTIFACT_HASH_MISMATCH"):
@@ -60,12 +64,12 @@ class SchemaToolTest(unittest.TestCase):
         self.assertEqual([], list((self.extract / "sql").iterdir()))
 
     def test_rejects_missing_migrations(self):
-        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45"):
+        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"):
             TOOL.extract_artifact(self.jar, self.artifact(range(1, 45)), self.extract)
 
     def test_rejects_future_migration(self):
-        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45"):
-            TOOL.extract_artifact(self.jar, self.artifact(range(1, 47)), self.extract)
+        with self.assertRaisesRegex(ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"):
+            TOOL.extract_artifact(self.jar, self.artifact(range(1, 48)), self.extract)
 
     def test_rejects_callback_or_path_traversal(self):
         for name in ("beforeMigrate.sql", "../../escape.sql"):
@@ -122,6 +126,7 @@ class SchemaToolTest(unittest.TestCase):
             artifact=self.jar,
             artifact_sha256="0" * 64,
             java_home=None,
+            target_version=45,
         )
 
     def test_apply_requires_explicit_plan_approval(self):

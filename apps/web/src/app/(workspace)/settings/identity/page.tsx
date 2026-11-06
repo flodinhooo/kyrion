@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useWorkspace } from "@/components/app-shell";
+import { CentralAccountPanel } from "@/components/central-account-panel";
 import { csrfHeader } from "@/features/auth/csrf";
 import { identityMessages } from "@/features/spaces/identity-messages";
 import { isBusinessPolicy, isDnsChallenge, isEmailIdentity, type BusinessPolicy, type DnsChallenge, type EmailIdentity } from "@/features/spaces/identity-contracts";
@@ -76,6 +77,7 @@ export default function IdentityPage() {
 
   return <section className="settings-stage space-page"><div className="settings-card">
     <h1>{t.title}</h1>
+    <div id="kyrion-account"><CentralAccountPanel locale={locale} /></div>
     {error && <p role="alert" className="auth-error">{errorText}</p>}
     {notice && <p role="status">{notice}</p>}
     {loading && <p role="status">{t.loading}</p>}

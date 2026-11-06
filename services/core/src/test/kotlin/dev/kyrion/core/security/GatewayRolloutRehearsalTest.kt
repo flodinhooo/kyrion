@@ -95,6 +95,6 @@ class GatewayRolloutRehearsalTest {
     }
 
     companion object {
-        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine")
+        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw"))
     }
 }

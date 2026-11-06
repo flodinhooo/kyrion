@@ -68,6 +68,8 @@ slices.
 - optional [Business mailbox/domain verification and local OWNER recovery](docs/business-identity-and-recovery.md);
 - owner-issued invitations for additional accounts with shared device control;
 - Argon2id password hashing and opaque, hashed session credentials;
+- optional [central Kyrion accounts and explicit local identity links](docs/unified-identity.md),
+  with independent offline password login and unchanged local Space permissions;
 - owner-scoped PostgreSQL persistence;
 - conversation history and deterministic context compaction;
 - explicit, owner-controlled personal memory;

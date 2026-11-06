@@ -67,7 +67,7 @@ public final class CoreSchemaMigration {
                 }
             }
             int version = history.size();
-            require(Set.of(39, 41, 43, 44, 45).contains(version), "SOURCE_VERSION_UNSUPPORTED");
+            require(Set.of(39, 41, 43, 44, 45, 46).contains(version), "SOURCE_VERSION_UNSUPPORTED");
             state.put("version", version);
             state.put("history", history);
             // Aggregate only digests/counts, never disclose account/event/token/ciphertext data.
@@ -105,6 +105,8 @@ public final class CoreSchemaMigration {
     }
 
     static Map<String, Object> execute(JsonNode request) throws Exception {
+        int targetVersion = request.required("targetVersion").asInt();
+        require(targetVersion == 45 || targetVersion == 46, "TARGET_VERSION_UNSUPPORTED");
         JsonNode settings = request.required("connection");
         String url = "jdbc:postgresql://" + settings.required("host").asText() + ":" + settings.required("port").asInt() + "/" + settings.required("database").asText();
         Properties credentials = new Properties();
@@ -129,12 +131,13 @@ public final class CoreSchemaMigration {
             var configuration = Flyway.configure().dataSource(dataSource)
                 .locations("filesystem:" + request.required("location").asText().replace('\\','/'))
                 .defaultSchema("public").schemas("public").table("flyway_schema_history")
-                .target("45").cleanDisabled(true).baselineOnMigrate(false).outOfOrder(false)
-                // Pending V(n+1)..V45 are the reviewed plan, not a validation defect.
+                .target(Integer.toString(targetVersion)).cleanDisabled(true).baselineOnMigrate(false).outOfOrder(false)
+                // Pending migrations through the explicit target are the reviewed plan, not a validation defect.
                 // Replace the default future tolerance: future history is never ignored.
                 .validateMigrationNaming(true).ignoreMigrationPatterns("*:pending");
             Flyway flyway = configuration.load();
             Map<String, Object> before = state(guard);
+            require((int) before.get("version") <= targetVersion, "SOURCE_NEWER_THAN_TARGET");
             flyway.validate();
             boolean apply = request.required("apply").asBoolean();
             int migrated = 0;
@@ -149,7 +152,7 @@ public final class CoreSchemaMigration {
                 flyway.validate();
             }
             Map<String, Object> after = state(guard);
-            require(!apply || Integer.valueOf(45).equals(after.get("version")), "TARGET_NOT_V45");
+            require(!apply || Integer.valueOf(targetVersion).equals(after.get("version")), "TARGET_VERSION_NOT_REACHED");
             require(apply || before.equals(after), "SOURCE_CHANGED_DURING_PLAN");
             return Map.of("ok", true, "applied", apply, "migrationsExecuted", migrated,
                 "fromVersion", before.get("version"), "state", after);

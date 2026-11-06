@@ -60,10 +60,10 @@ class CoreSchemaMigrationRehearsalTest {
             "user" to postgres.username, "password" to postgres.password, "sslmode" to "disable")))
         return file
     }
-    private fun tool(database: String, plan: Path, apply: Boolean = false, success: Boolean = true, target: String? = null): JsonNode {
+    private fun tool(database: String, plan: Path, apply: Boolean = false, success: Boolean = true, target: String? = null, version: Int = 46): JsonNode {
         val args = mutableListOf(System.getenv("KYRION_MIGRATION_PYTHON") ?: "python", root.resolve("infrastructure/dev/Migrate-CoreSchema.py").toString(),
             "--artifact", artifact.toString(), "--artifact-sha256", hash(Files.readAllBytes(artifact)),
-            "--connection-file", connection(database).toString(), "--plan", plan.toString(), "--java-home", System.getProperty("java.home"))
+            "--target-version", version.toString(), "--connection-file", connection(database).toString(), "--plan", plan.toString(), "--java-home", System.getProperty("java.home"))
         if (apply) args.addAll(listOf("--apply", "--approve-plan-sha256", hash(Files.readAllBytes(plan)),
             "--expected-target", target ?: json.readTree(Files.readString(plan))["state"]["targetIdentity"].asText()))
         val output = directory.resolve("tool-${UUID.randomUUID()}.json")
@@ -133,9 +133,9 @@ class CoreSchemaMigrationRehearsalTest {
         assertThat(snapshot(candidate, "flyway_schema_history")).isEqualTo(history) // planning did not migrate
         val planState = json.readTree(Files.readString(plan))["state"]
         assertThat(planState["version"].asInt()).isEqualTo(version)
-        assertThat(tool(candidate, plan, apply = true)["migrationsExecuted"].asInt()).isEqualTo(45-version)
+        assertThat(tool(candidate, plan, apply = true)["migrationsExecuted"].asInt()).isEqualTo(46-version)
         for ((table, data) in before) assertThat(snapshot(candidate, table)).describedAs(table).isEqualTo(data)
-        assertThat(value(candidate, "SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo("45")
+        assertThat(value(candidate, "SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo("46")
         assertThat(value(candidate, "SELECT count(*) FROM household_calendar_destination")).isEqualTo("0")
         assertThat(value(candidate, "SELECT count(*) FROM household_calendar_delivery")).isEqualTo("0")
         assertThat(value(candidate, "SELECT count(*) FROM personal_calendar_disclosure WHERE visibility<>'PRIVATE'")).isEqualTo("0")
@@ -159,10 +159,10 @@ class CoreSchemaMigrationRehearsalTest {
         assertThat(tool(rollback, plan, apply = true, success = false)["code"].asText()).isEqualTo("TARGET_IDENTITY_MISMATCH")
     }
 
-    @Test fun `V39 restore migrates only schema through V45`() = rehearse(39)
-    @Test fun `V41 restore migrates only schema through V45`() = rehearse(41)
-    @Test fun `V43 restore migrates only schema through V45`() = rehearse(43)
-    @Test fun `V44 restore migrates only schema through V45`() = rehearse(44)
+    @Test fun `V39 restore migrates only schema through V46`() = rehearse(39)
+    @Test fun `V41 restore migrates only schema through V46`() = rehearse(41)
+    @Test fun `V43 restore migrates only schema through V46`() = rehearse(43)
+    @Test fun `V44 restore migrates only schema through V46`() = rehearse(44)
 
     @Test fun `V45 independent restore retains disclosures grants and every delivery state without resume`() {
         val source = create(45)
@@ -189,6 +189,9 @@ class CoreSchemaMigrationRehearsalTest {
             sql(source, """INSERT INTO household_calendar_delivery(id,space_id,event_id,target_user_id,grant_id,destination_key,remote_id,etag,delivered_revision,write_started,state,error_code,attempt_id,lease_until)
                 VALUES('${UUID.randomUUID()}','$owner','$event','$owner','$grant','synthetic-$index','remote-$index','synthetic-etag',2,true,'$state','SYNTHETIC','${UUID.randomUUID()}',CURRENT_TIMESTAMP+INTERVAL '${if (index == 0) "5 minutes" else "-1 hour"}')""")
         }
+        val v45Plan = directory.resolve("v45-compatibility.json")
+        tool(source, v45Plan, version = 45)
+        assertThat(tool(source, v45Plan, apply = true, version = 45)["migrationsExecuted"].asInt()).isZero()
         val plan = directory.resolve("v45-source.json")
         tool(source, plan)
         val restored = restore(source)
@@ -199,7 +202,7 @@ class CoreSchemaMigrationRehearsalTest {
         assertThat(copy["targetIdentity"]).isNotEqualTo(original["targetIdentity"])
         assertThat(copy["tables"]).isEqualTo(original["tables"])
         assertThat(tool(restored, plan, apply = true, success = false)["code"].asText()).isEqualTo("TARGET_IDENTITY_MISMATCH")
-        assertThat(tool(restored, restoredPlan, apply = true)["migrationsExecuted"].asInt()).isZero() // no application or lease consumer
+        assertThat(tool(restored, restoredPlan, apply = true)["migrationsExecuted"].asInt()).isEqualTo(1) // no application or lease consumer
         assertThat(snapshot(restored, "household_calendar_delivery")).isEqualTo(snapshot(source, "household_calendar_delivery"))
         assertThat(snapshot(restored, "household_calendar_destination")).isEqualTo(snapshot(source, "household_calendar_destination"))
         assertThat(snapshot(restored, "personal_calendar_disclosure")).isEqualTo(snapshot(source, "personal_calendar_disclosure"))
@@ -223,6 +226,6 @@ class CoreSchemaMigrationRehearsalTest {
     }
 
     companion object {
-        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withStartupTimeout(Duration.ofMinutes(2))
+        @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw")).withStartupTimeout(Duration.ofMinutes(2))
     }
 }

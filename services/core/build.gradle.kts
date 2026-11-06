@@ -29,6 +29,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.security:spring-security-crypto")
+    implementation("com.nimbusds:oauth2-oidc-sdk:11.39")
     implementation("org.bouncycastle:bcprov-jdk18on:1.84")
     implementation("org.jmdns:jmdns:3.6.3")
     implementation("org.flywaydb:flyway-database-postgresql")

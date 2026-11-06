@@ -63,7 +63,10 @@ def extract_artifact(artifact, expected, directory):
                 filename = name.rsplit("/", 1)[1]
                 libraries[filename] = digest(content)
                 (directory / "lib" / filename).write_bytes(content)
-    require(sorted(catalog) == list(range(1, 46)), "ARTIFACT_CATALOG_NOT_V1_TO_V45")
+    require(
+        sorted(catalog) in (list(range(1, 46)), list(range(1, 47))),
+        "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46",
+    )
     for prefix in ("flyway-core-", "flyway-database-postgresql-", "postgresql-"):
         require(
             sum(name.startswith(prefix) for name in libraries) == 1,
@@ -141,7 +144,10 @@ def run(args):
         directory = Path(temporary)
         (directory / "sql").mkdir()
         (directory / "lib").mkdir()
+        if approved:
+            require(approved.get("targetVersion") == args.target_version, "PLAN_TARGET_VERSION_MISMATCH")
         catalog = extract_artifact(args.artifact, args.artifact_sha256, directory)
+        require(str(args.target_version) in catalog["migrations"], "ARTIFACT_TARGET_MISSING")
         if approved:
             require(approved.get("catalog") == catalog, "PLAN_CATALOG_MISMATCH")
         source = Path(__file__).with_name("CoreSchemaMigration.java")
@@ -173,6 +179,7 @@ def run(args):
             "connection": settings,
             "location": str(directory / "sql"),
             "apply": args.apply,
+            "targetVersion": args.target_version,
             "expectedState": approved["state"] if approved else None,
         }
         # Secret-bearing settings travel only through stdin; discard all third-party diagnostics.
@@ -204,6 +211,7 @@ def run(args):
             "artifactSha256": args.artifact_sha256,
             "toolSha256": tool_hash,
             "catalog": catalog,
+            "targetVersion": args.target_version,
             **response,
         }
         if args.apply:
@@ -217,7 +225,7 @@ def run(args):
                         "planSha256": digest(args.plan.read_bytes()),
                         "targetIdentity": report["state"]["targetIdentity"],
                         "fromVersion": report["state"]["version"],
-                        "toVersion": 45,
+                        "toVersion": args.target_version,
                     }
                 )
             )
@@ -234,6 +242,7 @@ def main():
         type=Path,
         default=Path(os.environ["JAVA_HOME"]) if os.environ.get("JAVA_HOME") else None,
     )
+    parser.add_argument("--target-version", type=int, choices=(45, 46), default=45)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--approve-plan-sha256")
     parser.add_argument("--expected-target")

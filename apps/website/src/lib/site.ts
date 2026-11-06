@@ -13,6 +13,7 @@ export const pages = [
   "development",
   "docs",
   "contact",
+  "account",
   "privacy",
   "terms",
 ] as const;
