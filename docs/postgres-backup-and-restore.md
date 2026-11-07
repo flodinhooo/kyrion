@@ -24,17 +24,36 @@ database dump contains account hashes and private application data.
 Verify a specific backup without modifying the production database:
 
 ```powershell
-.\infrastructure\postgres\verify-restore.ps1 -Backup "E:\Kyrion\Data\backups\postgres\kyrion-postgres-YYYYMMDDTHHMMSSZ.dump"
+# Prepare a disposable fixture using an already reviewed local PostgreSQL17
+# image ID. No pull/update, published port, persistent volume or socket mount.
+docker run -d --name kyrion-restore-owner-check --network none --label io.kyrion.restore-target=true --tmpfs /var/lib/postgresql/data -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_USER=kyrion '<reviewed-local-image-id>'
+# Wait for pg_isready -U kyrion inside this fixture before verification.
+.\infrastructure\postgres\verify-restore.ps1 -Backup "E:\Kyrion\Data\backups\postgres\kyrion-postgres-YYYYMMDDTHHMMSSZ.dump" -Container kyrion-restore-owner-check -ReadOnlyManifest
+# Remove only this positively identified owner-created fixture after the check.
+docker rm -f kyrion-restore-owner-check
 ```
 
 The verifier refuses missing manifests before contacting Docker, checks the
-manifest checksum, restores into a randomly named temporary database, validates
+manifest checksum and requires an explicitly supplied isolated container.
+It rejects unmarked, networked, published, stopped or persistent targets before
+copying a dump or creating any database. It pins the inspected container ID,
+restores into a randomly named temporary database, validates
 successful Flyway history/public tables and removes the temporary database.
+The trust setting above is only for an unpublished, network-none disposable
+fixture; it is not an installation authentication setting. Never pass the
+personal `kyrion-postgres` container. Keep the fixture stopped/removed when done.
 See [V40 rollout and old-binary rollback boundaries](v40-rollout.md).
-On success it updates the manifest with the
+Without `-ReadOnlyManifest`, success updates the manifest with the
 verification time and observed schema facts. Restore verification does not test
 application behaviour, credentials outside PostgreSQL, provider state or
 gateway/coordinator backups.
+
+Guard regressions use a fake Docker command and synthetic files:
+`python -m unittest discover -s infrastructure/postgres -p test_verify_restore.py -v`.
+Current original-key and nonempty-file evidence plus the planned host/off-host
+procedure are in [the acceptance gates](status/2026-11-07-acceptance-gates.md) and
+[host recovery plan](host-recovery-acceptance.md). A successful same-host drill
+does not establish off-host recovery or freshness of all post-backup writes.
 
 The PostgreSQL dump does not contain `audit-integrity.key`. Back up that file
 separately using protected secret storage; never place it beside an unencrypted

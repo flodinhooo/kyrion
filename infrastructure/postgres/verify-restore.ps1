@@ -2,8 +2,10 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Backup,
-    [string]$Container = "kyrion-postgres",
-    [string]$DatabaseUser = "kyrion"
+    [Parameter(Mandatory = $true)]
+    [string]$Container,
+    [string]$DatabaseUser = "kyrion",
+    [switch]$ReadOnlyManifest
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,12 +26,30 @@ if (Test-Path -LiteralPath $manifestPath) {
     }
 }
 
+# Never create scratch databases inside an installed/personal cluster. A label
+# alone is insufficient: require no network, published ports or persistent data.
+$targetJson = & docker inspect $Container
+if ($LASTEXITCODE -ne 0) { throw 'ISOLATED_RESTORE_TARGET_REQUIRED: container inspection failed.' }
+$target = @($targetJson | ConvertFrom-Json)[0]
+if ($target.Id -notmatch '^[a-f0-9]{64}$' -or
+    $target.Config.Labels.'io.kyrion.restore-target' -ne 'true' -or
+    $target.HostConfig.NetworkMode -ne 'none' -or
+    @($target.HostConfig.PortBindings.PSObject.Properties | Where-Object { $_.Value }).Count -ne 0 -or
+    !(@($target.HostConfig.Tmpfs.PSObject.Properties.Name) -contains '/var/lib/postgresql/data') -or
+    @($target.Mounts | Where-Object { $_ -and $_.Type -ne 'tmpfs' }).Count -ne 0 -or
+    !$target.State.Running) {
+    throw 'ISOLATED_RESTORE_TARGET_REQUIRED: use a marked network-none, unpublished, tmpfs-only PostgreSQL fixture.'
+}
+# Pin the inspected identity rather than following a concurrently reused name.
+$Container = $target.Id
+$databaseCreated = $false
 try {
     & docker cp $backupPath "${Container}:${containerBackup}"
     if ($LASTEXITCODE -ne 0) { throw "docker cp failed with exit code $LASTEXITCODE" }
 
     & docker exec $Container createdb --username=$DatabaseUser --template=template0 $verificationDatabase
     if ($LASTEXITCODE -ne 0) { throw "Temporary verification database creation failed with exit code $LASTEXITCODE" }
+    $databaseCreated = $true
 
     & docker exec $Container pg_restore --exit-on-error --no-owner --no-acl --username=$DatabaseUser --dbname=$verificationDatabase $containerBackup
     if ($LASTEXITCODE -ne 0) { throw "pg_restore failed with exit code $LASTEXITCODE" }
@@ -42,7 +62,7 @@ try {
     $tableCount = [int](& docker exec $Container psql --username=$DatabaseUser --dbname=$verificationDatabase --tuples-only --no-align --command "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';")
     if ($LASTEXITCODE -ne 0 -or $tableCount -lt 1) { throw "Restored database contains no public tables." }
 
-    if (Test-Path -LiteralPath $manifestPath) {
+    if (!$ReadOnlyManifest) {
         $manifest.restoreVerified = $true
         $manifest | Add-Member -NotePropertyName restoreVerifiedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString("o")) -Force
         $manifest | Add-Member -NotePropertyName restoreVerification -NotePropertyValue ([ordered]@{ flyway = $migrationResult; publicTables = $tableCount }) -Force
@@ -52,6 +72,6 @@ try {
     [ordered]@{ verified = $true; flyway = $migrationResult; publicTables = $tableCount; productionDatabaseChanged = $false } | ConvertTo-Json
 }
 finally {
-    & docker exec $Container dropdb --if-exists --force --username=$DatabaseUser $verificationDatabase 2>$null
+    if ($databaseCreated) { & docker exec $Container dropdb --if-exists --force --username=$DatabaseUser $verificationDatabase 2>$null }
     & docker exec $Container rm -f $containerBackup 2>$null
 }
