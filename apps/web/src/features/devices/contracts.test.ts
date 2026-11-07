@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { isDeviceCommandResult, isRuntimeDeviceList } from "./contracts";
+import { isButtonBindingList, isDeviceCommandResult, isRuntimeDeviceList } from "./contracts";
+
+describe("button authorization contracts", () => {
+  const binding = { gesture: "single", targetDeviceId: "lamp", targetRoomId: null, action: "toggle" };
+  it("retains explicit legacy and current grant states for review", () => {
+    expect(isButtonBindingList([{ ...binding, grantId: null }])).toBe(true);
+    expect(isButtonBindingList([binding])).toBe(true);
+    expect(isButtonBindingList([{ ...binding, grantId: "a1234567-1234-1234-1234-123456789012" }])).toBe(true);
+  });
+  it("rejects malformed grant metadata rather than showing authorization", () => {
+    for (const grantId of [false, {}, "", "authorized"]) {
+      expect(isButtonBindingList([{ ...binding, grantId }])).toBe(false);
+    }
+  });
+  it("rejects ambiguous duplicate gestures and non-object rows", () => {
+    expect(isButtonBindingList([binding, binding])).toBe(false);
+    expect(isButtonBindingList([null])).toBe(false);
+  });
+});
 
 describe("runtime device contracts", () => {
   it("accepts an explicit unknown availability without an observation", () => {

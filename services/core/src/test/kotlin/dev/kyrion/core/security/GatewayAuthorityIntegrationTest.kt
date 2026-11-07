@@ -249,6 +249,19 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
         denied(id)
     }
 
+    @Test fun `explicit removal through binding API revokes pending command and releases no device payload`() {
+        val credential = sessions.create(owner).rawToken
+        val body = """{"bindings":[{"gesture":"single","targetDeviceId":"$target","action":"turn_on"}]}"""
+        mvc.perform(put("/v1/devices/$button/button-bindings").header("Authorization", "Bearer $credential")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk)
+        val grant = jdbc.sql("SELECT grant_id FROM zigbee_button_binding").query(UUID::class.java).single()
+        val id = queue.enqueue(automation(grant), node, "zigbee.power", payload)
+        mvc.perform(put("/v1/devices/$button/button-bindings").header("Authorization", "Bearer $credential")
+            .contentType(MediaType.APPLICATION_JSON).content("""{"bindings":[]}""")).andExpect(status().isOk)
+        assertThat(jdbc.sql("SELECT count(*) FROM zigbee_button_binding").query(Long::class.java).single()).isZero()
+        denied(id)
+    }
+
     @Test fun `automation traverses Action queue and confirmed result but revoked grant cannot replay cached success`() {
         val grant = grant()
         val context = dev.kyrion.core.action.ActionContext(owner,

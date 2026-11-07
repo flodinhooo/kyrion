@@ -538,7 +538,9 @@ export default function DevicesPage() {
                   {(["single", "double", "long"] as const).map((gesture) => {
                     const binding = (buttonBindings[device.id] ?? []).find((item) => item.gesture === gesture);
                     return <div className="button-binding-row" key={gesture}>
-                      <span>{gesture === "single" ? t.buttonGestureSingle : gesture === "double" ? t.buttonGestureDouble : t.buttonGestureLong}</span>
+                      <span>{gesture === "single" ? t.buttonGestureSingle : gesture === "double" ? t.buttonGestureDouble : t.buttonGestureLong}
+                        {binding && <small role="status">{binding.grantId ? t.buttonBindingAuthorized : t.buttonBindingReviewRequired}</small>}
+                      </span>
                       <select aria-label={`${gesture}: ${t.buttonTarget}`} value={binding?.targetDeviceId ? `device:${binding.targetDeviceId}` : binding?.targetRoomId ? `room:${binding.targetRoomId}` : ""} onChange={(event) => updateButtonBinding(device.id, gesture, event.target.value)}>
                         <option value="">{t.buttonNotAssigned}</option>
                         <optgroup label={t.buttonTargetRooms}>{rooms.filter((room) => devices.some((candidate) => candidate.room?.id === room.id && candidate.capabilities.some((capability) => capability.id === "power.set"))).map((room) => <option value={`room:${room.id}`} key={room.id}>{room.name}</option>)}</optgroup>

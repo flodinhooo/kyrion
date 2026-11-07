@@ -93,16 +93,18 @@ export function isDeviceCommandStatus(value: unknown): value is DeviceCommandSta
 
 export type ButtonGesture = "single" | "double" | "long";
 export type ButtonAction = "toggle" | "turn_on" | "turn_off";
-export type ButtonBinding = { gesture: ButtonGesture; targetDeviceId: string | null; targetRoomId: string | null; action: ButtonAction };
+export type ButtonBinding = { gesture: ButtonGesture; targetDeviceId: string | null; targetRoomId: string | null; action: ButtonAction; grantId?: string | null };
 
 export function isButtonBindingList(value: unknown): value is ButtonBinding[] {
-  return Array.isArray(value) && value.length <= 3 && value.every((item) => {
+  return Array.isArray(value) && value.length <= 3 && new Set(value.map((item) => item?.gesture)).size === value.length && value.every((item) => {
     if (!item || typeof item !== "object") return false;
     const binding = item as Partial<ButtonBinding>;
     return (binding.gesture === "single" || binding.gesture === "double" || binding.gesture === "long")
       && ((typeof binding.targetDeviceId === "string" && binding.targetRoomId === null)
         || (binding.targetDeviceId === null && typeof binding.targetRoomId === "string"))
-      && (binding.action === "toggle" || binding.action === "turn_on" || binding.action === "turn_off");
+      && (binding.action === "toggle" || binding.action === "turn_on" || binding.action === "turn_off")
+      && (binding.grantId === undefined || binding.grantId === null
+        || (typeof binding.grantId === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(binding.grantId)));
   });
 }
 
