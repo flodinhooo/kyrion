@@ -37,6 +37,15 @@ private inventory or resave Windows against its stale source. Inspect actor/gran
 audit, then observe physical single/double/long, offline and revoked cases in an
 agreed slot. No actual binding was changed; **KY-002 remains open**.
 
+If the owner selects installation of the source-only review UI, prepare a new
+ARM64 Web artifact from the reviewed source (017dd52), retain the currently active
+871c46a image/build and root-protected Compose settings, compare effective config
+and change only web.image. Use a newly reviewed scoped Web activation and normal
+TLS/DE/EN checks; roll back to the retained871c46a image on failure. No schema/Core
+change is needed. **Do not rerun the old871c46a activation command.** Missing
+decision: whether/when to install this later UI revision. This is independent of
+each human's exact binding approval and never supplies that approval itself.
+
 ## KY-003 — optional central identity
 
 Actual Pi Keycloak26.8.2 remains loopback18889/18890 with the fixed HTTPS issuer;
@@ -111,6 +120,19 @@ now gives fixed DE/EN prompts, silence/explicit-end/next-wake and complete-item/
 ending/gap criteria. Physical listening and the separately approved twenty-action
 matrix remain required. No models were loaded/downloaded, cloud called, speech
 unit restarted or speaker output triggered. **KY-004 remains open**.
+
+For a separately selected source-fix rollout, use a quiet slot: record the running
+Satellite unit, config hash and installed dialogue module path/hash via its own
+venv; compare that module to the tested baseline before changing it. Back up the
+original module with its ownership/mode in protected Pi storage, stop only the
+Satellite user unit, install the tested dialogue.py from1ff39bf preserving mode,
+then restart only that unit. Keep Core/AI/WSL, credential/configuration, model,
+reference and audio routing untouched. Verify unit health and config hash before
+the owner-controlled hearing check. On failure restore the exact saved module
+and that unit only. If installed source differs from the reviewed baseline, stop
+for a bounded compatibility review rather than upgrading the whole environment.
+Missing decision: installation of this source-only fix and a consented quiet
+restart/hearing window. No deployment or automatic audio test happened here.
 
 ## KY-005 — restore isolation and host recovery
 
