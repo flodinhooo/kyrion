@@ -60,8 +60,9 @@ preserving the prior realm state privately. No environment/JVM password argument
 or client-side credential was introduced. The bootstrap admin's previously
 absent email was set to the owner's mailbox, explicitly unverified, so Keycloak's
 native SMTP test could address its logged-in administrator. That native test
-returned204 and submitted a real test mail. Mailbox receipt is pending owner
-confirmation; submission alone is not delivery/mailbox-verification evidence.
+returned204 and submitted a real test mail. The owner confirmed receipt in the
+normal inbox, not spam. No inbox access was used; this delivery does not mark
+any central or local user address verified.
 
 Registration remains disabled, website client disabled, verified-email policy
 enabled, both local Core flags unchanged. Do not enable public registration until

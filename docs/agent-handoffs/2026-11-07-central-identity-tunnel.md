@@ -20,7 +20,10 @@ allowing Keycloak's native logged-in-admin test-mail endpoint to address it.
 Native `POST /admin/realms/kyrion/testSMTPConnection` returned204 and submitted
 one real test mail to the owner-controlled sender mailbox. This is an actual
 Keycloak JVM mail test, not mocked delivery or only Python SMTP authentication.
-Receipt remains pending owner confirmation; no inbox read access was used.
+Owner subsequently confirmed receipt in the normal inbox, not spam. This proves
+the actual test message reached the owner-controlled mailbox; no inbox read
+access was used. It does not mark a provider user email verified or establish
+registration/reset/link acceptance.
 Evidence is private `smtp-readiness.json`; no real user email is asserted verified.
 
 Fresh provider snapshot `provider-smtp-20261107T162631Z.dump` was restored in an
@@ -32,7 +35,7 @@ off-device recovery copy. No personal installation data/migration was touched.
 
 Registration remainsfalse, verifyEmailtrue, website client disabled, Core flags
 unchanged. Public registration/link/account login is not declared accepted. Next:
-confirm receipt, secure individual admin/MFA and recovery, encrypted off-device
+secure individual admin/MFA and recovery, encrypted off-device
 provider backup, real browser email verification/reset/device link acceptance,
 then separately scope Core opt-in and the missing Vercel session database.
 
