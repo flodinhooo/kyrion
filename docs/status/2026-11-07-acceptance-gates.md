@@ -387,3 +387,49 @@ decryption/retrieval, full-host restart, application restore and reconciliation
 of later grants/revocations remain open. No personal backup was transferred off
 Pi, no productive database restore or hardware/audio action occurred. KY-005
 and all actual user/hardware/recovery acceptance gates remain open.
+
+## KY-005 recovery completion preparation
+
+Preserved `dbdc8de` and the already passed 175611Z V46 dump checksum, isolated
+restore and original-key audit/credential evidence. None of those checks was
+repeated. Additional local-only protected captures now contain the current
+Caddyfile, explicit TLS certificate/private key and the missing Caddy image,
+plus the existing compiled read-only verifier and source. They were read through
+already present read-only Caddy mounts, without changing permissions/mounts or
+adding a privileged container. New certificate/key public components match;
+the certificate matches the previously retained TLS pin. New Caddy archive image
+identity matches the running image. No secret content was printed or sent off Pi.
+
+Fresh source records/metadata are below the existing 175611Z secrets/material
+roots in `additions-20261107T193554Z-d8d1ddc2/`; earlier files/manifests remain
+unchanged. The two missing current host files are exactly
+`/etc/kyrion/platform/compose.yml` and `/etc/kyrion/platform/platform.env`.
+Noninteractive sudo requires a password. The staged capture helper prepares a
+new root-only five-file/TLS-tree snapshot under `/var/backups/kyrion/local-v46-additions/`;
+it never applies settings. Three new synthetic guard cases pass: additive private
+copies, redirected-source refusal, and retained incomplete capture on drift.
+
+Available GnuPG 2.4.7/libgcrypt 1.11.0 completed a synthetic AES256 tar roundtrip,
+wrong-passphrase rejection and modified-ciphertext rejection. Only temporary
+synthetic material/key and its own agent were used/removed. No personal recovery
+passphrase/recipient/custody was chosen or created, and no personal set encrypted.
+The existing [host/off-host recovery plan](../host-recovery-acceptance.md#prepared-completion-of-the-local-v46-set)
+now contains the exact interactive root capture command, conditional encryption
+pipeline, approved-target requirements, quarantine/isolated verification steps
+and independently retrievable decryption-key requirement. No external destination
+or personal transfer was selected. Current payload is about 914 MiB; target budget
+is at least 10 GiB free disk/2 GiB available RAM with growth recomputed before use.
+
+Knowledge upload-before-row publication, ingestion/reindex/audit, tombstone/file
+cleanup and orphan/temp sweep require coordination. Only Core currently mounts
+the document root. Read-only live observation found zero documents/jobs/tombstones,
+active Calendar leases/actions/nonterminal Gateway commands/Pi voice sessions and
+other active DB clients; this does not prove absence of an in-flight HTTP upload.
+Packaged defaults show graceful shutdown, 30s per lifecycle phase and no relevant
+environment override. A future operator-controlled Core-only drain/stop/copy/start
+window is prepared, reserving 5 minutes for the current tiny DB/empty file tree.
+Heavy export/encryption/verification stay outside the outage. This procedure was
+not executed: Web/Core/Satellite and other production services were not restarted;
+no bindings, Identity or DNS were changed. KY-005 remains open for root capture,
+coordinated snapshot, personal key/custody, independent-target proof and actual
+host/user/hardware recovery acceptance.

@@ -185,3 +185,251 @@ this follow-up did not touch Identity or DNS. Agree encryption/custody and an
 independent destination, then verify retrieval/decryption and isolated recovery
 there in a separately authorized task. No host reboot, service stop, productive
 restore, expired command replay or hardware/audio acceptance happened here.
+
+## Prepared completion of the local V46 set
+
+`dbdc8de` and the existing V46 checksum/isolated-restore/original-key proof are
+preserved. Those checks were **not repeated** during this preparation.
+
+### Actual additional capture and the remaining privileged files
+
+The running Caddy container already has read-only mounts of the installed
+Caddyfile and TLS directory. Without adding mounts, changing privileges or
+restarting it, those existing views were captured into an additional owner-only
+archive at:
+
+`~/.local/share/kyrion/recovery-secrets/20261107T175611Z/additions-20261107T193554Z-d8d1ddc2/caddy-current-config-tls.tar`
+
+The archive contains exactly these source files, with original ownership/modes
+recorded in its protected metadata:
+
+| Source on Pi | State in the additional set |
+| --- | --- |
+| `/etc/kyrion/platform/Caddyfile` | Captured through existing read-only `/etc/caddy/Caddyfile` mount; explicit certificate/key paths, no external Caddy import |
+| `/etc/kyrion/platform/tls/server.crt` | Captured; SHA-256 matches retained TLS pin |
+| `/etc/kyrion/platform/tls/server.key` | Captured without printing/exporting it; derived public key matches the certificate |
+| `/etc/kyrion/platform/compose.yml` | **Still missing as a current host-file copy**; effective runtime metadata is not a replacement |
+| `/etc/kyrion/platform/platform.env` | **Still missing as a current host-file copy**; contains protected deployment configuration |
+
+The observed TLS directory has only server.crt/server.key. This deployment uses
+an explicit pinned self-signed server certificate, not a newly created recovery
+CA/key. Preserve that existing certificate trust on the recovery station; do not
+regenerate it silently. Caddy `/data` and `/config` remain runtime caches/state,
+not substitutes for the explicit TLS files and installed configuration. Additional
+unknown imports/mounts found during a later root capture require inventory review.
+
+The matching current Caddy image was also archived, and the already compiled
+`VerifyOriginalData.class` plus its public Java source retained, under:
+
+`~/.local/state/kyrion/recovery-material-v46-20261107T175611Z/additions-20261107T193554Z-d8d1ddc2/`
+
+The new image archive's config digest matches the live Caddy image; its protected
+manifest indexes its bytes and hashes. Only these new additions were verified.
+Their directories/files are `0700`/`0600`. Previous dumps, keys, runtime archives and
+manifests were not overwritten. Current total local payload is 958704940 bytes
+(about 914 MiB), excluding the still-pending root addition.
+
+Noninteractive sudo still requires a password. The reviewed capture helper is
+staged at `~/.local/state/kyrion/ky005-recovery-preparation-20261107/` and is also
+versioned as `infrastructure/postgres/capture-pi-recovery-config.py`. In an
+interactive Pi SSH terminal, the concrete authorized capture step is:
+
+```sh
+sudo /usr/bin/python3 /home/flodinho/.local/state/kyrion/ky005-recovery-preparation-20261107/capture-pi-recovery-config.py capture
+```
+
+It captures the five required files and any additional regular TLS files into a
+**new** root `0700` directory below `/var/backups/kyrion/local-v46-additions/`, with
+copies/manifest `0600` and original UID/GID/mode/hash metadata. It rejects redirected
+paths, symlinks and changing sources. Failure retains an INCOMPLETE addition;
+no source settings or services are changed. Success prints only the new path.
+Three synthetic helper guard tests pass. Compare its fresh Caddy/TLS hashes with
+the mounted-view addition before selecting the recovery version; a mismatch is
+configuration drift to review, not permission to overwrite either source.
+This capture is current configuration evidence, not a simultaneous DB/files cut.
+
+### Encryption: tested mechanism, unresolved recovery-key custody
+
+Installed tools: GnuPG 2.4.7/libgcrypt 1.11.0, OpenSSL 3.5.6, GNU tar 1.35,
+Python 3 and Docker 26.1.5. age is not installed; no package or key was installed.
+`test_recovery_encryption.py` used only a synthetic tar and an ephemeral synthetic
+passphrase in a temporary GPG home: AES256 encryption/decryption round trip
+matched; a wrong passphrase and altered ciphertext both failed. Its own agent
+was stopped and scratch removed. No real recovery key was created or personal
+backup encrypted. OpenSSL was used only to compare the captured TLS public keys.
+
+The owner still must choose an independently available recovery secret/custodian:
+either an approved high-entropy passphrase recoverable without this Pi, or an
+already controlled recipient key with verified fingerprint and independently
+recoverable private key. No recipient, passphrase, storage account or custody
+location is assumed. Do not put a personal recovery secret in arguments,
+environment values, Git, chat or the encrypted payload itself.
+
+After the root capture succeeds AND the owner chooses the passphrase route and
+custody, the following is the prepared **local-only** encryption procedure.
+It is not authorized execution of an unchosen key scheme. Use an interactive
+Bash terminal; GPG prompts through its pinentry/TTY. Do not enable shell tracing.
+Set ROOT_ADDITION to the successful capture's exact output path first:
+
+```bash
+set -euo pipefail
+umask 077
+ROOT_ADDITION=/var/backups/kyrion/local-v46-additions/REPLACE_WITH_SUCCESSFUL_CAPTURE
+[[ "$ROOT_ADDITION" =~ ^/var/backups/kyrion/local-v46-additions/[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$ ]] || exit 1
+[[ -t 0 && -t 1 ]] || exit 1
+sudo test -f "$ROOT_ADDITION/manifest.json"
+sudo test ! -e "$ROOT_ADDITION/INCOMPLETE"
+OUT=$(mktemp -d /home/flodinho/.local/state/kyrion/encrypted-v46-XXXXXXXX)
+export GPG_TTY=$(tty)
+sudo -v
+sudo tar --create --file=- --directory=/ -- \
+  home/flodinho/.local/state/kyrion/database-backups-v46-20261107T175611Z \
+  home/flodinho/.local/state/kyrion/recovery-material-v46-20261107T175611Z \
+  home/flodinho/.local/share/kyrion/recovery-secrets/20261107T175611Z \
+  "${ROOT_ADDITION#/}" \
+  | gpg --no-options --no-symkey-cache --cipher-algo AES256 \
+      --symmetric --output "$OUT/recovery.tar.gpg.partial"
+mv --no-clobber -- "$OUT/recovery.tar.gpg.partial" "$OUT/recovery.tar.gpg"
+(cd "$OUT" && sha256sum recovery.tar.gpg > SHA256SUMS)
+```
+
+Only ciphertext and its checksum are candidates for a subsequently approved
+transfer. No combined plaintext tar is written on the source. Retain partial
+ciphertext as incomplete on pipeline failure; do not promote it. For an existing
+recipient-key decision, separately use the verified selected fingerprint with
+public-key encryption instead of improvising a passphrase or generating a key.
+A successful synthetic test is not personal-custody or disaster-recovery proof.
+
+### Prepared independent off-host rehearsal
+
+No off-host destination is selected and no personal material was sent anywhere.
+The destination must be independently accessible if the Pi/its SD card/network
+is unavailable; another directory/partition on the same Pi is insufficient.
+Agree owner/operator, allowed data location/access, encrypted storage and deletion
+policy. Provide at least 10 GiB free for the current roughly 914 MiB payload plus
+pending configuration, cipher/plaintext staging, image import and logs. Recompute
+for a new/nonempty Knowledge set: reserve encrypted input + plaintext archive +
+expanded quarantine + imported image layers + restore scratch/headroom. Use at
+least 2 GiB available RAM for the small current proof; cap the fixture's tmpfs and
+verifier heap instead of assuming host resources are free.
+
+The prepared runtime target is independent Linux ARM64 with Docker Engine 26+
+(or separately validated ARM64 emulation), Python 3.12+, GNU tar, GnuPG 2.4+,
+and checksum tooling. Reviewed archived Core/PostgreSQL/Caddy/Web images and the
+compiled read-only verifier are available without new builds, pulls or speech
+models. Existing original credential/audit keys travel only inside the approved
+encrypted payload; its decryption secret/private key must be independently
+retrievable. These are distinct keys. Verify the TLS certificate trust separately
+if a later, separately authorized application/TLS rehearsal is selected.
+
+On that approved target, set `umask 077` and use a new `0700` quarantine on encrypted storage:
+
+1. Check the ciphertext SHA256SUMS. Decrypt to `recovery.unverified.tar` using
+   the chosen independently supplied key, for example
+   `gpg --no-options --no-symkey-cache --output recovery.unverified.tar --decrypt recovery.tar.gpg`.
+   Promote only after GPG exits 0. GPG can emit plaintext before reporting an
+   integrity failure: never extract/promote failed output; keep it protected.
+2. Before extraction, inspect every tar member with Python tarfile. Reject
+   absolute paths, `..` components, links, special files, duplicate paths and
+   setuid/setgid modes; require only the three selected home backup roots and
+   the selected root-addition prefix. Then extract only below the quarantine,
+   unprivileged with `--no-same-owner`, never into `/` or a live installation.
+3. Verify the existing set manifest and separate addition/root manifests using
+   their relative file mappings, including original dump/keys/runtime hashes.
+   Do not silently choose between mismatching mounted-view and host-file copies.
+   Verify image archive config digests against the recorded image IDs before
+   `docker load` of only those images; no existing service gets recreated.
+4. Create a uniquely named marked PostgreSQL container from the archived exact
+   PostgreSQL image, `--network none`, no published ports, no persistent mount,
+   `--tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=768m`. Trust auth is
+   confined to this unpublished disposable fixture. Record its exact ID and
+   unique rehearsal label. Wait for final PostgreSQL PID1 plus pg_isready.
+5. Restore only into that fixture using
+   `docker exec -i "$RECOVERY_DB_ID" pg_restore --exit-on-error --no-owner --no-acl -U kyrion -d kyrion < "$RECOVERY_DUMP"`.
+   Check 46 successful migrations, zero failed migrations. The source installation
+   is never contacted. Do not run Compose, a Spring context, workers or providers.
+6. Expand only BOOT-INF/classes and BOOT-INF/lib from the verified app.jar into
+   the quarantine. Run the retained VerifyOriginalData.class with those libraries
+   using Java 21 from the archived Core image, overriding its entrypoint to
+   `/opt/java/openjdk/bin/java` and its command to `-cp ... VerifyOriginalData <settings>`.
+   Use `--network container:$RECOVERY_DB_ID`, read-only root and backup/key/file
+   mounts, `--cap-drop ALL`, no-new-privileges, bounded tmpfs and `-Xmx256m`.
+   Match the quarantine owner's UID/GID so protected files remain readable
+   without changing their permissions. Settings point only to 127.0.0.1 inside
+   the isolated namespace, the restored DB and readonly recovered keys/files.
+   Verify audit chains, credential AEAD and document byte hashes. Preserve
+   original revocations; never interpret restored grants as new consent.
+7. First exercise a separate synthetic **nonempty** Knowledge DB/files fixture;
+   current personal Knowledge is empty. No actual ingestion/RAG, account login,
+   device/provider action or production restore is implied by the verifier.
+   Record independent-host identity, key retrieval/decryption, hashes and proof.
+   Remove only the exact positively identified rehearsal container IDs, and
+   handle decrypted quarantine under the agreed data retention policy.
+
+The preceding is prepared procedure, not an executed off-host proof. Target and
+key decisions remain required; do not transfer personal backups to this machine
+until both are explicitly settled. Existing same-host proof is not repeated now.
+
+### Smallest coordinated database/files quiet window
+
+Source inspection of [object storage](../services/core/src/main/kotlin/dev/kyrion/core/knowledge/storage/KnowledgeObjectStore.kt),
+[upload/delete orchestration](../services/core/src/main/kotlin/dev/kyrion/core/knowledge/application/KnowledgeService.kt)
+and [ingestion/cleanup](../services/core/src/main/kotlin/dev/kyrion/core/knowledge/ingestion/KnowledgeWorker.kt)
+finds these coupled writers:
+
+- Upload writes/fsyncs `.upload-*.tmp`, atomically moves the original to its UUID
+  filename, parses/hashes it, then commits document/job rows. A file can exist
+  before its DB row; checking only SQL job counts does not prove no upload.
+- Ingestion claims/renews leases and commits status/chunks/embeddings, with audit
+  writes. Reindex changes revisions/jobs. A worker batch can call an embedding
+  runtime; do not interrupt a running job simply because one request timed out.
+- Deletion first tombstones the DB; cleanup removes the file then its row.
+  Scheduled sweep deletes old temporary/orphan files. Freezing upload UI alone
+  leaves both worker cleanup and sweep running.
+- Other Core HTTP requests, calendar leases/scheduler, gateway command results,
+  activity/audit, credential/account mutations and host-local recovery operations
+  can still write the database or keys/configuration. Coordinate users and
+  privileged operators, not just a browser tab.
+
+Only Core currently mounts `/var/lib/kyrion/knowledge`. A read-only observation
+found zero Knowledge documents/jobs/tombstones, active calendar leases, pending
+actions, nonterminal gateway commands, active Pi voice sessions and other active
+DB clients. These are dated observations, not a future stop authorization or an
+HTTP in-flight counter. No uploads/actions may be started in the future slot.
+The actual packaged Spring Boot metadata defaults to graceful shutdown and 30s
+per lifecycle phase; no corresponding environment override was present.
+
+Prepare static configuration/runtime images and the encryption destination
+before the slot. The minimum practical boundary with the existing implementation
+is **only the Pi Core process**, not Web/Caddy/PostgreSQL/host or Satellite:
+
+1. In a separately authorized window, finish user edits/uploads/dialogues and
+   device/provider actions; freeze new mutations and root key/config edits.
+   Recheck the above job/lease/action counters and in-flight work. Do not clear
+   leases, remove pending work or replay uncertain commands to get a green count.
+2. Record the current Core container ID/image/config, then gracefully stop that
+   exact existing container with a 90s stop allowance. This is a prepared step,
+   **not executed here**. Confirm the process is stopped, exit code is not 137,
+   OOMKilled is false, no second writer/client remains and no parser child is
+   active. A forced/uncertain stop invalidates automatic consistency acceptance.
+3. While Core remains stopped, create a **new** timestamped V46 dump, copy the
+   complete Knowledge root including any pending temporary/orphan files, and
+   capture matching original keys/configuration. Do not reuse the older online
+   dump with a newly copied nonempty document tree. Record file inventory/hashes
+   and repeat file metadata after capture; no writer or changed file is allowed.
+   Database read-only checks must show expected schema and no foreign writer.
+4. Once those small copies are complete and the source file inventory remains
+   stable, start only the same original Core container/image/config. Record UP,
+   V46 validation and fresh intended heartbeat; issue no audio/device/provider
+   acceptance command. If state is uncertain, inspect rather than recreating
+   services, weakening guards or restoring over production.
+5. Do slow image export, encryption and isolated/off-host verification **after**
+   Core is available again. A new coordinated snapshot is a new reason to verify
+   its checksum/restore/keys/files; it never overwrites the 175611Z online set.
+
+Reserve 5 minutes for the current tiny DB/empty file tree; the practical service
+outage is Core drain + dump/file capture + restart/readiness, not image export or
+encryption. Duration is a planning budget, not a measured bound; abort/reassess
+if work does not drain. Web/Caddy stay running, but Core-backed Web functions and
+Pi device commands are unavailable during the slot. No Core stop/start, host
+restart, Web/Satellite/binding/Identity/DNS change occurred during preparation.
