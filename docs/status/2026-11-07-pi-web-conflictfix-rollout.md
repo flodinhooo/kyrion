@@ -74,3 +74,37 @@ Reload existing browser pages before the
 Existing Core sessions are not deliberately revoked, but live session retention
 was not tested with personal accounts. Unsaved forms can be lost on reload.
 Physical-phone, authenticated family and real-provider acceptance remain open.
+
+## Subsequent KY-002 Web activation and read-only confirmation
+
+The owner completed the separately prepared KY-002 Web activation and supplied
+`ACTIVATION_VERIFIED`: new build `N6PUtpaaokUmjYzUdfjFf`, Core UP, schema46,
+normal HTTPS/login/assets, unchanged other containers and protected settings.
+The activation was **not repeated** and no rollback was run by this follow-up.
+
+Read-only inspection confirms active image
+`sha256:bf79063124a2354e1ecabebb00221055f8058a4889e614b1298b064af6db5882`,
+reference `kyrion/web:ky002-90125b9-20261107`, exact new build, healthy Web and
+Core UP. Web container is
+`c97f2b290786e5f1cc05294a919a75160593f84508cfc5dd69a2f8c021c0f829`, started
+`2026-11-07T17:29:12.435191936Z`. This supersedes this report's earlier active
+871c46a artifact; that earlier activation remains historical evidence.
+
+The current slot's root-protected original Compose/environment, preflight,
+activation and result receipts are under
+`/var/backups/kyrion/web-ky002-90125b9-20261107/`, as established by the
+owner-run operator. The agent cannot independently reread those root-only
+receipts through noninteractive sudo; no password or broader access was sought.
+Current staging/evidence remains at
+`/home/flodinho/.local/state/kyrion/activation-90125b9-20261107/`.
+The immediate Web rollback target is build `aaUX9C2_I6tMOcrV1sImr`, not the
+older pre-KY-001 build. No rollback is requested or performed.
+
+The installed Web now presents grant/review status and selected-binding save
+semantics. It does not create grants by deployment. An anonymous API request
+returns401; no authenticated human session is available to this agent. The
+owner-confirmed three Pi assignments are still legacy rows with null grants,
+actors and source-node fields. Their source/room/action mapping matches the
+reviewed inventory. Saving is blocked on a legitimate eligible human session;
+no SQL authorization, synthetic session or device command was used. Physical
+button and authenticated HOME acceptance remain open. Windows is untouched.

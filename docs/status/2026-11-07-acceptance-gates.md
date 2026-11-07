@@ -316,3 +316,74 @@ and separately changed identity deployment. The [host recovery plan](../host-rec
 records exact missing components and preparation sequence. No personal backup
 was created/exported, no host reboot or productive restore occurred. KY-001
 through KY-005 remain open for their actual human/operational acceptance.
+
+## Post-activation background follow-up
+
+The owner completed the scoped Pi Web activation. Read-only follow-up confirms
+build `N6PUtpaaokUmjYzUdfjFf`, image
+`sha256:bf79063124a2354e1ecabebb00221055f8058a4889e614b1298b064af6db5882`,
+healthy Web and Core UP. The [existing activation report](2026-11-07-pi-web-conflictfix-rollout.md#subsequent-ky-002-web-activation-and-read-only-confirmation)
+now records the successor artifact. This supersedes earlier source-only/prepared
+Web statements in this report. No activation, rollback or restart was repeated.
+Pi staging `ACTIVATION.md` and `FINAL-CHECK.json` now record completed activation;
+previous `FINAL-CHECK.json` bytes are retained. Original artifact manifests remain
+unchanged. Root-only operator receipts are owner-confirmed, not independently
+reread through the agent's unavailable noninteractive sudo access.
+
+The owner explicitly confirmed all three Pi button mappings. Read-only inventory
+matches the reviewed source UUID/IEEE, room UUIDs and toggle actions, with a fresh
+intended-node heartbeat. Complete room inventories still contain only the named
+power targets plus the known non-power sensor/button. However all three bindings
+still have null grant/actor/source fields. No eligible authenticated application
+session is available: anonymous same-origin `/api/auth/me` returns 401. No save
+was attempted, no SQL grant/session was created and no device was operated.
+The eligible human must log in and save the confirmed selections through Devices
+> button > Button bindings after a current target check. Human confirmation,
+persisted grants and physical acceptance are separate; KY-002 remains open.
+Windows was not accessed or changed by this follow-up.
+
+### Additional local Pi V46 snapshot
+
+A new owner-only local set was created without stopping services:
+
+- Database: `/home/flodinho/.local/state/kyrion/database-backups-v46-20261107T175611Z/core-v46.dump`.
+- Matching captured runtime material: `/home/flodinho/.local/state/kyrion/recovery-material-v46-20261107T175611Z/`.
+- Separate original keys and private effective runtime configuration:
+  `/home/flodinho/.local/share/kyrion/recovery-secrets/20261107T175611Z/`.
+
+Directories are `0700`, files `0600`; no prior snapshot was overwritten. Dump: 557580
+bytes, SHA-256 `41fe9e1a64c2bc3d19dd8b89ef84ba4776ee4ec46f36228112c2d62e3660c9c3`.
+`manifest.json` records checksums, exact source image/container/build identities,
+consistency limits and the proof. Installed Core/Web/PostgreSQL images, original
+Core JAR/parser and an observed Knowledge archive were retained locally. Archive
+config digests match the inspected source image IDs. Captured keys match live
+keys before/after proof; secret bytes never left the Pi or entered output/Git.
+
+The dump uses pg_dump's online transaction-consistent database snapshot. It was
+restored into a newly named, marked, network-none/tmpfs PostgreSQL using the
+same installed PostgreSQL image:46 successful migrations, zero failed migrations.
+The existing standalone read-only verifier used the exact matching reviewed Core
+runtime and original keys, without Spring, application workers, devices or
+providers: four audit chains, 872 sealed events, 874 legacy events, three encrypted
+credentials, six secret-less references, valid=true. Actual Knowledge documents
+and observed original files were both zero; this is not nonempty Knowledge
+recovery evidence. Only exact IDs of owned proof containers were removed.
+
+The initial isolated restore attempt failed before domain verification, without
+retained stderr. A focused diagnostic restored the **same unchanged dump** with
+identical parameters successfully. The final proof also succeeded after waiting
+for final PostgreSQL PID1/readiness, with protected local logs. Initial failure
+cause is not conclusively established; no test/assertion or protection was
+weakened. The dump and previously exported material were not recreated to pass.
+
+This is still same-host local backup evidence, **not a complete recovery set**.
+No global application/DB/files quiescence was imposed; zero Knowledge rows/files
+were observed but future concurrent uploads would require a controlled consistent
+capture. Filesystem encryption is unverified. Current root-only installed
+Compose/environment/TLS could not be copied through noninteractive sudo;
+protected effective container configuration is not a replacement for those files.
+Identity/provider backup is intentionally excluded here. Off-host transfer,
+decryption/retrieval, full-host restart, application restore and reconciliation
+of later grants/revocations remain open. No personal backup was transferred off
+Pi, no productive database restore or hardware/audio action occurred. KY-005
+and all actual user/hardware/recovery acceptance gates remain open.

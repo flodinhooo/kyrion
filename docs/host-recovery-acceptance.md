@@ -84,8 +84,10 @@ Do not reboot a shared host without telling affected users.
 
 Target: `kyrion-node` / `https://kyrion-node.local`, ARM64; Docker enabled, platform
 containers `unless-stopped`, user lingering enabled, Gateway and Voice/media user
-units enabled. Keep current Core V46 and Web871c46a build
-`aaUX9C2_I6tMOcrV1sImr`. Voice still depends on the separate Windows Core.
+units enabled. Keep current Core V46 and the owner-activated Web90125b9 build
+`N6PUtpaaokUmjYzUdfjFf`. Immediate Web rollback build is
+`aaUX9C2_I6tMOcrV1sImr`; no rollback is requested. Voice still depends on the
+separate Windows Core.
 
 Pi downtime also affects Pi-hole DNS, Home Assistant, Zigbee/Matter/Thread,
 media and the identity pilot. Reserve a directly reachable recovery station and
@@ -156,3 +158,30 @@ approved. V39/V41 snapshots are not directly usable with the current V46 runtime
 Database restore cannot undo real device/provider effects. Do not resurrect old
 sessions/grants or replay pending work automatically. Off-host recovery and full
 host restart remain separate acceptance records; KY-005 stays open until both pass.
+
+## Subsequent local V46 preparation, without interruption
+
+The earlier inventory above is historical. A new Pi online V46 source dump now
+exists at `~/.local/state/kyrion/database-backups-v46-20261107T175611Z/`, with
+matching installed runtime archives in the corresponding `recovery-material-`
+directory and original keys/private effective runtime configuration separately
+in `~/.local/share/kyrion/recovery-secrets/20261107T175611Z/`. All are owner-only;
+previous sets remain intact. Nothing was transferred off Pi.
+
+The [post-activation evidence](status/2026-11-07-acceptance-gates.md#additional-local-pi-v46-snapshot)
+records the dump checksum, isolated source-V46 restore, original-key audit and
+credential proof, initial failed proof attempt and final passing results.
+The database snapshot is transaction-consistent; files and runtime metadata were
+captured online without global quiescence. Actual Knowledge was empty, so no
+nonempty document restore is established. This local set is not proven encrypted
+and is not an off-host or complete-host recovery acceptance.
+
+Before promoting it to a complete recovery set, add current root-protected
+installed Compose/environment/TLS under the owner's administrative session,
+without substituting the old deployment archives. The effective container
+configuration captured here is useful evidence, not the original installed
+configuration. Reconcile a separately owned current identity/provider backup;
+this follow-up did not touch Identity or DNS. Agree encryption/custody and an
+independent destination, then verify retrieval/decryption and isolated recovery
+there in a separately authorized task. No host reboot, service stop, productive
+restore, expired command replay or hardware/audio acceptance happened here.
