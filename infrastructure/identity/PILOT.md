@@ -28,11 +28,46 @@ No access logs are enabled: authorization and email action URLs contain secrets.
 
 Realm import only creates an absent realm, never updates an existing one.
 Registration and the confidential website client initially stay disabled.
-SMTP is absent; verifyEmail remains mandatory. Do not manually mark real users
+SMTP is absent in the initial import; see the central SMTP checkpoint below for
+the subsequently configured live pilot. verifyEmail remains mandatory. Do not manually mark real users
 verified as a substitute for mailbox proof. The local public device client has
 no secret, password grant, redirect URI or automatic local enrollment.
 
 ## Public activation gates
+
+### Central SMTP checkpoint, 2026-11-07
+
+Owner supplied the existing mailbox SMTP password through a private ignored
+editor file. It was transferred through verified SSH and stored0600 only in the
+central Pi identity directory; never in either local installation's configuration.
+Actual Infomaniak STARTTLS587 authentication with certificate checks passed.
+The central `kyrion` realm now uses:
+
+| Setting                        | Value                                                     |
+| ------------------------------ | --------------------------------------------------------- |
+| Host                           | `mail.infomaniak.com`                                     |
+| Port                           | `587`                                                     |
+| Authentication                 | enabled, basic mailbox authentication                     |
+| STARTTLS                       | enabled; Keycloak26.8.2 requires STARTTLS when configured |
+| Implicit SSL                   | disabled (STARTTLS transport)                             |
+| User/from                      | `hello@kyrion.ch`                                         |
+| Display name                   | `Kyrion`                                                  |
+| SMTP debug                     | disabled                                                  |
+| Connection/read/write timeouts | 10 seconds                                                |
+
+SMTP settings were applied through the loopback Keycloak Admin REST API, after
+preserving the prior realm state privately. No environment/JVM password argument
+or client-side credential was introduced. The bootstrap admin's previously
+absent email was set to the owner's mailbox, explicitly unverified, so Keycloak's
+native SMTP test could address its logged-in administrator. That native test
+returned204 and submitted a real test mail. Mailbox receipt is pending owner
+confirmation; submission alone is not delivery/mailbox-verification evidence.
+
+Registration remains disabled, website client disabled, verified-email policy
+enabled, both local Core flags unchanged. Do not enable public registration until
+mailbox verification/recovery and secured individual admin/MFA acceptance. A
+local-email settings panel is still separate from a central account link.
+This SMTP setup does not provide a Vercel session database or cloud invitations.
 
 ### Named connector installed, 2026-11-07
 

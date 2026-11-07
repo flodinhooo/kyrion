@@ -1,5 +1,41 @@
 # Named central identity connector
 
+## Subsequent central SMTP checkpoint, 2026-11-07
+
+Owner supplied the Vercel contact mailbox's SMTP password through private ignored
+`smtp-password.txt`. It was transferred through verified SSH; Pi input normalized
+without trimming intentional password spaces, stored0600 centrally, and incoming
+transfer copy removed. No secrets printed, committed, copied into local Cores,
+passed in process arguments or shared with customers.
+
+Actual Pi-to-Infomaniak authentication passed on `mail.infomaniak.com:587` with
+mandatory STARTTLS and normal certificate verification. Central Keycloak realm
+SMTP configured through loopback Admin REST: basic auth, STARTTLStrue, implicit
+SSLfalse, debugfalse, from/user `hello@kyrion.ch`, display `Kyrion`, 10-second
+timeouts. Prior realm snapshot retained privately in `realm-before-smtp.json`.
+Admin access token existed only in operation memory. Bootstrap admin email was
+previously absent and set to the owner's sender mailbox with emailVerifiedfalse,
+allowing Keycloak's native logged-in-admin test-mail endpoint to address it.
+
+Native `POST /admin/realms/kyrion/testSMTPConnection` returned204 and submitted
+one real test mail to the owner-controlled sender mailbox. This is an actual
+Keycloak JVM mail test, not mocked delivery or only Python SMTP authentication.
+Receipt remains pending owner confirmation; no inbox read access was used.
+Evidence is private `smtp-readiness.json`; no real user email is asserted verified.
+
+Fresh provider snapshot `provider-smtp-20261107T162631Z.dump` was restored in an
+independent temporary database; realm/client/user/SMTP configuration row counts
+matched. Only the temporary probe database was removed. SHA256:
+`bf1c00d2285fd13dfef67a63b324348bdd52f8a355519223a8ebc5b24d2ef980`.
+Snapshot and restore evidence remain0600 on Pi. This is not yet an encrypted
+off-device recovery copy. No personal installation data/migration was touched.
+
+Registration remainsfalse, verifyEmailtrue, website client disabled, Core flags
+unchanged. Public registration/link/account login is not declared accepted. Next:
+confirm receipt, secure individual admin/MFA and recovery, encrypted off-device
+provider backup, real browser email verification/reset/device link acceptance,
+then separately scope Core opt-in and the missing Vercel session database.
+
 ## Subsequent public HTTPS checkpoint, 2026-11-07
 
 Owner added the exact `auth.kyrion.ch` route and reported both zone and Universal
