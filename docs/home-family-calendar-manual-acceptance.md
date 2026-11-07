@@ -6,9 +6,10 @@ close this gate. This checklist has not been executed on personal accounts/data.
 
 ## Target and prerequisites
 
-- Choose **one** installation: Windows `http://localhost:3000`, or the existing
-  Pi installation `https://kyrion-node.local`. Never mix their accounts or data.
-  The Windows Core artifact was checked read-only; Pi readiness was not reprobed.
+- Use the selected HOME target **Pi `https://kyrion-node.local`**. Its
+  [Web-only rollout](status/2026-11-07-pi-web-conflictfix-rollout.md) includes the
+  conflict-feedback fix. Windows `http://localhost:3000` is a separate installation
+  and was not updated. Never mix their accounts or data.
 - Two existing active local accounts A and B in the same HOME Space, their own
   passwords and current calendar permissions. A needs read/create/update/delete; B
   needs read/update. If a prerequisite is absent, stop: do not create accounts,
@@ -22,10 +23,9 @@ close this gate. This checklist has not been executed on personal accounts/data.
 - Obtain the owner's approval to create/delete only clearly marked synthetic
   **Kyrion household events**. Do not use existing family events, connect Google,
   select personal delivery destinations or change provider/account configuration.
-- The conflict-feedback fix is currently a **local source change**, not an update
-  of either personal installation. Do not assume the installed Web contains it.
-  An update requires separate authorization. Record an offscreen warning as a
-  failed UX check, even if scrolling reveals it.
+- The selected Pi runs Web build `aaUX9C2_I6tMOcrV1sImr` from `871c46a`.
+  Reload old browser pages before testing; unsaved form input can be lost.
+  Record an offscreen warning as a failed UX check, even if scrolling reveals it.
 
 ## Perform later with the owner
 

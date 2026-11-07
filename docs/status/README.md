@@ -6,7 +6,9 @@ Development continues on `master`; there is no pending worktree integration.
 Maintenance baseline `4f6ea01` passed [hosted CI](https://github.com/flodinhooo/kyrion/actions/runs/42359230467).
 That completed round was not repeated. [Current KY-001 checks](2026-11-07-home-calendar-acceptance.md)
 exercise real Core/PostgreSQL and separate authenticated browsers in DE/EN desktop/mobile.
-A local correction makes conflict feedback visible; it is not installed or pushed.
+A correction makes conflict feedback visible; `871c46a` passed
+[hosted CI](https://github.com/flodinhooo/kyrion/actions/runs/42364439472) and is
+[installed on Pi Web](2026-11-07-pi-web-conflictfix-rollout.md). Windows was not updated.
 **KY-001 remains open** pending actual HOME/user acceptance.
 
 ## Current capabilities and evidence
@@ -27,8 +29,9 @@ records actual Windows/Pi Core/Web activation, original-key restore drills and
 anonymous DE/EN browser checks. It does not prove authenticated owner/family
 journeys, hardware, provider writes, full-host restart or off-host disaster recovery.
 These are historical observations, not a current health guarantee. The KY-001
-work read only personal health/artifact metadata and performed no personal login,
-installation update, provider write or deployment.
+isolated work read only personal health/artifact metadata. The later authorized
+Pi Web-only rollout is recorded separately above; no personal login or provider
+write was performed.
 
 [Maintenance verification](2026-11-07-maintenance.md) records the checks for the
 initial maintenance changes. Results apply only to their reported source and
