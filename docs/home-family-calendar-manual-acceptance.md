@@ -1,79 +1,53 @@
-# KY-001: authenticated HOME/calendar acceptance
+# KY-001: manual HOME/calendar acceptance
 
-Status: prepared, **not executed or accepted**. KY-001 remains open.
-Use the [active backlog](status/TODO.md) and
-[current readiness boundaries](home-first-use-readiness.md).
+**OPEN: actual user acceptance is still required.** The
+[isolated real-stack checks](status/2026-11-07-home-calendar-acceptance.md) do not
+close this gate. This checklist has not been executed on personal accounts/data.
 
-## Prerequisites
+## Target and prerequisites
 
-- An owner-controlled test installation on the intended reviewed runtime, one
-  HOME Space, and two existing active local accounts A and B with calendar
-  read/create/edit permissions. A can be the OWNER. No new invitation is required
-  by this checklist. Keep personal installations and data outside this fixture.
-- Two independent browser profiles; run DE and EN at desktop and mobile widths.
-  Record runtime/version, browser, locale, viewport, time zone and actual results.
-- The actual intended installation additionally needs an owner-observed local
-  password login/logout check. Keep that check read-only, without modifying the
-  owner account. A sandbox login cannot close this production-journey gate.
-- For the optional real-provider stage, separately authorized Google test
-  accounts, valid connections, and dedicated disposable calendars containing
-  synthetic events only. Stop that stage if unavailable; do not substitute a
-  personal calendar, reconnect a personal account or infer provider acceptance.
-- No AI, central identity, device action, recurring/all-day authoring or automatic
-  delivery is needed. Do not change roles or personal account settings for this run.
+- Choose **one** installation: Windows `http://localhost:3000`, or the existing
+  Pi installation `https://kyrion-node.local`. Never mix their accounts or data.
+  The Windows Core artifact was checked read-only; Pi readiness was not reprobed.
+- Two existing active local accounts A and B in the same HOME Space, their own
+  passwords and current calendar permissions. A needs read/create/update/delete; B
+  needs read/update. If a prerequisite is absent, stop: do not create accounts,
+  send invitations or change permissions as part of this checklist.
+- Use two separate browser profiles or browsers, not two ordinary tabs sharing
+  cookies. Repeat in German/English and desktop/mobile; record the actual device,
+  viewport, time zone, installation and software version.
+- Windows loopback works only on that PC; resize its browser for a mobile-layout
+  check. A real phone may use the Pi HTTPS address only if already reachable and
+  trusted. Do not change networking, certificates or DNS to enable this test.
+- Obtain the owner's approval to create/delete only clearly marked synthetic
+  **Kyrion household events**. Do not use existing family events, connect Google,
+  select personal delivery destinations or change provider/account configuration.
+- The conflict-feedback fix is currently a **local source change**, not an update
+  of either personal installation. Do not assume the installed Web contains it.
+  An update requires separate authorization. Record an offscreen warning as a
+  failed UX check, even if scrolling reveals it.
 
-## Native household flow
+## Perform later with the owner
 
-1. In profile A, log in using the existing local password. Open Calendar, reload
-   and confirm the session remains authenticated. Log B in separately. After
-   logout, protected calendar access must return to login; repeat normal login.
-2. A chooses **Create shared event**, names it `KY-001 synthetic`, sets an ordinary
-   timed slot in the recorded browser time zone and explicitly selects A and B.
-   Save. Both profiles must show one shared household event after refresh, with
-   the correct participants and time. Saving alone must not write Google copies.
-3. B edits the title/time and saves; A reloads and sees the same updated event.
-   Keep an old event editor open in A, save another edit in B, then attempt A's
-   stale save: show a conflict/reload message and preserve B's accepted change.
-4. Check month/week/day views, person filters and long dialogs on desktop/mobile.
-   Hiding an entry with a filter must not change consent or event data. Reopen
-   without changing its time and save: the instant must remain unchanged,
-   including a prearranged DST fixture. Do not claim an ambiguous-time chooser.
-5. B must not have creator deletion authority. Delay A's deletion until after
-   provider checks if those will run. In the native-only run, A confirms deletion;
-   both profiles must lose the household event after refresh.
+| Step | Exact surface/action | Expected result |
+| --- | --- | --- |
+| 1 | A and B each open `/login` and use their own local password. In the sidebar choose **Kalender / Calendar** (`/calendar`). | Both sessions are authenticated independently; no central-account link or invitation is needed. Never share passwords or record them in evidence. |
+| 2 | A chooses **Gemeinsamen Termin erstellen / Create shared event**. Set **Titel / Title** to `KY-001 manual <date>`, a synthetic description and an ordinary timed slot under **Beginn / Start** and **Ende / End**. Select B explicitly; A is already selected. Do not use **Alle auswählen / Select everyone**. **Speichern / Save**. | Exactly the intended A/B participants; one native household event. Saving does not send personal calendar copies. |
+| 3 | B uses **Aktualisieren / Refresh**, opens the event, changes its title to append `B1`, then saves. A refreshes/reopens it. | B's edit is persisted and visible to A on the same event, with the intended time. |
+| 4 | Both open the saved `B1` event. B changes it to `B2` and saves. A edits the still-open older form and saves. | A receives **Dieser Termin wurde inzwischen geändert… / This event has changed…**, readable inside the dialog without searching below the fold. A's stale changes do not overwrite B2. A cancels, refreshes and reopens: B2 remains. |
+| 5 | In B's editor inspect the actions. A then uses **Löschen / Delete** and confirms deletion of this marked native event. B refreshes. | B has no creator deletion action; A can delete with its existing permissions. The event disappears for both. No provider copy is deleted. |
+| 6 | Optional negative case using the same two accounts: A creates another marked shared event selecting **only A**. B refreshes and opens/clicks it. A subsequently deletes that test event. | Household members with calendar read permission can still see native household events. B is not a participant, so cannot edit/delete this one. Participants control editing, not private visibility. |
+| 7 | B uses **Abmelden / Sign out**, then opens `/calendar`. Check A separately. | B is redirected to login; A's separate session remains usable. Complete the owner-observed local login/logout check on the intended installation. |
 
-## Separately authorized Google test stage
+Record pass/fail/not-run per step, DE/EN and device, with redacted screenshots and
+correlation IDs where available. Do not retain passwords or personal event text.
+Delete only the marked native events you created; do not perform bulk cleanup.
 
-6. Using only a synthetic event in B's disposable personal calendar, verify the
-   initial **Private** setting exposes nothing to A. B explicitly shares **Event
-   times only**: A sees busy intervals without title/description. B switches to
-   **Event details** with confirmation: A may read those details. A's OWNER role
-   alone grants no private access. Reading does not authorize personal edits.
-7. B revokes sharing. A's visible view refreshes/clears the shared data and a new
-   read is denied. Record actual refresh timing; already seen/copied information
-   cannot be recalled. UI filtering is not a substitute for this revocation.
-8. B explicitly allows joint-event copies in its disposable writable destination
-   under **Receive shared events in my Google calendar**. A saves a joint event,
-   selects only B under **Send saved event to selected calendars**, and confirms.
-   Check B's individual delivery status and the actual single Google copy.
-   Resend/update the saved revision: no duplicate; status/revision match the copy.
-9. Modify that synthetic Google copy externally, then attempt delivery of a newer
-   native revision: preserve the external edit and show conflict/review status.
-   If an outcome is uncertain, refresh status before retrying; do not assume no
-   copy exists. For a controlled browser-network failure, verify understandable
-   failure and a subsequent idempotent retry. This alone does not certify an
-   upstream provider outage or every failure boundary.
-10. B withdraws the test destination. Future writes/retries must stop; existing
-    copies remain. A then confirms native deletion: both profiles lose the shared
-    event, while personal Google copies remain with no further household updates.
-    Provider-copy deletion is not implemented. Cleanup of synthetic provider data
-    is a separate explicit operator action in the disposable calendars.
+## Still separate
 
-## Evidence and decision
-
-Record pass/fail/not-run per step and each DE/EN desktop/mobile combination,
-observed errors, redacted screenshots and relevant correlation IDs. Never record
-passwords, tokens or personal calendar content. A runtime health probe, anonymous
-page load or automated browser fixture is insufficient. Keep KY-001 open until
-the owner reviews actual authenticated and real-provider evidence, including any
-not-run failure/DST cases. This document does not authorize executing the steps.
+Unauthenticated/no-calendar permission denials and creator-only deletion were
+checked against real Core/PostgreSQL in isolation, without changing personal roles.
+Real Google disclosure/revocation, selected delivery, retry/conflict and copy
+retention remain **not accepted**; they need a separately authorized disposable
+provider-calendar procedure. See [HOME readiness](home-first-use-readiness.md).
+No simulated or isolated result closes **KY-001**.

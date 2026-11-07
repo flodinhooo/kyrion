@@ -48,6 +48,7 @@ export default function CalendarPage() {
   const [copiesUnavailable, setCopiesUnavailable] = useState(false);
   const [personFilter, setPersonFilter] = useState("");
   const sequence = useRef(0);
+  const editorFeedback = useRef<HTMLParagraphElement>(null);
   const canCreate = permissions.includes("calendar:create");
   const canUpdate = permissions.includes("calendar:update");
   const canDelete = permissions.includes("calendar:delete");
@@ -77,6 +78,10 @@ export default function CalendarPage() {
     setGoogleCode(google && typeof google === "object" && "code" in google && typeof google.code === "string" ? google.code : null);
     setState("ready");
   }, [range, calendarId]);
+
+  useEffect(() => {
+    if (message) editorFeedback.current?.scrollIntoView({ block: "center" });
+  }, [message]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -228,7 +233,7 @@ export default function CalendarPage() {
         {editor.id && selectedEvent && canDeleteCalendarEvent(selectedEvent, canDelete) && <button className="calendar-danger" type="button" onClick={() => void remove()} disabled={saving || selectedEvent?.pendingDeletion}>{text.remove}</button>}
         <button className="calendar-primary" type="submit" disabled={saving || (selectedEvent?.pendingDeletion && editor.syncToGoogle)}>{saving ? text.saving : text.save}</button>
       </div>
-      {message && <p role="alert">{message}</p>}
+      {message && <p ref={editorFeedback} role="alert">{message}</p>}
     </form></div>}
   </section>;
 }

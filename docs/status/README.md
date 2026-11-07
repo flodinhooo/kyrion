@@ -3,9 +3,11 @@
 Last reviewed: 2026-11-07. Start with the [active backlog](TODO.md).
 Development continues on `master`; there is no pending worktree integration.
 
-[Hosted CI follow-up](2026-11-07-github-ci.md): the actual GitHub run failed
-Core, Web and Website checks. Focused local checks pass; publication is
-blocked by the existing automatic Vercel Production deployment. KY-001 remains open.
+Maintenance baseline `4f6ea01` passed [hosted CI](https://github.com/flodinhooo/kyrion/actions/runs/42359230467).
+That completed round was not repeated. [Current KY-001 checks](2026-11-07-home-calendar-acceptance.md)
+exercise real Core/PostgreSQL and separate authenticated browsers in DE/EN desktop/mobile.
+A local correction makes conflict feedback visible; it is not installed or pushed.
+**KY-001 remains open** pending actual HOME/user acceptance.
 
 ## Current capabilities and evidence
 
@@ -24,12 +26,14 @@ The [2026-11-06 V46 rollout](../agent-handoffs/2026-11-06-v46-live-rollout.md)
 records actual Windows/Pi Core/Web activation, original-key restore drills and
 anonymous DE/EN browser checks. It does not prove authenticated owner/family
 journeys, hardware, provider writes, full-host restart or off-host disaster recovery.
-These are historical observations, not a current health probe. This maintenance
-session performed no deployment or personal-installation acceptance.
+These are historical observations, not a current health guarantee. The KY-001
+work read only personal health/artifact metadata and performed no personal login,
+installation update, provider write or deployment.
 
 [Maintenance verification](2026-11-07-maintenance.md) records the checks for the
-current maintenance changes. Test results apply only to the source and environment
-stated; no successful hosted GitHub execution is inferred.
+initial maintenance changes. Results apply only to their reported source and
+environment. The baseline hosted result above does not certify the new local
+KY-001 UI correction, which has only the linked local verification.
 
 ## Reading order
 
