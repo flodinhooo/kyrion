@@ -1,5 +1,38 @@
 # Named central identity connector
 
+## Subsequent public HTTPS checkpoint, 2026-11-07
+
+Owner added the exact `auth.kyrion.ch` route and reported both zone and Universal
+SSL Active. Cloudflare recursive DNS now returns public edge addresses. Some
+Google/Pi/Windows DNS caches still alternate stale NS/NXDOMAIN answers during
+delegation convergence; DS is absent in the public checks. This supersedes the
+earlier route-not-created/TLS-pending state below, not the remaining mail/login
+activation gates.
+
+Public HTTPS was verified using actual public DNS edge addresses temporarily
+mapped **only inside each test process**, retaining original hostname/SNI and
+complete certificate verification. No hosts, Pi-hole, resolver settings or TLS
+checks were changed. Discovery issuer matches
+`https://auth.kyrion.ch/realms/kyrion`; discovery and JWKS return200. Requests
+with browser and Java-client user-agent headers receive expected results;
+`/admin/`, `/realms/master`, `/health`, `/metrics` and `/` return404.
+Default Python urllib user-agent receives403 from the public path: do not
+misreport all automated clients as accepted or silently spoof clients in product
+code. Actual JVM/Node authenticated flows still need their own acceptance.
+
+Real isolated Chromium public account-console navigation reaches the Keycloak
+login form, HTTP200, username/password visible, registration link absent, no
+page script errors. This is a real TLS/browser check without credentials, not
+successful user authentication. Private screenshot/script remain in ignored
+`.run/stabilization/identity-pilot/`. Connector still connected with zero restarts;
+loopback discovery200. No real users created, mail sent, registration enabled,
+website client enabled or personal Core central flags changed.
+
+Next dependency is a privately supplied Infomaniak SMTP password and secure
+administration/MFA provisioning. Customer installations must never receive the
+central mailbox secret. Preserve parallel uncommitted development changes; no
+application build/restart is needed for this evidence-only update.
+
 Owner authorized home-hosted central identity and created Cloudflare tunnel
 `kyrion-central-auth`. Token supplied through ignored local private file; no
 credential copied into source, shell arguments, environment values or chat.
