@@ -1,5 +1,14 @@
 # Full local identity acceptance
 
+For later productive preparation, `smtp.example.json` is a **partial realm
+settings template**, not a realm import or an activation command. Replace its
+password only in protected central configuration; never commit the result.
+Review STARTTLS587, sender authorization, certificate validation, admin/MFA,
+verification and password-recovery delivery before applying settings in a
+separately approved operation. The website has its own disabled
+`apps/website/account.production.env.example`; contact-mail settings and local
+Core credentials are separate. No DNS status is inferred from these templates.
+
 This opt-in environment uses actual Website, local Web, packaged Core, Keycloak,
 three independent PostgreSQL databases and Mailpit. There are no mocked HTTP
 routes or provider responses in `apps/website/full-identity/flows.spec.ts`.
