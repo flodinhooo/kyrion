@@ -135,7 +135,7 @@
     "title": "Dein Zuhause. Ein System.",
     "titleAccent": "Deine Kontrolle.",
     "description": "Kyrion verbindet Geräte, Dienste und eigene Informationen in einer lokalen, modularen Plattform. Für ein vernetztes Zuhause heute im Prototyp erprobt; für kleine Unternehmen und Teams im Aufbau. KI unterstützt auf Wunsch.",
-    "heroNote": "Entwicklungsprototyp, kein allgemein verfügbares Produkt. Implementierter Code, automatisierte Tests und reale Erprobung sind unterschiedliche Nachweise. Business und persönliche Dokumentensuche haben offene Integrations- und Prüfaufgaben.",
+    "heroNote": "Entwicklungsprototyp, nicht allgemein verfügbar. Gemeinsame Haushaltstermine, Rollen und Einladungen sind implementiert; reale Familienabläufe, Sprachqualität und Wiederherstellung müssen noch abgenommen werden.",
     "diagramLabel": "Das Kyrion-Ökosystem",
     "diagramTop": "GERÄTE & INTEGRATIONEN",
     "diagramCore": "EIN VERTRAUENSWÜRDIGER CORE",
@@ -158,11 +158,11 @@
       },
       {
         "title": "Kalender & Medien",
-        "description": "Lokale Termine, begrenzte Google-Kalenderfunktionen, Spotify Connect und YouTube-Links."
+        "description": "Gemeinsame Haushaltstermine, freiwillige Kalenderfreigaben, Spotify Connect und YouTube-Links."
       },
       {
         "title": "Personen & Zugriff",
-        "description": "Einladungen, installationsweite Rollen und ein gemeinsamer Aktionspfad durch Core."
+        "description": "Ein HOME- oder BUSINESS-Space pro Installation, Rollen und widerrufbare Einladungen. Die optionale zentrale Identität erhält den lokalen Login."
       }
     ],
     "worksEyebrow": "SO FUNKTIONIERT KYRION",
@@ -203,7 +203,7 @@
     "cloudCard": {
       "label": "OPTIONALE VERBINDUNG",
       "title": "Dienste kommen nur dazu, wenn du sie brauchst",
-      "description": "Spotify nutzt ein ausdrücklich verbundenes Konto. Google Calendar bietet begrenztes Bearbeiten und explizites Synchronisieren ausgewählter Termine; ganztägige und wiederkehrende Termine bleiben schreibgeschützt. YouTube lädt einen sichtbaren Link-Player. Externe Dienste und optionale Cloud-KI benötigen ihre Anbieter und Netzwerkzugriff."
+      "description": "Persönliche Google-Kalender lassen sich freiwillig als Verfügbarkeit oder Details freigeben. Haushaltstermine können manuell an ausdrücklich freigegebene persönliche Ziele gesendet werden. Spotify, Google und optionale Cloud-KI benötigen ihre Anbieter und Netzwerkzugang; YouTube nutzt einen sichtbaren Browserplayer."
     },
     "permissionsEyebrow": "VERBINDUNGEN MIT KLAREN GRENZEN",
     "permissionsTitle": "Jede Aktion hat klare Grenzen.",
@@ -299,7 +299,7 @@
     "ecosystemLink": "Die Architektur verstehen",
     "veloraEyebrow": "DAS IST VELORA",
     "veloraTitle": "Velora: eine Assistenz im Aufbau.",
-    "veloraDescription": "Velora entsteht als intelligente Sprachschnittstelle für Kyrion. Lokaler Chat, „Hey Velora“-Erkennung, Transkription und begrenzte Gerätebefehle existieren. Wiederholbare Sprachzuverlässigkeit und natürliche Dialoge müssen weiter geprüft werden; KI bleibt optional.",
+    "veloraDescription": "Velora ist Kyrions Sprachoberfläche in Entwicklung. Lokaler Chat, Aktivierungswort, Transkription und begrenzte Geräteaktionen existieren. Physische Dialoge, Wortenden, Kontinuität und Latenz müssen noch wiederholbar abgenommen werden. Gesprochenes Unterbrechen ist nicht implementiert; KI bleibt optional.",
     "veloraRule": "Intelligenz schlägt vor. Core entscheidet.",
     "veloraPlay": "Velora kennenlernen",
     "veloraSpeaking": "Velora spricht",
@@ -308,7 +308,7 @@
     "veloraWelcomed": "Velora hat dich gerade begrüßt.",
     "developmentEyebrow": "TRANSPARENT, SCHRITT FÜR SCHRITT",
     "developmentTitle": "Unabhängig entwickelt.\nTransparent im Aufbau.",
-    "developmentDescription": "Aktuell geht es um verlässlichen Betrieb, die Integration der KI- und Wissensfunktionen sowie die Prüfung von Spaces. Ein Installer für Endkunden ist noch nicht veröffentlicht. Sprachzuverlässigkeit und vollständige Isolation bleiben offene Prüfaufgaben.",
+    "developmentDescription": "Die gemeinsame Grundlage ist integriert. Als Nächstes folgen angemeldete Familienkalender-Abläufe, die ausdrückliche Prüfung älterer Tastenaktionen, die optionale zentrale Anmeldung sowie Sprachqualität und Wiederanlauf. Ein Endkunden-Installer ist noch nicht veröffentlicht.",
     "developmentNote": "Kein öffentliches Erscheinungsdatum. Noch nicht allgemein verfügbar. Funktionen und Architektur können sich ändern.",
     "permissionModel": {
       "title": "Ein kontrollierter Aktionspfad",
@@ -316,7 +316,7 @@
       "items": [
         {
           "title": "Personen und Rollen",
-          "description": "Owner, Admin, User und Viewer, eigene Rollen sowie Einladungen durch Eigentümer.",
+          "description": "Ein Space pro Installation, System- und eigene Rollen sowie widerrufbare Einladungen. Eine zentrale Anmeldung erzeugt keine automatische Mitgliedschaft.",
           "status": "available"
         },
         {
@@ -336,7 +336,7 @@
     "overviewLabel": "IM PROTOTYP IMPLEMENTIERT",
     "overviewItems": [
       "Räume und Beleuchtung steuern",
-      "Lokaler Kalender und Mediendienste",
+      "Gemeinsamer Haushaltskalender und Mediendienste",
       "Konten, Rollen und Aktionsverlauf"
     ],
     "overviewLink": "Funktionen und Grenzen ansehen",
@@ -396,7 +396,7 @@
     },
     {
       "title": "Gemeinsame Installationen",
-      "description": "Einladungen und installationsweite System- sowie eigene Rollen sind implementiert. Berechtigungen je Raum oder Gerät bleiben geplant.",
+      "description": "Ein HOME- oder BUSINESS-Space pro Installation, System- und eigene Rollen sowie widerrufbare Einladungen. Optionale zentrale Kontoverknüpfungen erhalten den unabhängigen lokalen Passwort-Login. Die öffentliche zentrale Anmeldung benötigt eine separate Aktivierung; Raum-/Geräterechte sind geplant.",
       "status": "available"
     },
     {
@@ -411,7 +411,7 @@
     },
     {
       "title": "Velora & Sprache",
-      "description": "Aktivierungswort, Transkription und mehrstufige Sprachpfade existieren. Wiederholbare Ende-zu-Ende-Sprach- und Audioprüfungen bleiben in Entwicklung.",
+      "description": "Aktivierungswort, Transkription und mehrteilige Sprachdialoge existieren. Audioqualität, Sitzungsende, kontinuierliche Wiedergabe und akustische Latenz bleiben offen. Gesprochenes Unterbrechen ist nicht implementiert.",
       "status": "experimental"
     },
     {
@@ -426,7 +426,7 @@
     },
     {
       "title": "Kalender & Lounge",
-      "description": "Lokale Termine, begrenztes Bearbeiten normaler Google-Termine und explizite Synchronisierung einzelner verknüpfter Termine sind implementiert und mit markierten Testterminen live geprüft. Ganztägige und wiederkehrende Google-Termine bleiben schreibgeschützt. Spotify-Web-Empfang bleibt zu prüfen; YouTube nutzt den sichtbaren Browserplayer.",
+      "description": "Haushaltstermine mit ausgewählten Teilnehmenden gemeinsam bearbeiten. Persönliche Verfügbarkeit oder Kalenderdetails freiwillig freigeben und ausgewählte Termine manuell mit Einzelstatus und Wiederholung an erlaubte Google-Ziele senden. Beim Löschen eines Haushaltstermins bleiben persönliche Kopien erhalten. Die reale Familien- und Providerabnahme steht aus; Serien und Ganztagstermine zu erstellen ist geplant. Die Spotify-Web-Empfängerabnahme steht aus; YouTube nutzt den sichtbaren Browserplayer.",
       "status": "available"
     },
     {
@@ -436,12 +436,12 @@
     },
     {
       "title": "Eigene Dokumente (K-Data)",
-      "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind als erste Implementierung vorhanden. Zusätzliche Korrekturen wurden separat getestet und sind noch nicht vollständig integriert. Reale Modellantworten, Installation und Wiederherstellung sind noch zu prüfen; kein Teamwissen, OCR oder Cloud-Dokumentenkontext.",
+      "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind integriert. Antworten mit echten lokalen Modellen, Grenzen bei schädlichen Dokumenten und die Wiederherstellung gefüllter Dokumentablagen müssen noch abgenommen werden. Gemeinsames Teamwissen, OCR und Cloud-Dokumentkontext sind nicht verfügbar.",
       "status": "experimental"
     },
     {
       "title": "Spaces für Zuhause und Business",
-      "description": "HOME/BUSINESS, Mitgliedschaften, Rollen, Einladungen und E-Mail-/Domainprüfung sind in einem separaten Entwicklungsstand implementiert und automatisiert getestet. Im gemeinsamen Stand sind installationsweite Rollen vorhanden. Gemeinsame Integration, reale Betriebsprüfung und vollständige Isolation einschliesslich persönlichem Wissen bleiben offen.",
+      "description": "HOME-/BUSINESS-Einrichtung, Rollen, Einladungen und optionale Postfach-/Domainprüfung sind integriert und softwaregetestet. Pro Installation läuft nur ein Space. Multi-Space-Betrieb, Business Voice und eine vollständige Business-Isolationsabnahme sind weiterhin nicht verfügbar.",
       "status": "development"
     }
   ],
@@ -476,7 +476,7 @@
     "description": "Kyrion ist ein funktionierender Prototyp auf dem Weg zur privaten Alpha-Validierung. Es ist kein fertiges Endkundenprodukt und noch nicht allgemein verfügbar.",
     "checkpoint": "AKTUELLER STAND",
     "checkpointTitle": "Gemeinsamen Stand integrieren.\nGrenzen im Alltag prüfen.",
-    "checkpointDescription": "Aktuell geht es um verlässlichen Betrieb, die Integration der KI- und Wissensfunktionen sowie die Prüfung von Spaces. Ein Installer für Endkunden ist noch nicht veröffentlicht. Sprachzuverlässigkeit und vollständige Isolation bleiben offene Prüfaufgaben.",
+    "checkpointDescription": "Die gemeinsame Grundlage ist integriert. Als Nächstes folgen angemeldete Familienkalender-Abläufe, die ausdrückliche Prüfung älterer Tastenaktionen, die optionale zentrale Anmeldung sowie Sprachqualität und Wiederanlauf. Ein Endkunden-Installer ist noch nicht veröffentlicht.",
     "areasTitle": "Wo die Plattform steht",
     "legendTitle": "Was die Status bedeuten",
     "legend": [
@@ -489,13 +489,13 @@
     "roadmapDescription": "An Ergebnissen orientiert, ohne erfundene Termine.",
     "roadmap": [
       {
-        "title": "Installer v1 validieren",
-        "description": "Signierte Artefakte, erste Eigentümereinrichtung, Zertifikate und Wiederherstellung vor einer Pilotfreigabe auf einem frischen Raspberry Pi prüfen.",
+        "title": "HOME im Alltag abnehmen",
+        "description": "Angemeldete Familienkalender, ausdrückliche Freigaben älterer Tastenaktionen, optionale zentrale Identität und physische Sprache kontrolliert prüfen.",
         "status": "development"
       },
       {
-        "title": "Alltagszuverlässigkeit prüfen",
-        "description": "Wiederholbare Sprach- und Home-Assistant-Hardwareabnahmen abschließen; danach Automationen und feinere Haushaltsberechtigungen ausbauen.",
+        "title": "Wiederherstellung und Installation belegen",
+        "description": "Vollständigen Host-Neustart und externe Wiederherstellung prüfen, danach signierte Installer-Artefakte, Zertifikate und Ersteinrichtung auf einem unabhängigen sauberen Host vor einer Pilotfreigabe.",
         "status": "development"
       },
       {
@@ -643,7 +643,7 @@
     "eyebrow": "FÜR PRIVATKUNDEN",
     "title": "Dein Zuhause.\nMehr Zusammenhang.",
     "description": "Licht steuern, Termine organisieren, Informationen wiederfinden: Kyrion führt diese Aufgaben Schritt für Schritt zusammen. Du entscheidest, welche Geräte, Dienste und KI-Funktionen du nutzt.",
-    "notice": "Entwicklungsprototyp, kein allgemein verfügbares Produkt. Implementierter Code, automatisierte Tests und reale Erprobung sind unterschiedliche Nachweise. Business und persönliche Dokumentensuche haben offene Integrations- und Prüfaufgaben.",
+    "notice": "Entwicklungsprototyp, nicht allgemein verfügbar. Gemeinsame Haushaltstermine und freiwillige Kalenderfreigaben sind implementiert; die reale Familien- und Providerabnahme steht aus.",
     "casesTitle": "Was im Alltag zusammenkommt",
     "cases": [
       {
@@ -653,7 +653,7 @@
       },
       {
         "title": "Termine und Dienste bündeln",
-        "description": "Lokale Termine, begrenztes Bearbeiten normaler Google-Termine und explizite Synchronisierung einzelner verknüpfter Termine sind implementiert und mit markierten Testterminen live geprüft. Ganztägige und wiederkehrende Google-Termine bleiben schreibgeschützt. Spotify-Web-Empfang bleibt zu prüfen; YouTube nutzt den sichtbaren Browserplayer.",
+        "description": "Haushaltstermine mit ausgewählten Teilnehmenden gemeinsam bearbeiten. Persönliche Verfügbarkeit oder Kalenderdetails freiwillig freigeben und ausgewählte Termine manuell mit Einzelstatus und Wiederholung an erlaubte Google-Ziele senden. Beim Löschen eines Haushaltstermins bleiben persönliche Kopien erhalten. Die reale Familien- und Providerabnahme steht aus; Serien und Ganztagstermine zu erstellen ist geplant. Die Spotify-Web-Empfängerabnahme steht aus; YouTube nutzt den sichtbaren Browserplayer.",
         "status": "available"
       },
       {
@@ -663,7 +663,7 @@
       },
       {
         "title": "In eigenen Unterlagen suchen",
-        "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind als erste Implementierung vorhanden. Zusätzliche Korrekturen wurden separat getestet und sind noch nicht vollständig integriert. Reale Modellantworten, Installation und Wiederherstellung sind noch zu prüfen; kein Teamwissen, OCR oder Cloud-Dokumentenkontext.",
+        "description": "Persönlicher PDF-/Text-Upload und lokale Suche mit Quellen sind integriert. Antworten mit echten lokalen Modellen, Grenzen bei schädlichen Dokumenten und die Wiederherstellung gefüllter Dokumentablagen müssen noch abgenommen werden. Gemeinsames Teamwissen, OCR und Cloud-Dokumentkontext sind nicht verfügbar.",
         "status": "experimental"
       }
     ],
@@ -672,7 +672,7 @@
     "cloudNote": "Google, Spotify und andere externe Dienste benötigen ihre jeweiligen Verbindungen. Cloud-KI ist optional, braucht Anbieterzugang und ausdrückliche Freigabe. Der aktuelle KI-Pfad gibt nur die aktuelle Nachricht weiter; persönliche Erinnerungen, Verlauf, Kalender und Dokumente werden nicht als Cloud-Kontext freigegeben. Ein vollständig lokaler Betrieb aller Funktionen ist nicht zugesichert.",
     "setupTitle": "Einrichtung und Zugang heute",
     "setupDescription": "Kyrion richtet sich derzeit an technisch erfahrene Menschen mit eigener Entwicklungsumgebung. Web, Core und PostgreSQL werden separat eingerichtet; KI und Sprache benötigen zusätzliche lokale Dienste. Unterstützte Geräte müssen im eigenen Netzwerk erreichbar und ausdrücklich eingebunden sein. Ein Raspberry Pi kann als Gateway dienen, ist aber kein belegter Ersatz für die gesamte KI-Hardware.",
-    "setupNote": "Es gibt noch keinen veröffentlichten Endkundeninstaller, keine allgemeine Registrierung und keinen zugesicherten Alpha-/Beta-Zugang. Interesse an künftigen Tests kannst du über den bestehenden Kontaktkanal mitteilen.",
+    "setupNote": "Es gibt keinen veröffentlichten Endkunden-Installer oder garantierten Alpha-/Beta-Zugang. Optionale zentrale Konten sind implementiert; öffentliche Registrierung benötigt eine separate Aktivierung und gewährt keinen lokalen Space-Zugang. Interesse lässt sich über den Kontaktkanal melden.",
     "ctaTitle": "Wie sieht dein vernetztes Zuhause aus?",
     "ctaDescription": "Beschreibe deine Geräte, deinen Alltag oder eine Frage zum Entwicklungsstand.",
     "cta": "Kontakt aufnehmen",
@@ -682,7 +682,7 @@
     "eyebrow": "FÜR UNTERNEHMEN — IM AUFBAU",
     "title": "Geräte, Dienste und Teamwissen.\nEine gemeinsame Richtung.",
     "description": "Kyrion soll kleinen Unternehmen und Teams helfen, ihre digitale Umgebung verständlich zu verbinden. Dieser Bereich beschreibt das Zielbild und erste Entwicklungsarbeiten, keinen produktionsreifen Business-Service.",
-    "notice": "Business ist im Aufbau. Erste Spaces- und Identitätsfunktionen sind separat implementiert und getestet, aber noch nicht gemeinsam integriert und im realen Betrieb geprüft. Vollständige Isolation ist nicht belegt. Es gibt kein Angebot für produktiven Mandantenbetrieb, gehostete Teamumgebungen oder garantierten Support.",
+    "notice": "Business ist in Entwicklung. Spaces und Identität sind integriert und softwaregetestet. Reale Business-Abläufe und die vollständige Isolation müssen noch abgenommen werden. Es gibt kein Angebot für produktiven Mandantenbetrieb, gehostete Teams oder garantierten Support.",
     "casesTitle": "Mögliche Anwendungen für kleine Teams",
     "examplesNote": "Die folgenden Beispiele sind Zielbilder, keine bereits verfügbaren Business-Funktionen.",
     "cases": [
@@ -708,10 +708,10 @@
       }
     ],
     "controlTitle": "Zugriff ist eine Voraussetzung, kein Versprechen.",
-    "controlDescription": "Im gemeinsamen Prototyp existieren installationsweite Rollen, eigene Rollen und vom Eigentümer ausgestellte Einladungen. Ein separater Entwicklungsstand ergänzt HOME-/BUSINESS-Spaces, Mitgliedschaften, begrenzte Einladungen, E-Mail-Bestätigung und Domainprüfung sowie lokale Kontowiederherstellung für Eigentümer. Dafür liegen automatisierte Tests vor; die gemeinsame Integration und reale Betriebsprüfung stehen aus.",
-    "cloudNote": "Die Domainprüfung ist implementiert, aber noch nicht mit einem realen Postfach und einer eigenen Domain abgenommen. Auch die Trennung von Daten, Hintergrundaufgaben, KI-Streams und Wissenszugriff benötigt gemeinsame Nachweise. Mehrere Spaces in einer laufenden Installation bleiben gesperrt. Business-Sprachfunktionen sind im separaten Stand gesperrt, bis die handelnde Person verlässlich zugeordnet werden kann. Lokale und optionale Cloud-Verarbeitung müssen für jeden Anwendungsfall ausgewiesen werden.",
+    "controlDescription": "Der integrierte Prototyp unterstützt einen HOME- oder BUSINESS-Space pro Installation, System- und eigene Rollen, widerrufbare Einladungen, optionale Postfach-/Domainnachweise und lokale Owner-Wiederherstellung. Automatisierte Tests decken die integrierte Software ab; die reale Business-Abnahme steht aus.",
+    "cloudNote": "Reale Postfach-/Domainabnahme und vollständige Isolation von Geräten, Hintergrundarbeit, KI-Streams und Wissen stehen aus. Mehrere Spaces im laufenden System sind gesperrt. Business-Sprachfunktionen sind bis zur personenbezogenen Autorisierung gesperrt. Optionale zentrale Identität erzeugt keine Mitgliedschaft; die öffentliche Aktivierung hat eigene Betriebsvoraussetzungen.",
     "setupTitle": "Was vor einem Business-Einsatz noch fehlt",
-    "setupDescription": "Zusammenführung der getrennten Arbeitsstände, konfliktfreie Migrationen, Prüfung von Identitäten und Berechtigungen sowie gemeinsame Isolationstests für Geräte, Dienste und Dokumente. Betrieb, Wiederherstellung und reale Modellantworten müssen auf der Zielumgebung belegt werden.",
+    "setupDescription": "Identitäts- und Berechtigungsabläufe, Geräte- und Dokumentisolation sowie Betrieb und Wiederherstellung müssen auf der vorgesehenen Laufzeit belegt werden. Gemeinsames Teamwissen und Ressourcenbuchung benötigen eigene Implementierungen; Haushaltskalender belegen diese Business-Fähigkeiten nicht.",
     "setupNote": "Abonnements, Abrechnung, Kundenportal, verwaltetes Hosting und privilegierter Fernsupport sind nicht implementiert. Es werden keine Preise oder Verfügbarkeitsdaten angekündigt.",
     "ctaTitle": "Welchen Anwendungsfall möchtest du verbinden?",
     "ctaDescription": "Wir suchen den Austausch über konkrete Anforderungen kleiner Unternehmen und Teams. Eine Anfrage begründet weder ein Serviceangebot noch einen zugesicherten Zugang.",

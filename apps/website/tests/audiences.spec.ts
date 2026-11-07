@@ -36,13 +36,13 @@ test("audience routes retain language, truthful status, contact and mobile navig
           );
           await expect(page.locator("main")).toContainText(
             locale === "en"
-              ? "Business voice is blocked in the separate branch"
-              : "Business-Sprachfunktionen sind im separaten Stand gesperrt",
+              ? "Business voice is blocked until per-person authority is established."
+              : "Business-Sprachfunktionen sind bis zur personenbezogenen Autorisierung gesperrt.",
           );
           await expect(page.locator("main")).toContainText(
             locale === "en"
-              ? "Automated tests cover these capabilities; combined integration and real operational acceptance remain open."
-              : "Dafür liegen automatisierte Tests vor; die gemeinsame Integration und reale Betriebsprüfung stehen aus.",
+              ? "Automated tests cover the integrated software; real business acceptance remains open."
+              : "Automatisierte Tests decken die integrierte Software ab; die reale Business-Abnahme steht aus.",
           );
         } else {
           await expect(page.locator("main")).toContainText("PDF");

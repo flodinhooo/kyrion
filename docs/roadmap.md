@@ -9,20 +9,18 @@ the trustworthy orchestration layer first, then daily usability, followed by
 energy and operational differentiation. Integration breadth must not outrun
 permissions, diagnosis, audit and recovery.
 
-## Current delivery boundary - 2026-10-11
+## Current delivery boundary - 2026-11-07
 
-The current handoff is [Installer v1 preparation](installer-v1-plan.md), with
-[reviewed risks and verification](status/2026-10-11-installer-readiness.md) and
-the [consolidated active TODO](status/TODO.md). Installer v1 is not implemented.
-Priorities are security correctness, fresh-install state preservation, trusted
-owner setup and isolated recovery. Existing installations are not migrated or
-updated as part of this preparation.
-
-Installation-wide roles, invitations and deactivation are implemented (RBAC V1),
-as are local Calendar CRUD and read-only Google display. Household/resource scopes,
-Calendar permission enforcement and broader recovery remain open. The milestones
-below describe wider outcomes; an unchecked broad outcome may contain implemented
-groundwork and does not override the current TODO.
+The [active backlog](status/TODO.md) owns current priorities and completion gates.
+Single-Space HOME/BUSINESS, optional central identity, native family calendar,
+voluntary disclosure/manual Google delivery and bounded Installer v1 tooling are
+implemented. Actual V46 Windows/Pi activation is recorded in the
+[rollout report](agent-handoffs/2026-11-06-v46-live-rollout.md).
+Authenticated family/provider acceptance, legacy-binding review, productive
+central identity, physical Voice and full recovery remain open. Multi-Space,
+Business Voice and public installer/release availability are not established.
+Milestones below describe broader outcomes and historical groundwork; they do
+not override the current backlog or imply physical acceptance.
 
 ## Historical consolidation boundary - 2026-09-06
 
@@ -37,7 +35,7 @@ resolution, gateway enrollment and the bounded Web/Voice paths already exist.
 Explicit household/resource scopes and broader permission/backup policies remain open;
 installation-wide RBAC has since been implemented.
 
-## Milestone 0 — Foundation
+## Milestone 0 â€” Foundation
 
 Goal: establish Kyrion's identity, structure and architectural boundaries.
 
@@ -46,7 +44,7 @@ Goal: establish Kyrion's identity, structure and architectural boundaries.
 - [x] Document the initial architecture
 - [x] Create the repository and initial project documentation
 
-## Milestone 1 — Native Nanoleaf Reference Slice
+## Milestone 1 â€” Native Nanoleaf Reference Slice
 
 Goal: prove a local, owner-scoped integration end to end.
 
@@ -63,7 +61,7 @@ Goal: prove a local, owner-scoped integration end to end.
 Nanoleaf remains the native reference adapter used to prove generic contracts;
 it is not a reason to reproduce every manufacturer integration.
 
-## Milestone 2 — Trustworthy Orchestration Foundation
+## Milestone 2 â€” Trustworthy Orchestration Foundation
 
 Goal: make Core the provider-neutral trust and operations layer.
 
@@ -88,7 +86,7 @@ Success criterion:
 > policy and audit path without exposing provider credentials or trusting an
 > adapter to establish authority.
 
-## Milestone 3 — Safe Integration Breadth Without Lock-In
+## Milestone 3 â€” Safe Integration Breadth Without Lock-In
 
 Goal: connect mature ecosystems without making any one of them Kyrion Core.
 
@@ -113,7 +111,7 @@ Goal: connect mature ecosystems without making any one of them Kyrion Core.
 Home Assistant provides early integration breadth. It remains optional,
 replaceable and subordinate to Kyrion identity, policy, audit and UX.
 
-## Milestone 4 — Managed Gateway and Operational Safety
+## Milestone 4 â€” Managed Gateway and Operational Safety
 
 Goal: operate the ordered Raspberry Pi as a secure edge node while Core remains
 on the development PC or a later server.
@@ -134,7 +132,7 @@ on the development PC or a later server.
 Continuing local automation during Core outages is a later policy replication
 slice, not an initial gateway promise.
 
-## Milestone 5 — Understandable Daily Product
+## Milestone 5 â€” Understandable Daily Product
 
 Goal: make a heterogeneous home simple for every authorised household member.
 
@@ -150,7 +148,7 @@ Goal: make a heterogeneous home simple for every authorised household member.
 - [ ] Complete responsive German and English UX in both themes
 - [ ] Add safe remote access after throttling, session controls and audit exist
 
-## Milestone 6 — Hardware and Protocol Validation
+## Milestone 6 â€” Hardware and Protocol Validation
 
 Goal: prove the abstractions against the ordered devices as separate vertical
 slices rather than claiming success from pairing alone.
@@ -166,7 +164,7 @@ slices rather than claiming success from pairing alone.
 Kyrion uses mature radio stacks and does not implement its own Zigbee, Thread
 or Matter protocol stack.
 
-## Milestone 7 — Energy and Operational Differentiation
+## Milestone 7 â€” Energy and Operational Differentiation
 
 Goal: deliver measurable household value and verifiable trust features.
 
@@ -184,7 +182,7 @@ The initial target is technically interested Swiss homeowners with multiple
 systems, household members who need simple operation and potential energy
 assets such as PV, batteries, wallboxes or heat pumps.
 
-## Milestone 8 — Mobile and Local Voice Refinement
+## Milestone 8 â€” Mobile and Local Voice Refinement
 
 - [ ] Create the Expo mobile application
 - [ ] Add authentication, device state, quick actions and notifications

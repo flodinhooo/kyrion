@@ -1,5 +1,10 @@
 # Public website product review — 2026-10-30
 
+Historical review. The [current status](../../docs/status/README.md) and
+[2026-11-07 maintenance review](../../docs/status/2026-11-07-maintenance.md)
+supersede its separate-branch integration limits. Original evidence below retains
+its October scope.
+
 The initial review covered the shared `refresh/product-credibility` checkout at
 `082b661`, not a deployment. The final four-handover review used shared HEAD
 `ac7e87d` and Spaces documentation commit `024e1e6`. Initial Git status contained only dirty nested

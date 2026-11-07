@@ -1,7 +1,4 @@
 <p align="center">
-
-Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-19-calendar-ha-recovery.md); [security hardening closeout](docs/status/2026-10-11-security-hardening.md) ? RBAC, Calendar and first-owner bootstrap, with actual regression and additive-migration evidence.
-
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/logo/kyrion-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="branding/logo/kyrion-light.svg">
@@ -11,274 +8,173 @@ Latest integration: [Calendar and Home Assistant recovery](docs/status/2026-10-1
 
 # Kyrion
 
-Latest operational checkpoint: [Windows and Pi V46 live rollout](docs/agent-handoffs/2026-11-06-v46-live-rollout.md).
-Both Core/Web installations are activated; central-provider setup and controlled
-hardware/provider acceptance remain separate.
+A local-first platform connecting devices, household services, information and
+optional AI through one controlled foundation. Kyrion is a working development
+prototype, not a generally available consumer or business product.
 
-Current engineering checkpoint: [recovery integration and startup stabilization](docs/status/2026-10-30-stabilization.md).
-[K-AI Milestone 01](docs/ai-model-providers.md) implements model profiles and
-Ollama/OpenAI/Anthropic/Gemini adapters with explicit cloud disclosure controls.
-Cloud acceptance is simulated; no paid requests or production deployment are implied.
-
-> A local-first orchestration platform for devices, services, automations and
-> optional AI.
-
-Kyrion is being developed as an open-source project. It explores how a
-personal digital environment can connect smart-home devices, local services,
-media, knowledge and AI without giving an AI model direct authority over the
-user's systems.
-
-The project is currently a working development prototype, not a finished
-consumer product. Several existing vertical slices have real local hardware evidence;
-planned capabilities are documented separately and are not presented as
-complete.
-
-> **Licence notice:** the source is being prepared for open-source publication,
-> but a repository licence has not yet been selected. Until a `LICENSE` file is
-> added, the code remains all rights reserved and cannot yet be reused under an
-> open-source licence.
-
-## Why Kyrion exists
-
-Personal infrastructure is fragmented across vendor applications, cloud
-accounts and incompatible ecosystems. Kyrion aims to provide one coherent,
-auditable layer above them while preserving a few non-negotiable boundaries:
-
-- essential functions remain usable without AI;
-- local processing and storage are preferred where practical;
-- external providers are optional and visible;
-- Core, not an LLM, owns permissions and execution decisions;
-- integrations expose stable capabilities instead of leaking vendor APIs;
-- important actions are validated, correlated and recorded;
-- German and English are supported from the beginning.
-
-The guiding rule for AI-assisted actions is:
+Core validates identity, permissions and actions; AI never receives unrestricted
+execution authority. Essential local controls can be used without AI. External
+accounts, cloud models and their network requirements are optional and explicit.
+The Web interface and public website support German and English.
 
 > **LLM proposes. Core decides. Adapter executes. Result confirms.**
 
-Read the [project vision](docs/vision.md), [principles](docs/principles.md) and
-[product strategy](docs/product-strategy.md) for the longer-term direction.
+**Status reviewed 2026-11-07:** source work is integrated on `master`.
+The [current status](docs/status/README.md) separates implementation, tests,
+deployment and physical/provider acceptance. The [active backlog](docs/status/TODO.md)
+is the current work order, with stable IDs and completion criteria.
 
-## What works today
+> **Licence:** no repository `LICENSE` has been selected. Kyrion is intended for
+> open-source publication, but the current source remains all rights reserved;
+> do not assume permission to reuse or redistribute it.
 
-The current repository includes the following implemented
-slices.
+## What the prototype implements
 
-### Platform and security
+- **People and access:** protected local first-owner setup, password login,
+  session revocation, system/custom roles and bounded revocable invitations.
+  [Spaces](docs/kyrion-spaces.md) support HOME or BUSINESS configuration with
+  **one Space per installation**. Optional mailbox/domain verification and
+  host-local owner recovery exist. Multi-Space runtime and Business Voice stay
+  guarded; room/device permission scopes remain planned.
+- **Optional central identity:** explicit [account linking, central login and
+  unlinking](docs/unified-identity.md) preserve local accounts, roles and independent
+  local password login. Website login grants no local membership. Real isolated
+  identity acceptance exists; the staged central-provider pilot does not establish
+  public registration, productive login or cloud invitations.
+- **HOME calendar:** local events and jointly editable native household events,
+  explicit participants, revision conflicts, creator-only deletion, voluntary
+  private/availability/details disclosure and manual selected-recipient Google
+  delivery with per-target status/retry. Personal copies are retained on native
+  deletion. [Family calendar](docs/home-family-calendar-plan.md) software and
+  browser-fixture evidence do not close real family/provider acceptance.
+  Recurrence/all-day authoring and automatic family delivery remain planned.
+- **Rooms, lighting and integrations:** persistent rooms/catalog/availability,
+  Nanoleaf controls, selected Hue/Zigbee and MELK-OA20 Bluetooth commands via an
+  authenticated gateway. [Home Assistant](docs/home-assistant-import.md) is a
+  bounded read-only import, awaiting full physical acceptance; direct Shelly code
+  remains experimental. Discovery does not grant control. Legacy button bindings
+  require explicit human review/resave before grants become effective.
+- **Media:** [Lounge](docs/lounge.md) includes Core-owned Spotify OAuth/Connect
+  controls and validated YouTube links with a visible browser player. Phone-to-Pi
+  Spotify evidence does not certify the Web receiver or invited-account path.
+- **AI and personal knowledge:** provider-neutral chat and typed device proposals,
+  model profiles/policies/accounting, optional personal memory/context and personal
+  PDF/text ingestion/retrieval with sources. Ollama has local generation evidence;
+  OpenAI/Anthropic/Gemini adapters have simulated cloud acceptance. Current cloud
+  release is limited to the consented current message. Real local RAG, nonempty
+  knowledge recovery, parser/scale and lifecycle acceptance remain open; shared
+  Business knowledge, OCR and cloud document context are unavailable.
+- **Velora:** local `Hey Velora`, VAD/capture, provider-neutral Parakeet STT,
+  Core-owned voice sessions and reviewed/cached/dynamic batch speech paths.
+  Selected physical voice results exist. Repeatable audio quality, end feedback,
+  continuous playback and acoustic latency remain open; under-three-second first
+  answers and spoken barge-in are not achieved.
+- **Operations:** correlated activity/audit, backup and isolated restore tools,
+  bounded development recovery helper, schema-only migration tooling and guarded
+  [fresh Installer v1](docs/installer-v1-implementation-status.md) scaffolding.
+  This is not a released installer, safe general updater or complete disaster
+  recovery system. No public signed installable bundle is supplied.
 
-- local owner setup and authentication;
-- [Kyrion Spaces](docs/kyrion-spaces.md): local HOME/BUSINESS setup, Space settings,
-  default/custom roles and bounded, revocable invitations; one Space per installation;
-- optional [Business mailbox/domain verification and local OWNER recovery](docs/business-identity-and-recovery.md);
-- owner-issued invitations for additional accounts with shared device control;
-- Argon2id password hashing and opaque, hashed session credentials;
-- optional [central Kyrion accounts and explicit local identity links](docs/unified-identity.md),
-  with independent offline password login and unchanged local Space permissions;
-- owner-scoped PostgreSQL persistence;
-- conversation history and deterministic context compaction;
-- explicit, owner-controlled personal memory;
-- an append-only activity log with correlation identifiers;
-- German and English Web interfaces.
+## Current priorities and evidence
 
-### Devices and integrations
+The next acceptance gates are authenticated HOME/calendar use, explicit legacy
+binding review, optional productive central identity, physical Voice/audio and
+full-host/off-host recovery. Installer clean-room/release acceptance follows its
+own gates. Details and deferred work are in the [backlog](docs/status/TODO.md).
 
-- local Nanoleaf discovery, physical authorisation and encrypted credentials;
-- shared local network discovery;
-- [Home Assistant device and basic state import](docs/home-assistant-import.md),
-  including Shelly/sensor data and mapping into existing rooms (awaiting physical verification);
-- retained [experimental direct Shelly H&T code](docs/shelly-integration.md),
-  which is not a fully working, physically verified native integration;
-- Nanoleaf state, power, brightness, colour, temperature and stored scenes;
-- persistent rooms, device names and room assignments;
-- a provider-neutral device catalog and bounded command contracts;
-- an authenticated Raspberry Pi 5 gateway agent;
-- Zigbee discovery and explicit approval through Zigbee2MQTT;
-- physical control of two Philips Hue colour lamps through the shared Core
-  command path;
-- direct discovery, explicit approval and bounded Bluetooth control of a
-  physically verified MELK-OA20 colour lamp through the same Core command path;
-- explicit `online`, `offline`, `degraded` and `unknown` availability.
-- Core-owned Spotify OAuth, Connect-device selection and a [Lounge player](docs/lounge.md)
-  for playback control; phone-to-Pi playback is owner-verified, while the new
-  Web controls still require live receiver validation;
-- YouTube video and playlist links in Lounge, including a YouTube Music link
-  entry, using the visible browser player and Core-owned link validation;
-
-### AI and voice
-
-- local streaming chat through a provider-neutral AI service and Ollama;
-- bounded German and English device-command proposals;
-- a Raspberry Pi Voice Satellite with local `Hey Velora` wake-word inference;
-- local VAD, microphone capture and provider-neutral Parakeet transcription;
-- authenticated, Core-owned multi-turn voice sessions;
-- Bluetooth/PipeWire playback through physical speakers;
-- provider-neutral Fixed, Template and Dynamic voice-response plans;
-- checksum-pinned reviewed-audio support and an owner-scoped template cache.
-
-The shared Core Action Orchestrator is implemented for Web and Voice. Physical
-Voice evidence and remaining acceptance items are recorded separately; software
-coverage does not establish repeatable acoustic or device acceptance.
-
-## Current focus
-
-The current handoff prepares a bounded fresh Installer v1. Read the
-[readiness review](docs/status/2026-10-11-installer-readiness.md),
-[consolidated TODO](docs/status/TODO.md) and
-[implementation plan](docs/installer-v1-plan.md). Installer v1 is planned,
-not delivered. Security prerequisites, existing-installation preservation,
-trusted setup and isolated recovery are explicit acceptance gates.
-
-Installation-wide RBAC and local Calendar CRUD/read-only Google display are
-implemented. Explicit per-event timed Google synchronization and refreshed HA
-snapshots are described in [calendar synchronization](docs/calendar-synchronization.md)
-and [HA import](docs/home-assistant-import.md); physical acceptance remains separate.
-Remaining permissions, audit, privacy and reliability gaps are
-documented separately. Existing HA/Voice acceptance remains open; this handoff
-does not claim new deployment or physical verification or reopen TTS discovery.
+The [2026-11-06 Windows/Pi V46 report](docs/agent-handoffs/2026-11-06-v46-live-rollout.md)
+records actual Core/Web activation, original-key restore drills and anonymous
+DE/EN production browser checks. It does not prove an authenticated owner/family
+journey, provider writes or hardware acceptance. The
+[isolated identity scenario](docs/agent-handoffs/2026-11-06-identity-master-integration.md)
+used real fixture services, separate from productive identity.
+The [Pi identity pilot](docs/agent-handoffs/2026-11-06-central-identity-pi-pilot.md)
+is loopback-only, with public TLS, SMTP, lifecycle and website prerequisites open.
+These reports are dated evidence, not current runtime-health guarantees.
 
 ## Architecture
 
 ```text
-Web / Voice Satellite / future Mobile / Automations
-                         |
-                         v
-                    Kyrion Core
-       identity | policy | persistence | audit
-            target resolution | action decisions
-                  /                    \
-                 v                      v
-       Integration adapters       Optional AI service
-       Nanoleaf / Zigbee / ...    STT / proposals / chat / TTS
+Web / Voice Satellite / future Mobile
+                  |
+                  v
+             Kyrion Core
+ identity | permissions | policy | persistence | audit
+          /                       \
+         v                         v
+Integration adapters       Optional AI capabilities
+Nanoleaf / Gateway / ...   chat / retrieval / STT / TTS
 ```
 
-Component ownership is intentional:
-
-- **Web** presents state and collects intent through same-origin routes. It does
-  not own provider rules or browser-visible secrets.
-- **Kyrion Core** is the Kotlin/Spring Boot authority for authentication,
-  ownership, permissions, policy, target resolution, command execution,
-  persistence and audit.
-- **AI service** is a Python/FastAPI capability provider for language,
-  transcription and speech. Its proposals are untrusted until Core validates
-  them.
-- **Gateway agent** performs only bounded operations authorised by Core and
-  reports typed health and device observations.
-- **Voice Satellite** owns local wake detection, bounded capture and playback.
-  It cannot execute device actions directly.
-- **Adapters** translate Kyrion capabilities into provider-specific APIs.
-  Home Assistant is an optional read-only device import; it is not the platform
-  core.
-
-See [Architecture](docs/architecture.md) and the accepted
-[Architecture Decision Records](docs/adr/) for detailed boundaries.
+Web collects intent and presents results through same-origin routes. Kotlin/Spring
+Boot Core owns authorization, domain validation and execution. Python/FastAPI AI
+interprets requests and supplies untrusted typed proposals. Gateway and Satellite
+perform bounded device/audio work; manufacturer details stay in adapters.
+Home Assistant is an integration and Ollama a replaceable runtime.
+See [architecture](docs/architecture.md), [principles](docs/principles.md),
+[product strategy](docs/product-strategy.md) and [ADRs](docs/adr/).
 
 ## Repository layout
 
 ```text
-kyrion/
-|-- apps/
-|   |-- web/                 Next.js and React Web application
-|   |-- website/             independent public website for kyrion.ch
-|   `-- mobile/              planned Expo application
-|-- services/
-|   |-- core/                Kotlin/Spring Boot authority
-|   |-- ai/                  Python/FastAPI AI and speech capabilities
-|   |-- gateway-agent/       bounded Raspberry Pi gateway runtime
-|   `-- voice-satellite/     local wake, capture and playback runtime
-|-- packages/
-|   `-- api-contracts/       shared/generated contracts scaffold
-|-- infrastructure/         local deployment and node configuration
-|-- docs/                    architecture, roadmap, ADRs and evidence
-`-- README.md
+apps/web/                 local Next.js/React/TypeScript interface
+apps/website/             independent public Next.js website
+apps/mobile/              package scaffold; no mobile application yet
+services/core/            Kotlin/Spring Boot, PostgreSQL/Flyway, Java 21
+services/ai/              Python 3.12+ FastAPI AI and speech boundary
+services/gateway-agent/   bounded gateway/device runtime
+services/voice-satellite/ local wake, capture and playback runtime
+packages/api-contracts/   contract scaffold
+infrastructure/           development, identity, node and installer tooling
+docs/                     contracts, decisions, evidence and active backlog
+branding/                 shared branding assets
 ```
 
-## Technology
+## Development start
 
-- Next.js, React and TypeScript;
-- Kotlin, Spring Boot and Gradle;
-- Python, FastAPI and Pydantic;
-- PostgreSQL and Flyway;
-- Ollama for replaceable local language-model execution;
-- NVIDIA Parakeet behind a provider-neutral local HTTP boundary for speech recognition;
-- openWakeWord and ONNX on the Raspberry Pi;
-- Zigbee2MQTT and loopback-only Mosquitto for the current Zigbee adapter;
-- PipeWire, ALSA and Bluetooth for the Voice Satellite audio path.
+Use Node **22.21.1**, pnpm **10.29.3**, Java **21** and Python **3.12** to match
+CI. Core integration tests require Docker for disposable PostgreSQL. Real devices,
+provider accounts and large model downloads are not needed for standard checks.
 
-Speech runtimes, model weights, private recordings and device credentials are
-not treated as ordinary repository assets. Their versions, licences and local
-storage boundaries must be reviewed separately.
+The public website runs independently:
 
-## Development status and evidence
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter website dev
+```
 
-Kyrion distinguishes five states explicitly:
+Open `http://localhost:3001`. See [website setup](apps/website/README.md) for
+lint, formatting, type generation, build and isolated Playwright tests.
+The root workspace covers only the website. Web has its own lockfile:
 
-- **implemented**: present in the repository;
-- **automatically tested**: exercised by the reported automated checks;
-- **physically verified**: exercised against the documented local hardware;
-- **experimental**: isolated code or benchmarks that are not active product
-  paths;
-- **planned**: architectural direction or roadmap scope not yet implemented.
+```sh
+cd apps/web
+pnpm install --frozen-lockfile
+pnpm dev
+```
 
-Useful starting points:
+Before starting the local platform, follow [development startup](docs/development-startup.md)
+for PostgreSQL, protected keys/setup, Core, Web and optional AI/speech services.
+Do not point test tools at personal databases. Copy only documented placeholder
+configuration and keep credentials, recordings, models and private data out of Git.
+The Windows recovery helper is development tooling, not production lifecycle management.
 
-- [Current development status](docs/status/README.md)
-- [Current TODO](docs/status/TODO.md)
-- [Project roadmap](docs/roadmap.md)
-- [Single-file context snapshot](docs/status/CHAT-CONTEXT.md)
-- [Development startup](docs/development-startup.md)
-- [Hardware roadmap](docs/hardware-roadmap.md)
+Python components declare development extras in their own `pyproject.toml`:
+install `'.[dev]'` in a separate virtual environment, then run `python -m ruff check .`,
+`python -m pytest` and `python -m build` (install `build` for packaging).
+No Python lockfiles currently exist. For Core, build `bootJar` first and set
+`KYRION_MIGRATION_REHEARSAL_JAR` to its absolute path before the full test suite;
+CI and the isolated schema runner document the exact commands.
+See [maintenance verification](docs/status/2026-11-07-maintenance.md).
 
-Several voice-provider and streaming experiments remain in the repository as
-reproducible evidence. They are not automatically installed, started or
-considered production dependencies.
+## Roadmap and contribution
 
-## Running the project
+General automations, wider integrations/Matter/Thread, multi-HOME membership,
+mobile/remote access, energy views and signed plugin lifecycle remain separate
+future slices. Prove official plugin contracts before a public marketplace.
+Business subscriptions, hosted teams and privileged remote support are not offered.
+The [roadmap](docs/roadmap.md) describes direction; the active backlog sets priorities.
 
-The independent [public website](apps/website/README.md) runs with
-`pnpm install` and `pnpm --filter website dev` from the repository root at
-`http://localhost:3001`. It does not require the local platform services.
-The root pnpm workspace covers this new application; `apps/web` retains its
-existing independent pnpm setup.
-
-Kyrion is not yet packaged for one-command consumer installation. Local
-development currently requires the Web application, Core, AI service,
-PostgreSQL and selected local providers to be configured independently.
-Windows Web development now starts a bounded local recovery helper alongside
-Web. Login and System services link to an operator-key protected recovery page
-for starting missing services and restarting helper-managed processes, including
-three optional Pi user services. This is a development workflow, not production
-lifecycle management; see the startup guide for its boundaries.
-
-Start with [Local Development Startup](docs/development-startup.md), or the
-[Windows worktree workflow](docs/windows-development.md) when validating isolated
-changes against existing local configuration. Hardware
-integrations additionally require owner-controlled devices, private local
-configuration and explicit enrolment. Never commit credentials, model caches,
-private recordings or generated training data.
-
-## Roadmap direction
-
-The immediate handoff is Installer v1 preparation and its security prerequisites.
-Existing HA/Voice hardware acceptance remains a separate workstream. Wider
-integration profiles, complete recovery/update orchestration, Matter/Thread,
-remote access, mobile and public plugins remain future roadmap items. Spotify
-and YouTube already have bounded Lounge slices.
-
-## Contributing
-
-External contribution guidance, issue templates and a code of conduct have not
-yet been published. Until those are added, the repository should be considered
-an actively developed project shared for transparency and portfolio review.
-
-Architecture and implementation contributions must preserve the boundaries in
-[AGENTS.md](AGENTS.md): Core authority, least privilege, provider-neutral
-contracts, German/English parity, local-first operation and explicit separation
-between implemented and planned functionality.
-
-## Licence
-
-Kyrion is intended to be released as open source, but the licence decision is
-still pending. Until a `LICENSE` file is committed, all rights are reserved.
-Do not assume permission to copy, modify or redistribute the source yet.
-
-AI orchestration: [routing, user preferences, policy and budgets](docs/ai-orchestration.md).
+Read [AGENTS.md](AGENTS.md) before changes. Preserve Core authority, least privilege,
+DE/EN parity and the distinction between implemented, tested, deployed, physically
+accepted and planned. Public contribution guidance and a licence are still pending.

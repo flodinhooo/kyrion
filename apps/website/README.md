@@ -14,7 +14,9 @@ central session database; see [account configuration and security](ACCOUNT.md).
 - `/about`: purpose, ownership and local-first principles;
 - `/development`: status definitions, current focus and outcome-oriented direction;
 - `/docs`: documentation layout preview, with repository documentation links.
-- `/contact`: public inquiries and optional interest in future testing.
+- `/contact`: public inquiries and optional interest in future testing;
+- `/account`: optional central login, gated by server configuration;
+- `/privacy` and `/terms`: website privacy and prototype-use boundaries.
 
 German is the default language, with no URL prefix. Every page has an English
 equivalent under `/en`. Old `/de` URLs permanently redirect to the unprefixed
@@ -32,15 +34,24 @@ are implemented; resource scopes, general automations, mobile and public plugins
 remain planned. Voice reliability and physical HA acceptance remain open.
 Update both locales when development claims change.
 
-The [current product review](PRODUCT-STATUS.md) records the October 30 handover
-sources, all four final handovers and the remaining separate-worktree integration limits.
-Current labels say “Implemented in prototype”; they do not establish a public
-release. Google Calendar now includes bounded editing and explicit synchronization
-of selected events; earlier blanket read-only descriptions are superseded.
+The [active backlog](../../docs/status/TODO.md) and
+[current status](../../docs/status/README.md) supersede the integration limits
+in the historical [October product review](PRODUCT-STATUS.md). Spaces, optional
+central identity, personal Knowledge and HOME calendar work are integrated on
+master. Household events, voluntary calendar disclosure and manual selected
+Google delivery are implemented; real family/provider acceptance remains open.
+The one-Space and Business Voice guards remain. Public central identity requires
+separate operational activation; website login grants no local membership.
+
+The November content review updates Home, Product, Private/HOME, Business and
+Development in both locales without changing routes or design. About, Docs,
+Contact, Account and legal pages were checked for consistent claims and calls to
+action. Contact expresses interest, not guaranteed access; no download or released
+installer is offered. See [maintenance evidence](../../docs/status/2026-11-07-maintenance.md).
 
 ## Development
 
-Run from the repository root with Node.js 20.9 or newer and pnpm 10.29.3:
+Run from the repository root with Node.js 22.21.1 (matching CI) and pnpm 10.29.3:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -130,11 +141,11 @@ click or keyboard activation; hover and focus alone do not start audio.
 Vercel Analytics is included by the existing root layout. It remains separate
 from the local platform; this website does not claim to be analytics-free.
 No real delivery is attempted by tests. Full public docs, search, version
-selection and signup handling are intentionally not implemented. No alpha access or release dates are
+selection remain unimplemented. Optional central signup belongs to the configured
+identity provider and is unavailable until its operational gates are met. No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no
 software reuse or commercial-availability promise.
 
 The root pnpm workspace currently includes only `apps/website`. The pre-existing
 `apps/web` workspace and lockfile remain independent and unchanged; continue
 running its pnpm commands from that directory.
-
