@@ -326,7 +326,7 @@ class KnowledgeSecurityIntegrationTest @Autowired constructor(
     companion object {
         private val secret = SessionTokenService().create().rawToken
         private val temp = Files.createTempDirectory("knowledge-tests")
-        private val bootstrap = temp.resolve("bootstrap").also { Files.writeString(it, secret) }
+        private val bootstrap = Files.createTempFile(temp, "bootstrap-", ".secret").also { Files.writeString(it, secret) }
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         @Container
         @JvmStatic

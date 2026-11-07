@@ -58,7 +58,7 @@ jobs:
         run: pnpm lint
       - name: TypeScript
         working-directory: apps/web
-        run: pnpm exec tsc --noEmit
+        run: pnpm typecheck
       - name: Tests
         working-directory: apps/web
         run: pnpm test

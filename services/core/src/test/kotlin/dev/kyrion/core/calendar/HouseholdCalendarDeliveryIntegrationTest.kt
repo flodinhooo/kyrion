@@ -376,7 +376,7 @@ class HouseholdCalendarDeliveryIntegrationTest @Autowired constructor(
         private const val password = "secure-calendar-delivery-password"
         private val secret = SessionTokenService().create().rawToken
         private val temp = Files.createTempDirectory("kyrion-delivery-test-")
-        private val bootstrap = temp.resolve("bootstrap").also { Files.writeString(it, secret) }
+        private val bootstrap = Files.createTempFile(temp, "bootstrap-", ".secret").also { Files.writeString(it, secret) }
         private val key = temp.resolve("key").also { Files.write(it, ByteArray(32) { (it + 1).toByte() }) }
         @Container @JvmStatic val postgres = PostgreSQLContainer("postgres:17-alpine").withTmpFs(mapOf("/var/lib/postgresql/data" to "rw")).withStartupTimeout(Duration.ofMinutes(3))
         @DynamicPropertySource @JvmStatic fun properties(registry: DynamicPropertyRegistry) {

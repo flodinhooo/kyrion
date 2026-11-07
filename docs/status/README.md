@@ -3,6 +3,10 @@
 Last reviewed: 2026-11-07. Start with the [active backlog](TODO.md).
 Development continues on `master`; there is no pending worktree integration.
 
+[Hosted CI follow-up](2026-11-07-github-ci.md): the actual GitHub run failed
+Core, Web and Website checks. Focused local checks pass; publication is
+blocked by the existing automatic Vercel Production deployment. KY-001 remains open.
+
 ## Current capabilities and evidence
 
 | Area | Implemented | Verification and limits |
