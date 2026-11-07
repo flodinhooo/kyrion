@@ -49,13 +49,39 @@ export function accountConfig(
   const originUrl = validateUrl(required("KYRION_WEBSITE_ORIGIN"));
   if (originUrl.pathname !== "/")
     throw new Error("Website origin must not contain a path");
+  const databaseUrl = required("KYRION_WEBSITE_ACCOUNT_DATABASE_URL");
+  let database: URL;
+  try {
+    database = new URL(databaseUrl);
+  } catch {
+    // Connection strings contain credentials. Never include them in errors.
+    throw new Error("Invalid website account PostgreSQL configuration");
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(database.protocol) ||
+    !database.hostname ||
+    !database.username ||
+    database.pathname.length <= 1 ||
+    database.hash
+  )
+    throw new Error("Invalid website account PostgreSQL configuration");
+  const loopbackDatabase = ["localhost", "127.0.0.1", "[::1]"].includes(
+    database.hostname,
+  );
+  if (
+    !(developmentHttp && loopbackDatabase) &&
+    database.searchParams.get("sslmode") !== "verify-full"
+  )
+    throw new Error(
+      "Website account PostgreSQL requires sslmode=verify-full outside explicit loopback development",
+    );
   return {
     issuer,
     origin: originUrl.origin,
     callback: `${originUrl.origin}/api/account/callback`,
     clientId: required("KYRION_WEBSITE_OIDC_CLIENT_ID"),
     clientSecret: required("KYRION_WEBSITE_OIDC_CLIENT_SECRET"),
-    databaseUrl: required("KYRION_WEBSITE_ACCOUNT_DATABASE_URL"),
+    databaseUrl,
     developmentHttp,
   };
 }

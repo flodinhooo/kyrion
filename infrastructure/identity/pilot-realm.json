@@ -21,7 +21,7 @@
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["https://kyrion.ch/api/account/callback"],
+      "redirectUris": ["https://www.kyrion.ch/api/account/callback"],
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",

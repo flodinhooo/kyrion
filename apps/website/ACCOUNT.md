@@ -14,7 +14,10 @@ For the later productive gate, `account.production.env.example` supplies the
 HTTPS issuer/callback origin and a separate verified-TLS database placeholder,
 with accounts still disabled. It is not a deployment or permission to initialize
 a database. Confirm provider, region, credentials, schema/backup ownership and
-the exact `https://kyrion.ch/api/account/callback` before enabling anything.
+the exact `https://www.kyrion.ch/api/account/callback` before enabling anything.
+The public apex currently redirects308 to `www`; use the final canonical origin
+for cookies, POST Origin checks and the registered callback, not the redirecting
+apex. Do not register wildcard callbacks or both origins to hide this mismatch.
 Accounts default to disabled. Disabled accounts do not discover a provider or
 connect to PostgreSQL; the existing public site remains usable. When enabled,
 all fields are required. URLs require HTTPS; explicit development HTTP is
@@ -31,6 +34,14 @@ schema. Subsequent deployed schema changes require versioned migrations.
 On Vercel configure a managed PostgreSQL endpoint suitable for the runtime,
 TLS and restricted credentials; the existing informational deployment does not
 already provide that infrastructure. No hosting or DNS changes are included.
+
+Enabled account configuration rejects malformed PostgreSQL URLs without including
+credentials in error messages. Production and every remote database require
+`sslmode=verify-full`; modes such as `require`, `prefer` and `no-verify` are not
+accepted as substitutes for explicit certificate/hostname verification. Only an
+explicit loopback development configuration can omit this mode. Keep the
+managed provider's hostname and CA validation; never set `rejectUnauthorized`
+to false to make a connection work.
 
 For local start use [the isolated identity environment](../../infrastructure/identity/README.md).
 Run the website development server with configured variables. Normal production

@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { createServer } from "node:http";
 import { generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import pilotRealm from "../../../infrastructure/identity/pilot-realm.json";
 import { accountConfig, type AccountConfig } from "../src/lib/account/config";
 import { authenticate, authorizationUrl } from "../src/lib/account/oidc";
 import { hash, secret } from "../src/lib/account/store";
@@ -13,6 +16,32 @@ test("optional accounts do not require provider configuration", () => {
   expect(() =>
     accountConfig({ KYRION_WEBSITE_ACCOUNT_ENABLED: "true" }),
   ).toThrow("Missing account configuration");
+});
+
+test("production template and provider share the canonical www callback", () => {
+  const template = Object.fromEntries(
+    readFileSync(
+      path.resolve(__dirname, "../account.production.env.example"),
+      "utf8",
+    )
+      .split(/\r?\n/)
+      .filter((line) => line && !line.startsWith("#"))
+      .map((line) => {
+        const index = line.indexOf("=");
+        return [line.slice(0, index), line.slice(index + 1)];
+      }),
+  );
+  const config = accountConfig({
+    ...template,
+    KYRION_WEBSITE_ACCOUNT_ENABLED: "true",
+    NODE_ENV: "production",
+  });
+  expect(config?.callback).toBe("https://www.kyrion.ch/api/account/callback");
+  const client = pilotRealm.clients.find(
+    (value) => value.clientId === "kyrion-website",
+  );
+  expect(client?.redirectUris).toEqual([config?.callback]);
+  expect(client?.attributes["pkce.code.challenge.method"]).toBe("S256");
 });
 
 test("account origins reject paths, credentials, queries, LAN HTTP and production HTTP", () => {
@@ -49,6 +78,59 @@ test("opaque cookie material has sufficient entropy and only its digest identifi
     expect(value).toHaveLength(43);
     expect(hash(value)).toHaveLength(64);
     expect(hash(value)).not.toBe(value);
+  }
+});
+
+test("central account database requires verified TLS and redacts malformed credentials", () => {
+  const base = {
+    KYRION_WEBSITE_ACCOUNT_ENABLED: "true",
+    KYRION_WEBSITE_OIDC_ISSUER: "https://auth.example.test/realms/kyrion",
+    KYRION_WEBSITE_ORIGIN: "https://kyrion.example.test",
+    KYRION_WEBSITE_OIDC_CLIENT_ID: "website",
+    KYRION_WEBSITE_OIDC_CLIENT_SECRET: "private-test-fixture",
+    NODE_ENV: "production",
+  };
+  const configure = (database: string, development = false) =>
+    accountConfig({
+      ...base,
+      NODE_ENV: development ? "development" : "production",
+      KYRION_WEBSITE_ACCOUNT_DEV_HTTP: development ? "true" : "false",
+      KYRION_WEBSITE_ACCOUNT_DATABASE_URL: database,
+    });
+  expect(
+    configure(
+      "postgresql://website:fixture@db.example.test/sessions?sslmode=verify-full",
+    ),
+  ).not.toBeNull();
+  for (const mode of ["", "disable", "prefer", "require", "no-verify"]) {
+    expect(() =>
+      configure(
+        `postgresql://website:fixture@db.example.test/sessions?sslmode=${mode}`,
+      ),
+    ).toThrow("sslmode=verify-full");
+  }
+  expect(
+    configure("postgresql://website:fixture@127.0.0.1:5432/sessions", true),
+  ).not.toBeNull();
+  expect(() =>
+    configure("postgresql://website:fixture@db.example.test/sessions", true),
+  ).toThrow("sslmode=verify-full");
+  expect(() =>
+    configure("postgresql://website:fixture@localhost/sessions"),
+  ).toThrow("sslmode=verify-full");
+  for (const database of [
+    "postgresql://website:do-not-disclose@[invalid/sessions",
+    "https://website:do-not-disclose@db.example.test/sessions",
+    "postgresql://website:do-not-disclose@db.example.test",
+  ]) {
+    expect(() => configure(database)).toThrow(
+      "Invalid website account PostgreSQL configuration",
+    );
+    try {
+      configure(database);
+    } catch (error) {
+      expect(String(error)).not.toContain("do-not-disclose");
+    }
   }
 });
 
