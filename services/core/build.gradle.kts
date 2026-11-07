@@ -50,6 +50,12 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Local Docker access must never imply a socket-mounted resource reaper.
+    // Hosted GitHub CI retains its established Testcontainers configuration.
+    if (System.getenv("GITHUB_ACTIONS") != "true") {
+        environment("TESTCONTAINERS_RYUK_DISABLED", "true")
+        environment("TESTCONTAINERS_REUSE_ENABLE", "false")
+    }
 }
 
 val knowledgeParserJar by tasks.registering(Jar::class) {

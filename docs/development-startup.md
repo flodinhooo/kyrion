@@ -1,5 +1,29 @@
 # Local Development Startup
 
+## Local Core tests without Docker socket mounts
+
+Gradle's local `Test` tasks force `TESTCONTAINERS_RYUK_DISABLED=true` and
+`TESTCONTAINERS_REUSE_ENABLE=false`; GitHub Actions retains its existing setup.
+For IDE-native JUnit launches and any direct Testcontainers invocation, set the
+same two environment variables in the launch configuration **before** starting
+the JVM. Do not start a test runner that omits them. For PowerShell:
+
+```powershell
+$env:TESTCONTAINERS_RYUK_DISABLED = 'true'
+$env:TESTCONTAINERS_REUSE_ENABLE = 'false'
+```
+
+The integration fixtures use JUnit `@Container` lifecycle and tmpfs PostgreSQL;
+JUnit stops those containers on normal completion. Before a local run, record
+`docker ps -a --no-trunc` and inspect the new test container IDs while it runs.
+Verify that their mounts contain no Docker socket. Keep the exact IDs and their
+`org.testcontainers.sessionId` labels as private run evidence. After completion,
+check those exact IDs again. On an interrupted JVM, remove only containers whose
+IDs and session labels were captured for that run, with `docker rm -f <exact-id>`.
+Never select by image alone, remove all Testcontainers resources, run prune, or
+remove unrelated containers/volumes. Unattributed leftovers require investigation,
+not automatic deletion. No local test requires mounting the Docker socket.
+
 This guide starts the complete local Kyrion stack on Windows.
 For isolated worktrees and verified configuration loading, use the
 [Windows worktree workflow](windows-development.md).

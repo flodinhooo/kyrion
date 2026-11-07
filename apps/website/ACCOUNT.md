@@ -10,6 +10,11 @@ Central account management and verified email remain in Keycloak.
 ## Configuration
 
 Copy `account.env.example` values to protected deployment configuration.
+For the later productive gate, `account.production.env.example` supplies the
+HTTPS issuer/callback origin and a separate verified-TLS database placeholder,
+with accounts still disabled. It is not a deployment or permission to initialize
+a database. Confirm provider, region, credentials, schema/backup ownership and
+the exact `https://kyrion.ch/api/account/callback` before enabling anything.
 Accounts default to disabled. Disabled accounts do not discover a provider or
 connect to PostgreSQL; the existing public site remains usable. When enabled,
 all fields are required. URLs require HTTPS; explicit development HTTP is

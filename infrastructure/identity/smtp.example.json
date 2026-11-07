@@ -1,0 +1,12 @@
+{
+  "smtpServer": {
+    "host": "mail.infomaniak.com",
+    "port": "587",
+    "from": "hello@kyrion.ch",
+    "auth": "true",
+    "starttls": "true",
+    "ssl": "false",
+    "user": "hello@kyrion.ch",
+    "password": "replace-with-private-mailbox-password"
+  }
+}

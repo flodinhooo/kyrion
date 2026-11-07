@@ -8,6 +8,49 @@ does not establish a complete external recovery point.
 
 ## Preconditions and decisions
 
+### Read-only inventory and concrete set preparation, 2026-11-07
+
+The existing Pi directory named `database-backups-v46-20261106T200532Z`
+contains `preliminary-v41.dump` and `final-v41.dump`, not a V46 source snapshot.
+Windows `E:\Kyrion\Data\backups\postgres\v46-20261106T200532Z\` ends with
+`kyrion-postgres-20261106T203846Z.dump`; its verified manifest explicitly says
+source schema39 and isolated target46. Directory names do not prove freshness.
+Original keys/config archives exist on each source; the Pi Web and identity
+tunnel were changed after that set. No current external copy was established.
+
+For each selected installation, prepare a **new timestamped** protected set,
+leaving those originals intact. Its manifest must include:
+
+| Component | Current gap / capture in the approved quiet slot |
+| --- | --- |
+| Database | New consistent source-V46 custom dump, current Flyway checksums, timestamp and SHA-256; later writes/revocations omitted by old dumps |
+| Keys and private configuration | Matching original credential/audit keys plus bootstrap/recovery/enrollment material and restrictive ACLs; refreshed Compose/environment/TLS/launch pins, never printed |
+| Runtime | Exact installed V46 Core/JDK/parser and Web build/images plus standalone assets; retained old and candidate Web artifacts clearly separated; installed Satellite/Gateway source/unit/config and radio state |
+| Knowledge | Matching document tree and byte hashes; actual previous sets were empty, so separate synthetic nonempty DB-plus-files restore proof remains necessary |
+| Central identity | Independent current provider DB/config/signing state and protected tunnel credential/config; current deployment postdates old platform archive |
+| Host recovery | Windows supervised startup profile/helper lifecycle and Pi startup ordering, documented access fallback; full reboot/network-loss proof remains unperformed |
+| External copy | Owner-approved independent destination, capacity/access, encryption and separately recoverable key custody; off-host retrieval/checksum/decryption and isolated restore evidence absent |
+
+Do not run the general Pi bundle-preparation script for this task: it also builds
+Core and captures personal data. Windows's existing
+`infrastructure/postgres/backup.ps1 -Destination <new-protected-set-directory>`
+is the bounded dump entry point. On Pi use `pg_dump --format=custom --no-owner
+--no-acl` inside the **inspected current platform PostgreSQL container**, using
+its current configured database/user; transfer only into the selected protected
+local set. Select that container by inspected ID, not an old rollout command.
+Verify version46 and checksum before packaging, and keep credentials out of
+arguments/logs. Coordinate a Core quiet/stop window for database-plus-Knowledge
+consistency; stopping services is not authorized in the current preparation.
+
+Create a per-file hash/size inventory without secret contents, encrypt the
+complete set locally with the agreed tool/key recipient, and transfer only the
+encrypted result to the explicitly selected external destination. Keep decryption
+custody independent of the failed host and prove retrieval there. Then use the
+existing marked network-none/tmpfs verifier and original-key domain/file checks
+on a separate recovery machine, without application workers/providers. Record
+actual source schema, audit/credential and revocation disposition, not only
+`pg_restore` success. No transfer, backup quiescence or restore was performed here.
+
 The owner must choose the first host (Pi or Windows), window, local-console
 operator, acceptable outage and independently accessible off-host destination.
 For that destination decide access, capacity, encryption and separate key custody;

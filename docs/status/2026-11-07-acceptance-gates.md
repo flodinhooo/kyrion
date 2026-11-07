@@ -203,3 +203,116 @@ temporary resources were cleaned; personal containers were retained. Disabling
 the resource reaper did not disable assertions, tests or bootstrap permissions.
 Voice Core26 and Satellite43, Web6, real identity browser1, recovery Node30,
 Python21 and restore guards3 are separate checks, not a new full-CI claim.
+
+## Publication and prepared activation, 2026-11-07
+
+Remote `main` initially pointed to `871c46a` on `master`. Clean local `master`
+also contained an additional identity-tunnel commit `041fb1e`, outside this
+publication scope. Normal explicit-ref push published only `fb3f87c`, `017dd52`,
+`9719c0f`, `1ff39bf`, `cd3e5d1`, `f345027`, `90125b9`. They respectively preserve
+the installed KY-001 evidence, implement KY-002/003/004/005 source work, repair
+documentation encoding and scope deferred activation. No tag, release, force
+push or identity-tunnel publication was performed.
+
+[Actual CI run 42390396304](https://github.com/flodinhooo/kyrion/actions/runs/42390396304)
+completed successfully: Core, Web, Website, all three Python components and
+Installer. [Vercel](https://vercel.com/florianrogenmosers-projects/kyrion-website/CdukSfXXDZB7NvtQ2TfxpHNZ77tn)
+reported success for `90125b9`. This does not install local Web or Satellite.
+Local Gradle now disables Ryuk/reuse outside GitHub Actions; the existing
+[development entry point](../development-startup.md#local-core-tests-without-docker-socket-mounts)
+documents direct IDE configuration and exact-resource cleanup. The targeted
+GatewayAuthorityIntegrationTest rerun passed all 29 tests without failures/skips;
+the binding unit suite passed all three tests. A single-case live mount probe
+with the Ryuk variable absent in the parent shell observed the disposable
+PostgreSQL container with no bind mounts or socket; JUnit owns its lifecycle.
+Hosted CI configuration is unchanged.
+
+### Pi artifact inventory and activation boundaries
+
+Read-only recheck found active Web build `aaUX9C2_I6tMOcrV1sImr`, image
+`sha256:9f1a00ed82b3fef847f32a121a793b8cff76aeddbb4b8080bebf66da241ca3e8`.
+Satellite still runs the Nov6 unit and original dialogue module SHA-256
+`b30367c3eb1ab9e92f0ddbc5b370e9237307ff214ddcce30a2b97800c75b72a1`.
+Its configuration hash remains
+`22cbb2b653d5a8e7017bb7d15b51c5d9f71feccb09cff74dcc9cff94e3e0ed92`.
+No audio/capture, service restart or activation occurred.
+
+Prepared on Pi in
+`/home/flodinho/.local/state/kyrion/activation-90125b9-20261107/`:
+
+| Artifact | SHA-256 / identity |
+| --- | --- |
+| `web-arm64-90125b9.tar` | `5f191f1db4555e234fe63e796b7797365e7957355aa18007848d864454e23779` |
+| Web image `kyrion/web:ky002-90125b9-20261107` | `sha256:bf79063124a2354e1ecabebb00221055f8058a4889e614b1298b064af6db5882` |
+| Candidate Web build | `N6PUtpaaokUmjYzUdfjFf` |
+| `satellite-dialogue-1ff39bf.py` | `a2c1313165c444ed5433950588c893306cb376155c533403076b18db114a25ce` |
+| `rollback-web-871c46a.tar` | `643250dba69259a57ad4226ad54f50d98016e840792cee0ec08ecd7a25b421e4` |
+| `source.tar` (published `90125b9`, Web and Satellite only) | `c36f088560636d2dda8dfa0ec69b5015158af5ab7e6341d85d502c5167b9742d` |
+
+`manifest.json` records these identities. Staging is owner-only (0700); it also
+contains `ACTIVATION.md`, passing `candidate-browser.json`, the exact original
+`rollback-satellite-dialogue.py` and `satellite-original-metadata.json`. ARM64 Web used frozen dependencies and
+the previous pinned Node base digest. Build succeeded; isolated network-none,
+read-only image inspection confirmed its build ID. Satellite syntax was checked
+using the installed venv; the installed module still matches the baseline.
+Four candidate-image anonymous DE/EN desktop/mobile browser checks passed
+against a synthetic Core on an internal network, accessed only by SSH forwarding;
+owned test containers/network were removed. Root-only effective Compose comparison
+remains a pre-activation check: noninteractive `sudo` requires a password. Do not send that password to an agent or reuse the previous
+activation command. These artifacts contain source/runtime, no personal backups.
+
+For Web, in a separately authorized operator slot, verify manifest/image IDs,
+run isolated anonymous DE/EN desktop/mobile browser checks, compare root-protected
+effective Compose to the current running service using the reviewed no-deps hash
+normalization, and preserve root-only original Compose/environment. The candidate
+must differ only in `web.image`. Recreate only Web with no dependencies, build or
+pull; expect a brief login/page interruption (allow two minutes for health).
+Check candidate build, normal TLS, assets, DE/EN, Core/schema46 and unchanged
+other containers. On failure restore that slot's exact original Compose and
+retained image, recreate only Web and verify old build
+`aaUX9C2_I6tMOcrV1sImr`. Do not restore SQL. The new Web alone exposes localized
+binding grant/review state, all-selected-grants save guidance and stricter grant/
+duplicate-gesture response validation. It never authorizes a binding by deployment.
+
+For Satellite, use the existing module-only plan above with the exact staged
+`satellite-dialogue-1ff39bf.py`. Before the approved quiet slot, recheck installed
+module/config hashes, preserve the exact original module with mode/owner in
+protected storage, and record unit state. Stop only
+`kyrion-voice-satellite.service`, replace its installed `dialogue.py` preserving
+metadata, then start that unit. Expect voice unavailability for the stop/start
+interval; allow two minutes to inspect unit health, without automatic audio.
+On failure restore the saved module and restart only that unit. Keep the intended
+Windows Core destination and all audio/model settings. Only this activation makes
+close-error recovery to IDLE and one-first-chunk-per-turn logging effective.
+The existing short owner hearing guide remains unchanged and is still required.
+
+### Operational recheck
+
+Pi and Windows still have three unapproved bindings each. Private current
+inventories are in `.run/private-evidence/publication-20261107/`; exact source,
+gesture, named room/power targets and action were supplied privately to the
+owner for confirmation. The intended Pi source heartbeat is fresh. Room
+membership is dynamic; review current `power.set` targets again before human
+save. No resave or grant activation occurred. Windows still reports the intended
+node last seen `2026-08-28T18:03:36.842583Z`; that stale imported observation is
+not current Windows device availability and must be resolved independently.
+
+The DNSSEC observation earlier in this report is historical. Separate identity
+work has changed the pilot since that observation; no current DNSSEC assertion
+or productive DNS/Keycloak/SMTP/database change is made here. Existing website
+development configuration and acceptance checks already exist. Prepared missing
+production placeholders are `apps/website/account.production.env.example`
+(accounts disabled, exact HTTPS issuer/callback origin, separate TLS database)
+and `infrastructure/identity/smtp.example.json` (partial settings, STARTTLS587,
+private-password placeholder). Neither was applied. Mail delivery/recovery,
+administration/MFA, separate website DB and off-device provider recovery remain
+operational gates; synthetic account tests do not close them.
+
+Recovery inventory still contains Pi `final-v41.dump` and Windows Nov6
+`203846Z.dump` with manifest `sourceSchema:39` / `verifiedTargetSchema:46`.
+Neither is a current V46 source dump. Original keys/config archives exist, but
+must be refreshed into a consistent new set including the current Web rollback
+and separately changed identity deployment. The [host recovery plan](../host-recovery-acceptance.md)
+records exact missing components and preparation sequence. No personal backup
+was created/exported, no host reboot or productive restore occurred. KY-001
+through KY-005 remain open for their actual human/operational acceptance.
