@@ -76,12 +76,21 @@ class DialogueRunner:
                 turn_id = str(uuid.uuid4())
                 speech_end = time.time_ns() // 1_000_000
                 LOGGER.info("[VOICE] turn=%s event=speech_end ts_ms=%d", turn_id, speech_end)
+                received_chunks = 0
 
                 def play_chunk(audio: bytes, voice_turn_id: str = turn_id) -> None:
+                    nonlocal received_chunks
                     received = time.time_ns() // 1_000_000
+                    event = (
+                        "satellite_first_chunk_received"
+                        if received_chunks == 0
+                        else "satellite_chunk_received"
+                    )
+                    received_chunks += 1
                     LOGGER.info(
-                        "[VOICE] turn=%s event=satellite_first_chunk_received ts_ms=%d",
+                        "[VOICE] turn=%s event=%s ts_ms=%d",
                         voice_turn_id,
+                        event,
                         received,
                     )
                     LOGGER.info(
@@ -112,7 +121,9 @@ class DialogueRunner:
                     return False
         finally:
             self.state = DialogueState.CLOSING
-            if reason != "explicit":
-                self._client.close_session(session.id, reason)
-            self.state = DialogueState.IDLE
+            try:
+                if reason != "explicit":
+                    self._client.close_session(session.id, reason)
+            finally:
+                self.state = DialogueState.IDLE
         return False

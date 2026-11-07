@@ -1,5 +1,46 @@
 # Pi-to-Windows Core and Voice acceptance
 
+## Current owner hearing check (2026-11-07)
+
+Both Core installations are V46. Voice still targets Windows through
+`kyrion-core.home:8080`; its configured Chatterbox voice/model, wake/VAD and
+playback settings are preserved. The [current gate evidence](status/2026-11-07-acceptance-gates.md)
+separates source-only fixes from installed code and historical timings.
+Do not execute old activation commands below to perform this hearing check.
+
+Arrange a quiet, consented slot with only the intended participants and speaker.
+Keep the selected configuration; stop if the output device or room is wrong.
+No automatic recording or speaker test is authorized by this checklist.
+
+1. Say `Hey Velora`, wait for the greeting, then ask:
+   `Warum ist der Himmel blau? Antworte in höchstens zwei kurzen Sätzen.`
+   Hear both complete sentences; note missing endings, repetitions and gaps.
+2. Stay silent at least10s, then wake again. Ask:
+   `Nenne drei Möglichkeiten, Wasser zu sparen.` Hear all three distinct items.
+   Say `Danke Velora`; verify return to wake readiness, then wake once more.
+3. Repeat silence/empty-input exit without introducing background conversation.
+   Inactivity/no-speech exit is intentionally silent; no farewell or spoken
+   interruption is implemented. A later wake must start a fresh session.
+4. English equivalents, only when the owner deliberately selects that existing
+   locale: `Why is the sky blue? Answer in at most two short sentences.` and
+   `Name three ways to save water.` Restore the original locale afterwards.
+5. Record pass/fail for intelligibility, chosen voice, complete endings, item
+   count, gap duration, session exit and next wake. Measure end-of-spoken-question
+   to first **audible answer**, not waiting audio, on one observer's clock.
+   Software receipt/player start is not acoustic onset. No under3s promise.
+
+The separate twenty-action matrix still needs explicitly approved harmless
+targets and initial-state restoration: exact target, correct action, partial/
+offline denial and next session. Do not use the unapproved legacy bindings as
+authority. Network interruption/reconnect belongs to an agreed maintenance slot;
+do not unplug a shared host or kill running speech services during this check.
+
+## Historical troubleshooting and October evidence
+
+The following observations and activation commands are dated evidence. The
+November V46 rollout supersedes the old V39 runtime selection; this material
+does not authorize another restart or configuration change.
+
 Current acceptance limits and runnable on-site procedure:
 [section boundaries and playback safety](status/2026-10-31-voice-section-boundary.md).
 Use the new `-AbortDuringTts` / `-AbortDuringPlayback` options only for explicit
