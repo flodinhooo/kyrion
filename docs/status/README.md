@@ -11,7 +11,7 @@ A correction makes conflict feedback visible; `871c46a` passed
 [installed on Pi Web](2026-11-07-pi-web-conflictfix-rollout.md). Windows was not updated.
 **KY-001 remains open** pending actual HOME/user acceptance.
 
-The [KY-002â€“KY-005 recheck](2026-11-07-acceptance-gates.md) records source-only
+The [KY-002–KY-005 recheck](2026-11-07-acceptance-gates.md) records source-only
 binding/Voice fixes, real isolated identity acceptance, current DNSSEC failure
 and same-host original-key restore evidence. Personal/physical/full-host/off-host
 acceptance stays open; no later source fix is silently deployed.

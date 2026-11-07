@@ -1,11 +1,11 @@
-# KY-002â€“KY-005 software verification and operational gates
+# KY-002–KY-005 software verification and operational gates
 
 This evidence supplements the existing [backlog](TODO.md); it is not another
 task list. Work starts on `master` at `fb3f87c`, preserving the installed Pi Web
 `871c46a` / `aaUX9C2_I6tMOcrV1sImr`. KY-001 is unchanged and awaits the actual
 two-user acceptance. No personal binding/account/provider approval is inferred.
 
-## KY-002 â€” legacy button review
+## KY-002 — legacy button review
 
 Read-only transactions on both actual databases confirm three legacy rows each,
 all without grants. They refer to the same SONOFF button and room-toggle actions.
@@ -30,14 +30,14 @@ Targeted results: GatewayAuthorityIntegrationTest29 and ZigbeeButtonBindingTest3
 zero failures/errors/skips; Web contract tests6, ESLint, typecheck and isolated production build pass.
 
 For actual review, use the intended installation's eligible human session at
-Devices â†’ button â†’ Button bindings. Confirm each exact gesture, current room
+Devices → button → Button bindings. Confirm each exact gesture, current room
 power targets and toggle action. Remove any unapproved row before saving: one
 save replaces the whole button configuration. Never infer approval from the
 private inventory or resave Windows against its stale source. Inspect actor/grant
 audit, then observe physical single/double/long, offline and revoked cases in an
 agreed slot. No actual binding was changed; **KY-002 remains open**.
 
-## KY-003 â€” optional central identity
+## KY-003 — optional central identity
 
 Actual Pi Keycloak26.8.2 remains loopback18889/18890 with the fixed HTTPS issuer;
 discovery succeeds and restricted admin/master/management paths return404.
@@ -74,7 +74,7 @@ Acceptance services were stopped afterwards; only their synthetic tmpfs data was
 discarded. **KY-003 remains open** for productive domain/mail/admin/website and
 real-account acceptance. Logs are private under `.run/private-evidence/ky002-005/`.
 
-## KY-004 â€” voice lifecycle and timing
+## KY-004 — voice lifecycle and timing
 
 Read-only inventory confirms the Pi Satellite unit active since Nov6, using the
 same configuration hash and installed no-speech client/dialogue hashes as the
@@ -92,7 +92,7 @@ These fixes are **not installed**. Targeted Satellite43, Core no-speech2,
 end-intent22 and playback-acknowledgement2 pass; Ruff lint/format pass. Tests mock
 capture/playback/transport and never open a microphone or speaker.
 
-Three actual Piâ†’configured Windows Core health round trips using the installed
+Three actual Pi→configured Windows Core health round trips using the installed
 bounded Satellite transport measured23.57/19.54/17.23ms (monotonic request start
 through complete health-body receipt). They are transport/health timings, not
 STT/model/TTS or acoustic latency. A default urllib diagnostic took approximately
@@ -100,8 +100,8 @@ STT/model/TTS or acoustic latency. A default urllib diagnostic took approximatel
 not exhibit that delay. No network/firewall change is indicated by that probe.
 
 Reanalysis of the retained Oct31 synthetic turn, not a new dialogue: Core-local
-STT916ms, model dispatchâ†’first delta1619ms, TTS sections7764/8015ms; Pi-local
-fixture startâ†’answer receipt11977ms, player completion26248ms, inter-section
+STT916ms, model dispatch→first delta1619ms, TTS sections7764/8015ms; Pi-local
+fixture start→answer receipt11977ms, player completion26248ms, inter-section
 digital gap2901ms. Core and Pi clocks are not subtracted across hosts. The
 receipt/player boundaries do not prove acoustic onset, output completeness or
 human intelligibility; no fresh physical latency claim is made.
@@ -112,7 +112,7 @@ ending/gap criteria. Physical listening and the separately approved twenty-actio
 matrix remain required. No models were loaded/downloaded, cloud called, speech
 unit restarted or speaker output triggered. **KY-004 remains open**.
 
-## KY-005 â€” restore isolation and host recovery
+## KY-005 — restore isolation and host recovery
 
 The original PostgreSQL verifier defaulted to the personal container and created
 scratch databases in that cluster. It now requires an explicit disposable target,
