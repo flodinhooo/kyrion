@@ -31,6 +31,13 @@ Apply `account-schema.sql` to a new central website PostgreSQL database using a
 separate database account. Never use a local installation database or the
 provider's own database. The script is additive/idempotent for this initial
 schema. Subsequent deployed schema changes require versioned migrations.
+Create an independent `kyrion_website_app` login with a random private password,
+without administrative privileges or provider-administrator membership. Apply
+`account-runtime-grants.sql` as the database owner only on this dedicated database.
+It grants the runtime only the operations used by AccountStore, prevents schema
+creation and audit deletion, and can be reapplied. The website does not use the
+owner/migration credential. The existing `pg` driver enables SCRAM channel binding
+when the server offers it, in addition to verified TLS.
 On Vercel configure a managed PostgreSQL endpoint suitable for the runtime,
 TLS and restricted credentials; the existing informational deployment does not
 already provide that infrastructure. No hosting or DNS changes are included.
@@ -42,6 +49,17 @@ accepted as substitutes for explicit certificate/hostname verification. Only an
 explicit loopback development configuration can omit this mode. Keep the
 managed provider's hostname and CA validation; never set `rejectUnauthorized`
 to false to make a connection work.
+
+The owner-provisioned Neon database in Frankfurt was initialized separately from
+the Pi provider and local installation databases. Private production values are
+in ignored `apps/website/.env.production.local`; the website runtime credential
+differs from the provisioning credential. Only the `KYRION_WEBSITE_*` fields
+are needed by the account feature. `DATABASE_URL` is the same restricted runtime
+URL for tooling compatibility, not the provider-owner URL. Local files do not
+update Vercel settings automatically: import the private variables into the
+website project's Production environment only, retaining accounts disabled until
+activation acceptance. Do not copy production credentials into Preview or local
+installation configuration. Passwords and connection strings are never documentation.
 
 For local start use [the isolated identity environment](../../infrastructure/identity/README.md).
 Run the website development server with configured variables. Normal production

@@ -18,6 +18,7 @@ export function database(connectionString: string) {
   if (!pool) {
     pool = new Pool({
       connectionString,
+      enableChannelBinding: true,
       max: 5,
       connectionTimeoutMillis: 5000,
       statement_timeout: 5000,
