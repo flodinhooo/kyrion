@@ -4,8 +4,8 @@ import argparse
 import json
 import logging
 import os
-import subprocess
 import socket
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -240,7 +240,11 @@ def _play_youtube(payload: dict[str, object]) -> None:
     global _youtube_process
     url = payload.get("url")
     output_id = payload.get("outputId")
-    if not isinstance(url, str) or not url.startswith(("https://www.youtube.com/", "https://music.youtube.com/")) or len(url) > 2048:
+    if (
+        not isinstance(url, str)
+        or not url.startswith(("https://www.youtube.com/", "https://music.youtube.com/"))
+        or len(url) > 2048
+    ):
         raise ValueError("invalid YouTube URL")
     if not isinstance(output_id, str) or not output_id or len(output_id) > 200:
         raise ValueError("invalid audio output")

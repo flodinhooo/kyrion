@@ -125,7 +125,7 @@ export function DevelopmentBanner({
       href={href(locale, "development")}
       className="inline-flex min-h-11 items-center gap-3 rounded-full border border-border bg-muted/50 px-3.5 py-2 font-mono text-[11px] text-muted-foreground hover:border-accent"
     >
-      <span className="size-1.5 rounded-full bg-warm" aria-hidden="true"/>
+      <span className="size-1.5 rounded-full bg-warm" aria-hidden="true" />
       {t.common.inDevelopment}
       <ArrowRight className="size-3" aria-hidden="true" />
     </Link>
@@ -144,8 +144,7 @@ export function FeatureCard({
   children?: ReactNode;
 }) {
   return (
-    <article
-      className="group h-full rounded-xl border border-border bg-card p-6 transition-colors duration-200 hover:border-accent/40 sm:p-7">
+    <article className="group h-full rounded-xl border border-border bg-card p-6 transition-colors duration-200 hover:border-accent/40 sm:p-7">
       <Icon
         aria-hidden="true"
         strokeWidth={1.4}

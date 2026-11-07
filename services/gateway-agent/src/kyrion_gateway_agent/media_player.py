@@ -26,7 +26,9 @@ def serve() -> None:
                     raise ValueError("invalid URL")
                 if process is not None and process.poll() is None:
                     process.terminate()
-                process = subprocess.Popen(["mpv", "--no-video", "--no-terminal", f"--audio-device=pipewire/{output}", url])
+                process = subprocess.Popen(
+                    ["mpv", "--no-video", "--no-terminal", f"--audio-device=pipewire/{output}", url]
+                )
                 connection.sendall(b"OK\n")
             except (OSError, ValueError, KeyError, json.JSONDecodeError):
                 connection.sendall(b"ERROR\n")

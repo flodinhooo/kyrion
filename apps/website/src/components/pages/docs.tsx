@@ -1,4 +1,4 @@
-import {ArrowUpRight, BookOpen} from "lucide-react";
+import { ArrowUpRight, BookOpen } from "lucide-react";
 import { github, type Dictionary, type Locale } from "@/lib/site";
 import { Container, PageHero, StatusBadge } from "../site-ui";
 import { Button } from "../ui/button";
@@ -25,7 +25,7 @@ export function DocsPage({ t }: { t: Dictionary; locale: Locale }) {
                 className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border px-3 py-3 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground"
               >
                 {item.title}
-                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0"/>
+                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
               </a>
             ))}
           </nav>
@@ -57,7 +57,7 @@ export function DocsPage({ t }: { t: Dictionary; locale: Locale }) {
                 key={item.title}
                 className="rounded-lg border border-border p-5"
               >
-                <BookOpen aria-hidden="true" className="size-5 text-accent"/>
+                <BookOpen aria-hidden="true" className="size-5 text-accent" />
                 <h3 className="mt-5 font-medium">
                   <a
                     href={`${github}/blob/HEAD/${item.path}`}

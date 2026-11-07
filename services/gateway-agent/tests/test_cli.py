@@ -8,6 +8,8 @@ from kyrion_gateway_agent.config import AgentConfig
 
 
 def test_run_polls_commands_between_heartbeats(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Exercise the polling loop independently of the hardware subscription thread.
+    monkeypatch.setattr(cli, "_forward_button_events", Mock())
     config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
     monkeypatch.setattr(AgentConfig, "load", Mock(return_value=config))
     monotonic = iter([0.0, 0.25, 0.5])
@@ -28,6 +30,8 @@ def test_run_polls_commands_between_heartbeats(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_run_backs_off_when_core_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Its retry sleep must not race with the command-loop sleep under test.
+    monkeypatch.setattr(cli, "_forward_button_events", Mock())
     config = AgentConfig("http://core.local:8080", "node-id", "secret-token")
     monkeypatch.setattr(AgentConfig, "load", Mock(return_value=config))
     sleep = Mock(side_effect=KeyboardInterrupt)

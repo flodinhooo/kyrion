@@ -19,7 +19,7 @@ it does not run the independent website checks.
 ## Content evidence and corrections
 
 | Area           | Repository evidence                                                               | Website treatment                                                                   |
-|----------------|-----------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Positioning    | Root README; `docs/vision.md`; `docs/product-strategy.md`                         | Local-First Home Operating System; working prototype explicitly stated              |
 | Roles          | `docs/rbac.md`; Core `security/Rbac.kt`; Web roles/user routes; security closeout | Installation-wide roles implemented; resource scopes planned                        |
 | Calendar       | Core `calendar/LocalCalendar.kt`; Google integration; security closeout           | Local CRUD and read-only Google display implemented                                 |

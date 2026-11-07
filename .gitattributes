@@ -1,0 +1,7 @@
+# Linux entry points must retain LF even in Windows checkouts.
+*.sh text eol=lf
+services/core/gradlew text eol=lf
+
+# Keep formatter output stable in Windows and Linux checkouts.
+.github/workflows/*.yml text eol=lf
+apps/website/** text=auto eol=lf

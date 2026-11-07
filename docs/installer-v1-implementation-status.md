@@ -26,8 +26,9 @@ secret, migration, gateway or hardware configuration was changed.
 ## CI and release gate status
 
 `.github/workflows/ci.yml` runs Core tests/boot JAR, Web lint/type/test/build,
+AI/Gateway/Satellite lint, tests and packaging, Website checks and browser tests,
 installer Python checks, shell syntax, isolated Ed25519 signature tests and
-Compose validation on pull requests, `main`, and manual dispatch.
+Compose validation on pull requests, `master`, and manual dispatch.
 
 `.github/workflows/release.yml` builds an explicit `linux/arm64` bundle on
 version tags, validates it, and signs it only inside the protected

@@ -46,7 +46,7 @@ existing installations and full disaster recovery remain separate contracts.
 
 ## GitHub Actions
 
-CI runs on pull requests and `main`. It covers Core, Web, installer Python and
+CI runs on pull requests and `master`. It covers Core, Web, installer Python and
 Compose checks, plus isolated test-key signing. The release workflow is
 triggered by `v*.*.*` tags or manual dispatch. It requires a protected
 `release-signing` environment with `KYRION_RELEASE_SIGNING_KEY_PEM` and
