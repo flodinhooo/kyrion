@@ -1,0 +1,36 @@
+# Explicit opt-in overlay. Never mount this token into a customer installation.
+services:
+  public-proxy:
+    networks: [provider, tunnel]
+  cloudflared:
+    image: ${IDENTITY_TUNNEL_IMAGE:?Set a reviewed cloudflared image digest}
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --loglevel
+      - error
+      - --metrics
+      - 0.0.0.0:20241
+      - run
+      - --token-file
+      - /run/secrets/cloudflare-token
+    user: "${IDENTITY_CONNECTOR_UID:?Set the private token file owner UID}:${IDENTITY_CONNECTOR_GID:?Set the private token file owner GID}"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - ./cloudflare-token.txt:/run/secrets/cloudflare-token:ro
+    networks: [tunnel]
+    mem_limit: 128m
+    cpus: 0.5
+    logging:
+      driver: local
+      options:
+        max-size: 2m
+        max-file: "3"
+    depends_on: [public-proxy]
+networks:
+  tunnel:

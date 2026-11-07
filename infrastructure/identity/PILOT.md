@@ -34,6 +34,37 @@ no secret, password grant, redirect URI or automatic local enrollment.
 
 ## Public activation gates
 
+### Named connector installed, 2026-11-07
+
+The owner created `kyrion-central-auth` and supplied its token through a private
+ignored file. A digest-pinned ARM64 cloudflared2026.10.7 connector is connected
+and its internal `/ready` returns200. Use both Compose files for subsequent
+operations; otherwise the proxy's tunnel network can be removed accidentally:
+
+```sh
+docker compose --env-file .env -f pilot.compose.yaml -f pilot.tunnel.compose.yaml up -d --no-deps public-proxy cloudflared
+```
+
+The overlay places only connector and restrictive proxy on a separate `tunnel`
+network. Connector runs with the private token owner's non-root UID/GID, all
+capabilities dropped, no new privileges, read-only root and token file, no host
+ports and bounded container logs. Neither provider nor personal installation
+shares that connector network. No OS package installation or host reboot needed.
+The private `.env` adds image digest and UID/GID only, not the token itself.
+
+**Dashboard origin for this container deployment:** public hostname
+`auth.kyrion.ch`, empty path, service type HTTP, URL `public-proxy:8080`.
+Do not use `localhost:18890` from inside the connector container, and never
+route directly to Keycloak/admin18889, Core, Web or any PostgreSQL port.
+Public route creation, active delegation and normal HTTPS/browser acceptance
+remain pending. Connection readiness is not proof of public authentication.
+
+At this checkpoint public DNS still returned old Infomaniak NS answers, DS was
+absent and A resolution succeeded. This supersedes the earlier DNSSEC failure
+observations below; do not reapply their former incident diagnosis without a
+fresh check. SMTP, registration, website client/database and Core opt-in remain
+unchanged and disabled pending their separate acceptance gates.
+
 ### Read-only recheck, 2026-11-07
 
 The Pi pilot still returns discovery on loopback18889/18890 with issuer
