@@ -43,6 +43,9 @@ Pop-Location
 ```
 
 The Playwright configuration starts this checkout's Core JAR on loopback 18092,
+after bounded PostgreSQL/provider readiness checks; Core explicitly disables
+the personal `infrastructure/.env` import. A started container alone is insufficient.
+The remaining servers are
 Website on localhost 3119 and Web on localhost 3219; each refuses to reuse an
 unrelated existing process. Both Next applications use separate acceptance build
 directories, leaving personal dev/build output in place. The wrapper provisions a separate test bootstrap

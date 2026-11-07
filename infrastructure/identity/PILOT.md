@@ -34,6 +34,49 @@ no secret, password grant, redirect URI or automatic local enrollment.
 
 ## Public activation gates
 
+### Read-only recheck, 2026-11-07
+
+The Pi pilot still returns discovery on loopback18889/18890 with issuer
+`https://auth.kyrion.ch`; restricted admin/master/management paths return404.
+Registration and the website client remain disabled, realm SMTP has zero
+configuration rows, and central login is disabled on both personal Cores.
+
+Public validation currently fails **before** issuer TLS: DNS returns SERVFAIL,
+with `DNSKEY Missing / no SEP matching the DS`. The signed parent publishes DS
+key tag167, algorithm13, digest type2; validating NS queries fail. A diagnostic
+checking-disabled query exposes the existing Infomaniak delegation and returns
+NXDOMAIN for the auth A record. This diagnostic flag is not an application
+workaround or permission to disable DNSSEC. Public website account acceptance
+could not be checked through the broken hostname.
+
+Before the numbered activation gates, the domain operator must inventory the
+current zone/DS/DNSKEY state, preserve all mail/Vercel/validation records and
+reconcile the parent DS with the intended authoritative signing keys. Decide
+whether to retain Infomaniak DNS or perform the separately reviewed Cloudflare
+delegation. Obtain a record-preserving, DNSSEC-consistent transition/rollback
+procedure from the selected operator; never blindly remove DS or change NS.
+Verify validating queries from independent resolvers before enabling anything.
+
+The remaining change sequence is: DNSSEC and complete zone review → exact
+auth hostname/tunnel/TLS → private administration/MFA and SMTP acceptance →
+off-device recovery → central browser pilot → separately chosen website session
+database/callback → per-installation Core opt-in. Each is a separate controlled
+change, not a consequence of successful local software tests. Missing decisions
+are domain/delegation authority, secure SMTP/admin access, website database
+provider/location/backup policy and the intended first Core opt-in target.
+
+Retain original zone/DS records and tunnel/client/Core settings before each step.
+Rollback only the changed scope: withdraw the new tunnel route; disable new
+registration/website-client entry; restore the previous website account flag and
+Core central flag via their scoped deployment procedure. Preserve provider data,
+subjects/signing keys, local passwords and memberships; never reset a realm or
+restore a stale database over subsequent users. DNS rollback must restore a
+consistent delegation/signature chain, not just an old NS list. Do not enable
+public registration until real mailbox verification/recovery has passed.
+
+No productive setting was changed by this recheck. Current software acceptance
+and its limits are in the [gate evidence](../../docs/status/2026-11-07-acceptance-gates.md).
+
 1. Owner creates/signs into Cloudflare Free. Inventory/export existing Infomaniak
    DNS, especially MX/SPF/DKIM/DMARC, Vercel and ownership validation records;
    review DNSSEC/DS before changing nameservers. Preserve domain registration,

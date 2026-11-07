@@ -36,3 +36,40 @@ save replaces the whole button configuration. Never infer approval from the
 private inventory or resave Windows against its stale source. Inspect actor/grant
 audit, then observe physical single/double/long, offline and revoked cases in an
 agreed slot. No actual binding was changed; **KY-002 remains open**.
+
+## KY-003 — optional central identity
+
+Actual Pi Keycloak26.8.2 remains loopback18889/18890 with the fixed HTTPS issuer;
+discovery succeeds and restricted admin/master/management paths return404.
+Read-only provider SQL confirms registration disabled, email verification on,
+website client disabled and zero SMTP configuration rows. Both personal Cores
+return central-enabled=false. No personal account/link/role was changed.
+
+Fresh public DNS queries fail SERVFAIL with `DNSKEY Missing / no SEP matching the
+DS`. Parent DS tag167/algorithm13/digest2 validates; child signing keys do not
+match that trust chain. Checking-disabled diagnostic queries expose Infomaniak
+NS and auth A NXDOMAIN; they are not a proposed DNSSEC bypass. Public website
+account/TLS acceptance is blocked at DNS, not established by loopback health.
+The [existing pilot plan](../../infrastructure/identity/PILOT.md#read-only-recheck-2026-11-07)
+now records gates, target, scope, missing decisions and rollback boundaries.
+No DNS, ingress, provider settings or public registration changes were made.
+
+Actual isolated Keycloak26.7.5/Core/Web/Website/three PostgreSQL/Mailpit acceptance
+passes: synthetic registration/mail verification, website login/logout, local
+owner/member enrollment, unknown central subject denied without new membership,
+explicit password/confirmation-based link, central login with unchanged member
+rights, real token expiry, test-provider outage, preserved local password login
+and offline unlink. Mail is caught locally; no productive email/provider is used.
+UnifiedIdentityIntegrationTest13, CentralIdentityProviderTest9 and
+IdentityTransportTest2 pass with no failures/errors/skips. Domain tests use a
+mocked provider; the full browser scenario uses actual local Keycloak transport.
+
+First browser attempt failed before registration because the disposable provider
+was still bootstrapping. The runner now waits for the exact isolated discovery
+issuer (bounded120s) before starting Core; its startup budget includes that wait.
+It also explicitly suppresses the personal infrastructure/.env import. The final
+complete scenario passes (1.8m); Node syntax, focused ESLint/Prettier pass. The
+reviewed unchanged Core JAR was reused; no unrelated full suite/build repeated.
+Acceptance services were stopped afterwards; only their synthetic tmpfs data was
+discarded. **KY-003 remains open** for productive domain/mail/admin/website and
+real-account acceptance. Logs are private under `.run/private-evidence/ky002-005/`.

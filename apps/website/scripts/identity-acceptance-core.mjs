@@ -84,13 +84,39 @@ while (!ready && Date.now() < deadline) {
   }
 }
 if (!ready) throw new Error("Isolated Core PostgreSQL did not become ready");
+// Container start is not provider readiness: cold schema import can take over a
+// minute. Do not let browser account tests race the disposable provider startup.
+const issuer = "http://localhost:18089/realms/kyrion";
+const providerDeadline = Date.now() + 120_000;
+let providerReady = false;
+while (!providerReady && Date.now() < providerDeadline) {
+  try {
+    const response = await fetch(`${issuer}/.well-known/openid-configuration`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (response.ok) {
+      const value = await response.json();
+      providerReady = value.issuer === issuer;
+    }
+  } catch {
+    // This wait targets only the disposable localhost provider, never production.
+  }
+  if (!providerReady) await new Promise((resolve) => setTimeout(resolve, 500));
+}
+if (!providerReady)
+  throw new Error("Isolated identity provider did not become ready");
 const child = spawn(
   path.join(
     process.env.JAVA_HOME,
     "bin",
     process.platform === "win32" ? "java.exe" : "java",
   ),
-  ["-jar", "build/libs/kyrion-core-0.1.0-SNAPSHOT.jar"],
+  [
+    "-jar",
+    "build/libs/kyrion-core-0.1.0-SNAPSHOT.jar",
+    // Do not import the personal installation's infrastructure/.env into tests.
+    "--spring.config.import=",
+  ],
   {
     cwd: path.join(root, "services/core"),
     stdio: "inherit",

@@ -35,7 +35,8 @@ export default defineConfig({
       command: "node scripts/identity-acceptance-core.mjs",
       url: "http://127.0.0.1:18092/actuator/health",
       reuseExistingServer: false,
-      timeout: 120_000,
+      // Includes bounded DB/provider cold-start readiness before Core starts.
+      timeout: 240_000,
     },
     {
       command: "pnpm exec next dev --port 3119 --hostname localhost",
