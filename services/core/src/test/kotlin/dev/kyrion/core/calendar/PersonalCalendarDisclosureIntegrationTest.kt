@@ -31,6 +31,7 @@ class PersonalCalendarDisclosureIntegrationTest @Autowired constructor(
     private val jdbc: JdbcClient, private val auth: LocalAuthenticationService,
     private val hashing: PasswordHashingService, private val rbac: RbacService,
     private val service: PersonalCalendarDisclosureService, private val mvc: MockMvc,
+    private val dataSource: javax.sql.DataSource,
 ) {
     @MockitoBean private lateinit var google: GoogleIntegrationService
     private lateinit var owner: AuthenticatedOwner
@@ -39,7 +40,12 @@ class PersonalCalendarDisclosureIntegrationTest @Autowired constructor(
     private val start = Instant.parse("2026-11-10T10:00:00Z")
     private val end = start.plusSeconds(3600)
     private val calendar = "personal@example.invalid"
-    private fun setting(mode: CalendarVisibility, revision: Long = 0) = service.change(partner.user.id, CalendarDisclosureChange(calendar, mode, revision))
+    private fun setting(mode: CalendarVisibility, revision: Long = 0) = service.change(
+        partner.user.id, CalendarDisclosureChange(
+            calendar, mode, revision,
+            if (mode == CalendarVisibility.PRIVATE) emptyList() else listOf(owner.user.id)
+        )
+    )
     @BeforeEach fun setup() {
         jdbc.sql("TRUNCATE user_account,activity_event,activity_integrity_chain CASCADE").update()
         jdbc.sql("UPDATE installation_bootstrap_state SET initialized=FALSE").update()
@@ -124,7 +130,9 @@ class PersonalCalendarDisclosureIntegrationTest @Autowired constructor(
     }
     @Test fun `HTTP setting change is personal revisioned and visible only after explicit consent`() {
         mvc.perform(put("/v1/calendar/personal-disclosure").header("Authorization", "Bearer ${partner.session.rawToken}")
-            .contentType("application/json").content("""{"calendarId":"$calendar","visibility":"DETAILS","revision":0}"""))
+            .contentType("application/json")
+            .content("""{"calendarId":"$calendar","visibility":"DETAILS","revision":0,"recipientIds":["${owner.user.id}"]}""")
+        )
             .andExpect(status().isOk).andExpect(jsonPath("$.revision").value(1))
             .andExpect(header().string("Cache-Control", "no-store"))
         mvc.perform(get("/v1/calendar/personal-disclosure/sources").header("Authorization", "Bearer ${owner.session.rawToken}"))
@@ -189,6 +197,140 @@ class PersonalCalendarDisclosureIntegrationTest @Autowired constructor(
         assertThat(service.sources(owner.user.id)).isEmpty()
         val summaries = jdbc.sql("SELECT summary_code FROM activity_event WHERE event_type='calendar.disclosure.changed'").query(String::class.java).list()
         assertThat(summaries).containsOnly(grant.id.toString())
+    }
+    @Test
+    fun `only selected recipients can enumerate or fetch even when the unselected account is owner`() {
+        val id = UUID.randomUUID()
+        jdbc.sql("INSERT INTO user_account(id,username,password_hash,workspace_owner_id) VALUES(:id,'third-reader',:hash,:space)")
+            .param("id", id).param("hash", hashing.hash(password)).param("space", owner.user.id).update()
+        rbac.initializeUser(id, owner.user.id, false)
+        val role =
+            rbac.createRole(owner.user.id, RoleRequest("third-calendar", "Third calendar", setOf("calendar:read")))
+        rbac.assignRoles(owner.user.id, id, setOf(role.id))
+        val grant = service.change(
+            partner.user.id,
+            CalendarDisclosureChange(calendar, CalendarVisibility.DETAILS, 0, listOf(id))
+        )
+        assertThat(grant.recipientIds).containsExactly(id)
+        assertThat(service.sources(owner.user.id)).isEmpty()
+        assertThatThrownBy {
+            service.events(
+                owner.user.id,
+                grant.id,
+                start,
+                end
+            )
+        }.hasMessage("CALENDAR_DISCLOSURE_NOT_FOUND")
+        verify(google, never()).events(partner.user.id, calendar, start.toString(), end.toString(), connection)
+        assertThat(service.sources(id)).hasSize(1)
+        assertThat(service.events(id, grant.id, start, end).items.first().title).isEqualTo("Medical appointment")
+        assertThat(service.settings(owner.user.id)).isEmpty()
+    }
+
+    @Test
+    fun `removing recipient during a provider request prevents in flight disclosure`() {
+        val grant = setting(CalendarVisibility.DETAILS)
+        `when`(google.events(partner.user.id, calendar, start.toString(), end.toString(), connection)).thenAnswer {
+            setting(CalendarVisibility.PRIVATE, grant.revision)
+            GoogleCalendarEvents(
+                listOf(
+                    GoogleCalendarEvent(
+                        "secret",
+                        "Must not escape",
+                        start.toString(),
+                        end.toString()
+                    )
+                )
+            )
+        }
+        assertThatThrownBy {
+            service.events(
+                owner.user.id,
+                grant.id,
+                start,
+                end
+            )
+        }.hasMessage("CALENDAR_DISCLOSURE_NOT_FOUND")
+        assertThat(service.settings(partner.user.id).single().recipientIds).isEmpty()
+    }
+
+    @Test
+    fun `recipient list rejects empty duplicate self foreign disabled and non reader accounts`() {
+        val unknown = UUID.randomUUID()
+        for (recipients in listOf(
+            emptyList(),
+            listOf(owner.user.id, owner.user.id),
+            listOf(partner.user.id),
+            listOf(unknown)
+        )) {
+            assertThatThrownBy {
+                service.change(
+                    partner.user.id,
+                    CalendarDisclosureChange(calendar, CalendarVisibility.DETAILS, 0, recipients)
+                )
+            }
+                .hasMessage("CALENDAR_DISCLOSURE_INVALID")
+        }
+        val id = UUID.randomUUID()
+        jdbc.sql("INSERT INTO user_account(id,username,password_hash,workspace_owner_id) VALUES(:id,'no-read',:hash,:space)")
+            .param("id", id).param("hash", hashing.hash(password)).param("space", owner.user.id).update()
+        rbac.initializeUser(id, owner.user.id, false)
+        val deniedRole =
+            rbac.createRole(owner.user.id, RoleRequest("denied-calendar", "No calendar", setOf("devices:read")))
+        rbac.assignRoles(owner.user.id, id, setOf(deniedRole.id))
+        assertThatThrownBy {
+            service.change(
+                partner.user.id,
+                CalendarDisclosureChange(calendar, CalendarVisibility.DETAILS, 0, listOf(id))
+            )
+        }
+            .hasMessage("CALENDAR_DISCLOSURE_INVALID")
+        rbac.deactivate(owner.user.id, id, false)
+        assertThatThrownBy {
+            service.change(
+                partner.user.id,
+                CalendarDisclosureChange(calendar, CalendarVisibility.DETAILS, 0, listOf(id))
+            )
+        }
+            .hasMessage("CALENDAR_DISCLOSURE_INVALID")
+        assertThat(service.settings(partner.user.id)).isEmpty()
+    }
+
+    @Test
+    fun `V47 snapshots only current active audience and never future members or private calendars`() {
+        dataSource.connection.use { db ->
+            db.autoCommit = false
+            try {
+                db.createStatement().use { sql ->
+                    sql.execute("CREATE SCHEMA recipient_migration_fixture")
+                    sql.execute("SET LOCAL search_path TO recipient_migration_fixture")
+                    sql.execute("CREATE TABLE user_account(id UUID PRIMARY KEY,space_id UUID NOT NULL,enabled BOOLEAN NOT NULL,UNIQUE(id,space_id))")
+                    sql.execute("CREATE TABLE personal_calendar_disclosure(id UUID PRIMARY KEY,space_id UUID NOT NULL,user_id UUID NOT NULL,visibility VARCHAR(16) NOT NULL)")
+                    val space = UUID.randomUUID();
+                    val ownerId = UUID.randomUUID();
+                    val reader = UUID.randomUUID();
+                    val disabled = UUID.randomUUID()
+                    val shared = UUID.randomUUID();
+                    val privateId = UUID.randomUUID()
+                    sql.execute("INSERT INTO user_account VALUES('$ownerId','$space',true),('$reader','$space',true),('$disabled','$space',false)")
+                    sql.execute("INSERT INTO personal_calendar_disclosure VALUES('$shared','$space','$ownerId','DETAILS'),('$privateId','$space','$ownerId','PRIVATE')")
+                    val migration =
+                        javaClass.getResourceAsStream("/db/migration/V47__selected_calendar_disclosure_recipients.sql")!!
+                            .bufferedReader().use { it.readText() }
+                    sql.execute(migration)
+                    sql.execute("INSERT INTO user_account VALUES('${UUID.randomUUID()}','$space',true)")
+                    sql.executeQuery("SELECT disclosure_id,recipient_id FROM personal_calendar_disclosure_recipient")
+                        .use { rows ->
+                            assertThat(rows.next()).isTrue()
+                            assertThat(rows.getObject(1, UUID::class.java)).isEqualTo(shared)
+                            assertThat(rows.getObject(2, UUID::class.java)).isEqualTo(reader)
+                            assertThat(rows.next()).isFalse()
+                        }
+                }
+            } finally {
+                db.rollback()
+            }
+        }
     }
     companion object {
         private const val password = "secure-personal-calendar-password"

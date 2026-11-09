@@ -22,19 +22,40 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class CalendarVisibility { PRIVATE, AVAILABILITY, DETAILS }
-data class CalendarDisclosureSetting(val id: UUID, val calendarId: String, val visibility: CalendarVisibility, val revision: Long)
-data class CalendarDisclosureChange(val calendarId: String, val visibility: CalendarVisibility, val revision: Long)
+data class CalendarDisclosureSetting(
+    val id: UUID,
+    val calendarId: String,
+    val visibility: CalendarVisibility,
+    val revision: Long,
+    val recipientIds: List<UUID>
+)
+
+data class CalendarDisclosureChange(
+    val calendarId: String,
+    val visibility: CalendarVisibility,
+    val revision: Long,
+    val recipientIds: List<UUID> = emptyList()
+)
 data class SharedCalendarSource(val id: UUID, val userId: UUID, val username: String, val visibility: CalendarVisibility)
 data class DisclosedCalendarEvent(val id: String, val startsAt: String, val endsAt: String, val title: String?, val description: String?)
 data class DisclosedCalendarEvents(val source: SharedCalendarSource, val items: List<DisclosedCalendarEvent>)
 internal data class DisclosureRow(val id: UUID, val space: UUID, val user: UUID, val connection: UUID,
     val calendar: String, val visibility: CalendarVisibility, val revision: Long, val username: String) {
-    fun setting() = CalendarDisclosureSetting(id, calendar, visibility, revision)
+    fun setting(recipients: List<UUID>) = CalendarDisclosureSetting(id, calendar, visibility, revision, recipients)
     fun source() = SharedCalendarSource(id, user, username, visibility)
 }
 
 @Repository
 class CalendarDisclosureRepository(private val jdbc: JdbcClient) {
+    fun recipients(id: UUID): List<UUID> =
+        jdbc.sql("SELECT recipient_id FROM personal_calendar_disclosure_recipient WHERE disclosure_id=:id ORDER BY recipient_id")
+            .param("id", id).query { rs, _ -> requireNotNull(rs.getObject("recipient_id", UUID::class.java)) }.list()
+
+    fun members(space: UUID): List<HouseholdCalendarMember> =
+        jdbc.sql("SELECT id,username FROM user_account WHERE space_id=:space AND enabled ORDER BY username,id")
+            .param("space", space)
+            .query { rs, _ -> HouseholdCalendarMember(rs.getObject("id", UUID::class.java), rs.getString("username")) }
+            .list()
     internal fun rows(space: UUID): List<DisclosureRow> = jdbc.sql("""SELECT d.*,u.username
         FROM personal_calendar_disclosure d JOIN user_account u ON u.id=d.user_id AND u.space_id=d.space_id
         JOIN integration_connection c ON c.id=d.connection_id AND c.owner_id=d.user_id AND c.provider='google'
@@ -55,6 +76,11 @@ class CalendarDisclosureRepository(private val jdbc: JdbcClient) {
             revision=personal_calendar_disclosure.revision+1,updated_at=CURRENT_TIMESTAMP""")
             .param("id", id).param("space", space).param("user", actor).param("connection", connection)
             .param("calendar", body.calendarId).param("visibility", body.visibility.name).update()
+        jdbc.sql("DELETE FROM personal_calendar_disclosure_recipient WHERE disclosure_id=:id").param("id", id).update()
+        if (body.visibility != CalendarVisibility.PRIVATE) for (recipient in body.recipientIds) {
+            jdbc.sql("INSERT INTO personal_calendar_disclosure_recipient(disclosure_id,space_id,recipient_id) VALUES(:id,:space,:recipient)")
+                .param("id", id).param("space", space).param("recipient", recipient).update()
+        }
         return id
     }
 }
@@ -66,11 +92,15 @@ class PersonalCalendarDisclosureService(
     private val transactions: TransactionTemplate,
 ) {
     fun settings(actor: UUID): List<CalendarDisclosureSetting> = transaction {
-        repository.rows(readSpace(actor)).filter { it.user == actor }.map { it.setting() }
+        repository.rows(readSpace(actor)).filter { it.user == actor }.map { it.setting(repository.recipients(it.id)) }
     }
 
     fun change(actor: UUID, body: CalendarDisclosureChange): CalendarDisclosureSetting {
         if (body.calendarId.isBlank() || body.calendarId.length > 512 || body.calendarId == "primary" || body.revision < 0) invalid()
+        if (body.recipientIds.size > 50 || body.recipientIds.distinct().size != body.recipientIds.size || actor in body.recipientIds ||
+            (body.visibility != CalendarVisibility.PRIVATE && body.recipientIds.isEmpty()) ||
+            (body.visibility == CalendarVisibility.PRIVATE && body.recipientIds.isNotEmpty())
+        ) invalid()
         val connection = transaction {
             val space = readSpace(actor)
             rbac.require(actor, "calendar:update")
@@ -85,6 +115,15 @@ class PersonalCalendarDisclosureService(
         return transaction {
             val space = rbac.authorizeMutation(actor, "calendar:update")
             requireHome(space); rbac.require(actor, "calendar:read")
+            val eligible = repository.members(space).filter { member ->
+                runCatching {
+                    rbac.require(
+                        member.id,
+                        "calendar:read"
+                    ); rbac.workspace(member.id) == space
+                }.getOrDefault(false)
+            }.map { it.id }.toSet()
+            if (body.recipientIds.any { it !in eligible }) invalid()
             if (repository.connection(actor) != connection) missing()
             val rows = repository.rows(space).filter { it.user == actor }
             val old = rows.find { it.connection == connection && it.calendar == body.calendarId }
@@ -93,13 +132,18 @@ class PersonalCalendarDisclosureService(
             val id = repository.save(space, actor, connection, body, old)
             activity.record(ActivityCategory.SECURITY, "calendar.disclosure.changed", ActivityStatus.SUCCEEDED, ActivityActorType.USER,
                 "kyrion-core", id.toString(), actor.toString(), UUID.randomUUID(), space)
-            repository.rows(space).first { it.id == id }.setting()
+            repository.rows(space).first { it.id == id }.setting(repository.recipients(id))
         }
     }
 
     fun sources(actor: UUID): List<SharedCalendarSource> = transaction {
         val space = readSpace(actor)
-        repository.rows(space).filter { it.user != actor && it.visibility != CalendarVisibility.PRIVATE && eligible(it, space) }.map { it.source() }
+        repository.rows(space).filter {
+            it.user != actor && it.visibility != CalendarVisibility.PRIVATE && actor in repository.recipients(it.id) && eligible(
+                it,
+                space
+            )
+        }.map { it.source() }
     }
 
     fun events(actor: UUID, id: UUID, start: Instant, end: Instant): DisclosedCalendarEvents {
@@ -119,7 +163,7 @@ class PersonalCalendarDisclosureService(
     private fun authorized(actor: UUID, id: UUID): DisclosureRow {
         val space = readSpace(actor)
         val row = repository.rows(space).find { it.id == id && it.user != actor && it.visibility != CalendarVisibility.PRIVATE } ?: missing()
-        if (!eligible(row, space)) missing()
+        if (actor !in repository.recipients(id) || !eligible(row, space)) missing()
         return row
     }
     private fun eligible(row: DisclosureRow, space: UUID): Boolean = try {
@@ -155,17 +199,37 @@ class PersonalCalendarDisclosureService(
 @RestController
 @RequestMapping("/v1/calendar/personal-disclosure")
 class PersonalCalendarDisclosureController(private val service: PersonalCalendarDisclosureService) {
-    @ModelAttribute fun noStore(response: jakarta.servlet.http.HttpServletResponse) { response.setHeader("Cache-Control", "no-store") }
+    @ModelAttribute
+    fun noStore(response: jakarta.servlet.http.HttpServletResponse) {
+        response.setHeader("Cache-Control", "no-store")
+        response.setHeader("X-Kyrion-Calendar-Recipients", "selected-v1")
+    }
     @GetMapping fun settings(request: HttpServletRequest) = service.settings(request.authenticatedUserId())
     @GetMapping("/sources") fun sources(request: HttpServletRequest) = service.sources(request.authenticatedUserId())
     @PutMapping fun change(request: HttpServletRequest, @RequestBody raw: String): CalendarDisclosureSetting {
         val body = try {
             if (raw.length > 4000) invalid()
             val root = jacksonObjectMapper().readTree(raw)
-            if (!root.isObject || root.fieldNames().asSequence().toSet() != setOf("calendarId", "visibility", "revision") ||
+            val fields = root.fieldNames().asSequence().toSet()
+            if (!root.isObject || fields !in setOf(
+                    setOf("calendarId", "visibility", "revision"),
+                    setOf("calendarId", "visibility", "revision", "recipientIds")
+                ) ||
                 !root.path("calendarId").isTextual || !root.path("visibility").isTextual ||
                 !root.path("revision").isIntegralNumber || !root.path("revision").canConvertToLong()) invalid()
-            CalendarDisclosureChange(root.path("calendarId").asText(), CalendarVisibility.valueOf(root.path("visibility").asText()), root.path("revision").asLong())
+            val recipients = if (root.has("recipientIds")) {
+                val values = root.path("recipientIds")
+                if (!values.isArray || values.size() > 50 || values.any { !it.isTextual }) invalid()
+                values.map {
+                    UUID.fromString(it.asText()).also { id -> if (id.toString() != it.asText().lowercase()) invalid() }
+                }
+            } else emptyList()
+            CalendarDisclosureChange(
+                root.path("calendarId").asText(),
+                CalendarVisibility.valueOf(root.path("visibility").asText()),
+                root.path("revision").asLong(),
+                recipients
+            )
         } catch (_: Exception) { invalid() }
         return service.change(request.authenticatedUserId(), body)
     }

@@ -221,6 +221,49 @@ class CoreSchemaMigrationRehearsalTest {
         assertThat(snapshot(restored, "personal_calendar_disclosure")).isEqualTo(snapshot(source, "personal_calendar_disclosure"))
     }
 
+    @Test
+    fun selectedRecipientV47PlanApplyPreservesOldData() {
+        val source = create(46)
+        val owner = UUID.randomUUID();
+        val reader = UUID.randomUUID();
+        val disabled = UUID.randomUUID()
+        val connection = UUID.randomUUID();
+        val shared = UUID.randomUUID()
+        sql(
+            source, """
+            INSERT INTO user_account(id,username,password_hash) VALUES('$owner','recipient-owner','synthetic-hash');
+            INSERT INTO user_account(id,username,password_hash,workspace_owner_id,enabled)
+                VALUES('$reader','recipient-reader','synthetic-hash','$owner',true),('$disabled','recipient-disabled','synthetic-hash','$owner',false);
+            INSERT INTO integration_connection(id,owner_id,provider,display_name,endpoint_host,credential_ciphertext,credential_nonce,created_at,updated_at)
+                VALUES('$connection','$owner','google','Synthetic','calendar.invalid',decode('010203','hex'),decode('040506','hex'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+            INSERT INTO personal_calendar_disclosure(id,space_id,user_id,connection_id,calendar_id,visibility,revision)
+                VALUES('$shared','$owner','$owner','$connection','shared','DETAILS',3),('${UUID.randomUUID()}','$owner','$owner','$connection','private','PRIVATE',2);
+        """.trimIndent()
+        )
+        val accounts = snapshot(source, "user_account")
+        val disclosures = snapshot(source, "personal_calendar_disclosure")
+        val credentials = snapshot(source, "integration_connection")
+        val plan = directory.resolve("v47-selected-recipients.json")
+        tool(source, plan, version = 47)
+        assertThat(value(source, "SELECT max(version::int)::text FROM flyway_schema_history")).isEqualTo("46")
+        assertThat(tool(source, plan, apply = true, version = 47)["migrationsExecuted"].asInt()).isEqualTo(1)
+        assertThat(snapshot(source, "user_account")).isEqualTo(accounts)
+        assertThat(snapshot(source, "personal_calendar_disclosure")).isEqualTo(disclosures)
+        assertThat(snapshot(source, "integration_connection")).isEqualTo(credentials)
+        assertThat(
+            value(
+                source,
+                "SELECT recipient_id::text FROM personal_calendar_disclosure_recipient WHERE disclosure_id='$shared'"
+            )
+        ).isEqualTo(reader.toString())
+        assertThat(value(source, "SELECT count(*)::text FROM personal_calendar_disclosure_recipient")).isEqualTo("1")
+        sql(
+            source,
+            "INSERT INTO user_account(id,username,password_hash,workspace_owner_id) VALUES('${UUID.randomUUID()}','later-reader','synthetic-hash','$owner')"
+        )
+        assertThat(value(source, "SELECT count(*)::text FROM personal_calendar_disclosure_recipient")).isEqualTo("1")
+    }
+
     @Test fun `invalid checksum failed history live session and missing schema are rejected`() {
         val source = create(44)
         val plan = directory.resolve("invalid.json")
