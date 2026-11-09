@@ -12,10 +12,11 @@ import { csrfHeader } from "@/features/auth/csrf";
 import { editorForCalendarDate, editorForEvent, isCalendarEvent, canEditCalendarEvent, canDeleteCalendarEvent,
   editorInstant, CalendarTimeError,
   householdMembers, householdEventPayload, type HouseholdMember, type CalendarEditor, type CalendarEvent } from "@/features/calendar/calendar-model";
-import { CalendarSyncSettings, type CalendarSchedule } from "@/features/calendar/sync-settings";
+import {isCalendarSchedule, type CalendarSchedule} from "@/features/calendar/sync-settings";
+import {eventsForCalendarView, type CalendarView} from "@/features/calendar/calendar-views";
+import {useSharedCalendars} from "@/features/calendar/use-shared-calendars";
+import {calendarColor, calendarColors} from "@/features/calendar/calendar-colors";
 import { calendarMessages } from "@/features/calendar/messages";
-import { PersonalCalendarDisclosure } from "@/features/calendar/personal-disclosure";
-import { HouseholdDestination } from "@/features/calendar/household-destination";
 import { HouseholdDeliveriesPanel } from "@/features/calendar/household-deliveries";
 import { householdEditorIsDirty } from "@/features/calendar/delivery-model";
 
@@ -31,7 +32,8 @@ export default function CalendarPage() {
   const text = calendarMessages[locale] ?? calendarMessages.en;
   const [schedule, setSchedule] = useState<CalendarSchedule | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [sharedEvents, setSharedEvents] = useState<CalendarEvent[]>([]);
+  const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([]);
+  const [selectedView, setSelectedView] = useState<CalendarView | null>(null);
   const [sharedDetailId, setSharedDetailId] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [googleState, setGoogleState] = useState("loading");
@@ -47,6 +49,11 @@ export default function CalendarPage() {
   const [householdState, setHouseholdState] = useState("loading");
   const [copiesUnavailable, setCopiesUnavailable] = useState(false);
   const [personFilter, setPersonFilter] = useState("");
+  const shared = useSharedCalendars(range, text.sharedBusy);
+  const sharedEvents = shared.events;
+  const sharedDetail = sharedEvents.find(item => item.id === sharedDetailId);
+  const hasSharedCalendar = shared.available || events.some(event => event.source === "household" || event.source === "local") || (householdState === "ready" && members.length > 1);
+  const activeView = selectedView === "personal" || !hasSharedCalendar ? "personal" : "shared";
   const sequence = useRef(0);
   const editorFeedback = useRef<HTMLParagraphElement>(null);
   const canCreate = permissions.includes("calendar:create");
@@ -54,8 +61,8 @@ export default function CalendarPage() {
   const canDelete = permissions.includes("calendar:delete");
   const canSync = canCreate && canUpdate && canDelete;
   const writable = calendars.filter(item => ["owner", "writer"].includes(item.accessRole));
-  const selectedEvent = events.find(item => item.id === editor?.id);
-  const sharedDetail = sharedEvents.find(item => item.id === sharedDetailId);
+  const selectedEvent = [...events, ...personalEvents].find(item => item.id === editor?.id);
+
   const statuses: Record<string, string> = { local: text.localStatus, pending: text.pending, synced: text.synced,
     read_error: text.error, error: text.error, conflict: text.conflict, configuration_required: text.configuration_required };
 
@@ -68,7 +75,9 @@ export default function CalendarPage() {
     if (current !== sequence.current || signal?.aborted) return;
     if (!response.ok || !value || typeof value !== "object" || !("items" in value) ||
         !Array.isArray(value.items) || !value.items.every(isCalendarEvent)) throw new Error();
+    if (!("personalItems" in value) || !Array.isArray(value.personalItems) || !value.personalItems.every(isCalendarEvent)) throw new Error();
     setEvents(value.items);
+    setPersonalEvents(value.personalItems);
     const household = "household" in value ? value.household : null;
     setHouseholdState(household && typeof household === "object" && "status" in household && household.status === "ready" ? "ready" : "error");
     const copies = "copies" in value ? value.copies : null;
@@ -106,6 +115,17 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    void browserRequest("/api/calendar/sync/settings", {cache: "no-store", signal: controller.signal})
+      .then(async response => response.ok ? response.json() : null)
+      .then(value => {
+        if (!controller.signal.aborted && isCalendarSchedule(value)) setSchedule(value);
+      }).catch(() => {
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     if(!schedule?.enabled) return;
     const interval = window.setInterval(() => { void load().catch(() => setState("error")); }, schedule.intervalSeconds * 1000);
     return () => window.clearInterval(interval);
@@ -118,7 +138,7 @@ export default function CalendarPage() {
       const remote = editor.source === "google";
       const household = editor.source === "household";
       const url = household ? `/api/calendar/household-events${editor.id ? `/${encodeURIComponent(editor.id.slice(10))}` : ""}` :
-        remote ? `/api/integrations/google/calendar/events/${encodeURIComponent(editor.id!.slice(7))}` : editor.id ? `/api/calendar/events/${editor.id}` : "/api/calendar/events";
+        remote ? `/api/integrations/google/calendar/events${editor.id ? `/${encodeURIComponent(editor.id.slice(7))}` : ""}` : editor.id ? `/api/calendar/events/${editor.id}` : "/api/calendar/events";
       const response = await browserRequest(url, {
         method: editor.id ? "PUT" : "POST", headers: { "Content-Type": "application/json", ...csrfHeader() },
         body: JSON.stringify(household ? householdEventPayload(editor, Intl.DateTimeFormat().resolvedOptions().timeZone) : remote ? { calendarId, summary: editor.title, description: editor.description || null,
@@ -133,6 +153,7 @@ export default function CalendarPage() {
         setMessage(code === "HOUSEHOLD_CALENDAR_CONFLICT" ? text.jointConflict : code === "HOUSEHOLD_CALENDAR_INVALID" ? text.jointInvalid : text.saveError);
         return;
       }
+      if (household) setSelectedView("shared");
       setEditor(null); await load();
     } catch (error) { setMessage(error instanceof CalendarTimeError ? text.invalidLocalTime : text.saveError); } finally { setSaving(false); }
   }
@@ -158,39 +179,93 @@ export default function CalendarPage() {
     } catch { setMessage(text.syncError); } finally { setSaving(false); }
   }
   const combinedEvents = [...events, ...sharedEvents];
-  const filtered = combinedEvents.filter(event => !personFilter || (event.source === "shared" ? event.sharedBy === personFilter : event.source !== "household" || event.participantIds?.includes(personFilter)));
+  const filtered = eventsForCalendarView(activeView === "personal" ? personalEvents : combinedEvents, activeView, personFilter, userId);
+
+  function createAt(date: Date) {
+    setMessage(null);
+    if (activeView === "personal") {
+      if (!writable.some(item => item.id === calendarId || (calendarId === "primary" && item.primary))) return;
+      setEditor({...editorForCalendarDate(date), source: "google"});
+    } else if (householdState === "ready" && membersReady) {
+      setEditor({...editorForCalendarDate(date), source: "household", participantIds: [userId]});
+    }
+  }
+
+  const canCreateInView = canCreate && (activeView === "personal" ? writable.some(item => item.id === calendarId || (calendarId === "primary" && item.primary)) : householdState === "ready" && membersReady);
   const visible = filtered.filter(event => !range || (event.allDay ? event.endsAt > range.start.slice(0, 10) && event.startsAt < range.end.slice(0, 10) : Date.parse(event.endsAt) > Date.parse(range.start) && Date.parse(event.startsAt) < Date.parse(range.end)));
   const calendarEvents = filtered.map(event => ({ id: event.id,
-    title: `${event.source === "shared" ? `${text.sharedSource} · ` : event.source === "household" ? `${text.jointSource} · ` : event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
+    title: `${event.source === "shared" ? `${members.find(member => member.id === event.sharedBy)?.username ?? text.sharedTab} · ` : event.source === "household" ? `${text.sharedTab} · ` : event.source === "google" ? "Google · " : ""}${event.title}${event.pendingDeletion ? ` · ${text.deletion}` : event.syncStatus && !["local", "synced"].includes(event.syncStatus) ? ` · ${statuses[event.syncStatus] ?? text.error}` : ""}`,
     start: event.startsAt, end: event.endsAt, allDay: event.allDay,
-    classNames: event.source === "google" ? ["calendar-event-google"] : ["calendar-event-local"],
+    classNames: [`calendar-color-${calendarColor(event)}`],
+    backgroundColor: calendarColors[calendarColor(event)],
+    borderColor: calendarColors[calendarColor(event)],
+    textColor: "#ffffff",
   }));
+  const legend = [...new Map(filtered.map(event => {
+    const label = event.source === "google" ? text.personalTab : event.source === "household" ? text.jointSource : event.source === "local" ? text.localStatus :
+      `${text.sharedTab} · ${members.find(member => member.id === event.sharedBy)?.username ?? text.sharedSource}`;
+    return [event.source === "shared" ? `shared:${event.sharedBy}` : event.source, {
+      label,
+      color: calendarColor(event)
+    }];
+  })).values()];
   return <section className="plugins-stage integration-detail calendar-page">
     <header className="plugins-header"><div><h1>{t.calendarTitle}</h1><p>{text.subtitle}</p></div>
       <div className="calendar-actions">
-        {canCreate && <button className="calendar-primary" type="button" onClick={() => { setMessage(null); setEditor(editorForCalendarDate(new Date())); }}>+ {text.create}</button>}
-        {canCreate && householdState === "ready" && membersReady && <button className="calendar-primary" type="button" onClick={() => { setMessage(null); setEditor({ ...editorForCalendarDate(new Date()), source: "household", participantIds: [userId] }); }}>+ {text.jointCreate}</button>}
-        <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void load().catch(() => setState("error"))}>{text.refresh}</button>
+        {canCreateInView && <button className="calendar-primary" type="button"
+                                    onClick={() => createAt(new Date())}>+ {activeView === "shared" ? text.jointCreate : text.create}</button>}
+        {activeView === "personal" && canCreate && householdState === "ready" && membersReady &&
+          <button className="calendar-secondary" type="button" onClick={() => {
+            setMessage(null);
+            setEditor({...editorForCalendarDate(new Date()), source: "household", participantIds: [userId]});
+          }}>+ {text.jointCreate}</button>}
+        <button className="calendar-secondary" type="button" disabled={saving} onClick={() => {
+          shared.refresh();
+          void load().catch(() => setState("error"));
+        }}>{text.refresh}</button>
         {canSync && <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void sync()}>{saving ? text.syncing : text.sync}</button>}
-        <Link className="calendar-secondary" href="/plugins/google">{text.googleSettings}</Link>
+        <Link className="calendar-secondary" href="/settings/calendar">{text.settingsTitle}</Link>
       </div>
     </header>
-    {canSync && <CalendarSyncSettings schedule={schedule} onChange={setSchedule} />}
-    <PersonalCalendarDisclosure locale={locale} canUpdate={canUpdate} calendars={calendars} range={range} onEvents={setSharedEvents} />
-    <HouseholdDestination locale={locale} canUpdate={canUpdate} canEnable={canCreate && canUpdate} calendars={calendars} />
-    {membersReady && householdState === "ready" && <label>{text.participantFilter}<select value={personFilter} onChange={event => setPersonFilter(event.target.value)}>
-      <option value="">{text.allPeople}</option>{members.map(member => <option key={member.id} value={member.id}>{member.username}</option>)}
-    </select></label>}
-    {calendars.length > 0 && <label>{text.viewCalendar}<select value={calendarId} onChange={event => { setState("loading"); setCalendarId(event.target.value); }}>
-      <option value="primary">Google · {text.select}</option>{calendars.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
-    </select></label>}
-    <article className="connection-card calendar-panel">
+    <div className="calendar-tabs" role="tablist" aria-label={t.calendarTitle} onKeyDown={event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) || !hasSharedCalendar) return;
+      event.preventDefault();
+      const next = event.key === "Home" ? "shared" : event.key === "End" ? "personal" : activeView === "shared" ? "personal" : "shared";
+      setSelectedView(next);
+      setPersonFilter("");
+      document.getElementById(`calendar-${next}-tab`)?.focus();
+    }}>
+      {hasSharedCalendar &&
+        <button type="button" role="tab" id="calendar-shared-tab" tabIndex={activeView === "shared" ? 0 : -1}
+                aria-controls="calendar-view" aria-selected={activeView === "shared"} onClick={() => {
+          setSelectedView("shared");
+          setPersonFilter("");
+        }}>{text.sharedTab}</button>}
+      <button type="button" role="tab" id="calendar-personal-tab" tabIndex={activeView === "personal" ? 0 : -1}
+              aria-controls="calendar-view" aria-selected={activeView === "personal"} onClick={() => {
+        setSelectedView("personal");
+        setPersonFilter("");
+      }}>{text.personalTab}</button>
+    </div>
+    <article id="calendar-view" role="tabpanel" aria-labelledby={`calendar-${activeView}-tab`}
+             className="connection-card calendar-panel">
       <FullCalendar plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} locale={locale} initialView="dayGridMonth" firstDay={1}
         height="auto" expandRows headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
         buttonText={{ today: text.today, month: text.month, week: text.week, day: text.day }}
+                    eventDidMount={info => {
+                      info.el.title = info.event.title;
+                    }}
         datesSet={info => { setRange(current => current?.start === info.startStr && current?.end === info.endStr ? current : { start: info.startStr, end: info.endStr }); }}
-        dateClick={info => { if (canCreate) { setMessage(null); setEditor(editorForCalendarDate(info.date)); } }} events={calendarEvents}
-        eventClick={info => { const found = combinedEvents.find(event => event.id === info.event.id); if (found?.source === "shared") setSharedDetailId(found.id); else if (found && canEditCalendarEvent(found, canUpdate)) { setMessage(null); setEditor(editorForEvent(found)); } else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus); }} />
+                    dateClick={info => {
+                      if (canCreateInView) createAt(info.date);
+                    }} events={calendarEvents}
+                    eventClick={info => {
+                      const found = filtered.find(event => event.id === info.event.id);
+                      if (found?.source === "shared") setSharedDetailId(found.id); else if (found && canEditCalendarEvent(found, canUpdate)) {
+                        setMessage(null);
+                        setEditor(editorForEvent(found));
+                      } else setMessage(found?.source === "household" ? text.jointReadOnly : found?.source === "google" ? text.readOnly : text.localStatus);
+                    }}/>
       {state === "loading" && <p role="status">{text.loading}</p>}
       {state === "error" && <p role="alert">{text.loadError}</p>}
       {state === "ready" && visible.length === 0 && <p>{text.empty}</p>}
@@ -201,6 +276,27 @@ export default function CalendarPage() {
       {copiesUnavailable && <p role="status">{text.copiesUnavailable}</p>}
       {message && <p role="status">{message}</p>}
     </article>
+    <div className="calendar-view-options">
+      {legend.length > 0 &&
+        <ul className="calendar-legend" aria-label={text.colorLegend}>{legend.map(item => <li key={item.label}><span
+          aria-hidden="true" className={`calendar-color-dot calendar-color-${item.color}`}/>{item.label}</li>)}</ul>}
+      <p>{activeView === "personal" ? text.personalInfo : text.sharedInfo}</p>
+      {activeView === "shared" && membersReady && <label>{text.participantFilter}<select value={personFilter}
+                                                                                         onChange={event => setPersonFilter(event.target.value)}>
+        <option value="">{text.allPeople}</option>
+        <option value={userId}>{text.personalTab}</option>
+        {members.filter(member => member.id !== userId).map(member => <option key={member.id}
+                                                                              value={member.id}>{member.username}</option>)}
+      </select></label>}
+      {calendars.length > 0 && <label>{text.viewCalendar}<select value={calendarId} onChange={event => {
+        setState("loading");
+        setCalendarId(event.target.value);
+      }}>
+        <option value="primary">Google · {text.select}</option>
+        {calendars.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
+      </select></label>}
+      {shared.error && activeView === "shared" && <p role="alert">{text.sharedError}</p>}
+    </div>
     {sharedDetail && <div className="calendar-dialog-backdrop"><article className="calendar-dialog" role="dialog" aria-modal="true" aria-labelledby="shared-calendar-detail-title">
       <h2 id="shared-calendar-detail-title">{sharedDetail.title}</h2><p>{text.sharedReadOnly}</p>
       {sharedDetail.description && <p style={{ whiteSpace: "pre-wrap" }}>{sharedDetail.description}</p>}
@@ -218,6 +314,7 @@ export default function CalendarPage() {
             onChange={event => setEditor({ ...editor, participantIds: event.target.checked ? [...(editor.participantIds ?? []), member.id] : editor.participantIds?.filter(id => id !== member.id) })} />{member.username}</label>)}
         </>}
       </fieldset>}
+      {editor.source === "google" && !editor.id && <p>{text.personalSaveInfo}</p>}
       <label>{text.title}<input required maxLength={500} value={editor.title} onChange={event => setEditor({ ...editor, title: event.target.value })} /></label>
       <label>{text.description}<textarea maxLength={10000} value={editor.description} onChange={event => setEditor({ ...editor, description: event.target.value })} /></label>
       <label>{text.start}<input required type="datetime-local" value={editor.startsAt} onChange={event => setEditor({ ...editor, startsAt: event.target.value })} /></label>

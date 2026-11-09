@@ -35,16 +35,30 @@ export function HouseholdDestination({ locale, canUpdate, canEnable, calendars }
     } catch { setMessage(text.destinationError); } finally { setSaving(false); }
   }
   const choices = calendars.filter(item => item.id !== "primary" && ["owner", "writer"].includes(item.accessRole));
-  return <article className="connection-card calendar-panel"><details><summary>{text.destinationTitle}</summary>
-    <p>{text.destinationConsent}</p><p>{text.destinationRetention}</p>
+  return <article className="connection-card calendar-panel calendar-destination">
+    <div><h2>{text.destinationHeading}</h2><p>{text.destinationSummary}</p></div>
     {setting === null ? <p role="status">{text.destinationUnavailable}</p> : <>
-      <label className="calendar-checkbox"><input type="checkbox" checked={enabled} disabled={!canUpdate || saving || (!canEnable && !enabled)} onChange={event => setEnabled(event.target.checked)} />{text.destinationEnable}</label>
-      {enabled && <label>{text.target}<select value={calendar} disabled={!canEnable || saving} onChange={event => setCalendar(event.target.value)}>
+      <label className="calendar-checkbox calendar-destination-toggle"><input type="checkbox" checked={enabled}
+                                                                              disabled={!canUpdate || saving || (!canEnable && !enabled)}
+                                                                              onChange={event => setEnabled(event.target.checked)}/><span>{text.destinationToggle}</span></label>
+      {enabled && <label>{text.target}<small>{text.destinationChooseHint}</small><select value={calendar}
+                                                                                         disabled={!canEnable || saving}
+                                                                                         onChange={event => setCalendar(event.target.value)}>
         <option value="">{text.select}</option>{choices.map(item => <option key={item.id} value={item.id}>{item.summary}</option>)}
       </select></label>}
-      <button className="calendar-secondary" type="button" disabled={!canUpdate || saving || (enabled && (!canEnable || !choices.some(item => item.id === calendar)))} onClick={() => void save()}>{text.destinationSave}</button>
+      {enabled && choices.length === 0 && <p role="status">{text.destinationNoCalendar}</p>}
+      <p className="calendar-destination-note">{text.destinationManual}</p>
     </>}
-    <button className="calendar-secondary" type="button" disabled={saving} onClick={() => void load()}>{text.disclosureReload}</button>
+    <details className="calendar-help">
+      <summary>{text.destinationMore}</summary>
+      <p>{text.destinationConsent}</p><p>{text.destinationRetention}</p></details>
+    <div className="calendar-dialog-actions">
+      {setting !== null && <button className="calendar-primary" type="button"
+                                   disabled={!canUpdate || saving || (enabled && (!canEnable || !choices.some(item => item.id === calendar)))}
+                                   onClick={() => void save()}>{saving ? text.saving : text.destinationSave}</button>}
+      <button className="calendar-secondary" type="button" disabled={saving}
+              onClick={() => void load()}>{text.disclosureReload}</button>
+    </div>
     {message && <p role="status">{message}</p>}
-  </details></article>;
+  </article>;
 }
