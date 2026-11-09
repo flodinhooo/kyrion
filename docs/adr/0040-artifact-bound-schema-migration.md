@@ -2,6 +2,11 @@
 
 Status: accepted for implementation, 2026-11-06. No operational apply authorized.
 
+2026-11-09 source extension: the tool also accepts an exact V1–V47 catalog and
+explicit target47 for [selected calendar recipients](0044-selected-personal-calendar-recipients.md).
+The same artifact, target identity, data fingerprint, plan approval and quiet-target
+checks apply. This extension does not authorize applying V47 to either live host.
+
 Follow-up: the owner separately authorized the recorded
 [Windows/Pi V46 live rollout](../agent-handoffs/2026-11-06-v46-live-rollout.md).
 The integrated tool accepts exact V1–V45 or V1–V46 catalogs and explicitly binds

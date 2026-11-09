@@ -8,6 +8,14 @@ Each source slice has its own consent boundary and deployment evidence. The
 and [delivery results](agent-handoffs/2026-11-06-household-calendar-delivery-results.md)
 record them separately. Personal Google credentials remain server-side.
 
+The 2026-11-09 source update adds selected personal-calendar read recipients as
+[ADR 0044](adr/0044-selected-personal-calendar-recipients.md) specifies. V47 and
+the corresponding Core artifact require a separately approved operator rollout.
+The Web interface distinguishes disclosure to selected people from receiving
+manual shared-event copies into one's own Google calendar. Existing runtime
+sharing continues under its installed contract until activation; an older Core
+cannot accept new selected-recipient sharing through the updated interface.
+
 ## Native joint household events
 
 `/v1/calendar/household-events` is a separate HOME-only resource. New events carry

@@ -2,6 +2,10 @@
 
 Status: accepted implementation direction for HOME-03, 2026-11-06.
 
+Follow-up, 2026-11-09: [ADR 0044](0044-selected-personal-calendar-recipients.md)
+supersedes this first slice's household-wide audience with selected recipients in
+V47. Source implementation and live activation remain separate.
+
 ## Context
 
 Native household events permit joint editing. Personal Google connections remain

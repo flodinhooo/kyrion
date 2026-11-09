@@ -11,6 +11,66 @@ Parallel ownership: [two-chat coordination](agent-handoffs/2026-11-06-parallel-h
 
 ## Confirmed behavior
 
+### Calendar navigation (2026-11-09)
+
+The calendar grid appears immediately below the page actions and view tabs.
+Synchronization configuration, personal disclosure and Google delivery destinations
+live under `/settings/calendar`, linked from both the calendar and Settings.
+Display filters stay below the grid; they never change sharing permissions.
+Calendar events and a textual legend use consistent colors: own Google events
+are blue, native household events teal, legacy local events brown, and disclosed
+members receive a stable color derived from their account ID. Colors persist
+across dates, filters and themes; source/member labels remain available so color
+is not the only distinction. A bounded member palette may repeat in larger homes.
+
+The Personal tab shows the acting account's selected Google calendar, including
+Google copies that the combined view may merge with their canonical household
+event. Creating an event there uses the existing Core-owned Google creation API;
+the saved event is available to phone apps using that same Google calendar.
+Google remains required for this personal view; this change does not introduce
+private native Kyrion calendars. Existing local events remain household-visible.
+Native household event creation remains available from the Personal view even
+without Google; its explicit shared-event editor never labels these events as
+private. Saving a native household event opens the Shared view.
+
+The Shared tab is first and initially selected when there are household/local
+events, an available native household calendar with multiple eligible members,
+or personal calendars disclosed to the acting member. It combines the acting
+member's selected calendar with all currently authorized disclosed calendars and
+native household events. The existing Core grants remain authoritative: sharing
+is voluntary and can be one-way, does not require reciprocal disclosure, and
+does not give editing access to another person's personal calendar. Availability
+stays redacted. Refresh, focus/visibility changes and a 30-second poll revalidate
+disclosed sources and clear previous representations before requesting new data.
+Individual unavailable sources do not hide other successful sources.
+
+Source and isolated fixture/browser verification are separate from real partner,
+Google and phone acceptance. No real provider writes or sharing changes are
+performed by UI verification.
+
+### Selected disclosure recipients (2026-11-09 source slice)
+
+Personal calendar settings now let their owner select active, eligible HOME
+members per calendar. Positive disclosure requires a nonempty explicit recipient
+list; PRIVATE clears it. Core enforces the audience before and after provider
+reads, including against unselected owners. Recipient changes share the existing
+revision/conflict and atomic audit boundary. V47 snapshots existing positive
+audiences to current active accounts; future members are not added automatically.
+See [ADR 0044](adr/0044-selected-personal-calendar-recipients.md).
+
+The Web proxy forwards the Core `X-Kyrion-Calendar-Recipients: selected-v1`
+capability. An older runtime still permits private revocation but cannot offer
+new positive sharing that might silently use the previous household-wide model.
+The recipient editor requires the V47 Core rollout; no live apply is implied by
+source or synthetic-test success.
+
+The separate Google destination card uses the heading "Show shared events on my
+phone", a clear opt-in, a labeled target calendar and spaced save/reload actions.
+Detailed consent/retention information stays in an expandable explanation. This
+destination controls receiving manual copies, not who may read personal events.
+
+### Original household event requirements
+
 1. Prioritize HOME; defer new Business features while retaining its protections.
 2. Protected first setup creates the household and its OWNER. Roles can be
    delegated with the existing permission ceilings and last-owner protections.
