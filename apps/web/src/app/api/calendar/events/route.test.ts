@@ -56,6 +56,31 @@ describe("GET /api/calendar/events", () => {
     expect((await response.json()).items).toEqual([expect.objectContaining({ id: "google:google-1", source: "google" })]);
   });
 
+  it("retains owned Google entries for the personal tab even when linked duplicates are merged in the shared view", async () => {
+    vi.mocked(requireApiSession).mockResolvedValue({token: "token", user: {id: "owner", username: "Owner"}});
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json([{
+        id: "local",
+        title: "Linked",
+        startsAt: "2026-09-17T09:00:00Z",
+        endsAt: "2026-09-17T10:00:00Z",
+        googleCalendarId: "selected",
+        googleEventId: "remote"
+      }]))
+      .mockResolvedValueOnce(Response.json({
+        items: [{
+          id: "remote",
+          summary: "Linked",
+          start: "2026-09-17T09:00:00Z",
+          end: "2026-09-17T10:00:00Z"
+        }]
+      }));
+    const value = await (await GET(new Request("http://web.test/api/calendar/events?calendarId=selected"))).json();
+    expect(value.items).toHaveLength(1);
+    expect(value.items[0].source).toBe("local");
+    expect(value.personalItems).toEqual([expect.objectContaining({id: "google:remote", source: "google"})]);
+  });
+
   it("keeps local events when the optional Google request rejects", async () => {
     vi.mocked(requireApiSession).mockResolvedValue({ token: "server-only-token", user: { id: "owner", username: "Owner" } });
     vi.spyOn(globalThis, "fetch")

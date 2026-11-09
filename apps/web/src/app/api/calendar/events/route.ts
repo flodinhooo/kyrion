@@ -41,7 +41,9 @@ export async function GET(request?: Request) {
       copyStatus = links === null ? "unavailable" : "ready";
       copies = confirmedOwnedCopies(googleValue, household, links);
     }
-    return Response.json({ items: [...local, ...remote.filter(event => !linked.has(event.id) && !copies.has(event.id)), ...(household ?? [])],
+    return Response.json({
+      personalItems: remote,
+      items: [...local, ...remote.filter(event => !linked.has(event.id) && !copies.has(event.id)), ...(household ?? [])],
       google: { status: googleReady ? "ready" : googleCode === "GOOGLE_DISCONNECTED" ? "disconnected" : "error", code: googleReady ? null : googleCode },
       household: { status: household !== null ? "ready" : "error" },
       copies: { status: copyStatus },

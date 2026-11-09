@@ -10,6 +10,8 @@ export async function disclosureProxy(path: string, request?: Request, write = f
       headers: { Authorization: `Bearer ${auth.token}`, ...(write ? { "Content-Type": "application/json" } : {}) },
       ...(write ? { body: await request!.text() } : {}), cache: "no-store", signal: AbortSignal.timeout(20_000),
     });
-    return Response.json(await response.json(), { status: response.status, headers: { "Cache-Control": "no-store" } });
+    const headers: Record<string, string> = {"Cache-Control": "no-store"};
+    if (response.headers.get("X-Kyrion-Calendar-Recipients") === "selected-v1") headers["X-Kyrion-Calendar-Recipients"] = "selected-v1";
+    return Response.json(await response.json(), {status: response.status, headers});
   } catch { return Response.json({ code: "CORE_UNAVAILABLE" }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
 }

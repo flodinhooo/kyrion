@@ -17,6 +17,34 @@ describe("personal calendar disclosure", () => {
     expect(sharedSources([{ ...source, visibility: "PRIVATE" }])).toBeNull();
     expect(disclosureSettings([{ id: "id", calendarId: "calendar", visibility: "DETAILS", revision: "1" }])).toBeNull();
     expect(disclosureSettings([{ id: "id", calendarId: "calendar", visibility: "PRIVATE", revision: 1 }])).toHaveLength(1);
+    expect(disclosureSettings([{
+      id: "id",
+      calendarId: "calendar",
+      visibility: "DETAILS",
+      revision: 1,
+      recipientIds: ["partner"]
+    }])?.[0].recipientIds).toEqual(["partner"]);
+    expect(disclosureSettings([{
+      id: "id",
+      calendarId: "calendar",
+      visibility: "DETAILS",
+      revision: 1,
+      recipientIds: ["partner", "partner"]
+    }])).toBeNull();
+    expect(disclosureSettings([{
+      id: "id",
+      calendarId: "calendar",
+      visibility: "DETAILS",
+      revision: 1,
+      recipientIds: [null]
+    }])).toBeNull();
+  });
+  it("forwards the explicit selected-recipient capability without inventing support on old Core responses", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json([], {headers: {"X-Kyrion-Calendar-Recipients": "selected-v1"}}))
+      .mockResolvedValueOnce(Response.json([]));
+    expect((await GET()).headers.get("X-Kyrion-Calendar-Recipients")).toBe("selected-v1");
+    expect((await GET()).headers.get("X-Kyrion-Calendar-Recipients")).toBeNull();
+    expect(upstream).toHaveBeenCalledTimes(2);
   });
   it("preserves availability redaction even if an unexpected upstream title is present", () => {
     const parsed = disclosedEvents({ source, items: [{ id: "opaque", title: "secret", description: "secret", startsAt: "2026-11-10", endsAt: "2026-11-11", etag: "secret" }] }, source.id, "Belegt")!;

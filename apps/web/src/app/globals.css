@@ -1363,3 +1363,229 @@ body { font-size: calc(15px + var(--text-size-step)); }
   overscroll-behavior: contain;
 }
 .calendar-page .calendar-dialog fieldset { min-width: 0; }
+
+/* Put calendar views before administrative controls. */
+.calendar-tabs {
+  display: flex;
+  gap: .35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.calendar-tabs button {
+  min-height: 44px;
+  padding: .7rem 1.2rem;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendar-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--primary);
+  color: var(--text);
+}
+
+.calendar-view-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+}
+
+.calendar-view-options > p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.calendar-view-options label, .calendar-settings label:not(:has(input[type="checkbox"])) {
+  display: grid;
+  gap: .5rem;
+}
+
+.calendar-view-options select, .calendar-settings select, .calendar-settings input[type="number"] {
+  min-height: 44px;
+  max-width: 100%;
+  padding: .5rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: .5rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.calendar-settings .connection-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.calendar-settings .connection-card h2 {
+  font-size: 1.1rem;
+}
+
+.calendar-settings fieldset {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.calendar-settings .connection-card > button {
+  justify-self: start;
+}
+
+/* Calendar colors remain consistent in light/dark mode and all calendar views. */
+.calendar-color-personal {
+  --calendar-event-color: #1d4ed8;
+}
+
+.calendar-color-household {
+  --calendar-event-color: #0f766e;
+}
+
+.calendar-color-local {
+  --calendar-event-color: #92400e;
+}
+
+.calendar-color-shared0 {
+  --calendar-event-color: #7e22ce;
+}
+
+.calendar-color-shared1 {
+  --calendar-event-color: #be185d;
+}
+
+.calendar-color-shared2 {
+  --calendar-event-color: #b45309;
+}
+
+.calendar-color-shared3 {
+  --calendar-event-color: #0369a1;
+}
+
+.calendar-color-shared4 {
+  --calendar-event-color: #4338ca;
+}
+
+.calendar-color-shared5 {
+  --calendar-event-color: #475569;
+}
+
+.calendar-page .calendar-panel .fc .fc-event {
+  background: var(--calendar-event-color);
+  color: #fff;
+}
+
+.calendar-page .calendar-panel .fc .fc-daygrid-event-dot {
+  border-color: var(--calendar-event-color);
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem 1.25rem;
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: .875rem;
+}
+
+.calendar-legend li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.calendar-color-dot {
+  width: .8rem;
+  height: .8rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--calendar-event-color);
+}
+
+.calendar-settings .calendar-sharing-row {
+  padding: 1rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  align-items: start;
+}
+
+.calendar-sharing-row > legend {
+  font-weight: 600;
+  padding: .25rem 0;
+}
+
+.calendar-settings .calendar-recipient-list {
+  flex-basis: 100%;
+  display: grid;
+  gap: .6rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  background: var(--surface);
+}
+
+.calendar-recipient-list p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.calendar-settings .calendar-recipient {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.calendar-recipient input, .calendar-destination-toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.calendar-destination > div:first-child p {
+  max-width: 65ch;
+  margin-top: .6rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.calendar-destination-toggle {
+  gap: .75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  background: var(--surface);
+}
+
+.calendar-destination > label:not(.calendar-checkbox) {
+  max-width: 38rem;
+}
+
+.calendar-destination small, .calendar-destination-note {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.calendar-help {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  max-width: 75ch;
+}
+
+.calendar-help summary {
+  min-height: 36px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.calendar-help p {
+  margin: .6rem 0;
+  line-height: 1.7;
+  color: var(--text-muted);
+}

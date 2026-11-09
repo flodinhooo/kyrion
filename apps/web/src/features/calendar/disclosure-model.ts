@@ -1,12 +1,19 @@
 import { isCalendarEvent, type CalendarEvent } from "./calendar-model";
 export type Visibility = "PRIVATE" | "AVAILABILITY" | "DETAILS";
-export type DisclosureSetting = { id: string; calendarId: string; visibility: Visibility; revision: number };
+export type DisclosureSetting = {
+  id: string;
+  calendarId: string;
+  visibility: Visibility;
+  revision: number;
+  recipientIds?: string[]
+};
 export type SharedSource = { id: string; userId: string; username: string; visibility: Exclude<Visibility, "PRIVATE"> };
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const visibility = (value: unknown): value is Visibility => ["PRIVATE", "AVAILABILITY", "DETAILS"].includes(String(value));
 export function disclosureSettings(value: unknown): DisclosureSetting[] | null {
   if (!Array.isArray(value) || !value.every(item => object(item) && typeof item.id === "string" && typeof item.calendarId === "string" &&
-    visibility(item.visibility) && Number.isSafeInteger(item.revision) && Number(item.revision) > 0)) return null;
+    visibility(item.visibility) && Number.isSafeInteger(item.revision) && Number(item.revision) > 0 &&
+    (item.recipientIds === undefined || (Array.isArray(item.recipientIds) && item.recipientIds.length <= 50 && item.recipientIds.every(id => typeof id === "string") && new Set(item.recipientIds).size === item.recipientIds.length)))) return null;
   return value;
 }
 export function sharedSources(value: unknown): SharedSource[] | null {

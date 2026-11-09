@@ -54,8 +54,12 @@ describe("confirmed own calendar copies", () => {
     expect(value.items).toHaveLength(1);
     expect(value.items[0].id).toBe(`household:${id}`);
     expect(value.copies.status).toBe("ready");
-    expect(JSON.stringify(value)).not.toContain("private-version");
-    expect(JSON.stringify(value)).not.toContain(remoteId);
+    expect(JSON.stringify(value.items)).not.toContain("private-version");
+    expect(JSON.stringify(value.items)).not.toContain(remoteId);
+    // The separate personal view retains the account's own editable Google copy.
+    expect(value.personalItems).toEqual([expect.objectContaining({id: `google:${remoteId}`, etag: "private-version"})]);
+    expect(JSON.stringify(value)).not.toContain('"kyrionId"');
+    expect(JSON.stringify(value)).not.toContain('"eventId"');
     expect(upstream.mock.calls[3][0]).toBe("http://core.test/v1/calendar/household-copy-links?start=2026-11-01T00%3A00%3A00Z&end=2026-12-01T00%3A00%3A00Z&calendarId=chosen");
     expect(upstream.mock.calls[3][1]).toMatchObject({ headers: { Authorization: "Bearer server-only" }, cache: "no-store" });
   });
