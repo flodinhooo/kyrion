@@ -59,6 +59,12 @@ class SchemaToolTest(unittest.TestCase):
         )
         self.assertEqual(46, len(catalog["migrations"]))
 
+    def test_accepts_selected_recipient_v47_catalog(self):
+        catalog = TOOL.extract_artifact(
+            self.jar, self.artifact(range(1, 48)), self.extract
+        )
+        self.assertEqual(47, len(catalog["migrations"]))
+
     def test_rejects_wrong_hash_before_extraction(self):
         self.artifact()
         with self.assertRaisesRegex(ValueError, "ARTIFACT_HASH_MISMATCH"):
@@ -67,15 +73,15 @@ class SchemaToolTest(unittest.TestCase):
 
     def test_rejects_missing_migrations(self):
         with self.assertRaisesRegex(
-            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_V46_OR_V47"
         ):
             TOOL.extract_artifact(self.jar, self.artifact(range(1, 45)), self.extract)
 
     def test_rejects_future_migration(self):
         with self.assertRaisesRegex(
-            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_OR_V46"
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_V46_OR_V47"
         ):
-            TOOL.extract_artifact(self.jar, self.artifact(range(1, 48)), self.extract)
+            TOOL.extract_artifact(self.jar, self.artifact(range(1, 49)), self.extract)
 
     def test_rejects_callback_or_path_traversal(self):
         for name in ("beforeMigrate.sql", "../../escape.sql"):
