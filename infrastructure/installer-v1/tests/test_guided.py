@@ -341,6 +341,42 @@ class JournalTests(unittest.TestCase):
             installation.write("orphan.key", b"replace")
         self.assertEqual(path.read_bytes(), b"preserve")
 
+    def test_interruption_after_secret_write_recovers_exact_recorded_value(self):
+        installation = self.create()
+        save = installation.save
+        calls = 0
+
+        def checkpoint():
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("synthetic crash after durable key write")
+            save()
+
+        with (
+            patch.object(installation, "save", side_effect=checkpoint),
+            self.assertRaises(OSError),
+        ):
+            installation.write("recovered.key", b"original durable credential")
+        resumed = self.create()
+        resumed.write("recovered.key", b"must not rotate this value")
+        self.assertEqual(
+            (self.target / "recovered.key").read_bytes(), b"original durable credential"
+        )
+        self.assertNotIn("pendingWrite", resumed.state)
+
+    def test_pending_write_tampering_is_not_adopted(self):
+        installation = self.create()
+        installation.state["pendingWrite"] = {
+            "path": "key",
+            "sha256": "a" * 64,
+            "uid": None,
+        }
+        installation.save()
+        (self.target / "key").write_bytes(b"unrelated")
+        with self.assertRaisesRegex(ValueError, "E_CHANGED"):
+            installation.write("key", b"regenerate")
+
     def test_changed_file_refuses_further_writes(self):
         installation = self.create()
         installation.write("secret.key", b"first")

@@ -134,6 +134,23 @@ class OnboardingTests(unittest.TestCase):
             self.assertEqual(setup.args[2]["spaceName"], "My Home")
             self.assertEqual(setup.kwargs["bootstrap"], "b" * 43)
 
+    def test_business_setup_uses_existing_core_space_type(self):
+        (self.installation.target / "secrets").mkdir()
+        (self.installation.target / "secrets/bootstrap.secret").write_text("b" * 43)
+        with patch.object(
+            self.client,
+            "request",
+            side_effect=[
+                {"setupRequired": True},
+                {"sessionToken": "s" * 43},
+                {"id": "owner"},
+            ],
+        ) as request:
+            self.client.login_or_setup(
+                "owner", "local-password", "My Business", "BUSINESS"
+            )
+            self.assertEqual(request.call_args_list[1].args[2]["spaceType"], "BUSINESS")
+
     def test_failed_ha_probe_cannot_store_connection(self):
         with patch.object(
             self.client,

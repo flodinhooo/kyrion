@@ -1,0 +1,2 @@
+# Build tooling only; not installed on end-user machines.
+PyInstaller==6.22.3
