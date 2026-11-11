@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Local guided installer entrypoint. Public website has no setup state."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+from bundle import authenticate, sha256
+from host import inventory
+from onboarding import guided_setup
+from runtime import (
+    Installation,
+    image_plan,
+    installation_lock,
+    provision,
+    validate_inputs,
+)
+
+ROOT = Path(__file__).resolve().parent
+
+
+def main() -> int:
+    if sys.version_info < (3, 12):
+        print("E_PYTHON: Python 3.12 or newer is required", file=sys.stderr)
+        return 2
+    parser = argparse.ArgumentParser(description="Kyrion local guided installer")
+    parser.add_argument(
+        "--probe", action="store_true", help="Read-only target inventory, no install"
+    )
+    parser.add_argument("--bundle", type=Path, default=ROOT / "release")
+    parser.add_argument(
+        "--public-key", type=Path, help="Independently trusted release public key"
+    )
+    parser.add_argument(
+        "--target",
+        type=Path,
+        default=Path("/var/lib/kyrion-install")
+        if os.name != "nt"
+        else Path(os.environ.get("ProgramData", "C:/ProgramData")) / "Kyrion",
+    )
+    args = parser.parse_args()
+    if args.probe:
+        print(json.dumps(inventory(args.target), indent=2, ensure_ascii=False))
+        return 0
+    if not sys.stdin.isatty():
+        print(
+            "E_INTERACTIVE: use a local terminal; --probe is available without prompts",
+            file=sys.stderr,
+        )
+        return 2
+    language = input("Sprache / language [de/en]: ").strip().lower()
+    language = language if language in {"de", "en"} else "en"
+    messages = json.loads(
+        (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
+    )
+    print(messages["intro"])
+    report = inventory(args.target)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    if not report["candidateProvisioning"]:
+        print(messages["unsupported"])
+        return 2
+    print(messages["modes"])
+    mode = input("> ").strip().lower()
+    if mode not in {"fresh", "resume"}:
+        print(messages["maintenanceUnavailable"])
+        return 2
+    if mode == "fresh" and args.target.exists():
+        print(messages["existing"])
+        return 2
+    if mode == "resume" and not (args.target / "install-state.json").is_file():
+        print(messages["noResume"])
+        return 2
+    if args.public_key is None:
+        print(messages["trustRequired"])
+        return 2
+    hostname = input(messages["hostname"] + ": ").strip()
+    address = input(messages["address"] + ": ").strip()
+    try:
+        validate_inputs(args.target, hostname, address)
+        manifest = authenticate(args.bundle, args.public_key)
+        image_plan(manifest)
+        digest = sha256(args.bundle / "manifest.json")
+        if manifest["architecture"] != "linux/" + report["architecture"]:
+            raise ValueError("E_ARCH: release does not match this target")
+        print(messages["review"])
+        print(
+            json.dumps(
+                {
+                    "release": manifest["release"],
+                    "architecture": manifest["architecture"],
+                    "artifactBytes": sum(
+                        item["bytes"] for item in manifest["artifacts"]
+                    ),
+                    "target": str(args.target),
+                    "url": "https://" + hostname,
+                    "httpsBind": address + ":443",
+                    "mode": mode,
+                },
+                indent=2,
+            )
+        )
+        if input(messages["approve"] + " [INSTALL]: ").strip() != "INSTALL":
+            print(messages["cancelled"])
+            return 0
+        print(messages["working"])
+        state = provision(
+            args.target, args.bundle, args.public_key, hostname, address, digest
+        )
+        print(messages["servicesHealthy"])
+        print("https://" + hostname)
+        print(messages["certificate"] + ": " + str(args.target / "data/tls/cert.pem"))
+        print(messages["handoff"])
+        print(
+            messages["bootstrap"] + ": " + str(args.target / "secrets/bootstrap.secret")
+        )
+        with installation_lock(args.target):
+            installation = Installation(
+                args.target, manifest, digest, hostname, address
+            )
+            guided_setup(installation, messages)
+            state = installation.state
+        print(messages["pending"])
+        print(
+            json.dumps(
+                {
+                    "installationId": state["installationId"],
+                    "stage": state["stage"],
+                    "ownerSetup": state["ownerSetup"],
+                    "backup": state["backup"],
+                    "updates": state["updates"],
+                    "centralIdentity": state.get("centralIdentity", "not-verified"),
+                    "hardwareSelection": state.get("hardwareSelection", []),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    except KeyboardInterrupt:
+        print(messages["interrupted"], file=sys.stderr)
+        return 130
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+        # Error details from untrusted files, TLS or command output aren't logs.
+        code = str(error).split(":", 1)[0]
+        print(
+            (code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_INSTALL")
+            + ": "
+            + messages["failed"],
+            file=sys.stderr,
+        )
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

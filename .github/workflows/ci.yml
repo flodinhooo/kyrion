@@ -68,7 +68,10 @@ jobs:
 
   installer:
     name: Installer validation
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -77,20 +80,23 @@ jobs:
           python-version: '3.12'
       - name: Python tests and syntax
         run: |
-          python3 infrastructure/installer-v1/tests/test_installer.py
-          python3 -m py_compile infrastructure/installer-v1/*.py
+          python -m unittest discover -s infrastructure/installer-v1/tests -v
+          python -c "import pathlib, py_compile; [py_compile.compile(str(p), doraise=True) for p in pathlib.Path('infrastructure/installer-v1').glob('*.py')]"
       - name: Shell syntax
+        if: runner.os == 'Linux'
         run: |
           for script in infrastructure/installer-v1/*.sh infrastructure/installer-v1/release/*.sh infrastructure/nodes/kyrion-node/*.sh; do
             sh -n "$script"
           done
       - name: Signature chain
+        if: runner.os == 'Linux'
         run: sh infrastructure/installer-v1/release/test-signature.sh
       - name: Compose contract
+        if: runner.os == 'Linux'
         run: |
           mkdir -p "$RUNNER_TEMP/kyrion-data" "$RUNNER_TEMP/kyrion-secrets"
           cp infrastructure/installer-v1/templates/compose.yml "$RUNNER_TEMP/compose.yml"
-          printf 'KYRION_RELEASE=ci-test\nKYRION_HOSTNAME=kyrion.test\nKYRION_DATA_DIR=%s\nKYRION_SECRETS_DIR=%s\n' "$RUNNER_TEMP/kyrion-data" "$RUNNER_TEMP/kyrion-secrets" > "$RUNNER_TEMP/compose.env"
+          printf 'KYRION_RELEASE=ci-test\nKYRION_HOSTNAME=kyrion.test\nKYRION_BIND_ADDRESS=192.168.50.10\nKYRION_DATA_DIR=%s\nKYRION_SECRETS_DIR=%s\n' "$RUNNER_TEMP/kyrion-data" "$RUNNER_TEMP/kyrion-secrets" > "$RUNNER_TEMP/compose.env"
           docker compose --env-file "$RUNNER_TEMP/compose.env" -f "$RUNNER_TEMP/compose.yml" config --quiet
 
   python:

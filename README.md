@@ -71,7 +71,8 @@ is the current work order, with stable IDs and completion criteria.
   answers and spoken barge-in are not achieved.
 - **Operations:** correlated activity/audit, backup and isolated restore tools,
   bounded development recovery helper, schema-only migration tooling and guarded
-  [fresh Installer v1](docs/installer-v1-implementation-status.md) scaffolding.
+  [guided Installer candidate](docs/guided-installer.md) with local target probes,
+  signed-image verification, fresh Linux orchestration and existing Core onboarding.
   This is not a released installer, safe general updater or complete disaster
   recovery system. No public signed installable bundle is supplied.
 

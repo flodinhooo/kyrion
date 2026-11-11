@@ -9,6 +9,9 @@ RUN ./gradlew bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /opt/kyrion
 COPY --from=build --chown=10001:10001 /workspace/build/libs/kyrion-core-*-SNAPSHOT.jar app.jar
 COPY --from=build --chown=10001:10001 /workspace/build/libs/knowledge-parser.jar knowledge-parser.jar

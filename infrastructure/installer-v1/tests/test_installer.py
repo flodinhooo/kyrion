@@ -40,6 +40,8 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(all((secrets_dir / n).stat().st_mode & 0o077 == 0 for n in
                             ["bootstrap.secret", "credential.key", "audit-integrity.key", "postgres-password"]))
       self.assertEqual(len((secrets_dir / "bootstrap.secret").read_text().strip()), 43);
+      self.assertEqual(len((secrets_dir / "credential.key").read_bytes()), 32)
+      self.assertEqual(len((secrets_dir / "audit-integrity.key").read_bytes()), 32)
       self.assertNotEqual(
         run("configure.py", "--secrets-dir", secrets_dir, "--hostname", "kyrion.local", "--release", "1.0.0",
             "--output", output).returncode, 0)

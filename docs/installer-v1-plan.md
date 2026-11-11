@@ -1,6 +1,9 @@
 # Installer v1 implementation plan
 
-Date: 2026-10-11. Status: **planned; no installer v1 has been implemented or deployed**.
+Date: 2026-10-11. Historical plan; implementation has since begun. The
+[current guided installer record](guided-installer.md) and
+[implementation status](installer-v1-implementation-status.md) supersede status
+and product-scope claims in this historical plan. No public installer is released.
 
 Read the [readiness review](status/2026-10-11-installer-readiness.md),
 [current TODO](status/TODO.md) and [proposed ADR 0022](adr/0022-fresh-installation-boundary.md).

@@ -47,7 +47,7 @@ services:
     image: caddy:2.10.2-alpine
     restart: unless-stopped
     depends_on: { web: { condition: service_started } }
-    ports: [ "443:443" ]
+    ports: [ "${KYRION_BIND_ADDRESS:?private LAN bind address required}:443:443" ]
     volumes: [ "${KYRION_DATA_DIR:-/var/lib/kyrion}/Caddyfile:/etc/caddy/Caddyfile:ro", "${KYRION_DATA_DIR:-/var/lib/kyrion}/tls:/etc/caddy/tls:ro" ]
     networks: [ platform ]
     cap_drop: [ ALL ]

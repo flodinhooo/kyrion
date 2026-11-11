@@ -1,5 +1,25 @@
 # Installer v1 implementation status
 
+## Current guided candidate, 2026-11-11
+
+The [guided implementation record](guided-installer.md) supersedes the historical
+entrypoint and ARM64-only source scope below. `guided.py` now owns local review,
+actual target inventory, strict authenticated image loading, private raw 32-byte
+Core keys, local TLS, private LAN binding, bounded Compose startup, separate Core
+and HTTPS readiness, exclusive locking and persistent same-release resume.
+The old entrypoint's preflight/write-order failure and encoded-key mismatch with
+Core have been corrected. The installer invokes existing Core owner/HOME Space,
+login, optional RFC8628 linking and real read-only HA probe/import APIs; no parallel
+identity, membership or integration store was added.
+
+Linux AMD64/ARM64 are candidate source paths only. Windows has a read-only probe,
+not native provisioning. No platform is newly release-accepted. Full Windows,
+multi-device, model/voice lifecycle, update, backup/restore/repair, installer package
+trust/distribution and clean-host acceptance remain open. See the current record
+for tests, support matrix, installation/release instructions and exact limitations.
+
+## Historical first boundary
+
 The first fresh-install boundary is implemented under
 `infrastructure/installer-v1`. It is deliberately separate from the existing
 Pi migration tooling. It performs read-only platform checks, refuses populated
