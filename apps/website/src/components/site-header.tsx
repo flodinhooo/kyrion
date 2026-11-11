@@ -39,6 +39,7 @@ export function SiteHeader({
       "private",
       "business",
       "development",
+      "download",
       "contact",
       "account",
     ] as const

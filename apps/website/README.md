@@ -14,6 +14,8 @@ central session database; see [account configuration and security](ACCOUNT.md).
 - `/about`: purpose, ownership and local-first principles;
 - `/development`: status definitions, current focus and outcome-oriented direction;
 - `/docs`: documentation layout preview, with repository documentation links.
+- `/download`: installer versions, prerequisites, the local-setup boundary and help;
+- `/hardware`: optional information without hardware surveys or commerce;
 - `/contact`: public inquiries and optional interest in future testing;
 - `/account`: optional central login, gated by server configuration;
 - `/privacy` and `/terms`: website privacy and prototype-use boundaries.
@@ -149,4 +151,3 @@ software reuse or commercial-availability promise.
 The root pnpm workspace currently includes only `apps/website`. The pre-existing
 `apps/web` workspace and lockfile remain independent and unchanged; continue
 running its pnpm commands from that directory.
-

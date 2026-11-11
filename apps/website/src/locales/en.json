@@ -103,7 +103,9 @@
     "switchDark": "Switch to dark mode",
     "private": "For individuals",
     "business": "For business",
-    "account": "Kyrion Account"
+    "account": "Kyrion Account",
+    "download": "Download",
+    "hardware": "Hardware"
   },
   "status": {
     "available": "Implemented in prototype",
@@ -731,5 +733,74 @@
     "unavailable": "The account service is unavailable. Please try again later.",
     "cancelled": "Sign-in was cancelled.",
     "failed": "Sign-in could not be verified. Please start again."
+  },
+  "download": {
+    "eyebrow": "KYRION INSTALLER",
+    "title": "Download and installation",
+    "description": "Get Kyrion for your local network. Setup belongs to the downloaded installer.",
+    "localOnly": "Download here, then configure Kyrion on your own device. Accounts, Spaces, devices and integrations are set up in the installer and managed locally afterward. This website does not collect your installation configuration.",
+    "versions": "Published installer versions",
+    "unpublished": "No accepted installer release has been published yet. Development builds are not offered as supported public downloads. Windows provisioning and platform acceptance are still being completed.",
+    "download": "Download installer",
+    "releaseNotes": "Release notes",
+    "requirementsTitle": "Requirements and current platform status",
+    "requirements": [
+      "Linux candidates: Debian 13 on x64 or ARM64, and Raspberry Pi OS 13 on ARM64. These paths still require clean-host and restart acceptance.",
+      "Windows x64: native installer packaging is in development. The existing inventory probe is not a working Windows installation path.",
+      "The current non-AI Linux candidate requires at least 4 GiB RAM and 12 GiB free storage, plus Docker Engine and Compose v2. The installer will check the actual target. These minimums do not establish AI performance.",
+      "Local networking and administrator permission are required for installation. Internet is needed for initial downloads and account linking; local functionality is intended to continue offline.",
+      "No extra smart-home hardware, microphone, AI model or paid cloud account is required for the essential local installation."
+    ],
+    "helpTitle": "Installation help",
+    "help": [
+      "Wait for a published installer matching your supported operating system and architecture. Verify its publisher and release information.",
+      "Start the downloaded installer on each intended target. Review the proposed services, permissions and downloads before accepting system changes.",
+      "Complete account, local access and Space setup inside the installer. Optional integrations and AI can be skipped and configured later.",
+      "Keep your recovery information in a protected place. Configure backups before relying on the installation. Do not expose local services through router port forwarding."
+    ],
+    "instructions": "Installer documentation",
+    "status": "Implementation and test status",
+    "hardware": "Optional hardware advice"
+  },
+  "hardware": {
+    "eyebrow": "OPTIONAL HARDWARE",
+    "title": "Use the hardware you need.",
+    "description": "Understand the building blocks before adding devices. There is no purchase requirement.",
+    "note": "The installer checks the actual target and asks what you already own. This page provides information only; it does not configure devices, select a Space or collect a hardware survey.",
+    "scenarios": [
+      {
+        "title": "Kyrion without additional devices",
+        "description": "Start with the local central services and software features. Extra radios, microphones and AI are optional. Choose a supported always-on device if the household should remain available when a desktop is switched off."
+      },
+      {
+        "title": "Existing smart home",
+        "description": "Keep devices paired to Home Assistant or their existing controller. A supported integration connects that inventory to Kyrion. Do not attach a second Zigbee process to a coordinator already used by another service. Compatibility depends on each integration and device capability."
+      },
+      {
+        "title": "Optional local AI",
+        "description": "Recommendations must reflect the device that actually runs inference, available RAM and GPU memory, acceleration, disk capacity and concurrent work. A GPU name alone does not prove acceleration support. You can complete setup without AI."
+      },
+      {
+        "title": "Optional voice",
+        "description": "Voice needs a suitable microphone and speaker plus explicitly enabled audio processing. A satellite can place capture in another room; the installer must show where wake-word, speech recognition and speech generation run. Audio acceptance is separate from service health."
+      }
+    ],
+    "protocolTitle": "Zigbee, Matter and Thread",
+    "protocols": [
+      {
+        "title": "Zigbee",
+        "description": "A radio ecosystem using a coordinator. Existing paired networks remain with their current coordinator and software; importing through Home Assistant does not require pairing every device again."
+      },
+      {
+        "title": "Matter",
+        "description": "An application protocol with a compatible controller. Matter devices may use different supported transports; Matter does not mean that a Zigbee stick can control them."
+      },
+      {
+        "title": "Thread",
+        "description": "An IPv6 mesh network. Thread devices need a compatible Border Router to reach the surrounding IP network. A Thread Border Router and a Matter controller serve different roles."
+      }
+    ],
+    "future": "Kyrion Node is a future device category, not an available product or a purchase offer. No shop, prices, partnerships or affiliate links are offered here. Any later affiliate links must be clearly labelled.",
+    "back": "Back to downloads and installation help"
   }
 }

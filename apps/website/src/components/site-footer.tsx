@@ -30,6 +30,8 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dictionary }) {
                 "about",
                 "development",
                 "docs",
+                "download",
+                "hardware",
                 "contact",
               ] as const
             ).map((page) => (

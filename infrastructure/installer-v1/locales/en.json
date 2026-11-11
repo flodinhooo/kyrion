@@ -40,5 +40,12 @@
   "centralCode": "One-time provider user code",
   "centralCheck": "After browser authorization, check the existing Core operation or skip",
   "centralConfirm": "Confirm linking the browser-authorized identity to this local account",
-  "centralPending": "Authorization is still pending. Core enforces the polling interval and expiry."
+  "centralPending": "Authorization is still pending. Core enforces the polling interval and expiry.",
+  "spaceType": "Space type",
+  "maintenanceReview": "Maintenance affects only the selected local installation. Backup pauses the authoritative Core writer briefly and encrypts data/keys; restore verification starts a new isolated database. Repair preserves original keys; uninstall removes only this installation's containers and keeps data unless separately confirmed. Diagnostics exports only allowlisted metadata, never logs or credentials. Review the selected arguments before continuing",
+  "diagnosticSaved": "Local diagnostic report saved. Nothing was uploaded.",
+  "backupPassword": "Backup encryption password (at least 16 characters; store separately from the backup)",
+  "deleteDataReview": "Permanently remove ALL local data beneath the selected installation directory? Foreign runtimes and files outside that directory are retained",
+  "recoveryNow": "Set up the existing Core owner recovery now? It pauses Core/Web briefly and requires your current OWNER password",
+  "recoveryConsole": "The protected Core recovery console will open. Store the one-time offline recovery code separately from the host key and backup. It will not be captured by the installer or included in diagnostics."
 }

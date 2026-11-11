@@ -103,7 +103,9 @@
     "switchDark": "Zum dunklen Modus wechseln",
     "private": "Für Privatkunden",
     "business": "Für Unternehmen",
-    "account": "Kyrion-Account"
+    "account": "Kyrion-Account",
+    "download": "Download",
+    "hardware": "Hardware"
   },
   "status": {
     "available": "Im Prototyp umgesetzt",
@@ -731,5 +733,74 @@
     "unavailable": "Der Account-Dienst ist nicht erreichbar. Versuche es später erneut.",
     "cancelled": "Die Anmeldung wurde abgebrochen.",
     "failed": "Die Anmeldung konnte nicht bestätigt werden. Bitte starte sie erneut."
+  },
+  "download": {
+    "eyebrow": "KYRION-INSTALLER",
+    "title": "Download und Installation",
+    "description": "Kyrion für dein lokales Netzwerk. Die Einrichtung gehört in den heruntergeladenen Installer.",
+    "localOnly": "Hier herunterladen, danach auf deinem eigenen Gerät einrichten. Konto, Space, Geräte und Integrationen werden im Installer eingerichtet und anschliessend lokal verwaltet. Diese Website erfasst keine Installationskonfiguration.",
+    "versions": "Veröffentlichte Installer-Versionen",
+    "unpublished": "Es wurde noch kein freigegebener Installer veröffentlicht. Entwicklungsstände werden nicht als unterstützte öffentliche Downloads angeboten. Windows-Installation und Plattformabnahme werden noch vervollständigt.",
+    "download": "Installer herunterladen",
+    "releaseNotes": "Versionshinweise",
+    "requirementsTitle": "Voraussetzungen und aktueller Plattformstatus",
+    "requirements": [
+      "Linux-Kandidaten: Debian 13 auf x64 oder ARM64 sowie Raspberry Pi OS 13 auf ARM64. Frischinstallation und Neustart müssen auf diesen Plattformen noch abgenommen werden.",
+      "Windows x64: Die native Installer-Paketierung wird entwickelt. Die bestehende Systemprüfung ist noch kein funktionierender Windows-Installationspfad.",
+      "Der aktuelle Linux-Kandidat ohne KI benötigt mindestens 4 GiB RAM und 12 GiB freien Speicher sowie Docker Engine und Compose v2. Der Installer prüft das tatsächliche Zielgerät. Diese Mindestwerte sind keine KI-Leistungszusage.",
+      "Für die Installation werden ein lokales Netzwerk und Administratorrechte benötigt. Erste Downloads und Kontoverknüpfung benötigen Internet; lokale Funktionen sollen danach offline weiterlaufen.",
+      "Zusätzliche Smart-Home-Hardware, Mikrofon, KI-Modell oder kostenpflichtiges Cloud-Konto sind für die wesentliche lokale Einrichtung nicht erforderlich."
+    ],
+    "helpTitle": "Installationshilfe",
+    "help": [
+      "Eine veröffentlichte Version für dein unterstütztes Betriebssystem und deine Architektur verwenden. Herausgeber und Versionsinformationen prüfen.",
+      "Den heruntergeladenen Installer auf jedem vorgesehenen Zielgerät starten. Dienste, Berechtigungen und Downloads vor Systemänderungen prüfen.",
+      "Konto, lokalen Zugang und Space im Installer einrichten. Optionale Integrationen und KI können übersprungen und später eingerichtet werden.",
+      "Wiederherstellungsinformationen geschützt aufbewahren. Backups einrichten, bevor du dich auf die Installation verlässt. Lokale Dienste nicht per Router-Portfreigabe öffentlich erreichbar machen."
+    ],
+    "instructions": "Installer-Dokumentation",
+    "status": "Implementierungs- und Prüfstatus",
+    "hardware": "Optionale Hardware-Beratung"
+  },
+  "hardware": {
+    "eyebrow": "OPTIONALE HARDWARE",
+    "title": "Die Hardware, die du brauchst.",
+    "description": "Die Bausteine verstehen, bevor weitere Geräte dazukommen. Es besteht kein Kaufzwang.",
+    "note": "Der Installer prüft das tatsächliche Zielgerät und fragt nach vorhandener Ausstattung. Diese Seite informiert nur; sie konfiguriert keine Geräte, wählt keinen Space und erfasst keinen Hardware-Fragebogen.",
+    "scenarios": [
+      {
+        "title": "Kyrion ohne zusätzliche Geräte",
+        "description": "Mit lokaler Zentrale und Software-Funktionen beginnen. Funkadapter, Mikrofone und KI sind optional. Ein unterstütztes, dauerhaft eingeschaltetes Gerät wählen, wenn Funktionen auch bei ausgeschaltetem Desktop verfügbar bleiben sollen."
+      },
+      {
+        "title": "Vorhandenes Smart Home",
+        "description": "Geräte bleiben an Home Assistant oder dem vorhandenen Controller gekoppelt. Eine unterstützte Integration verbindet dieses Inventar mit Kyrion. Ein bereits verwendeter Zigbee-Koordinator darf nicht ungefragt von einem zweiten Prozess geöffnet werden. Kompatibilität hängt von Integration und Gerätefähigkeiten ab."
+      },
+      {
+        "title": "Optionale lokale KI",
+        "description": "Empfehlungen müssen das tatsächlich rechnende Gerät, freien RAM und Grafikspeicher, Beschleunigung, Speicherplatz und parallele Arbeit berücksichtigen. Ein GPU-Name allein belegt keine nutzbare Beschleunigung. Einrichtung ohne KI bleibt möglich."
+      },
+      {
+        "title": "Optionale Sprache",
+        "description": "Sprache benötigt geeignetes Mikrofon und Lautsprecher sowie bewusst aktivierte Audioverarbeitung. Ein Satellit kann die Aufnahme in einen anderen Raum verlegen; der Installer muss zeigen, wo Wake Word, Spracherkennung und Sprachausgabe laufen. Audioabnahme ist von Dienstbereitschaft getrennt."
+      }
+    ],
+    "protocolTitle": "Zigbee, Matter und Thread",
+    "protocols": [
+      {
+        "title": "Zigbee",
+        "description": "Ein Funkökosystem mit Koordinator. Bestehende gekoppelte Netzwerke bleiben bei ihrer Software und ihrem Koordinator; ein Import über Home Assistant erfordert keine erneute Kopplung jedes Geräts."
+      },
+      {
+        "title": "Matter",
+        "description": "Ein Anwendungsprotokoll mit kompatiblem Controller. Matter-Geräte können unterschiedliche unterstützte Übertragungswege verwenden; Matter bedeutet nicht, dass ein Zigbee-Stick diese Geräte steuern kann."
+      },
+      {
+        "title": "Thread",
+        "description": "Ein IPv6-Mesh-Netz. Thread-Geräte benötigen einen kompatiblen Border Router für die Verbindung zum übrigen IP-Netz. Thread Border Router und Matter-Controller erfüllen unterschiedliche Aufgaben."
+      }
+    ],
+    "future": "Kyrion Node ist eine spätere Geräteart, kein verfügbares Produkt oder Kaufangebot. Hier gibt es keinen Shop, keine Preise, Partnerschaften oder Affiliate-Links. Spätere Affiliate-Links müssen eindeutig gekennzeichnet werden.",
+    "back": "Zurück zu Downloads und Installationshilfe"
   }
 }

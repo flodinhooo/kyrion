@@ -40,5 +40,12 @@
   "centralCode": "Einmaliger Benutzer-Code des Anbieters",
   "centralCheck": "Nach Freigabe im Browser den bestehenden Core-Vorgang prüfen oder überspringen",
   "centralConfirm": "Die im Browser bestätigte Identität mit diesem lokalen Konto verknüpfen",
-  "centralPending": "Die Freigabe steht noch aus. Core prüft Abfrageabstand und Ablaufzeit."
+  "centralPending": "Die Freigabe steht noch aus. Core prüft Abfrageabstand und Ablaufzeit.",
+  "spaceType": "Space-Typ",
+  "maintenanceReview": "Wartung betrifft ausschliesslich die gewählte lokale Installation. Ein Backup pausiert Core als schreibende Instanz kurzzeitig und verschlüsselt Daten und Schlüssel; die Restore-Prüfung startet eine neue isolierte Datenbank. Reparatur erhält Originalschlüssel; Deinstallation entfernt nur Container dieser Installation und behält Daten ohne separate Bestätigung. Diagnose exportiert nur ausgewählte Metadaten, keine Protokolle oder Zugangsdaten. Die gewählten Argumente vor dem Fortfahren prüfen",
+  "diagnosticSaved": "Lokaler Diagnosebericht gespeichert. Es wurde nichts übertragen.",
+  "backupPassword": "Backup-Verschlüsselungspasswort (mindestens 16 Zeichen; getrennt vom Backup aufbewahren)",
+  "deleteDataReview": "ALLE lokalen Daten unterhalb des gewählten Installationsverzeichnisses dauerhaft löschen? Fremde Laufzeitumgebungen und Dateien ausserhalb dieses Verzeichnisses bleiben erhalten",
+  "recoveryNow": "Jetzt die vorhandene Core-Eigentümer-Wiederherstellung einrichten? Core/Web werden kurz pausiert; das aktuelle OWNER-Passwort wird benötigt",
+  "recoveryConsole": "Die geschützte Core-Wiederherstellungskonsole wird geöffnet. Den einmaligen Offline-Code getrennt von Host-Schlüssel und Backup aufbewahren. Der Installer zeichnet ihn nicht auf und übernimmt ihn nicht in Diagnoseberichte."
 }
