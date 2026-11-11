@@ -1,4 +1,4 @@
-﻿# Native Windows runtime bundle (development)
+# Native Windows runtime bundle (development)
 
 This is the ADR 0049 runtime payload contract, not completed Windows installer
 support. `native_bundle.py` authenticates and extracts public application/runtime
@@ -88,3 +88,20 @@ and [suspended assignment requirement](https://learn.microsoft.com/en-us/windows
 Two actual Windows tests verify child/grandchild termination after deliberate
 close and after an abrupt supervisor exit. This module is not yet wired into
 the installed role scheduler; no boot/service acceptance is claimed.
+
+
+## Current platform evidence (not consumer support approval)
+
+| Platform | Actual developer evidence | Outstanding acceptance |
+| --- | --- | --- |
+| Windows x64, build 10.0.26300.0 | Native installer smoke; 99 tests (one symlink skip); real runtime versions; signed payload extraction/resume; fresh native Core/Web/PostgreSQL/Caddy with trusted TLS and process-restart login; actual child-tree crash cleanup | Finished guided native provisioning, privileged per-role ACLs, registered services/tasks and stable Windows-version/cold-boot acceptance |
+| Debian 13 x64 | Standalone installer smoke; 99 tests (three Windows-only skips) in network-none container; fresh source Core/Web/PostgreSQL/Caddy fixture; encrypted database restore | Full installed host boot/maintenance and complete product journey |
+| Linux ARM64 / suitable Raspberry Pi | Native build jobs prepared; bounded inventory/manifest contracts tested | Actual native artifact build, target installation and hardware/boot acceptance; no current release claim |
+
+The successful native stack uses Java 21.0.13+9, Node 22.23.3, PostgreSQL 17.11-5
+and Caddy 2.10.2. PostgreSQL helpers must not use captured output pipes for daemon
+startup: inherited pipe handles can outlive the helper and block completion.
+The fixture writes helper output to local synthetic logs instead. Core key
+files contain 32 raw random bytes. The developer sandbox's restricted token
+cannot create PostgreSQL's own restricted token; the passing process test used
+the normal developer execution context without registering services/tasks.

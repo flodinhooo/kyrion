@@ -172,8 +172,9 @@ release acceptance remain absent. No public release or download was activated.
 
 The real large-payload extraction was deliberately interrupted, revealing an
 orphan atomic-journal temporary and an inefficient growing progress list. Both
-cases now have regression tests. Actual extraction resumption is in progress;
-the native-stack runner is prepared but has not yet supplied passing evidence.
+cases now have regression tests. Actual extraction resumption passes for all 5,960 files (704.42 seconds on the
+developer workspace). The native-stack runner also now passes the actual
+process-level scenario described below.
 Do not treat executable version probes or the archive as complete Windows R20.
 
 
@@ -185,3 +186,37 @@ remains unfinished; machine-start acceptance is still absent. Repeated payload
 verification now checkpoints informational progress every 128 existing files,
 while retaining per-file digest checks and durable intent for newly copied
 members. The regression verifies bounded receipt writes on a repeated run.
+
+
+## Actual native Windows stack evidence
+
+`verify-native-windows.py` passes on Windows x64 build 10.0.26300.0 with the real
+signed-development payload described above: fresh native PostgreSQL data,
+all Core schema migrations, actual owner and HOME Space through Core APIs,
+authenticated `/me` and device listing, Windows-built standalone Web behind
+Caddy with exact-leaf trusted TLS, Core/database process restart and successful
+local login afterwards. Bootstrap remains closed. Optional AI/hardware/cloud
+credentials are absent. This does not establish required linked web-account
+onboarding, host cold boot, network-disconnected operation, task/service ACLs or
+finished guided Windows installation. This host is a developer build, not stable
+Windows-version release certification.
+
+Developer verification found and corrected three fixture issues: PostgreSQL's
+own restricted-token creation is denied by the execution sandbox (error 87),
+daemon descendants can retain captured stdout pipes after pg_ctl exits, and
+Core's audit/credential keys require 32 raw bytes rather than hexadecimal text.
+The successful test runs outside that sandbox, writes helper output to files,
+and uses correctly shaped synthetic key files. No global runtime/profile,
+service, scheduled task, trust store or household device was changed. Only exact
+fixture processes/data are stopped/removed. A separate read-only process query
+confirms zero remaining executables from the owned native payload path.
+
+Local ignored evidence: `build/windows-native-stack-proof.json` and
+`build/windows-native-unpack-proof.json`. Runtime payload manifest SHA-256 is
+`d7a1c2b88b894800eb10f4933c2c28bee1413514301151b02866b1cb7d8cd39f`.
+The development ZIP remains private/unsigned for distribution; the extraction
+test signature is from an ephemeral test key, not a production release key.
+Next: implement protected native installation ACL/bootstrap and connect the
+existing journal/role supervision/task/service lifecycle to guided provisioning
+and maintenance; prepare actual disposable Windows boot acceptance separately.
+Continue with all other open matrix groups afterwards. No owner test requested.

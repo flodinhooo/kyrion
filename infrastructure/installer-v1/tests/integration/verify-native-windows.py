@@ -39,7 +39,7 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
     runtime = payload / "runtime"
     environment = {
         name: os.environ[name]
-        for name in ("SystemRoot", "WINDIR", "SystemDrive", "TEMP", "TMP")
+        for name in ("SystemRoot", "WINDIR", "SystemDrive", "TEMP", "TMP", "COMSPEC")
         if name in os.environ
     }
     environment["PATH"] = (
@@ -101,22 +101,30 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
             "credential": secrets.token_hex(32),
             "audit": secrets.token_hex(32),
         }.items():
-            (root / name).write_text(value, encoding="utf-8")
+            (root / name).write_bytes(
+                bytes.fromhex(value)
+                if name in {"credential", "audit"}
+                else value.encode("utf-8")
+            )
         pg = runtime / "postgres/bin"
         data = root / "postgres"
         pg_started = False
 
         def run(arguments, **kwargs):
-            return subprocess.run(
-                [str(x) for x in arguments],
-                cwd=root,
-                env=environment,
-                capture_output=True,
-                timeout=90,
-                check=True,
-                creationflags=subprocess.CREATE_NO_WINDOW,
-                **kwargs,
-            )
+            # Daemon-launch helpers may leave inherited pipe handles in children.
+            # File output avoids waiting for unrelated pipe EOF after helper exit.
+            with (root / "commands.log").open("ab") as output:
+                return subprocess.run(
+                    [str(x) for x in arguments],
+                    cwd=root,
+                    env=environment,
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                    timeout=90,
+                    check=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                    **kwargs,
+                )
 
         def start(arguments, name, extra=None):
             output = (root / (name + ".log")).open("wb")
@@ -181,6 +189,7 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
                 stream.write(
                     "\nlisten_addresses='127.0.0.1'\nport=" + str(pg_port) + "\n"
                 )
+            pg_started = True  # Cleanup also covers a timeout after daemon startup.
             run(
                 [
                     pg / "pg_ctl.exe",
@@ -386,7 +395,19 @@ https://localhost:PORT {
             for process in reversed(processes):
                 stop(process)
             if pg_started:
-                run([pg / "pg_ctl.exe", "stop", "-D", data, "-m", "fast", "-w"])
+                status = subprocess.run(
+                    [str(pg / "pg_ctl.exe"), "status", "-D", str(data)],
+                    cwd=root,
+                    env=environment,
+                    capture_output=True,
+                    timeout=20,
+                    check=False,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                if status.returncode == 0:
+                    run([pg / "pg_ctl.exe", "stop", "-D", data, "-m", "fast", "-w"])
+                elif status.returncode != 3:
+                    raise ValueError("E_NATIVE_FIXTURE_POSTGRES_CLEANUP")
             for handle in handles:
                 handle.close()
 
