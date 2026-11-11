@@ -141,6 +141,18 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
     value = json.loads(result.stdout.decode("utf-8-sig"))
     if (
         not isinstance(value, dict)
+        or set(value)
+        != {
+            "name",
+            "action",
+            "definitionValidated",
+            "taskSecurityPolicyValidated",
+            "registered",
+            "coldBootVerified",
+        }
+        or value.get("definitionValidated") is not True
+        or value.get("taskSecurityPolicyValidated") is not True
+        or type(value.get("registered")) is not bool
         or value.get("name") != plan["name"]
         or value.get("action") != action
         or value.get("coldBootVerified") is not False

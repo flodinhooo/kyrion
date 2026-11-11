@@ -144,8 +144,8 @@ or user execution policy is changed, and enforced Group Policy is not overridden
 
 ## Native payload continuation evidence
 
-The full task remains open. Current source passes 99 installer tests on Windows
-(one symlink-permission skip) and Debian 13 (three Windows-only skips). Windows COM
+The full task remains open. Current source passes 100 installer tests on Windows
+(one symlink-permission skip) and Debian 13 (four Windows-only skips). Windows COM
 validation is read-only and requires the less restricted developer execution
 context; no service or task was registered. Changed Python files pass Ruff.
 
@@ -220,3 +220,16 @@ Next: implement protected native installation ACL/bootstrap and connect the
 existing journal/role supervision/task/service lifecycle to guided provisioning
 and maintenance; prepare actual disposable Windows boot acceptance separately.
 Continue with all other open matrix groups afterwards. No owner test requested.
+
+
+Task security continuation: matching task XML/principal alone did not constrain
+who could later edit that task. `windows-task-security.ps1` now requires a
+protected administrator/System-only task descriptor and checks it before any
+existing-task operation. New registration uses explicit SDDL and
+TASK_CREATE | TASK_DONT_ADD_PRINCIPAL_ACE, avoiding implicit task-management
+rights for the shared Local Service identity. A native .NET descriptor test
+accepts both generic and expanded full-control forms and rejects ten unsafe
+owner/DACL/ACE variants. Native read-only COM checks also pass. This verifies
+the policy/parser, not actual registered-task normalization or boot behavior;
+those remain disposable-runner acceptance. Current suite: 100 tests, Windows
+one skip, Debian four Windows-only skips, no failures.

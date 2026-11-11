@@ -1,6 +1,8 @@
 """Task plans and actual Windows COM schema validation, never registration."""
 
+import json
 import os
+import subprocess
 import sys
 import unittest
 import uuid
@@ -55,6 +57,32 @@ class TaskPlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "E_WINDOWS_TASK_PLAN"):
             operate({**self.plan, "command": r"C:\Windows\System32\cmd.exe"})
 
+    @unittest.skipUnless(os.name == "nt", "Actual Windows security-descriptor parser")
+    def test_native_task_security_rejects_shared_or_mutable_descriptors(self):
+        script = Path(__file__).parent / "integration/verify-task-security.ps1"
+        result = subprocess.run(
+            [
+                str(
+                    Path(os.environ["SystemRoot"])
+                    / "System32/WindowsPowerShell/v1.0/powershell.exe"
+                ),
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(script),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        evidence = json.loads(result.stdout)
+        self.assertEqual(evidence["nativeDescriptorsChecked"], 12)
+        self.assertFalse(evidence["tasksRegistered"])
+
     @unittest.skipUnless(
         os.name == "nt", "Actual Windows Task Scheduler COM validation"
     )
@@ -65,6 +93,7 @@ class TaskPlanTests(unittest.TestCase):
                     task_plan(self.identifier, r"C:\ProgramData\Kyrion Test", role)
                 )
                 self.assertTrue(result["definitionValidated"])
+                self.assertTrue(result["taskSecurityPolicyValidated"])
                 self.assertFalse(result["registered"])
                 self.assertFalse(result["coldBootVerified"])
         result = operate(self.plan, "inspect")

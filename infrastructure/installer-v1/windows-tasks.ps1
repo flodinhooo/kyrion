@@ -3,6 +3,8 @@ $ErrorActionPreference = 'Stop'
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 try {
+    . (Join-Path $PSScriptRoot 'windows-task-security.ps1')
+    Assert-KyrionTaskSecurityDescriptor $KyrionTaskSecurityDescriptor
     $raw = [Console]::In.ReadToEnd()
     if ($raw.Length -gt 32768) { throw 'E_TASK_INPUT' }
     $plan = $raw | ConvertFrom-Json
@@ -80,19 +82,24 @@ try {
             while ($cause.InnerException) { $cause = $cause.InnerException }
             if ($cause.HResult -notin @(-2147024894, -2147024893)) { throw }
         }
-        if ($exists) { Assert-Definition $task.Definition }
+        if ($exists) {
+            Assert-Definition $task.Definition
+            Assert-KyrionTaskSecurityDescriptor ($task.GetSecurityDescriptor(7))
+        }
         if ($Action -eq 'register' -and -not $exists) {
             if (-not (Test-Path -LiteralPath $plan.command -PathType Leaf)) { throw 'E_TASK_EXECUTABLE' }
-            # TASK_CREATE only: never overwrite an existing task, even on a race.
-            $task = $folder.RegisterTaskDefinition([string]$plan.name, $definition, 2, 'S-1-5-19', $null, 5, $null)
+            # TASK_CREATE | TASK_DONT_ADD_PRINCIPAL_ACE: no overwrite, no shared
+            # Local Service ACE that could alter the validated task definition.
+            $task = $folder.RegisterTaskDefinition([string]$plan.name, $definition, 18, 'S-1-5-19', $null, 5, $KyrionTaskSecurityDescriptor)
             Assert-Definition $task.Definition
+            Assert-KyrionTaskSecurityDescriptor ($task.GetSecurityDescriptor(7))
             $exists = $true
         }
         if ($Action -eq 'start') { if (-not $exists) { throw 'E_TASK_MISSING' }; $null = $task.Run($null) }
         if ($Action -eq 'stop' -and $exists) { $task.Stop(0) }
         if ($Action -eq 'remove' -and $exists) { $folder.DeleteTask([string]$plan.name, 0); $exists = $false }
     }
-    @{ name=$plan.name; action=$Action; definitionValidated=$true; registered=$exists; coldBootVerified=$false } | ConvertTo-Json -Compress
+    @{ name=$plan.name; action=$Action; definitionValidated=$true; taskSecurityPolicyValidated=$true; registered=$exists; coldBootVerified=$false } | ConvertTo-Json -Compress
 } catch {
     # Native errors can contain paths/account metadata. Never emit raw exceptions.
     $code = [string]$_.Exception.Message

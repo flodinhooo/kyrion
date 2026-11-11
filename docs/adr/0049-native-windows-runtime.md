@@ -73,3 +73,12 @@ The built-in Windows scheduling APIs and Python's existing Win32 FFI avoid a new
 third-party service-wrapper dependency. This choice requires native API tests,
 explicit cancellation/recovery behavior and Windows runner/VM integration tests;
 generated XML alone is not the finished user function.
+
+
+Task definitions also require administrator/System-only protected task ACLs.
+An exact command/principal match alone does not prevent a lower-privilege task
+owner from replacing it after validation. Native registration supplies a fixed
+protected security descriptor, suppresses the automatic principal ACE, and
+validates the resulting descriptor on every existing-task operation. No broad
+Local Service task-management permission is added. This follows the official
+[RegisterTaskDefinition contract](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-registertaskdefinition).
