@@ -22,6 +22,10 @@ from runtime import atomic_json
 REPOSITORY = "https://github.com/flodinhooo/kyrion"
 
 
+class PublicationError(ValueError):
+    pass
+
+
 def published_record(metadata: dict, release: dict) -> dict:
     selected_version = metadata.get("version")
     version(selected_version)
@@ -43,25 +47,25 @@ def published_record(metadata: dict, release: dict) -> dict:
         release.get("draft") is not False
         or release.get("tag_name") != "v" + selected_version
     ):
-        raise ValueError("E_NOT_PUBLISHED")
+        raise PublicationError("E_NOT_PUBLISHED")
     if not metadata["file"].endswith(
         ".exe" if platform == "windows-amd64" else ".tar.gz"
     ):
         raise ValueError("E_PUBLISHED_ASSET")
     published = release.get("published_at")
     if not isinstance(published, str):
-        raise ValueError("E_NOT_PUBLISHED")
+        raise PublicationError("E_NOT_PUBLISHED")
     timestamp = datetime.datetime.fromisoformat(published.replace("Z", "+00:00"))
     if timestamp.tzinfo is None or timestamp > datetime.datetime.now(
         datetime.timezone.utc
     ):
-        raise ValueError("E_NOT_PUBLISHED")
+        raise PublicationError("E_NOT_PUBLISHED")
     url = (
         REPOSITORY + "/releases/download/v" + selected_version + "/" + metadata["file"]
     )
     assets = release.get("assets")
     if not isinstance(assets, list):
-        raise ValueError("E_NOT_PUBLISHED")
+        raise PublicationError("E_NOT_PUBLISHED")
     matches = [asset for asset in assets if asset.get("name") == metadata["file"]]
     if len(matches) != 1:
         raise ValueError("E_PUBLISHED_ASSET")

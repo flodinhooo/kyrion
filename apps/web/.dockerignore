@@ -1,5 +1,5 @@
-.next
-.next-review
+.next*
+*.tsbuildinfo
 next-env.d.ts
 node_modules
 coverage

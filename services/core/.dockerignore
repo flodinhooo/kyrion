@@ -1,3 +1,6 @@
 .gradle
 build
 core-runtime*.log
+.env
+.env.*
+!.env.example

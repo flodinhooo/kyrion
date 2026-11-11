@@ -20,11 +20,33 @@ from runtime import ROOT, installation_lock
 def check_updates(args) -> dict:
     from release_policy import compatible_release, fetch_document, parse, verify
 
-    if not args.feed or args.trust_store is None or args.installed_schema is None:
+    if not args.feed or args.trust_store is None:
         raise ValueError("E_UPDATE_CONFIG")
     reject_links(args.trust_store)
     with installation_lock(args.target):
         installation = load_installation(args.target)
+        runtime_checks(
+            installation.configuration["address"],
+            installation.configuration["hostname"],
+            fresh=False,
+        )
+        schema_text = installation.compose(
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-U",
+            "kyrion",
+            "-d",
+            "kyrion",
+            "-Atc",
+            "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
+        ).strip()
+        if not schema_text.isdigit() or (
+            args.installed_schema is not None
+            and int(schema_text) != args.installed_schema
+        ):
+            raise ValueError("E_UPDATE_SCHEMA")
         trust = parse(args.trust_store.read_bytes())
         index = verify(fetch_document(args.feed), trust, "release-index")
         previous = installation.state.get("updateCheck", {})
@@ -33,7 +55,7 @@ def check_updates(args) -> dict:
             args.installer_version,
             installation.configuration["release"],
             installation.configuration["architecture"],
-            args.installed_schema,
+            int(schema_text),
             args.installed_api,
             previous.get("sequence", 0),
         )
@@ -93,7 +115,9 @@ def repair(target: Path) -> dict:
         config = installation.configuration
         runtime_checks(config["address"], config["hostname"], fresh=False)
         candidates = {
-            "compose.yml": (ROOT / "templates/compose.yml").read_bytes(),
+            "compose.yml": (ROOT / "templates/compose.yml")
+            .read_text(encoding="utf-8")
+            .encode("utf-8"),
             "data/Caddyfile": (ROOT / "templates/Caddyfile")
             .read_text(encoding="utf-8")
             .replace("__KYRION_HOSTNAME__", config["hostname"])
