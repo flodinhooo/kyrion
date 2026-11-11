@@ -129,7 +129,11 @@ class NativeBundleTests(unittest.TestCase):
         _, public_key = self.signed_bundle()
         destination = self.root / "payload"
         first = native_bundle.unpack(self.root, public_key, destination)
-        repeated = native_bundle.unpack(self.root, public_key, destination)
+        with patch(
+            "native_bundle.atomic_json", wraps=native_bundle.atomic_json
+        ) as writes:
+            repeated = native_bundle.unpack(self.root, public_key, destination)
+        self.assertEqual(writes.call_count, 2 + len(self.files) // 128)
         self.assertEqual(first, repeated)
         self.assertTrue(first["payloadVerified"])
         self.assertFalse(first["runtimeActivated"])

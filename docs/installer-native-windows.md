@@ -73,3 +73,18 @@ python infrastructure/installer-v1/tests/integration/verify-native-windows.py `
 This process-level fixture is not network-isolated and establishes neither
 machine boot before login nor the intended Local Service/task-SID ACLs. No
 published consumer support or public artifact availability follows from it.
+
+
+## Child containment
+
+`windows_process.py` starts the native child suspended, assigns it to an unnamed
+noninheritable Windows job with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, and only
+then resumes its primary thread. Assignment/resume failure terminates the
+suspended child and closes its handles. Closing the owner ends the descendant
+tree; an owner crash closes the job handle through Windows. No blanket PID/name
+process kill or breakaway flag is used. Native FFI follows the Microsoft
+[job object contract](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
+and [suspended assignment requirement](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject).
+Two actual Windows tests verify child/grandchild termination after deliberate
+close and after an abrupt supervisor exit. This module is not yet wired into
+the installed role scheduler; no boot/service acceptance is claimed.

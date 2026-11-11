@@ -375,6 +375,13 @@ https://localhost:PORT {
                 "coldBootAccepted": False,
                 "networkIsolated": False,
             }
+        except BaseException:
+            failure = work_parent / ("native-fixture-failure-" + root.name)
+            failure.mkdir()
+            # Synthetic developer logs only; never copy password/key/config files.
+            for log in root.glob("*.log"):
+                shutil.copyfile(log, failure / log.name)
+            raise
         finally:
             for process in reversed(processes):
                 stop(process)

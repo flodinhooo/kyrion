@@ -433,7 +433,8 @@ def _unpack_reviewed(root: Path, reviewed: ReviewedBundle, destination: Path) ->
         for name, expected in sorted(files.items()):
             path = destination / name
             reject_links(path)
-            if path.exists():
+            existing = path.exists()
+            if existing:
                 if (
                     not path.is_file()
                     or path.stat().st_size != expected["bytes"]
@@ -453,7 +454,8 @@ def _unpack_reviewed(root: Path, reviewed: ReviewedBundle, destination: Path) ->
                 temporary.unlink()
             state["completed"] += 1
             state["pending"] = None
-            atomic_json(receipt_path, state)
+            if not existing or state["completed"] % 128 == 0:
+                atomic_json(receipt_path, state)
     state["complete"] = True
     atomic_json(receipt_path, state)
     return {

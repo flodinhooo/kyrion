@@ -144,8 +144,8 @@ or user execution policy is changed, and enforced Group Policy is not overridden
 
 ## Native payload continuation evidence
 
-The full task remains open. Current source passes 97 installer tests on Windows
-(one symlink-permission skip) and Debian 13 (one Windows COM skip). Windows COM
+The full task remains open. Current source passes 99 installer tests on Windows
+(one symlink-permission skip) and Debian 13 (three Windows-only skips). Windows COM
 validation is read-only and requires the less restricted developer execution
 context; no service or task was registered. Changed Python files pass Ruff.
 
@@ -175,3 +175,13 @@ orphan atomic-journal temporary and an inefficient growing progress list. Both
 cases now have regression tests. Actual extraction resumption is in progress;
 the native-stack runner is prepared but has not yet supplied passing evidence.
 Do not treat executable version probes or the archive as complete Windows R20.
+
+
+The native child-tree containment module now also has two passing real Windows
+API tests: normal close and abrupt supervisor exit both end the child and its
+grandchild. Suspended creation and assignment-before-resume prevent a child
+from launching descendants before containment. The native role/backend wiring
+remains unfinished; machine-start acceptance is still absent. Repeated payload
+verification now checkpoints informational progress every 128 existing files,
+while retaining per-file digest checks and durable intent for newly copied
+members. The regression verifies bounded receipt writes on a repeated run.
