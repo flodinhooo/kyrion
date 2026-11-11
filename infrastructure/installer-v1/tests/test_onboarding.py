@@ -38,6 +38,106 @@ class OnboardingTests(unittest.TestCase):
             guided_home_assistant(self.client, {"haConfigure": "Configure"})
         request.assert_not_called()
 
+    def test_guided_ha_selection_and_deliberate_action_use_core_contract(self):
+        messages = json.loads(
+            (Path(__file__).resolve().parents[1] / "locales/en.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        source, entity = "a" * 64, "b" * 64
+        device_id = "8d1a0b3b-1155-4138-8708-af74caf924fc"
+        for test_action in (False, True):
+
+            def api(method, route, body=None):
+                if route.endswith("/preview"):
+                    return {
+                        "revision": 1,
+                        "devices": [
+                            {
+                                "key": source,
+                                "name": "Synthetic",
+                                "sourceRoom": None,
+                                "entities": [
+                                    {
+                                        "key": entity,
+                                        "name": "Light",
+                                        "state": "off",
+                                        "supportsPower": True,
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                if route.endswith("/selection"):
+                    self.assertEqual(body["expectedRevision"], 1)
+                    self.assertEqual(
+                        body["devices"],
+                        [
+                            {
+                                "key": source,
+                                "entityKeys": [entity],
+                                "allowControl": True,
+                                "overrideRoom": True,
+                                "roomId": None,
+                            }
+                        ],
+                    )
+                    return {"imported": 1, "reason": None}
+                if route == "/v1/home/rooms":
+                    return []
+                if route == "/v1/devices":
+                    return [
+                        {
+                            "id": device_id,
+                            "displayName": "Synthetic",
+                            "provider": "home_assistant",
+                            "availability": "online",
+                            "capabilities": [{"id": "power.set"}],
+                        }
+                    ]
+                if route == "/v1/device-commands":
+                    self.assertEqual(
+                        body,
+                        {
+                            "capability": "power.set",
+                            "selector": {
+                                "provider": "home_assistant",
+                                "deviceId": device_id,
+                            },
+                            "arguments": {"on": True},
+                        },
+                    )
+                    return {"requested": 1, "succeeded": 1, "failed": 0}
+                return {"configured": True}
+
+            replies = [
+                "CONFIGURE",
+                "1",
+                "1",
+                "ALLOW",
+                "none",
+                "APPLY",
+                "TEST" if test_action else "skip",
+            ]
+            if test_action:
+                replies += ["1", "TURN-ON"]
+            with (
+                self.subTest(test_action=test_action),
+                patch("builtins.input", side_effect=replies),
+                patch("builtins.print"),
+                patch.object(self.client, "request", side_effect=api) as request,
+            ):
+                guided_home_assistant(self.client, messages)
+            commands = [
+                call
+                for call in request.call_args_list
+                if call.args[1] == "/v1/device-commands"
+            ]
+            self.assertEqual(len(commands), int(test_action))
+            self.assertEqual(
+                self.installation.state["homeAssistant"], "selected-and-imported"
+            )
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

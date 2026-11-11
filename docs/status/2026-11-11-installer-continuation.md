@@ -13,8 +13,10 @@ device action was performed.
 
 Available developer environments: Windows x64/Python 3.12.1/Node 22.21.1,
 isolated Debian 13 Python containers, and isolated Java 21 containers. Docker
-tests use newly labelled resources, synthetic secrets, exact image IDs, no
-published ports, and cleanup of only resources created by the test. Target
+tests use newly labelled resources, synthetic secrets, exact image IDs, and
+cleanup of only resources created by the test. Offline mode publishes no ports;
+browser mode exposes only an ephemeral 127.0.0.1 port in a separate bridge network.
+The browser mode is not an offline-network acceptance test. Target
 hardware, host cold boot, Windows background-service provisioning and ARM64
 installation acceptance have not been established.
 
@@ -57,9 +59,13 @@ installation acceptance have not been established.
 
 ## Developer checks
 
-- Installer Python suite: Windows 76 tests, successful with two platform skips
-  (POSIX flock and forbidden symlink creation). Debian 13 isolated run: 77 tests,
+- Installer Python suite: Windows 79 tests, successful with one platform skip
+  (forbidden symlink creation). Debian 13 isolated run: 79 tests,
   successful with no skips.
+- Native Win32 exclusive file-handle locking is now implemented and actually
+  checked on Windows, including exclusion of a second process and release after
+  exit. The existing POSIX lock has the same cross-process regression. This is
+  Windows orchestration groundwork, not complete Windows provisioning.
 - Java 21: 20 targeted Home Assistant/device-command tests pass, boot JAR built.
   Test XML is in ignored `build/core-fixture-output/test-results/test`.
   An unfinished Mockito stub and an outdated audit-source assertion were found
@@ -83,6 +89,16 @@ installation acceptance have not been established.
   It checks selective entities/import, optimistic conflict, no action on saving,
   explicit fixed-service power action, state confirmation, removed entity and
   deselection. The provider is a synthetic HA-compatible API, not physical HA.
+- Real Chromium checks also pass in German/English at 1440/390 pixels against
+  those actual Core/Web/DB containers: selection, explicit control consent, room
+  override, confirmation dialog and persisted selection. Both browser request
+  tracing and the synthetic provider's service-call counter verify that saving
+  causes no device action. The fixture's disposable browser context accepts its
+  self-signed certificate temporarily; independent curl checks verify TLS using
+  the actual generated leaf certificate. No product TLS setting is relaxed.
+  Default offline mode remains internal-network/no-ports. Browser-mode isolation
+  and DNS/route restrictions are separate and explicitly reported. CI now prepares
+  the existing Playwright tooling and runs both modes; hosted CI was not triggered.
 - Native Windows development artifact `0.0.0-dev.20261111.4` was built and its
   complete model recommendation questionnaire was actually executed in a PTY,
   without Python as an end-user requirement. No model download occurred.
@@ -96,10 +112,10 @@ installation acceptance have not been established.
 
 ## Immediate continuation
 
-Retain the successful synthetic HA scenario as a regression and add browser
-interaction coverage. Finish the native Linux artifact verification and continue
-with the open matrix rows rather than handing the partial implementation to the
-owner. Core/Web HA source is saved in local commit `a4ca331`.
+Retain the successful synthetic HA API/browser scenarios as regressions and
+continue with the open matrix rows rather than handing the partial implementation
+to the owner. Core/Web HA source is saved in local commit `a4ca331`; model planning,
+maintenance safety and the continuation evidence are saved in `711cd14`.
 
 The major open implementation groups are Windows runtime/service installation,
 device enrollment/task movement/fencing, regular linked-account/Space onboarding,

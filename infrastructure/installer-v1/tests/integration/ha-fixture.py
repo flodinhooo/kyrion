@@ -38,6 +38,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/fixture/remove":
             state["removed"] = True
             return self.reply(state)
+        if self.path == "/fixture/reset":
+            state.update(on=False, removed=False, posts=0)
+            return self.reply(state)
         if self.headers.get("Authorization") != "Bearer synthetic-ha-fixture":
             return self.reply({}, 401)
         if self.path == "/api/template":

@@ -323,7 +323,6 @@ class JournalTests(unittest.TestCase):
         self.assertIn("kyrion.home.arpa", result.stdout)
         self.assertIn("192.168.1.2", result.stdout)
 
-    @unittest.skipUnless(os.name == "posix", "fcntl lock acceptance requires POSIX")
     def test_concurrent_installer_is_refused_and_lock_released(self):
         with runtime.installation_lock(self.target):  # noqa: SIM117 -- hold first lock while acquiring second
             with (
@@ -331,6 +330,28 @@ class JournalTests(unittest.TestCase):
                 runtime.installation_lock(self.target),
             ):
                 self.fail("lock should not be acquired")
+        with runtime.installation_lock(self.target):
+            pass
+
+    def test_other_process_cannot_enter_held_installation_lock(self):
+        script = """import sys
+from pathlib import Path
+from runtime import installation_lock
+try:
+ with installation_lock(Path(sys.argv[1])): pass
+except ValueError as error:
+ sys.exit(23 if str(error).startswith('E_LOCKED') else 24)
+sys.exit(0)
+"""
+        with runtime.installation_lock(self.target):
+            result = subprocess.run(
+                [sys.executable, "-c", script, str(self.target)],
+                cwd=Path(runtime.__file__).parent,
+                capture_output=True,
+                timeout=10,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 23)
         with runtime.installation_lock(self.target):
             pass
 

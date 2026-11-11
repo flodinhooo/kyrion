@@ -64,10 +64,46 @@ def atomic_json(path: Path, value: dict) -> None:
 
 @contextlib.contextmanager
 def installation_lock(target: Path):
-    import fcntl
-
     lock_path = target.parent / ("." + target.name + ".installer.lock")
     reject_links(lock_path)
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        create = kernel.CreateFileW
+        create.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        ]
+        create.restype = wintypes.HANDLE
+        close = kernel.CloseHandle
+        close.argtypes = [wintypes.HANDLE]
+        close.restype = wintypes.BOOL
+        # OPEN_ALWAYS never truncates an existing file; share mode zero excludes
+        # another process and null SECURITY_ATTRIBUTES prevents inheritance.
+        handle = create(
+            str(lock_path.absolute()), 0xC0000000, 0, None, 4, 0x00200000, None
+        )
+        if handle == ctypes.c_void_p(-1).value:
+            failure = ctypes.get_last_error()
+            if failure in {32, 33}:
+                raise ValueError("E_LOCKED: another installer owns the target")
+            raise OSError("E_LOCK: cannot establish exclusive target ownership")
+        try:
+            reject_links(lock_path)
+            yield
+        finally:
+            if not close(handle):
+                raise OSError("E_LOCK_RELEASE")
+        return
+    import fcntl
+
     descriptor = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         try:

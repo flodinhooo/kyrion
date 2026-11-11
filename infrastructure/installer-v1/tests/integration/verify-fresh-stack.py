@@ -1,7 +1,9 @@
 """Actual fresh Core/Web/TLS/bootstrap/offline-restart developer scenario.
 
-Every resource has a new UUID, uses a private internal Docker network, publishes
-no port, and contains synthetic credentials only. This is not host boot acceptance.
+Every resource has a new UUID and contains synthetic credentials only. Default:
+internal network and no ports. Optional browser mode: separate bridge network
+with only the disposable Caddy port bound to 127.0.0.1; it is not an offline test.
+Neither mode establishes host boot acceptance.
 """
 
 from __future__ import annotations
@@ -52,7 +54,7 @@ def ready(container: str, postgres: bool = False) -> None:
     raise ValueError("E_FIXTURE_NOT_READY")
 
 
-def main(images: dict[str, str]) -> None:
+def main(images: dict[str, str], browser_checks: bool = False) -> None:
     if any(
         not re.fullmatch(r"sha256:[a-f0-9]{64}", image) for image in images.values()
     ):
@@ -67,7 +69,7 @@ def main(images: dict[str, str]) -> None:
                 "docker",
                 "network",
                 "create",
-                "--internal",
+                *([] if browser_checks else ["--internal"]),
                 "--label",
                 "io.kyrion.test-fixture=true",
                 prefix,
@@ -241,9 +243,10 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                 "KYRION_PUBLIC_URL=https://fixture.test",
             ],
         )
-        start(
+        caddy = start(
             "caddy",
             [
+                *(["-p", "127.0.0.1::443"] if browser_checks else []),
                 "--network-alias",
                 "fixture.test",
                 "--read-only",
@@ -323,6 +326,65 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                 space = client.request("GET", "/v1/space")
                 client.request("GET", "/v1/devices")
                 verify_selected_ha(client, ha, ha_address, real_run)
+                if browser_checks:
+                    real_run(
+                        [
+                            "docker",
+                            "exec",
+                            ha,
+                            "curl",
+                            "--fail",
+                            "--silent",
+                            "-X",
+                            "POST",
+                            "http://127.0.0.1:8123/fixture/reset",
+                        ],
+                        capture_output=True,
+                        check=True,
+                        timeout=15,
+                    )
+                    bindings = json.loads(execute_inspect(caddy, real_run))[0][
+                        "NetworkSettings"
+                    ]["Ports"]["443/tcp"]
+                    if len(bindings) != 1 or bindings[0]["HostIp"] != "127.0.0.1":
+                        raise ValueError("E_BROWSER_FIXTURE_BINDING")
+                    checked = real_run(
+                        [
+                            "node",
+                            str(Path(__file__).with_name("verify-ha-browser.mjs")),
+                        ],
+                        input=json.dumps(
+                            {
+                                "webUrl": "https://fixture.test:"
+                                + bindings[0]["HostPort"],
+                                "session": client.session,
+                            }
+                        ),
+                        capture_output=True,
+                        text=True,
+                        timeout=180,
+                        check=False,
+                    )
+                    if checked.returncode:
+                        raise ValueError("E_HA_BROWSER: " + checked.stdout[-1500:])
+                    effect = real_run(
+                        [
+                            "docker",
+                            "exec",
+                            ha,
+                            "curl",
+                            "--fail",
+                            "--silent",
+                            "http://127.0.0.1:8123/fixture/status",
+                        ],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                        timeout=15,
+                    )
+                    if json.loads(effect.stdout)["posts"] != 0:
+                        raise ValueError("E_HA_BROWSER_SAVE_SWITCHED_DEVICE")
+                    print(checked.stdout.strip())
                 client.close()
             execute(["docker", "stop", core])
             execute(["docker", "restart", pg])
@@ -347,7 +409,16 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                 client.close()
         for container in containers:
             inspected = json.loads(execute(["docker", "inspect", container]))[0]
-            if inspected["HostConfig"].get("PortBindings"):
+            bindings = inspected["HostConfig"].get("PortBindings")
+            if bindings and not (
+                browser_checks
+                and container == caddy
+                and all(
+                    row["HostIp"] == "127.0.0.1"
+                    for rows in bindings.values()
+                    for row in rows
+                )
+            ):
                 raise ValueError("E_FIXTURE_EXPOSURE")
         print(
             json.dumps(
@@ -357,8 +428,12 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                     "ownerAndSpaceCreatedByCore": True,
                     "localLoginAfterCoreAndDatabaseRestart": True,
                     "bootstrapRemainsClosed": True,
-                    "publishedPorts": [],
-                    "network": "internal",
+                    "publishedPorts": ["127.0.0.1 ephemeral browser fixture"]
+                    if browser_checks
+                    else [],
+                    "network": "bridge-loopback-browser-fixture"
+                    if browser_checks
+                    else "internal",
                     "aiHardwareMicConfigured": False,
                     "hostBootAccepted": False,
                     "productionDataUsed": False,
@@ -373,6 +448,16 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
             execute(["docker", "network", "rm", network])
         for volume in volumes:
             execute(["docker", "volume", "rm", volume])
+
+
+def execute_inspect(container: str, runner) -> str:
+    return runner(
+        ["docker", "inspect", container],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=15,
+    ).stdout
 
 
 def verify_selected_ha(
@@ -478,6 +563,7 @@ def verify_selected_ha(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--browser-checks", action="store_true")
     for name in ("core", "web", "postgres", "caddy", "helper"):
         parser.add_argument("--" + name + "-image", required=True)
     arguments = vars(parser.parse_args())
@@ -485,5 +571,6 @@ if __name__ == "__main__":
         {
             name: arguments[name + "_image"]
             for name in ("core", "web", "postgres", "caddy", "helper")
-        }
+        },
+        arguments["browser_checks"],
     )

@@ -108,12 +108,21 @@ jobs:
   installer-fresh-stack:
     name: Isolated fresh stack and offline restart
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.21.1'
+      - name: Prepare existing Chromium test tooling
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.3 --activate
+          pnpm install --frozen-lockfile
+          pnpm --filter website exec playwright install --with-deps chromium
       - run: docker build -t kyrion-installer-core-test:ci services/core
       - run: docker build -t kyrion-installer-web-test:ci apps/web
       - run: docker build -t kyrion-installer-helper-test:ci infrastructure/installer-v1/tests/integration
@@ -127,6 +136,7 @@ jobs:
           postgres_image=$(docker image inspect postgres:17.6-alpine --format '{{.Id}}')
           caddy_image=$(docker image inspect caddy:2.10.2-alpine --format '{{.Id}}')
           python infrastructure/installer-v1/tests/integration/verify-fresh-stack.py --core-image "$core_image" --web-image "$web_image" --helper-image "$helper_image" --postgres-image "$postgres_image" --caddy-image "$caddy_image"
+          python infrastructure/installer-v1/tests/integration/verify-fresh-stack.py --browser-checks --core-image "$core_image" --web-image "$web_image" --helper-image "$helper_image" --postgres-image "$postgres_image" --caddy-image "$caddy_image"
 
   installer-native:
     name: Native installer / ${{ matrix.os }}
