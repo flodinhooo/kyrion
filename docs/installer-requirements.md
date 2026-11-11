@@ -1,0 +1,106 @@
+# Installer requirements and evidence ledger
+
+The original twenty-section scope and continuation request remain binding. No
+row is removed when a work session ends. Repository docs and disabled UI do not
+count as implemented functionality. Baseline commit: `1c3bcee`.
+
+States: **verified** = implemented and developer-tested (evidence may be isolated); **platform-unverified** = executable
+implementation, actual target acceptance
+outstanding; **external-blocked** = implementation complete but a named external
+prerequisite prevents the specified operation; **not-implemented** = source work
+remains. A prerequisite does not convert missing code into an external blocker.
+
+`I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
+`S` = `apps/website`. Tests named here are developer evidence, not release approval.
+
+| ID  | Requirement                                             | Implementation                             | State               | Missing work / acceptance                                         | Evidence                                   | External prerequisite                              |
+|-----|---------------------------------------------------------|--------------------------------------------|---------------------|-------------------------------------------------------------------|--------------------------------------------|----------------------------------------------------|
+| R01 | Preserve existing code, architecture and history        | ADR0045, baseline commit                   | verified            | Reaudit each changed domain                                       | baseline 42 tests                          | None                                               |
+| R02 | Complete durable requirement ledger                     | this file                                  | verified            | Maintain after every implementation batch                         | manual scope audit                         | None                                               |
+| R03 | Website only downloads, requirements, versions, help    | S installation pages/locales, release catalog parser/generator | verified | Public download activation stays gated on published accepted signed metadata | 13 site/catalog browser tests; website build/lint/types | Accepted published artifacts |
+| R04 | Optional hardware advice, no invented commerce | S /hardware and /en/hardware | verified | Installer advice link                                      still to add | bilingual browser navigation/no-configuration checks                                       | None                                               |
+| R05 | Easily started Windows download without Python          | I/release/build-native.py, native CI jobs | verified | Windows provisioning is separate R20; outputs are unsigned development artifacts | Actual Windows EXE built and executed without source Python | Productive executable signing/trust distribution |
+| R06 | Linux x64/ARM64 download without Python                 | I/release/build-native.py, native CI matrix | platform-unverified | Linux x64 built/executed in Debian 13; ARM64 native CI prepared but not run | Actual Linux x64 standalone smoke test | ARM64 builder/host acceptance               |
+| R07 | Headless guided terminal                                | I/guided.py, locales                       | verified            | Finish all optional/maintenance paths                             | test_guided, test_onboarding               | None                                               |
+| R08 | Local browser/desktop wizard and accessibility          | I                                          | not-implemented     | Complete downloaded UI sharing local state                        | None                                       | None                                               |
+| R09 | DE/EN selection/fallback                                | I/guided.py, locales                       | verified            | Cover every new screen/error                                      | locale parity                              | None                                               |
+| R10 | Fresh/existing detection                                | I/host.py, runtime.py                      | verified            | Broader owned native/runtime discovery                            | test_guided, test_provision                | None                                               |
+| R11 | Extend/repair/restore modes                             | I                                         /maintenance.py, recovery.py | not-implemented     | Partial: repair, uninstall, encrypted capture and isolated verification executable; extension and active full restore still missing | test_recovery and actual PostgreSQL fixture restore                      | None                                               |
+| R12 | Confirm system changes/downloads                        | I/guided.py                                | verified            | Extend to all maintenance/runtime operations                      | fixture flow                               | None                                               |
+| R13 | Durable progress and repeatable steps                   | I/runtime.py                               pendingWrite intent journal | verified | Interrupted partial bytes are preserved/refused; complete intent can resume exactly | post-key-write crash/recovery and tamper tests | None |
+| R14 | Interruption at any boundary/reboot | I/runtime.py | platform-unverified | Per-stage fault injection; actual reboot | selected journal tests | Disposable hosts for reboot |
+| R15 | Setup without AI/hardware/cloud key/mic | I onboarding and fresh-stack integration runner                | platform-unverified | Real fresh-stack developer scenario being executed; no cold-boot acceptance                                 | transport fixtures          ; verify-fresh-stack.py | Disposable host                             for system boot |
+| R16 | Windows OS/CPU/RAM/disk/GPU inventory | I/host.py | verified | Acceleration and hardware ownership probes | actual read-only Windows inventory | None |
+| R17 | Linux OS/CPU/RAM/disk/GPU inventory | I/host.py | platform-unverified | Real Linux probe acceptance | hardware fixtures | Supported Linux target |
+| R18 | Permissions/runtime/network/port checks | I/host.py | verified | Native Windows and component-specific checks | runtime-check fixtures | None |
+| R19 | Existing Ollama/hardware occupancy | I/host.py | not-implemented | Models/config/USB ownership enumeration | Version observation only | Device acceptance later |
+| R20 | Windows x64 complete installation | I | not-implemented | Runtime, host credentials, services, restart | None | Disposable supported Windows VM |
+| R21 | Linux x64/ARM64 fresh provisioning | I/runtime.py, templates | platform-unverified | Clean-host and real images acceptance | injected Compose tests/config | Native/isolated Linux host |
+| R22 | Boot before login; bounded restart and dependency order | I/templates | not-implemented | Service installation, capped restart policy, standby | Compose ordering only | Actual reboot acceptance |
+| R23 | Single-device and validated distributed tasks | I, C | not-implemented | Assignment and dependency validation | None | None |
+| R24 | Device identity/availability/version/inventory | C gateway/satellite existing, I | not-implemented | Reuse enrollment authority for installer nodes | Existing specialized agents only | None |
+| R25 | Expiring one-use authorized device pairing | C, I | not-implemented | Pairing protocol and replay tests | None | None |
+| R26 | Authenticated restricted inter-device calls | C, agent | not-implemented | Enrolled node transport and capabilities | None | None |
+| R27 | Add/remove/reassign tasks | C, I | not-implemented | Authorization and coordinated handover | None | None |
+| R28 | Offline devices/reconnect/no cloud fallback | C, I | not-implemented | Failure isolation and lease-safe recovery | None | None |
+| R29 | Migration with no double writers | C, I | not-implemented | Fencing/leases, offline source handling | None | None |
+| R30 | Regular web-account linked local identity | C UnifiedIdentity, I/onboarding.py | not-implemented | Required normal flow, first-use transaction, provider config | Optional LINK transport fixtures only | Productive issuer/client config |
+| R31 | Browser auth and return to installer | C RFC8628, I/onboarding.py | verified | Automatic local wizard continuation | existing optional provider flow fixtures | Productive issuer/client config |
+| R32 | Offline persistent login/hash/rate limits | C LocalAuthentication | platform-unverified | Isolated installer restart/offline scenario | existing Core service tests | Disposable target for reboot |
+| R33 | Explicit offline permissions/revocation policy | C, docs/unified-identity.md | verified | Verify regular linked setup obeys same policy | existing per-request membership rules | Immediate central block requires network |
+| R34 | Conscious owner recovery setup | I/onboarding.py provision_recovery; existing C LocalSecurityAdmin | platform-unverified | Interactive TTY/operator acceptance pending; wrapper reuses existing owner-password/audit checks | Core existing recovery tests; wrapper not live exercised | Disposable interactive host                                               |
+| R35 | HOME/BUSINESS and existing authorized Space             | C SpaceService; I                          HOME/BUSINESS onboarding | not-implemented | HOME and BUSINESS source flow tested; existing remote authorized Space selection remains missing | test_onboarding BUSINESS contract fixture | None |
+| R36 | Roles/Space isolation for all admin operations | C RBAC | platform-unverified | Cover new node/update/backup endpoints | existing Core RBAC tests | None |
+| R37 | Hardware multi-select and protocol explanations | I/onboarding.py, locales | verified | Audio selectors, other supported inventory | transport/locale fixtures | None |
+| R38 | Detect then confirm; avoid competing controllers | I/host.py | not-implemented | USB/audio enumeration and ownership review | Unknown explicitly reported | Physical ownership acceptance later |
+| R39 | Existing integration catalog guided paths | C integration catalog, I | not-implemented | All supported connectors with actual tests/edit/remove | HA path only | Provider accounts where needed |
+| R40 | HA authenticated probe/connect/encrypted token | C existing HA integration, I/onboarding.py | verified | Isolated full service acceptance | transport fixtures, existing Core HA tests | None for isolated fixture |
+| R41 | HA preview entities/devices/rooms | C HomeAssistantClient | not-implemented | Typed inventory preview endpoint | None | None |
+| R42 | HA selection for Space and room overrides | C HomeAssistantImport | not-implemented | Persist selected mappings; preserve overrides | None | None |
+| R43 | HA states/removed/unavailable entities | C HomeAssistantRefresh | platform-unverified | Selected-entity reconciliation; real fixture sequence | Existing read-only sync tests | None |
+| R44 | HA supported control and deliberate tutorial | C command adapters, I | not-implemented | Capability validation and fixed HA service calls | None | None for synthetic HA fixture |
+| R45 | Duplicates across integrations | C device catalog | not-implemented | Owner-reviewed provenance resolution | None | None |
+| R46 | Usable acceleration on actual AI target | I/host.py | not-implemented | Runtime-backed GPU inference/probe, unknown fallback | GPU name only | GPU acceptance hardware |
+| R47 | Use/languages/quality/concurrency/resource budget | I | not-implemented | Questionnaire and deterministic resource calculation | None | None |
+| R48 | Authenticated versioned model catalog | I, C model registry | not-implemented | Signed updateable catalog with verified sources/licenses/variants | None | Release signing custody for public catalog |
+| R49 | Model sizes/resource estimates/reserves | I | not-implemented | Exact supported variants and conservative estimator | None | None |
+| R50 | Detect/reuse/install Ollama without overwrites | I, existing AI Ollama | not-implemented | Runtime manager and explicit adoption | Generation adapter only | Official binaries for accepted bundle |
+| R51 | Approved resumable model downloads | I | not-implemented | Progress, cancellation and retry via Ollama | None | None |
+| R52 | Ollama limits/autostart/loopback and remote security | I, C | not-implemented | Fixed supported settings and authenticated agent relay | None | None |
+| R53 | Model switch/remove/optional synthetic benchmark | I, AI | not-implemented | Owned model lifecycle and benchmark conditions | None | None |
+| R54 | Unsuitable hardware alternatives/explicit cloud consent | I, C AI policies | not-implemented | Guided choices with existing provider/budget enforcement | Existing AI policy tests only | Cloud keys only if user elects cloud |
+| R55 | Audio selection and deliberate mic/speaker tests | voice-satellite, I | not-implemented | Guided probe and explicit capture/playback consent | Existing operator hardware probe only | Real audio acceptance hardware |
+| R56 | Wake/STT/TTS/satellite assignment/processing location | existing Voice services, I | not-implemented | Runtime provisioning and UI through existing ownership | Existing runtime tests only | Model provenance for released voice files |
+| R57 | Repeatable adaptive interactive tutorial | I, W | not-implemented | Persist tutorial steps and explicit capability-safe action | Text offer only | None |
+| R58 | Summary services/devices/integrations/autostart | I/runtime.py | not-implemented | Actual checks and resumable open steps | Core/login check only | None |
+| R59 | Local address/QR without credentials | I | not-implemented | QR generation/local rendering | None | None |
+| R60 | Conscious redacted diagnosis export/no upload | I/maintenance.py diagnostic | verified | Native Windows ACL administration remains R20 | allowlisted export secret/session/error redaction fixture                           | None                                               |
+| R61 | Installed update service/check at boot/schedule         | I, W                                       | not-implemented     | Actual installed scheduler and update overview                    | None                                       | Published channel for public checks                |
+| R62 | Authorized manual updates and optional window           | C, I                                       | not-implemented     | Permissions, settings and execution                               | None                                       | None                                               |
+| R63 | Versioned signed releases/integrity/platform selection  | I/bundle.py, release builders              | verified            | Native artifacts and richer compatibility manifest                | actual test-key signature tests            | Productive release keys                            |
+| R64 | Trust anchors/key rotation/min installer                | I                                         /release_policy.py | not-implemented     | Scoped signed rotation and anti-replay implemented/tested; production embedded trust and installer rotation UI still open | actual Ed25519 key rotation/tamper/expiry/usage tests                                       | Productive root trust distribution |
+| R65 | API/component/schema compatibility and release notes | I/release_policy.py compatibility policy                     | not-implemented     | Platform/min-installer/API/schema selection implemented; update/migration coordinator still missing | compatibility and rollback sequence fixtures          | None                                               |
+| R66 | Older supported installer selects compatible release    | I                                          --check-updates and compatible_release | platform-unverified | Reads actual DB schema, verifies feed and selects compatible release; installed scheduler and artifact download remain R61/R67 | real signed-document tests and selector fixtures | Published authenticated feed for public use |
+| R67 | Backup then ordered updates/migrations/health           | I                                          | not-implemented     | Durable coordinator reusing migration tooling                     | None                                       | None                                               |
+| R68 | Interrupted/distributed update/recovery                 | I, C                                       | not-implemented     | Reboot continuation, offline node version barriers                | None                                       | None                                               |
+| R69 | Offline installed version remains usable                | C/W local stack                            | platform-unverified | Network-disabled whole-journey/restart evidence                   | Existing local components only             | Disposable host                                    |
+| R70 | Consistent DB/config/keys/knowledge backup              | I/recovery.py capture                      | platform-unverified | Stops Core for dump plus tracked config/keys/knowledge/recovery capture; whole application backup acceptance remains | capture failure/restart fixture; real encrypted DB restore | Complete isolated source stack acceptance                                               |
+| R71 | Authenticated encryption/separate recovery keys         | I/recovery.py crypto and verified_plaintext | verified | Packaging GnuPG as a runtime prerequisite remains platform work | actual GPG roundtrip/wrong password on Windows and Debian 13           | None                                               |
+| R72 | Restore on new target/integrity/version/identity        | I/recovery.py verify_database and integration runner                | not-implemented     | Actual isolated encrypted database restore implemented; full application activation/identity fencing/other-device restore remains missing | real network-none PostgreSQL restore, schema/count checks | None |
+| R73 | Repair with preservation and safe uninstall choices | I/maintenance.py repair/uninstall | platform-unverified | Known-original nonsecret repair and data-preserving/purge removal implemented; real runtime/OS acceptance pending | repair preserves originals/refuses key rotation; uninstall keeps foreign sentinel | Disposable installed host                                               |
+| R74 | Native distribution/release CI/signatures               | CI/release native platform jobs and image architecture matrix              | not-implemented     | Native artifacts/AMD64+ARM64 image jobs and post-publication catalog generation implemented; complete native signing/publication gates still open | actual native Win/Linux x64 builds; workflows parsed; publication rejection fixtures          | Productive keys, platform acceptance and publication authorization |
+| R75 | Full automated/isolated setup/update/restore scenarios | I tests/integration; S browser tests                        | not-implemented     | Actual isolated crypto/DB restore and native binaries exercised; full linked/distributed/update/restore product scenarios remain | 64+ Python tests, Debian container tests, 13 site tests; counts updated in continuation record | Only cold boot/audio/radio acceptance needs target hardware                       |
+| R76 | No productive actions/publication/paid calls            | all implementation work                    | verified            | Keep release activation separate                                  | baseline review                            | Explicit later authorization                       |
+
+## Work order and continuation
+
+1. Preserve baseline and audit transport/state safety.
+2. Download/help/hardware site and native installer packaging/build jobs.
+3. Complete maintenance foundation: consistent encrypted backup, isolated restore,
+   repair/uninstall, then signed compatible update transactions.
+4. Actual Windows runtime/service implementation and isolated host tests.
+5. Existing Core identity/recovery/Space onboarding and authorized device lifecycle.
+6. HA selection/control, integration catalog, AI/Ollama/voice, adaptive tutorial.
+7. Integrated full-journey tests and remaining platform acceptance.
+
+Finishing a row advances this work order; it does not constitute a user handoff.
