@@ -73,6 +73,23 @@ def nearest_existing(path: Path) -> Path:
     return path
 
 
+def effective_ram(physical: int | None) -> int | None:
+    if physical is None or platform.system() != "Linux":
+        return physical
+    limits = [physical]
+    for path in (
+            Path("/sys/fs/cgroup/memory.max"),
+            Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+    ):
+        try:
+            value = path.read_text().strip()
+            if value.isdigit() and int(value) > 0:
+                limits.append(int(value))
+        except OSError:
+            pass
+    return min(limits)
+
+
 def reject_links(path: Path) -> None:
     for item in (path, *path.parents):
         if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
@@ -118,7 +135,7 @@ def inventory(target: Path) -> dict:
         "architecture": architecture,
         "cpu": platform.processor() or None,
         "cpuCount": os.cpu_count(),
-        "ramBytes": ram_bytes(),
+        "ramBytes": effective_ram(ram_bytes()),
         "freeBytes": free,
         "gpuVendorObservation": gpu_rows,
         "usableAcceleration": None,

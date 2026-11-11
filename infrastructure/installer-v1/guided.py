@@ -12,6 +12,7 @@ from pathlib import Path
 
 from bundle import authenticate, sha256
 from host import inventory
+from maintenance import run as run_maintenance
 from onboarding import guided_setup
 from runtime import (
     Installation,
@@ -33,6 +34,23 @@ def main() -> int:
         "--probe", action="store_true", help="Read-only target inventory, no install"
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--backup", type=Path)
+    actions.add_argument("--verify-backup", type=Path)
+    actions.add_argument("--diagnostics", type=Path)
+    actions.add_argument("--repair", action="store_true")
+    actions.add_argument("--uninstall", action="store_true")
+    actions.add_argument("--check-updates", action="store_true")
+    parser.add_argument("--feed")
+    parser.add_argument("--trust-store", type=Path)
+    parser.add_argument("--installer-version", default="1.0.0")
+    parser.add_argument("--installed-api", type=int, default=1)
+    parser.add_argument("--installed-schema", type=int)
+    parser.add_argument("--delete-data", action="store_true")
+    parser.add_argument(
+        "--postgres-image",
+        help="Exact previously verified PostgreSQL image ID for isolated restore",
+    )
     parser.add_argument(
         "--public-key", type=Path, help="Independently trusted release public key"
     )
@@ -59,6 +77,24 @@ def main() -> int:
         (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
     )
     print(messages["intro"])
+    if (
+        args.backup
+        or args.verify_backup
+        or args.diagnostics
+        or args.repair
+        or args.uninstall
+        or args.check_updates
+    ):
+        try:
+            return run_maintenance(args, messages)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+            code = str(error).split(":", 1)[0]
+            print(
+                code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_MAINTENANCE",
+                file=sys.stderr,
+            )
+            print(messages["failed"], file=sys.stderr)
+            return 2
     report = inventory(args.target)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     if not report["candidateProvisioning"]:

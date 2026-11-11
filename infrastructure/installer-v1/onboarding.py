@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import getpass
 import json
+import os
 import re
 import subprocess
+import uuid
 from urllib.parse import urlsplit
 
+from host import reject_links
 from runtime import Installation
 
 ROUTES = {
@@ -114,14 +117,20 @@ class CoreClient:
             raise ValueError("E_API: local Core unavailable") from None
 
     def login_or_setup(
-        self, username: str, password: str, space_name: str | None = None
+        self,
+        username: str,
+        password: str,
+        space_name: str | None = None,
+        space_type: str = "HOME",
     ) -> dict:
         status = self.request("GET", "/v1/auth/setup/status")
         body = {"username": username, "password": password}
         if status.get("setupRequired") is True:
             if not space_name or not 1 <= len(space_name) <= 120:
                 raise ValueError("E_SPACE: explicit Space name required")
-            body.update({"spaceType": "HOME", "spaceName": space_name})
+            if space_type not in {"HOME", "BUSINESS"}:
+                raise ValueError("E_SPACE_TYPE")
+            body.update({"spaceType": space_type, "spaceName": space_name})
             bootstrap = (
                 (self.installation.target / "secrets/bootstrap.secret")
                 .read_text(encoding="utf-8")
@@ -174,13 +183,18 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
             if status.get("setupRequired") is True
             else None
         )
+        space_type = (
+            input(messages["spaceType"] + " [HOME/BUSINESS]: ").strip().upper()
+            if space_name is not None
+            else "HOME"
+        )
         username = input(messages["localUsername"] + ": ").strip()
         password = getpass.getpass(messages["localPassword"] + ": ")
         if space_name is not None and password != getpass.getpass(
             messages["repeatPassword"] + ": "
         ):
             raise ValueError("E_PASSWORD_MISMATCH")
-        client.login_or_setup(username, password, space_name)
+        user = client.login_or_setup(username, password, space_name, space_type)
         # Linking the same account uses Core's RFC8628 flow; the installer never
         # collects a website password, handles a provider token or grants a role.
         config = client.request("GET", "/v1/auth/central/config")
@@ -192,6 +206,12 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         else:
             print(messages["linkLater"])
         del password
+        if (
+            "OWNER" in user.get("roles", [])
+            and input(messages["recoveryNow"] + " [RECOVERY]: ").strip() == "RECOVERY"
+        ):
+            space = client.request("GET", "/v1/space")
+            provision_recovery(installation, str(uuid.UUID(space["id"])), messages)
         print(messages["hardwareHelp"])
         hardware = input(messages["hardwareChoice"] + ": ").strip().split(",")
         allowed = {"ha", "zigbee", "matter", "thread", "audio", "none"}
@@ -227,6 +247,64 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         installation.save()
     finally:
         client.close()
+
+
+def provision_recovery(
+    installation: Installation, space_id: str, messages: dict[str, str]
+) -> None:
+    if os.name != "posix" or os.geteuid() != 0:
+        raise ValueError("E_PLATFORM")
+    space_id = str(uuid.UUID(space_id))
+    directory = installation.target / "recovery"
+    reject_links(directory)
+    directory.mkdir(mode=0o700, exist_ok=True)
+    os.chmod(directory, 0o700)
+    os.chown(directory, 10001, 10001)
+    key = directory / (space_id + ".host-key")
+    if key.exists() or key.is_symlink():
+        raise ValueError("E_RECOVERY_EXISTING: existing recovery is never overwritten")
+    print(messages["recoveryConsole"])
+    installation.compose("stop", "--timeout", "30", "web", "core")
+    try:
+        command = [
+            "docker",
+            "compose",
+            "--project-name",
+            "kyrion-" + installation.state["installationId"],
+            "--env-file",
+            str(installation.target / ".env"),
+            "-f",
+            str(installation.target / "compose.yml"),
+            "run",
+            "--rm",
+            "--no-deps",
+            "--entrypoint",
+            "java",
+            "--volume",
+            str(directory) + ":/run/kyrion-recovery",
+            "core",
+            "-Dloader.main=dev.kyrion.core.security.LocalSecurityAdmin",
+            "-cp",
+            "/opt/kyrion/app.jar",
+            "org.springframework.boot.loader.launch.PropertiesLauncher",
+            "provision",
+            space_id,
+            "/run/kyrion-recovery/" + space_id + ".host-key",
+        ]
+        # Inherit the real terminal. The existing host-only tool refuses pipes,
+        # verifies OWNER password and audit integrity, and shows a code once.
+        result = subprocess.run(command, check=False)
+        if (
+            result.returncode
+            or not key.is_file()
+            or key.stat().st_mode & 0o077
+            or key.stat().st_uid != 10001
+        ):
+            raise ValueError("E_RECOVERY_NOT_PROVISIONED")
+        installation.state["recovery"] = "provisioned-by-core-host-tool"
+        installation.save()
+    finally:
+        installation.compose("start", "core", "web")
 
 
 def link_existing_identity(

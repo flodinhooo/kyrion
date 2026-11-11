@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import ipaddress
 import json
 import os
@@ -154,6 +155,7 @@ class Installation:
         manifest_digest: str,
         hostname: str,
         address: str,
+        verify: bool = True,
     ):
         self.target = target
         self.path = target / "install-state.json"
@@ -187,7 +189,8 @@ class Installation:
                 raise ValueError(
                     "E_RESUME: release or configuration differs from saved installation"
                 )
-            self.verify_files()
+            if verify:
+                self.verify_files()
         else:
             target.mkdir(mode=0o700)
             self.state = {
@@ -221,26 +224,61 @@ class Installation:
 
     def write(self, relative: str, value: str | bytes, uid: int | None = None) -> None:
         path = self.target / relative
+        if not path.resolve().is_relative_to(self.target.resolve()):
+            raise ValueError("E_STATE: invalid managed path")
         reject_links(path)
+        self.verify_files()
         if relative in self.state["files"]:
-            self.verify_files()
             return
-        # An interruption between file creation and checkpoint is ambiguous: fail
-        # closed, preserve it, and require operator inspection, never rotate a key.
+        pending = self.state.get("pendingWrite")
+        if pending is not None:
+            if not isinstance(pending, dict) or pending.get("path") != relative:
+                raise ValueError(
+                    "E_INCOMPLETE: a different pending write needs recovery"
+                )
+            if path.is_file():
+                if sha256(path) != pending.get("sha256"):
+                    raise ValueError(
+                        "E_CHANGED: pending file differs from recorded intent"
+                    )
+                if os.name == "posix" and (
+                    path.stat().st_mode & 0o077
+                    or path.stat().st_uid != pending.get("uid")
+                ):
+                    raise ValueError(
+                        "E_CHANGED: pending file ownership or permissions differ"
+                    )
+                self.state["files"][relative] = pending["sha256"]
+                del self.state["pendingWrite"]
+                self.save()
+                return
+            # No target file exists: the previous value was never published or
+            # consumed. A fresh random value is safe; an existing key is never rotated.
+            del self.state["pendingWrite"]
         if path.exists() or path.is_symlink():
             raise ValueError(
                 "E_INCOMPLETE: uncheckpointed file preserved for inspection"
             )
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        payload = value.encode("utf-8") if isinstance(value, str) else value
+        self.state["pendingWrite"] = {
+            "path": relative,
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "uid": uid
+            if uid is not None
+            else (os.geteuid() if os.name == "posix" else None),
+        }
+        self.save()
         with os.fdopen(
             os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
         ) as stream:
-            stream.write(value.encode("utf-8") if isinstance(value, str) else value)
+            stream.write(payload)
+            if uid is not None:
+                os.chown(path, uid, uid)
             stream.flush()
             os.fsync(stream.fileno())
-        if uid is not None:
-            os.chown(path, uid, uid)
         self.state["files"][relative] = sha256(path)
+        del self.state["pendingWrite"]
         self.save()
 
     def configure(self) -> None:
