@@ -61,6 +61,7 @@ def build(output: Path, version: str) -> Path:
         for relative in (
                 "locales/en.json",
                 "locales/de.json",
+                "model-catalog.json",
                 "templates/compose.yml",
                 "templates/Caddyfile",
         ):

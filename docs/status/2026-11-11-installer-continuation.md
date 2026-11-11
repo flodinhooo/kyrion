@@ -1,0 +1,109 @@
+# Installer continuation — developer evidence and open work
+
+The full installer assignment remains open. This is a continuation record, not
+a product acceptance or a request for the owner to test partial features.
+The binding scope is the [requirement matrix](../installer-requirements.md).
+
+## Source and environment
+
+Work continues on `master`. Baseline `1c3bcee` preserves the pre-existing guided
+installer changes. Subsequent task commits were inspected and retained. No
+reset, worktree, production deployment, publication, paid API call or household
+device action was performed.
+
+Available developer environments: Windows x64/Python 3.12.1/Node 22.21.1,
+isolated Debian 13 Python containers, and isolated Java 21 containers. Docker
+tests use newly labelled resources, synthetic secrets, exact image IDs, no
+published ports, and cleanup of only resources created by the test. Target
+hardware, host cold boot, Windows background-service provisioning and ARM64
+installation acceptance have not been established.
+
+## Implemented during continuation
+
+- Bilingual website download/help and optional hardware advice. Public catalog
+  remains empty until accepted, signed artifacts actually exist in a published
+  release. Strict metadata validation and read-only catalog generation prevent
+  draft or invented downloads.
+- Native PyInstaller build and executable probe, with target-platform CI jobs.
+  Windows development EXEs and a Debian 13 x64 standalone archive were built and
+  executed. They are unsigned development artifacts, not platform installation
+  acceptance. Manual Python installation is not required to run these binaries.
+- Durable pending-write recovery adopts only exact recorded bytes after an
+  interrupted secret write. Tampering and blind copied-install adoption fail.
+- Scoped signed-document verification, trust rotation/replay protection and
+  platform/API/schema compatibility selection for update discovery. Installed
+  scheduling and applying updates remain missing.
+- Consistent Core-paused database/config/key/knowledge capture, GPG encryption,
+  bounded archive validation and actual restore into a new isolated PostgreSQL
+  database. Full restored-application activation and identity fencing remain
+  missing; database restore is explicitly not application restore acceptance.
+- Maintenance commands for known-original nonsecret repair, data-preserving
+  uninstall with separate purge consent, and allowlisted local diagnostics.
+- HOME/BUSINESS onboarding and wrapper for the existing host-only Core recovery
+  tool. Interactive recovery acceptance remains unperformed. Regular required
+  linked-account onboarding and existing authorized Space selection remain open.
+- Home Assistant selected-device/entity previews, revisioned persistence, room
+  overrides, encrypted credential reuse and explicit single-power-entity control
+  consent through the existing Core command/authority/audit boundary. The local
+  Web card and terminal assistant collect selection and consent. Service calls
+  are fixed light/switch power operations followed by a confirming state read;
+  saving selection does not call a service. Legacy unselected imports remain
+  read-only. See ADR 0047. Synthetic full-stack verification passes with the
+  current source-built Core and Web images.
+- Optional hardware-based model questionnaire, reviewed exact Qwen3 variant
+  metadata and conservative resource recommendations. Updated data verifies
+  through the existing scoped Ed25519 policy. Automatic signed catalog refresh,
+  persisted antirollback and full Ollama lifecycle remain open. See ADR 0048.
+
+## Developer checks
+
+- Installer Python suite: Windows 76 tests, successful with two platform skips
+  (POSIX flock and forbidden symlink creation). Debian 13 isolated run: 77 tests,
+  successful with no skips.
+- Java 21: 20 targeted Home Assistant/device-command tests pass, boot JAR built.
+  Test XML is in ignored `build/core-fixture-output/test-results/test`.
+  An unfinished Mockito stub and an outdated audit-source assertion were found
+  and corrected before the successful run. An actual production-Jackson request
+  issue with omitted stored credentials was reproduced and fixed with nullable
+  optional fields; the production-generation mapper regression test passes.
+- New local Web selection contract: two tests pass. Changed Web source passes
+  TypeScript and ESLint. Production build initially failed because sandbox
+  network policy prevented existing Google Font downloads; the network-enabled
+  retry passes. A fresh source Docker Web build also passes.
+- Website: production build, types, lint and 13 browser/catalog tests passed.
+- Actual GPG encrypted backup roundtrip/wrong-password refusal and isolated
+  PostgreSQL dump/restore were exercised again, including expected user/Space/
+  audit counts. The current full stack verifies TLS,
+  fresh owner/Space setup, persisted local login after Core/database restart,
+  and bootstrap remaining closed. This is process restart, not host cold boot.
+- Current HA full-stack run passes with source-built Core image ID
+  `sha256:8b7df2d2419f1eab99ee2e975aa90e91a1475af49d41631827913eeb1f0e61a0`
+  and Web image ID
+  `sha256:e202e2b362509ad2b16550a60e7475da32b3d4fa298fa67e27e7bd56eeb16a6b`.
+  It checks selective entities/import, optimistic conflict, no action on saving,
+  explicit fixed-service power action, state confirmation, removed entity and
+  deselection. The provider is a synthetic HA-compatible API, not physical HA.
+- Native Windows development artifact `0.0.0-dev.20261111.4` was built and its
+  complete model recommendation questionnaire was actually executed in a PTY,
+  without Python as an end-user requirement. No model download occurred.
+  Metadata reports native smoke success and platform installation acceptance
+  false. Linux x64 archive of the same source was also built and executed in
+  Debian 13. Development artifacts are under ignored `build/native-installer`
+  and `build/native-linux`; neither is signed or publicly offered.
+- Ruff passes for changed Python modules. Broad Ruff additionally reports old
+  issues in `configure.py` and `tests/test_installer.py`; they are not hidden by
+  the successful targeted check.
+
+## Immediate continuation
+
+Retain the successful synthetic HA scenario as a regression and add browser
+interaction coverage. Finish the native Linux artifact verification and continue
+with the open matrix rows rather than handing the partial implementation to the
+owner. Core/Web HA source is saved in local commit `a4ca331`.
+
+The major open implementation groups are Windows runtime/service installation,
+device enrollment/task movement/fencing, regular linked-account/Space onboarding,
+hardware detection, remaining integrations, AI/Ollama/voice provisioning,
+installed update transactions/scheduling, full application restore, and adaptive
+tutorial/final checks. Missing target hardware does not excuse these missing
+source implementations.

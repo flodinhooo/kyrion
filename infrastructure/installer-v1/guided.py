@@ -13,6 +13,7 @@ from pathlib import Path
 from bundle import authenticate, sha256
 from host import inventory
 from maintenance import run as run_maintenance
+from models import guided_recommendation, load_catalog
 from onboarding import guided_setup
 from runtime import (
     Installation,
@@ -35,6 +36,7 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--recommend-ai", action="store_true")
     actions.add_argument("--backup", type=Path)
     actions.add_argument("--verify-backup", type=Path)
     actions.add_argument("--diagnostics", type=Path)
@@ -43,6 +45,12 @@ def main() -> int:
     actions.add_argument("--check-updates", action="store_true")
     parser.add_argument("--feed")
     parser.add_argument("--trust-store", type=Path)
+    parser.add_argument(
+        "--model-catalog",
+        type=Path,
+        help="Signed model-catalog envelope; requires --trust-store",
+    )
+    parser.add_argument("--minimum-catalog-sequence", type=int, default=0)
     parser.add_argument("--installer-version", default="1.0.0")
     parser.add_argument("--installed-api", type=int, default=1)
     parser.add_argument("--installed-schema", type=int)
@@ -77,6 +85,22 @@ def main() -> int:
         (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
     )
     print(messages["intro"])
+    if args.recommend_ai:
+        try:
+            if args.model_catalog is not None and args.trust_store is None:
+                raise ValueError("E_MODEL_TRUST_REQUIRED")
+            catalog = load_catalog(
+                args.model_catalog.read_bytes() if args.model_catalog else None,
+                json.loads(args.trust_store.read_text(encoding="utf-8"))
+                if args.trust_store
+                else None,
+                args.minimum_catalog_sequence,
+            )
+            guided_recommendation(inventory(args.target), messages, catalog)
+            return 0
+        except (OSError, ValueError, TypeError, KeyError):
+            print("E_MODEL_RECOMMENDATION", file=sys.stderr)
+            return 2
     if (
         args.backup
         or args.verify_backup

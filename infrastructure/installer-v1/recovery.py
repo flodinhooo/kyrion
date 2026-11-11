@@ -22,12 +22,14 @@ from bundle import sha256
 from host import reject_links, runtime_checks
 from runtime import Installation, atomic_json, execute, installation_lock
 
-MAX_BACKUP = 128 * 1024 ** 3
+MAX_BACKUP = 128 * 1024**3
 MAX_FILES = 100_000
 COUNTS_SQL = "SELECT json_build_object('users',(SELECT count(*) FROM user_account),'spaces',(SELECT count(*) FROM kyrion_space),'audit',(SELECT count(*) FROM activity_event))"
 
 
 def load_installation(target: Path, verify: bool = True) -> Installation:
+    if not target.is_absolute() or target == target.parent:
+        raise ValueError("E_TARGET")
     reject_links(target)
     path = target / "install-state.json"
     reject_links(path)
@@ -108,6 +110,9 @@ def crypto(
                     "E_BACKUP_INTEGRITY" if decrypt else "E_BACKUP_ENCRYPTION"
                 )
             os.chmod(destination, 0o600)
+            if os.name == "posix":
+                with destination.open("rb") as stream:
+                    os.fsync(stream.fileno())
         except (OSError, subprocess.TimeoutExpired) as error:
             raise ValueError("E_BACKUP_CRYPTO") from error
         finally:
@@ -131,9 +136,9 @@ def file_record(path: Path) -> dict:
     digest = sha256(path)
     after = path.stat()
     if (before.st_ino, before.st_size, before.st_mtime_ns) != (
-            after.st_ino,
-            after.st_size,
-            after.st_mtime_ns,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
     ):
         raise ValueError("E_BACKUP_SOURCE_CHANGED")
     return {"bytes": after.st_size, "sha256": digest, "mtimeNs": after.st_mtime_ns}
@@ -186,7 +191,9 @@ def allowed_member(name: str) -> bool:
                 ".env",
                 "data/Caddyfile",
             }
-            or name.startswith(("secrets/", "data/tls/", "data/knowledge/", "recovery/"))
+            or name.startswith(
+                ("secrets/", "data/tls/", "data/knowledge/", "recovery/")
+            )
         )
     )
 
@@ -194,7 +201,14 @@ def allowed_member(name: str) -> bool:
 def inspect_archive(path: Path) -> dict:
     try:
         return _inspect_archive(path)
-    except (OSError, tarfile.TarError, KeyError, TypeError, AttributeError, json.JSONDecodeError):
+    except (
+        OSError,
+        tarfile.TarError,
+        KeyError,
+        TypeError,
+        AttributeError,
+        json.JSONDecodeError,
+    ):
         raise ValueError("E_BACKUP_INVALID") from None
 
 
@@ -332,7 +346,9 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
                     for path in tree.rglob("*"):
                         reject_links(path)
                         if path.is_file():
-                            sources[path.relative_to(installation.target).as_posix()] = path
+                            sources[
+                                path.relative_to(installation.target).as_posix()
+                            ] = path
             metadata = {
                 "installationId": installation.state["installationId"],
                 "configuration": installation.configuration,
@@ -389,6 +405,12 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
         try:
             crypto(archive, temporary, password)
             os.link(temporary, destination)
+            if os.name == "posix":
+                descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
         finally:
             temporary.unlink(missing_ok=True)
     receipt = {
@@ -456,9 +478,9 @@ def verify_database(source: Path, password: str, image_id: str) -> dict:
                 or inspected["Config"]["Labels"].get("io.kyrion.restore-target")
                 != "true"
                 or any(
-                mount.get("Type") != "tmpfs"
-                for mount in inspected.get("Mounts", [])
-            )
+                    mount.get("Type") != "tmpfs"
+                    for mount in inspected.get("Mounts", [])
+                )
             ):
                 raise ValueError("E_RESTORE_ISOLATION")
             import time

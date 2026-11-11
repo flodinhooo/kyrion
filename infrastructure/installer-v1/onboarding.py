@@ -10,7 +10,8 @@ import subprocess
 import uuid
 from urllib.parse import urlsplit
 
-from host import reject_links
+from host import inventory, reject_links
+from models import guided_recommendation
 from runtime import Installation
 
 ROUTES = {
@@ -29,12 +30,28 @@ ROUTES = {
     ("GET", "/v1/integrations/home-assistant"),
     ("POST", "/v1/integrations/home-assistant/probe"),
     ("POST", "/v1/integrations/home-assistant/connect"),
+    ("POST", "/v1/integrations/home-assistant/sync"),
+    ("GET", "/v1/integrations/home-assistant/preview"),
+    ("POST", "/v1/integrations/home-assistant/preview"),
+    ("GET", "/v1/integrations/home-assistant/selection"),
+    ("POST", "/v1/integrations/home-assistant/selection"),
+    ("GET", "/v1/home/rooms"),
+    ("POST", "/v1/device-commands"),
     ("GET", "/v1/devices"),
 }
 
 
 class CoreError(ValueError):
-    pass
+    def __init__(self, code: str, status: int | None = None):
+        self.code = (
+            code if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", code) else "E_API"
+        )
+        self.status = status
+        super().__init__(
+            self.code
+            if self.code == self.code.upper()
+            else "E_CORE_" + self.code.upper()
+        )
 
 
 class CoreClient:
@@ -109,9 +126,7 @@ class CoreClient:
                 code = (
                     value.get("code", "E_API") if isinstance(value, dict) else "E_API"
                 )
-                raise ValueError(
-                    code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_API"
-                )
+                raise CoreError(code if isinstance(code, str) else "E_API", int(status))
             return value
         except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
             raise ValueError("E_API: local Core unavailable") from None
@@ -222,31 +237,199 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
                 if entry.strip().lower() in allowed
             }
         )
+        if any(
+            entry.strip().lower() not in allowed for entry in hardware if entry.strip()
+        ):
+            raise ValueError("E_HARDWARE_SELECTION")
         if "none" in selection and len(selection) > 1:
             raise ValueError("E_HARDWARE_SELECTION")
         installation.state["hardwareSelection"] = selection
         installation.save()
         if "ha" in selection:
-            current = client.request("GET", "/v1/integrations/home-assistant")
-            if current.get("configured") is True:
-                print(messages["haExisting"])
-            else:
-                print(messages["haScope"])
-                if input(messages["haConsent"] + " [IMPORT]: ").strip() == "IMPORT":
-                    endpoint = input(messages["haEndpoint"] + ": ").strip()
-                    token = getpass.getpass(messages["haToken"] + ": ")
-                    result = client.connect_home_assistant(endpoint, token)
-                    del token
-                    print(
-                        messages["haImported"]
-                        + ": "
-                        + str(result["importedDeviceCount"])
-                    )
+            guided_home_assistant(client, messages)
+        recommendation = guided_recommendation(inventory(installation.target), messages)
+        if recommendation is not None:
+            installation.state["aiRecommendation"] = recommendation
+            installation.save()
         print(messages["tutorial"])
         installation.state["tutorial"] = "offered"
         installation.save()
     finally:
         client.close()
+
+
+def selected_indices(value: str, count: int) -> list[int]:
+    value = value.strip().lower()
+    if value in {"all", "alle"}:
+        return list(range(count))
+    if value in {"none", "keine"}:
+        return []
+    parts = value.split(",")
+    if not parts or any(not part.strip().isdigit() for part in parts):
+        raise ValueError("E_SELECTION")
+    selected = [int(part.strip()) - 1 for part in parts]
+    if len(set(selected)) != len(selected) or any(
+        index < 0 or index >= count for index in selected
+    ):
+        raise ValueError("E_SELECTION")
+    return selected
+
+
+def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
+    if input(messages["haConfigure"] + " [CONFIGURE/skip]: ").strip() != "CONFIGURE":
+        return
+    current = client.request("GET", "/v1/integrations/home-assistant")
+    body = {}
+    if current.get("configured") is True:
+        preview = client.request("GET", "/v1/integrations/home-assistant/preview")
+    else:
+        body = {
+            "baseUrl": input(messages["haEndpoint"] + ": ").strip(),
+            "accessToken": getpass.getpass(messages["haToken"] + ": "),
+        }
+        preview = client.request(
+            "POST", "/v1/integrations/home-assistant/preview", body
+        )
+    devices = preview.get("devices")
+    if not isinstance(devices, list) or type(preview.get("revision")) is not int:
+        raise CoreError("E_HA_PREVIEW")
+    print(messages["haSelectScope"])
+    for index, device in enumerate(devices, 1):
+        print(
+            json.dumps(
+                {
+                    "number": index,
+                    "name": device["name"],
+                    "sourceRoom": device.get("sourceRoom"),
+                },
+                ensure_ascii=True,
+            )
+        )
+    chosen = selected_indices(input(messages["haChooseDevices"] + ": "), len(devices))
+    rooms = client.request("GET", "/v1/home/rooms")
+    if not isinstance(rooms, list):
+        raise CoreError("E_HA_ROOMS")
+    choices = []
+    for index in chosen:
+        device = devices[index]
+        print(json.dumps({"device": device["name"]}, ensure_ascii=True))
+        for number, entity in enumerate(device["entities"], 1):
+            print(
+                json.dumps(
+                    {
+                        "number": number,
+                        "name": entity["name"],
+                        "state": entity["state"],
+                        "supportsPower": entity["supportsPower"],
+                    },
+                    ensure_ascii=True,
+                )
+            )
+        entities = [
+            device["entities"][number]
+            for number in selected_indices(
+                input(messages["haChooseEntities"] + ": "), len(device["entities"])
+            )
+        ]
+        if not entities:
+            raise ValueError("E_HA_ENTITY_SELECTION")
+        allow = False
+        if sum(entity["supportsPower"] is True for entity in entities) == 1:
+            allow = (
+                input(messages["haControlConsent"] + " [ALLOW/skip]: ").strip()
+                == "ALLOW"
+            )
+        else:
+            print(messages["haControlSingle"])
+        for number, room in enumerate(rooms, 1):
+            print(
+                json.dumps({"number": number, "room": room["name"]}, ensure_ascii=True)
+            )
+        room_choice = (
+            input(messages["haChooseRoom"] + " [auto/none/number]: ").strip().lower()
+        )
+        override, room_id = room_choice not in {"auto", ""}, None
+        if override and room_choice not in {"none", "keine"}:
+            indices = selected_indices(room_choice, len(rooms))
+            if len(indices) != 1:
+                raise ValueError("E_HA_ROOM_SELECTION")
+            room_id = rooms[indices[0]]["id"]
+        choices.append(
+            {
+                "key": device["key"],
+                "entityKeys": [entity["key"] for entity in entities],
+                "allowControl": allow,
+                "overrideRoom": override,
+                "roomId": room_id,
+            }
+        )
+    print(messages["haSelectionReview"].format(count=len(choices)))
+    if input("[APPLY/skip]: ").strip() != "APPLY":
+        return
+    result = client.request(
+        "POST",
+        "/v1/integrations/home-assistant/selection",
+        {**body, "expectedRevision": preview["revision"], "devices": choices},
+    )
+    body.clear()
+    if result.get("reason") is not None or type(result.get("imported")) is not int:
+        raise CoreError("E_HA_SYNC")
+    client.installation.state["homeAssistant"] = "selected-and-imported"
+    client.installation.save()
+    print(messages["haImported"] + ": " + str(result["imported"]))
+    if (
+        any(choice["allowControl"] for choice in choices)
+        and input(messages["haFirstAction"] + " [TEST/skip]: ").strip() == "TEST"
+    ):
+        catalog = client.request("GET", "/v1/devices")
+        if not isinstance(catalog, list):
+            raise CoreError("E_HA_CATALOG")
+        candidates = [
+            device
+            for device in catalog
+            if device.get("provider") == "home_assistant"
+            and device.get("availability") == "online"
+            and any(
+                capability.get("id") == "power.set"
+                for capability in device.get("capabilities", [])
+            )
+        ]
+        for number, device in enumerate(candidates, 1):
+            print(
+                json.dumps(
+                    {"number": number, "device": device["displayName"]},
+                    ensure_ascii=True,
+                )
+            )
+        selected = selected_indices(
+            input(messages["haChooseActionDevice"] + ": "), len(candidates)
+        )
+        if len(selected) != 1:
+            raise ValueError("E_HA_ACTION_SELECTION")
+        device = candidates[selected[0]]
+        action = input(
+            messages["haActionConfirm"] + " [TURN-ON/TURN-OFF/skip]: "
+        ).strip()
+        if action not in {"TURN-ON", "TURN-OFF"}:
+            return
+        result = client.request(
+            "POST",
+            "/v1/device-commands",
+            {
+                "capability": "power.set",
+                "selector": {"provider": "home_assistant", "deviceId": device["id"]},
+                "arguments": {"on": action == "TURN-ON"},
+            },
+        )
+        print(
+            json.dumps(
+                {
+                    "requested": result.get("requested"),
+                    "succeeded": result.get("succeeded"),
+                    "failed": result.get("failed"),
+                }
+            )
+        )
 
 
 def provision_recovery(

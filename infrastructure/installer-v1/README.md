@@ -8,6 +8,65 @@ surface. No website-hosted installation wizard is used.
 Read [inventory, stages, support matrix and acceptance](../../docs/guided-installer.md)
 and [ADR 0045](../../docs/adr/0045-guided-local-installer.md).
 
+The [complete requirement matrix](../../docs/installer-requirements.md) tracks
+the continuing full scope. The additions below supersede older limitations in
+this document; they do not establish product completion or release acceptance.
+
+## Native builds and implemented maintenance additions
+
+`release/build-native.py --version VERSION --output OUTPUT` builds a standalone
+terminal executable on Windows x64, Linux x64 or Linux ARM64 using the pinned
+build-only `release/native-build-requirements.txt`. PyInstaller includes Python;
+it is not an end-user prerequisite. Build on the matching target architecture.
+Windows `.exe` and Linux `.tar.gz` developer outputs have been built and executed
+locally (Linux x64 inside an isolated Debian 13 container). ARM64 CI jobs are
+prepared. None of these results is native Windows provisioning or system boot
+acceptance. Native artifacts remain unsigned development outputs.
+
+The same local entrypoint now supports explicitly reviewed maintenance flags:
+
+* `--backup NEW_FILE.gpg`: pauses the owned Core writer during PostgreSQL custom
+  dump plus original configuration/keys/TLS/Knowledge/recovery-material capture;
+  restarts Core in a finally path and encrypts using GnuPG in isolated scratch.
+  A passphrase is requested privately and must be kept separately. Requires GnuPG.
+* `--verify-backup FILE.gpg --postgres-image sha256:VERIFIED_IMAGE_ID`: validates
+  decryption, archive paths and digests, then restores into a **new**, marked,
+  network-none, temporary PostgreSQL target. Schema and recorded account/Space/
+  audit row counts are checked. This verifies the database, not complete
+  application/audit-key usability or activation on a replacement device.
+* `--repair`: restores only missing/damaged known nonsecret configuration whose
+  original recorded digest matches this installer's template. Changed originals
+  are retained. Missing/changed keys require original recovery material; no key
+  regeneration is offered.
+* `--uninstall`: removes the owned Compose services while keeping local data.
+  `--delete-data` additionally requires a separate `DELETE-DATA` confirmation.
+  No shared images/runtime or foreign Ollama installation/model is removed.
+* `--diagnostics NEW_REPORT.json`: explicit allowlisted local export, without
+  logs, passwords, tokens, provider URLs, usernames or automatic upload.
+* `--check-updates --feed HTTPS_URL --trust-store TRUST.json`: authenticates a
+  scoped signed release index, reads the actual database schema, rejects channel
+  rollback and selects a newer platform/API/schema/installer-compatible release.
+  It does **not** install the release. A scheduled installed updater and durable
+  migration/update transaction remain open requirements.
+
+Maintenance mutations currently require a supported local Linux/root terminal.
+An installation journal is bound to its original root path; copying a directory
+does not authorize a second active installation. Legacy journals without this
+binding require an explicit migration/review path and are not silently adopted.
+
+HOME and BUSINESS setup reuse Core's existing Space types. An authenticated OWNER
+can explicitly launch the existing host-only recovery tool in a separate
+interactive administrative container. Core/Web are paused for its audit preflight;
+the recovery host directory is mounted only into that command. The existing tool
+verifies the OWNER password and displays the offline code once, outside installer
+logs/state. Live interactive operator acceptance is still pending.
+
+The public website now supplies `/download`, `/en/download`, `/hardware` and
+`/en/hardware`. Its catalog stays empty until accepted signed metadata matches
+actual published GitHub asset size/digest/state. `release/published-catalog.py`
+prepares that catalog using read-only API access after publication; it never
+publishes a release. Device/Space/integration setup is absent from the website.
+
 ## Run
 
 Python 3.12+ is required. Inspect the actual target without modifying it:
@@ -38,7 +97,7 @@ and bootstrap credentials, a local leaf certificate and runtime-only Compose.
 Only HTTPS on the explicitly chosen private LAN IPv4 address is published.
 Core and local HTTPS readiness are checked separately with TLS verification enabled.
 
-You may continue owner/HOME Space setup directly in the installer through the
+You may continue owner/HOME or BUSINESS Space setup directly in the installer through the
 existing Core API, or sign into the same account on resume. Passwords and bearer
 tokens travel through child-process stdin, never command arguments or journals.
 Optional central linking uses Core's existing RFC8628 browser authorization and
@@ -46,11 +105,20 @@ requires an already configured HTTPS provider. Its public productive availabilit
 is not established by this source change. No website password is collected.
 
 Hardware choices are recorded without claiming a controller or microphone.
-Optional Home Assistant connection performs a real Core probe before Core stores
-encrypted credentials and imports devices. Current scope is explicitly **all
-supported registry-backed devices, read-only**, with existing room-name mapping.
-Selection of individual HA devices and HA control remain unavailable. An existing
-connection is preserved. No physical action is executed.
+Optional Home Assistant connection previews a real provider inventory before
+Core stores encrypted credentials and imports the selected devices/entities.
+Room overrides persist. Reading is the default; exactly one supported selected
+power entity may receive separate control consent. Saving consent does not
+switch a device. A later explicit TEST and TURN-ON/TURN-OFF action uses the common
+Core command boundary and confirms the provider state. No household action is
+performed during developer tests. Existing connections can be reviewed again.
+
+Optional model planning uses actual local target observations and a reviewed
+versioned catalog. `--recommend-ai` can run this questionnaire independently.
+Updated catalog envelopes require `--model-catalog` and `--trust-store`; minimum
+accepted sequence can be supplied explicitly. See
+[catalog rules and limits](../../docs/installer-model-catalog.md). Recommendation
+does not install a runtime, download a model, or activate cloud processing.
 
 ## Resume and maintenance
 

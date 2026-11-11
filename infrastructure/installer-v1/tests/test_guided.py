@@ -276,6 +276,15 @@ class JournalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "E_RESUME"):
             self.create("b" * 64)
 
+    def test_copied_installation_is_not_silently_adopted(self):
+        self.create()
+        clone = self.target.parent / "copied-installation"
+        shutil.copytree(self.target, clone)
+        with self.assertRaisesRegex(ValueError, "E_INSTALLATION_LOCATION"):
+            runtime.Installation(
+                clone, self.manifest, "a" * 64, "kyrion.home.arpa", "192.168.1.2"
+            )
+
     def test_no_secret_content_in_journal(self):
         installation = self.create()
         installation.write("secrets/test.key", b"synthetic-private-secret")

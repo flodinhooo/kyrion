@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from onboarding import CoreClient
+from onboarding import CoreClient, CoreError
 from runtime import Installation, execute
 
 
@@ -57,6 +57,7 @@ def main(images: dict[str, str]) -> None:
         not re.fullmatch(r"sha256:[a-f0-9]{64}", image) for image in images.values()
     ):
         raise ValueError("E_IMAGE_PIN")
+    images = {**images, "ha": images["helper"]}
     prefix = "kyrion-fresh-test-" + uuid.uuid4().hex
     containers, volumes = [], []
     network = None
@@ -101,6 +102,7 @@ for name,value in json.load(sys.stdin).items():
 os.chown('/knowledge',10001,10001)
 subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-days','1','-subj','/CN=fixture.test','-addext','basicConstraints=critical,CA:FALSE','-addext','subjectAltName=DNS:fixture.test','-keyout','/fixture/key.pem','-out','/fixture/cert.pem'],capture_output=True,check=True)
 os.chown('/fixture/cert.pem',10001,10001)
+os.chmod('/fixture/cert.pem',0o644)
 Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\\nhttps://fixture.test {\\n tls /fixture/cert.pem /fixture/key.pem\\n reverse_proxy web:3000\\n}\\n')
 """
         subprocess.run(
@@ -204,6 +206,25 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
             ],
         )
         ready(core)
+        fixture_source = (
+            Path(__file__).with_name("ha-fixture.py").read_text(encoding="utf-8")
+        )
+        ha = start(
+            "ha",
+            [
+                "--read-only",
+                "--cap-drop",
+                "ALL",
+                "--security-opt",
+                "no-new-privileges:true",
+                "--entrypoint",
+                "python",
+            ],
+            ("-c", fixture_source),
+        )
+        ha_address = json.loads(execute(["docker", "inspect", ha]))[0][
+            "NetworkSettings"
+        ]["Networks"][prefix]["IPAddress"]
         start(
             "web",
             [
@@ -301,6 +322,7 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                     raise ValueError("E_FIXTURE_OWNER")
                 space = client.request("GET", "/v1/space")
                 client.request("GET", "/v1/devices")
+                verify_selected_ha(client, ha, ha_address, real_run)
                 client.close()
             execute(["docker", "stop", core])
             execute(["docker", "restart", pg])
@@ -340,6 +362,7 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
                     "aiHardwareMicConfigured": False,
                     "hostBootAccepted": False,
                     "productionDataUsed": False,
+                    "homeAssistantSelectedControl": "synthetic-provider-only",
                 }
             )
         )
@@ -350,6 +373,107 @@ Path('/fixture/Caddyfile').write_text('{\\n admin off\\n persist_config off\\n}\
             execute(["docker", "network", "rm", network])
         for volume in volumes:
             execute(["docker", "volume", "rm", volume])
+
+
+def verify_selected_ha(
+    client: CoreClient, fixture: str, address: str, docker_run
+) -> None:
+    def check(condition, code):
+        if not condition:
+            raise ValueError(code)
+
+    def fixture_request(path, method="GET"):
+        response = docker_run(
+            [
+                "docker",
+                "exec",
+                fixture,
+                "curl",
+                "--fail",
+                "--silent",
+                "--max-time",
+                "5",
+                "-X",
+                method,
+                "http://127.0.0.1:8123" + path,
+            ],
+            capture_output=True,
+            check=True,
+            timeout=15,
+        )
+        return json.loads(response.stdout)
+
+    credentials = {
+        "baseUrl": "http://" + address + ":8123",
+        "accessToken": "synthetic-ha-fixture",
+    }
+    base = "/v1/integrations/home-assistant"
+    preview = client.request("POST", base + "/preview", credentials)
+    check(len(preview["devices"]) == 2, "E_HA_FIXTURE_PREVIEW")
+    source = next(row for row in preview["devices"] if row["name"] == "Synthetic a")
+    entity = next(row for row in source["entities"] if row["name"] == "fixture")
+    choice = {
+        "key": source["key"],
+        "entityKeys": [entity["key"]],
+        "allowControl": True,
+        "overrideRoom": True,
+        "roomId": None,
+    }
+    body = {**credentials, "expectedRevision": preview["revision"], "devices": [choice]}
+    result = client.request("POST", base + "/selection", body)
+    check(result["imported"] == 1 and result["reason"] is None, "E_HA_FIXTURE_IMPORT")
+    try:
+        client.request("POST", base + "/selection", body)
+    except CoreError as failure:
+        check(
+            failure.status == 409 and failure.code == "selection_conflict",
+            "E_HA_WRONG_CONFLICT",
+        )
+    else:
+        raise ValueError("E_HA_STALE_REVISION_ACCEPTED")
+    devices = client.request("GET", "/v1/devices")
+    selected = [device for device in devices if device["provider"] == "home_assistant"]
+    check(len(selected) == 1, "E_HA_UNSELECTED_VISIBLE")
+    device = selected[0]
+    check(
+        device["room"] is None and device["state"]["temperatureCelsius"] is None,
+        "E_HA_UNSELECTED_ENTITY_IMPORTED",
+    )
+    check(
+        any(capability["id"] == "power.set" for capability in device["capabilities"]),
+        "E_HA_CONTROL_CONSENT_MISSING",
+    )
+    status = fixture_request("/fixture/status")
+    check(status["posts"] == 0, "E_HA_SAVE_SWITCHED_DEVICE")
+    command = {
+        "capability": "power.set",
+        "selector": {"provider": "home_assistant", "deviceId": device["id"]},
+        "arguments": {"on": True},
+    }
+    action = client.request("POST", "/v1/device-commands", command)
+    check(action["succeeded"] == 1 and action["failed"] == 0, "E_HA_FIXTURE_CONTROL")
+    fixture_request("/fixture/remove", "POST")
+    client.request("POST", base + "/sync")
+    missing = next(
+        row for row in client.request("GET", "/v1/devices") if row["id"] == device["id"]
+    )
+    check(
+        missing["availability"] == "unknown"
+        and not any(cap["id"] == "power.set" for cap in missing["capabilities"]),
+        "E_HA_REMOVED_ENTITY_ACTIVE",
+    )
+    client.request(
+        "POST",
+        base + "/selection",
+        {"expectedRevision": result["revision"], "devices": []},
+    )
+    check(
+        not any(
+            row["provider"] == "home_assistant"
+            for row in client.request("GET", "/v1/devices")
+        ),
+        "E_HA_DESELECTION_IGNORED",
+    )
 
 
 if __name__ == "__main__":

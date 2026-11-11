@@ -3,6 +3,11 @@
 Reviewed 2026-11-11. This is the work record for the downloaded installer;
 kyrion.ch is a download/documentation surface, never an installation authority.
 
+The detailed [binding requirement matrix](installer-requirements.md) supersedes
+the coarse historical stage table below. Continuing source/test work is recorded
+in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
+full product scope remains open; no user acceptance is requested for this state.
+
 ## Inventory and conflicts
 
 * `infrastructure/installer-v1`: Python standard library, shell, signed image
@@ -15,9 +20,10 @@ kyrion.ch is a download/documentation surface, never an installation authority.
   persistent sessions, roles, one active Space per installation. Optional RFC8628
   central linking preserves the same local identity. Public central identity is
   not operationally accepted. Selecting arbitrary remote Spaces is not supported.
-* Home Assistant: encrypted connection credentials, real read-only probe/import,
-  periodic refresh and owner isolation. Selective import and HA control require
-  Core changes; lights must not be presented as controllable today.
+* Home Assistant: encrypted credentials, bounded selected inventory preview/import,
+  room overrides, periodic refresh and owner isolation. Explicit single-entity
+  power consent uses the common Core command boundary and state confirmation;
+  physical acceptance remains separate. Legacy imports stay read-only.
 * AI: existing Ollama and optional cloud adapters/policies. Satellite and STT/TTS
   runtimes exist separately; no release images or turnkey voice provisioning.
 * Releases: ARM64 OCI builder, Ed25519 detached manifest verification and protected

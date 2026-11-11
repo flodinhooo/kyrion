@@ -189,6 +189,10 @@ class Installation:
                 raise ValueError(
                     "E_RESUME: release or configuration differs from saved installation"
                 )
+            if self.state.get("rootPath") != str(target.resolve()):
+                raise ValueError(
+                    "E_INSTALLATION_LOCATION: copied or legacy state requires explicit migration"
+                )
             if verify:
                 self.verify_files()
         else:
@@ -196,6 +200,7 @@ class Installation:
             self.state = {
                 "formatVersion": 1,
                 "installationId": str(uuid.uuid4()),
+                "rootPath": str(target.resolve()),
                 "configuration": self.configuration,
                 "stage": "reviewed",
                 "files": {},

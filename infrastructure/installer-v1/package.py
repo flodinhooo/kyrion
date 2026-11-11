@@ -18,6 +18,8 @@ FILES = (
     "maintenance.py",
     "recovery.py",
     "release_policy.py",
+    "models.py",
+    "model-catalog.json",
     "locales/en.json",
     "locales/de.json",
     "templates/compose.yml",

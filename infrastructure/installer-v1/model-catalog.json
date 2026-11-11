@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "model-catalog",
+  "sequence": 1,
+  "reviewedAt": "2026-11-11",
+  "expiresAt": 1809993600,
+  "models": [
+    {
+      "id": "qwen3:0.6b",
+      "manifestSha256": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+      "quantization": "Q4_K_M",
+      "downloadBytes": 522653767,
+      "memoryEstimateBytes": 2147483648,
+      "estimateContextTokens": 2048,
+      "architectures": ["amd64", "arm64"],
+      "purposes": ["everyday", "smart-home"],
+      "languages": ["de", "en"],
+      "license": "Apache-2.0",
+      "licenseUrl": "https://ollama.com/library/qwen3:0.6b/blobs/d18a5cc71b84",
+      "sourceUrl": "https://ollama.com/library/qwen3:0.6b",
+      "registryUrl": "https://registry.ollama.ai/v2/library/qwen3/manifests/0.6b"
+    },
+    {
+      "id": "qwen3:4b",
+      "manifestSha256": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "quantization": "Q4_K_M",
+      "downloadBytes": 2497293931,
+      "memoryEstimateBytes": 6442450944,
+      "estimateContextTokens": 2048,
+      "architectures": ["amd64", "arm64"],
+      "purposes": ["everyday", "smart-home", "coding"],
+      "languages": ["de", "en"],
+      "license": "Apache-2.0",
+      "licenseUrl": "https://ollama.com/library/qwen3:4b/blobs/d18a5cc71b84",
+      "sourceUrl": "https://ollama.com/library/qwen3:4b",
+      "registryUrl": "https://registry.ollama.ai/v2/library/qwen3/manifests/4b"
+    }
+  ]
+}

@@ -12,11 +12,32 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from onboarding import CoreClient, link_existing_identity
+from onboarding import (
+    CoreClient,
+    guided_home_assistant,
+    link_existing_identity,
+    selected_indices,
+)
 from runtime import Installation
 
 
 class OnboardingTests(unittest.TestCase):
+    def test_device_selection_rejects_duplicates_and_out_of_range(self):
+        self.assertEqual(selected_indices("alle", 3), [0, 1, 2])
+        self.assertEqual(selected_indices("none", 3), [])
+        self.assertEqual(selected_indices("3,1", 3), [2, 0])
+        for value in ("0", "4", "1,1", "-1", "1.5", "unknown"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                selected_indices(value, 3)
+
+    def test_skipping_home_assistant_has_no_provider_request(self):
+        with (
+            patch("builtins.input", return_value="skip"),
+            patch.object(self.client, "request") as request,
+        ):
+            guided_home_assistant(self.client, {"haConfigure": "Configure"})
+        request.assert_not_called()
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

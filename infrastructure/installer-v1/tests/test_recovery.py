@@ -41,12 +41,12 @@ class RecoveryTests(unittest.TestCase):
 
     def test_rejects_unsafe_archive_members(self):
         for name in (
-                "../keys",
-                "/etc/passwd",
-                "secrets/../../keys",
-                "secrets/C:/keys",
-                "secrets\\key",
-                "./database.dump",
+            "../keys",
+            "/etc/passwd",
+            "secrets/../../keys",
+            "secrets/C:/keys",
+            "secrets\\key",
+            "./database.dump",
         ):
             with self.subTest(name=name):
                 self.assertFalse(recovery.allowed_member(name))
@@ -104,11 +104,11 @@ class RecoveryTests(unittest.TestCase):
             "192.168.1.2",
         )
         for name in (
-                "secrets/credential.key",
-                "secrets/audit-integrity.key",
-                "secrets/postgres-password",
-                "compose.yml",
-                ".env",
+            "secrets/credential.key",
+            "secrets/audit-integrity.key",
+            "secrets/postgres-password",
+            "compose.yml",
+            ".env",
         ):
             installation.write(name, b"fixture")
         return installation
@@ -159,7 +159,11 @@ class RecoveryTests(unittest.TestCase):
     def test_repair_restores_only_original_known_template(self):
         installation = self.installation()
         path = installation.target / "compose.yml"
-        original = (maintenance.ROOT / "templates/compose.yml").read_bytes()
+        original = (
+            (maintenance.ROOT / "templates/compose.yml")
+            .read_text(encoding="utf-8")
+            .encode("utf-8")
+        )
         path.write_bytes(original)
         installation.state["files"]["compose.yml"] = recovery.sha256(path)
         installation.save()
