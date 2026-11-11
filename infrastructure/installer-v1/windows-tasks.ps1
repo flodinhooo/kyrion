@@ -47,6 +47,9 @@ try {
         $parent = $directory
         while ($parent) {
             if ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'E_TASK_TARGET' }
+            if ($parent.FullName -ine $directory.FullName) {
+                Assert-KyrionTaskAncestor (Get-Acl -LiteralPath $parent.FullName)
+            }
             $parent = $parent.Parent
         }
         $journalPath = Join-Path $directory.FullName 'install-state.json'

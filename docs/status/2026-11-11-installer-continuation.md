@@ -233,3 +233,12 @@ owner/DACL/ACE variants. Native read-only COM checks also pass. This verifies
 the policy/parser, not actual registered-task normalization or boot behavior;
 those remain disposable-runner acceptance. Current suite: 100 tests, Windows
 one skip, Debian four Windows-only skips, no failures.
+
+
+Ancestor-path hardening also refuses privileged task operations beneath
+untrusted-owned or user-replaceable parent directories, even when the immediate
+installation root is protected. It checks effective ancestor ACLs and rejects
+write-data/reparse, deletion and ownership/DACL replacement rights outside
+System/Administrators/the resolved Windows TrustedInstaller identity. Eight
+native in-memory directory-policy cases pass; the test changes no actual file
+ACL. Real installed-directory/service acceptance remains separate.

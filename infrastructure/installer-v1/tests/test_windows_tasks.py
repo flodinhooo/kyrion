@@ -81,6 +81,7 @@ class TaskPlanTests(unittest.TestCase):
         )
         evidence = json.loads(result.stdout)
         self.assertEqual(evidence["nativeDescriptorsChecked"], 12)
+        self.assertEqual(evidence["ancestorPoliciesChecked"], 8)
         self.assertFalse(evidence["tasksRegistered"])
 
     @unittest.skipUnless(

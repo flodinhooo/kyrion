@@ -113,3 +113,12 @@ sufficient ownership evidence. It rejects weaker existing task descriptors
 instead of adopting/rewriting them. Native descriptor tests cover ten unsafe
 variants without registering a task. Actual scheduler registration/normalization
 and boot acceptance must still run on a disposable supported Windows target.
+
+
+Ancestor-path hardening also refuses privileged task operations beneath
+untrusted-owned or user-replaceable parent directories, even when the immediate
+installation root is protected. It checks effective ancestor ACLs and rejects
+write-data/reparse, deletion and ownership/DACL replacement rights outside
+System/Administrators/the resolved Windows TrustedInstaller identity. Eight
+native in-memory directory-policy cases pass; the test changes no actual file
+ACL. Real installed-directory/service acceptance remains separate.
