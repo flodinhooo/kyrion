@@ -106,13 +106,16 @@ class HomeAssistantReconciler(
     private val observations: DeviceObservationRepository,
     private val readings: ImportedDeviceRepository,
     private val clock: Clock = Clock.systemUTC(),
+    private val selections: HomeAssistantSelectionStore? = null,
 ) {
     fun reconcile(ownerId: UUID, devices: List<HomeAssistantDevice>) {
         val now = clock.instant()
         val existing = connections.findAll(ownerId).filter { it.provider == HOME_ASSISTANT_PROVIDER && it.credentialCiphertext.isEmpty() }
             .associateBy { it.endpointHost }
         val ownerRooms = rooms.all(ownerId)
-        devices.forEach { device ->
+        val selection = selections?.load(ownerId)?.devices?.associateBy { it.externalId }
+        val selectedDevices = devices.filter { selection == null || it.externalId in selection }
+        selectedDevices.forEach { device ->
             val connection = existing[device.externalId]?.also {
                 connections.update(ownerId, it.id, device.name, device.deviceClass, now)
             } ?: connections.save(
@@ -130,16 +133,24 @@ class HomeAssistantReconciler(
                     deviceClass = device.deviceClass
                 )
             )
-            check(rooms.assignConnection(ownerId, connection.id, importedRoom(device.area, ownerRooms)))
+            val choice = selection?.get(device.externalId)
+            check(rooms.assignConnection(ownerId, connection.id,
+                if (choice?.roomOverride == true) choice.roomId else importedRoom(device.area, ownerRooms)))
+            val capabilities = if (choice?.control == true && device.entities.count { it.supportsPower } == 1)
+                (device.capabilities + DeviceCommandService.POWER_SET).distinct() else device.capabilities
             readings.save(
                 ownerId,
-                ImportedDeviceState(connection.id, device.hardwareName, device.state, device.capabilities)
+                ImportedDeviceState(connection.id, device.hardwareName, device.state, capabilities)
             )
             observations.save(DeviceObservation(connection.id, ownerId, device.availability, now))
         }
-        val present = devices.map { it.externalId }.toSet()
+        val present = selectedDevices.map { it.externalId }.toSet()
+        val previousReadings = readings.all(ownerId).associateBy { it.connectionId }
         existing.filterKeys { it !in present }.values.forEach {
             observations.save(DeviceObservation(it.id, ownerId, DeviceAvailability.UNKNOWN, now))
+            previousReadings[it.id]?.let { previous ->
+                readings.save(ownerId, previous.copy(capabilities = previous.capabilities.filter { capability -> capability != DeviceCommandService.POWER_SET }))
+            }
         }
     }
 }
@@ -156,13 +167,24 @@ class HomeAssistantImportService(
     private val resolver: HomeAssistantConnectionResolver? = null,
     private val client: HomeAssistantClient? = null,
     private val store: HomeAssistantConnectionStore? = null,
+    private val selections: HomeAssistantSelectionStore? = null,
 ) {
+    fun selection(ownerId: UUID): HomeAssistantSelection? = selections?.load(ownerId)
     fun storeFor(ownerId: UUID, config: HomeAssistantConnectionConfig) {
-        (store ?: throw HomeAssistantException("internal_error")).saveForOwner(ownerId, config)
+        transactions.executeWithoutResult {
+            jdbc.sql("SELECT id FROM user_account WHERE id=:owner FOR UPDATE").param("owner", ownerId).query(UUID::class.java).single()
+            val credentials = store ?: throw HomeAssistantException("internal_error")
+            val existing = credentials.findForOwner(ownerId)
+            if (existing != null && existing.baseUrl.trimEnd('/') != config.baseUrl.trimEnd('/')) throw HomeAssistantException("connection_change_requires_disconnect")
+            credentials.saveForOwner(ownerId, config)
+        }
     }
 
-    fun disconnect(ownerId: UUID): Boolean =
+    fun disconnect(ownerId: UUID): Boolean = transactions.execute {
+        jdbc.sql("SELECT id FROM user_account WHERE id=:owner FOR UPDATE").param("owner", ownerId).query(UUID::class.java).single()
+        selections?.load(ownerId)?.let { selections.replace(ownerId, it.revision, emptyList()) }
         (store ?: throw HomeAssistantException("internal_error")).deleteForOwner(ownerId)
+    } ?: false
 
     fun probe(config: HomeAssistantConnectionConfig): HomeAssistantProbeResponse {
         return try {
@@ -206,13 +228,13 @@ class HomeAssistantImportService(
     }
 
     fun sync(ownerId: UUID, actorType: ActivityActorType = ActivityActorType.USER, onlyIfDue: Boolean = false): HomeAssistantSyncResult {
-        val connection = resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)
-            ?: throw HomeAssistantException("configuration_missing")
         val correlationId = UUID.randomUUID()
         // Serialize the snapshot fetch as well as writes across Core processes.
         return transactions.execute {
             jdbc.sql("SELECT id FROM user_account WHERE id=:owner FOR UPDATE").param("owner", ownerId)
                 .query(UUID::class.java).single()
+            val connection = resolver?.resolve(ownerId) ?: configuration?.connectionOrNull(ownerId)
+                ?: throw HomeAssistantException("configuration_missing")
             if (onlyIfDue) {
                 val attempted = status(ownerId).lastAttemptAt
                 if (attempted != null && !attempted.isBefore(clock.instant().minusSeconds(30))) {
@@ -221,7 +243,7 @@ class HomeAssistantImportService(
             }
             var reason: String? = null
             val devices = try {
-                client?.snapshot(connection) ?: gateway?.snapshot(ownerId)
+                client?.snapshot(connection, selections?.load(ownerId)?.entityMap()) ?: gateway?.snapshot(ownerId)
                 ?: throw HomeAssistantException("configuration_missing")
             } catch (exception: HomeAssistantException) {
                 reason = exception.code; null
@@ -262,6 +284,7 @@ class HomeAssistantController(private val service: HomeAssistantImportService) {
         service.probe(config)
         service.storeFor(ownerId, config)
         val imported = service.sync(ownerId)
+        imported.reason?.let { throw HomeAssistantException(it) }
         return HomeAssistantConnectResponse("connected", true, HomeAssistantConnectionStore.endpointHost(config.baseUrl), imported.imported, imported.correlationId)
     }
     @DeleteMapping

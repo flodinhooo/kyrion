@@ -82,7 +82,7 @@ class DeviceCommandServiceTest {
         assertEquals(listOf(20, 20), gateway.brightnessValues)
         assertEquals(2, observations.values.count { it.availability == DeviceAvailability.ONLINE })
         val commandEvents = events.filter { it.correlationId == result.correlationId }
-        assertTrue(commandEvents.any { it.status == ActivityStatus.PROPOSED && it.source == "velora" })
+        assertTrue(commandEvents.any { it.status == ActivityStatus.PROPOSED && it.source == "web" && it.actorId == owner.toString() })
         assertEquals(2, commandEvents.count { it.eventType == "action.device.confirmed" })
     }
 

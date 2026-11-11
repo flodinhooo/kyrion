@@ -91,6 +91,7 @@ class DeviceCommandService(
     private val powerStates: CommandedPowerStateStore = CommandedPowerStateStore(),
     private val catalog: DeviceCatalogService? = null,
     private val gatewayAuthority: dev.kyrion.core.gateway.GatewayAuthorityService? = null,
+    private val homeAssistant: dev.kyrion.core.integration.HomeAssistantCommandAdapter? = null,
 ) {
     fun enqueue(authority: GatewayAuthority, request: ExecuteDeviceCommandRequest): AsyncDeviceCommandResult {
         if (authority.capability != request.capability) throw DeviceCommandInvalidException()
@@ -163,9 +164,10 @@ class DeviceCommandService(
         val actorType = if (authority.kind == dev.kyrion.core.gateway.GatewayPrincipalKind.HUMAN) ActivityActorType.USER else ActivityActorType.INTEGRATION
         val actorId = authority.principalId.toString()
         val provider = request.selector.provider.trim().lowercase()
-        if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER)) {
+        if (provider !in setOf(NanoleafIntegrationService.PROVIDER, ZigbeeDeviceSyncService.PROVIDER, BluetoothDeviceSyncService.PROVIDER, dev.kyrion.core.integration.HOME_ASSISTANT_PROVIDER)) {
             throw DeviceCapabilityUnsupportedException()
         }
+        if (provider == dev.kyrion.core.integration.HOME_ASSISTANT_PROVIDER && request.capability != POWER_SET) throw DeviceCapabilityUnsupportedException()
         val roomName = request.selector.roomName?.trim()?.takeIf { it.isNotBlank() }
         if ((roomName == null) == (request.selector.deviceId == null)) throw DeviceCommandInvalidException()
         val room = roomName?.let { requestedName ->
@@ -186,10 +188,10 @@ class DeviceCommandService(
                 ActivityCategory.CAPABILITY,
                 "capability.device.proposed",
                 ActivityStatus.PROPOSED,
-                ActivityActorType.AI,
-                "velora",
+                actorType,
+                if (authority.kind == dev.kyrion.core.gateway.GatewayPrincipalKind.HUMAN) "web" else "velora",
                 "device.command.proposed",
-                ownerId.toString(),
+                actorId,
                 correlationId,
                 ownerId,
             )
@@ -200,7 +202,9 @@ class DeviceCommandService(
                 actorType, provider, target.id.toString(), actorId, correlationId, ownerId)
             try {
                 when (request.capability) {
-                    POWER_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {
+                    POWER_SET -> if (provider == dev.kyrion.core.integration.HOME_ASSISTANT_PROVIDER) {
+                        (homeAssistant ?: throw DeviceCapabilityUnsupportedException()).power(ownerId, target.id, request.arguments.on!!)
+                    } else if (provider != NanoleafIntegrationService.PROVIDER) {
                         executeGateway(authority, provider, target.endpointHost, "$provider.power", mapOf("deviceId" to target.endpointHost, "on" to request.arguments.on!!), correlationId)
                     } else nanoleaf.power(ownerId, target.id, request.arguments.on!!, true, correlationId)
                     BRIGHTNESS_SET -> if (provider != NanoleafIntegrationService.PROVIDER) {

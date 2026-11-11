@@ -1,4 +1,4 @@
-# Home Assistant device snapshot import
+# Home Assistant selected inventory and power control
 
 Status: implemented; automated and physical verification are reported separately
 in the [consolidation report](status/2026-09-06-platform-consolidation.md).
@@ -14,7 +14,7 @@ can probe/connect/disconnect through authenticated, CSRF-protected same-origin
 routes. Core validates the bounded private-IPv4 endpoint and stores the access
 token encrypted in `HomeAssistantConnectionStore`; public status contains only
 bounded endpoint metadata. Core's stored connection is used for subsequent
-read-only sync. This source verification does not establish new physical HA
+selected sync. This source verification does not establish new physical HA
 acceptance. Web credential setup therefore is no longer entirely deferred.
 
 Development-only fallback remains available through these variables in the Core
@@ -47,8 +47,19 @@ also exposes `POST /v1/integrations/home-assistant/sync` and a read-only status
 at `GET /v1/integrations/home-assistant`.
 
 The token may grant broader authority within HA; Kyrion exposes no arbitrary
-template, service or control endpoint. The only provider request is a fixed
-read-only template at `/api/template`.
+template or service endpoint. Inventory uses a fixed read-only template at
+`/api/template`. Selected, explicitly consented light/switch power control uses
+only the matching `turn_on` or `turn_off` service and then reads the selected
+entity state. HTTP 200 alone does not establish success. The ordinary Core
+device-command permission, capability, target and audit boundary applies.
+
+The local installer and local integration card use `GET/POST .../preview` and
+`GET/POST .../selection`. Preview does not persist credentials or import devices.
+Selection stores opaque owner/endpoint-scoped source keys, selected entities,
+room overrides and separate power consent. Core resolves keys against a fresh
+provider snapshot and validates room ownership. An expected revision prevents
+lost updates. Saving selection never invokes a device service. Configuration,
+selection, sync and control serialize through the existing owner lock.
 
 ## Mapping and reconciliation
 
@@ -64,9 +75,10 @@ read-only template at `/api/template`.
   accepted. Missing areas, missing rooms and ambiguous matches map to `null`,
   displayed as **Nicht zugeordnet / Unassigned**. No room is created. No Voice
   room synonyms, punctuation removal, substring matching or fuzzy matching apply.
-- Sync intentionally replaces imported names and room assignments with the HA
-  mapping, including clearing an earlier assignment. Removing an imported device
-  locally does not remove it from HA; the next import can recreate it.
+- Sync updates imported names and uses the matching HA room unless the selection
+  contains an explicit room override (including deliberately unassigned).
+  Deselection hides sources from the current catalog and revokes control while
+  retaining history. It never removes the device from Home Assistant.
 - Supported observations: power, temperature (Celsius, converting Fahrenheit),
   relative humidity, battery, occupancy/motion/presence, contact opening, and
   single-light brightness/hue/saturation. Read capabilities
@@ -75,8 +87,10 @@ read-only template at `/api/template`.
 - HA timestamps describe provider observations, not independently verified
   physical measurements. A device-level timestamp conservatively uses the oldest
   included entity update. Missing readings stay null, never zero.
-- All HA devices are read-only, including lights. They never advertise
-  `power.set`, `light.setBrightness` or `light.setColour`.
+- Reading is the default. Only a selection with exactly one supported light or
+  switch entity and explicit control consent advertises `power.set`.
+  Brightness/color actions are not advertised. Missing or unavailable entities
+  cannot be controlled; removed sources lose their power capability.
 - All-unavailable states report offline; mixed valid/unavailable data reports
   degraded; all unknown/unavailable without an explicit all-unavailable result
   reports unknown. Missing devices in a later snapshot remain cataloged as
@@ -95,7 +109,7 @@ fallback configuration, explicit and periodic device import, bounded
 basic state/sensor import, mapping to existing rooms, stable reconciliation,
 owner boundaries, status diagnostics and correlated sync audit.
 
-Not implemented: control, services, automations, scenes, dashboards, HA users,
+Not implemented: arbitrary services, brightness/color control, automations, scenes, dashboards, HA users,
 event ingestion, webhooks, event bus, MQTT forwarding, permission profiles,
 backup/restore integration or automation migration. No native Shelly acceptance
 is implied by importing a Shelly device through HA.

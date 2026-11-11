@@ -41,7 +41,10 @@ class HomeAssistantDevelopmentConfiguration(
 
 typealias HomeAssistantConfiguration = HomeAssistantDevelopmentConfiguration
 
-internal fun homeAssistantRequest(config: HomeAssistantConnectionConfig, body: String): HttpRequest {
+internal fun homeAssistantRequest(config: HomeAssistantConnectionConfig, body: String, path: String = "/api/template", get: Boolean = false): HttpRequest {
+        val allowed = if (get) Regex("/api/states/(?:light|switch)\\.[a-z0-9_]{1,240}").matches(path)
+            else path == "/api/template" || Regex("/api/services/(?:light|switch)/(?:turn_on|turn_off)").matches(path)
+        if (!allowed) throw HomeAssistantException("control_unsupported")
         val uri = try {
             URI(config.baseUrl)
         } catch (_: Exception) {
@@ -60,13 +63,14 @@ internal fun homeAssistantRequest(config: HomeAssistantConnectionConfig, body: S
             uri.path !in setOf(
                 "",
                 "/"
-            ) || uri.port !in -1..65535 || uri.port == 0 || config.accessToken.isBlank() || config.accessToken.any { it == '\r' || it == '\n' }
+            ) || uri.port !in -1..65535 || uri.port == 0 || config.accessToken.isBlank() || config.accessToken.length > 8192 || config.accessToken.any { it == '\r' || it == '\n' }
         ) {
             throw HomeAssistantException("configuration_invalid")
         }
-        return HttpRequest.newBuilder(URI(config.baseUrl.trimEnd('/') + "/api/template"))
+        val builder = HttpRequest.newBuilder(URI(config.baseUrl.trimEnd('/') + path))
             .timeout(Duration.ofSeconds(10)).header("Authorization", "Bearer ${config.accessToken}")
-            .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build()
+            .header("Content-Type", "application/json")
+        return (if (get) builder.GET() else builder.POST(HttpRequest.BodyPublishers.ofString(body))).build()
 }
 
 data class HomeAssistantDevice(
@@ -78,7 +82,13 @@ data class HomeAssistantDevice(
     val availability: DeviceAvailability,
     val state: DeviceStateView,
     val capabilities: List<String>,
+    val entities: List<HomeAssistantEntity> = emptyList(),
 )
+
+data class HomeAssistantEntity(val id: String, val name: String, val state: String) {
+    val supportsPower: Boolean get() = id.startsWith("light.") || id.startsWith("switch.")
+}
+data class HomeAssistantPowerConfirmation(val on: Boolean, val updatedAt: Instant?)
 
 interface HomeAssistantGateway {
     fun snapshot(ownerId: UUID): List<HomeAssistantDevice>
@@ -96,8 +106,36 @@ class HomeAssistantClient(
         return snapshot(configuration.connection(ownerId))
     }
 
-    fun snapshot(config: HomeAssistantConnectionConfig): List<HomeAssistantDevice> {
+    fun snapshot(config: HomeAssistantConnectionConfig, selected: Map<String, Set<String>>? = null): List<HomeAssistantDevice> {
         val request = homeAssistantRequest(config, mapper.writeValueAsString(mapOf("template" to TEMPLATE)))
+        val root = exchange(request)
+        val all = parse(root)
+        if (selected == null) return all
+        val filtered = mapper.createArrayNode()
+        root.forEach { row ->
+            if (selected[row.path("id").asText()]?.contains(row.path("entity").asText()) == true) filtered.add(row)
+        }
+        return parse(filtered)
+    }
+
+    fun power(config: HomeAssistantConnectionConfig, entity: String, on: Boolean): HomeAssistantPowerConfirmation {
+        if (!entity.matches(Regex("(?:light|switch)\\.[a-z0-9_]{1,240}"))) throw HomeAssistantException("control_unsupported")
+        val service = if (on) "turn_on" else "turn_off"
+        exchange(homeAssistantRequest(config, mapper.writeValueAsString(mapOf("entity_id" to entity)), "/api/services/${entity.substringBefore('.')}/$service"))
+        repeat(3) { attempt ->
+            val state = exchange(homeAssistantRequest(config, "", "/api/states/$entity", get = true))
+            if (state.path("entity_id").asText() != entity) throw HomeAssistantException("invalid_response")
+            if (state.path("state").asText() == if (on) "on" else "off") {
+                return HomeAssistantPowerConfirmation(on, runCatching { Instant.parse(state.path("last_updated").asText()) }.getOrNull())
+            }
+            if (attempt < 2) try { Thread.sleep(150) } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt(); throw HomeAssistantException("dependency_unreachable")
+            }
+        }
+        throw HomeAssistantException("control_not_confirmed")
+    }
+
+    private fun exchange(request: HttpRequest): JsonNode {
         try {
             val response = http.send(request, HttpResponse.BodyHandlers.ofInputStream())
             response.body().use { stream ->
@@ -112,7 +150,7 @@ class HomeAssistantClient(
                     throw HomeAssistantException("dependency_unreachable")
                 }
                 if (bytes.size > MAX_BYTES) throw HomeAssistantException("invalid_response")
-                return parse(mapper.readTree(bytes))
+                return mapper.readTree(bytes)
             }
         } catch (exception: HomeAssistantException) {
             throw exception
@@ -142,7 +180,7 @@ class HomeAssistantClient(
         return groups.toSortedMap().map { (id, entities) ->
             val first = entities.first()
             fun label(key: String): String? = first.path(key).takeIf { it.isTextual }?.asText()?.trim()
-                ?.takeIf { it.isNotEmpty() && it.length <= 160 }
+                ?.takeIf { it.isNotEmpty() && it.length <= 160 && it.none(Char::isISOControl) }
 
             val name = label("name") ?: "Home Assistant"
             var invalid = label("name") == null
@@ -230,6 +268,11 @@ class HomeAssistantClient(
                     if (power.size == 1) add("power.read")
                     if (contact.size == 1 && power.isEmpty()) add("contact.read")
                     if (occupancyEntities.size == 1) add("occupancy.read")
+                },
+                entities.map { entity ->
+                    val entityId = entity.path("entity").asText()
+                    if (!entityId.matches(Regex("(?:light|switch|sensor|binary_sensor)\\.[a-z0-9_]{1,240}"))) throw HomeAssistantException("invalid_response")
+                    HomeAssistantEntity(entityId, entity.path("entityName").asText().takeIf { it.isNotBlank() && it.length <= 240 && it.none(Char::isISOControl) } ?: entityId.substringAfter('.'), entity.path("state").asText())
                 })
         }
     }
@@ -243,7 +286,7 @@ class HomeAssistantClient(
             {% for s in states if s.domain in ['sensor', 'binary_sensor', 'light', 'switch'] %}
             {% set id = device_id(s.entity_id) %}
             {% if id %}
-            {% set ns.rows = ns.rows + [dict(id=id, entity=s.entity_id,
+            {% set ns.rows = ns.rows + [dict(id=id, entity=s.entity_id, entityName=s.attributes.get('friendly_name'),
               name=device_attr(id, 'name_by_user') or device_attr(id, 'name'),
               area=area_name(id), manufacturer=device_attr(id, 'manufacturer'), model=device_attr(id, 'model'),
               state=s.state, class=s.attributes.get('device_class'), unit=s.attributes.get('unit_of_measurement'), updated=s.last_updated.isoformat(),

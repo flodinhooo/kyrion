@@ -79,11 +79,14 @@ class DeviceCatalogService(
             dev.kyrion.core.integration.HomeAssistantSyncStatus(true, "degraded", reason = "configuration_invalid", lastError = "configuration_invalid")
         }
         val imported = importedReadings?.all(ownerId).orEmpty().associateBy { it.connectionId }
+        val haSelection = homeAssistant?.selection(ownerId)?.devices?.associateBy { it.externalId }
+        val selectedHaSources = haSelection?.keys
         val zigbeeDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.zigbee?.devices.orEmpty() }
             .associateBy { it.ieeeAddress }
         val bluetoothDevices = gateways?.all(ownerId).orEmpty().flatMap { it.health?.bluetoothDevices.orEmpty() }
             .associateBy { it.address }
-        return connections.findAll(ownerId).filter { it.provider !in setOf("google", "spotify") && !(it.provider == "home_assistant" && it.credentialCiphertext.isNotEmpty()) }.map { connection ->
+        return connections.findAll(ownerId).filter { it.provider !in setOf("google", "spotify") && !(it.provider == "home_assistant" && it.credentialCiphertext.isNotEmpty()) &&
+            (it.provider != "home_assistant" || selectedHaSources == null || it.endpointHost in selectedHaSources) }.map { connection ->
             val observation = ownerObservations[connection.id]
             val haFailure = connection.provider == "home_assistant" && haStatus != null && (!haStatus.configured || haStatus.lastError != null)
             val currentAvailability = observation?.takeUnless { haFailure }?.takeIf { isFresh(it.observedAt) }?.availability
@@ -99,7 +102,10 @@ class DeviceCatalogService(
                     ?: bluetooth?.let { "${it.name} ${it.model}" }
                     ?: if (connection.provider == NanoleafIntegrationService.PROVIDER) "Nanoleaf" else connection.provider,
                 room = connection.roomId?.let(ownerRooms::get)?.let { DeviceRoomView(it.id, it.name, it.roomType) },
-                capabilities = imported[connection.id]?.capabilities?.map(::DeviceCapabilityView) ?: capabilities(connection, zigbee),
+                capabilities = imported[connection.id]?.capabilities?.filter { capability ->
+                    connection.provider != "home_assistant" || capability != DeviceCommandService.POWER_SET ||
+                        haSelection?.get(connection.endpointHost)?.control == true
+                }?.map(::DeviceCapabilityView) ?: capabilities(connection, zigbee),
                 availability = currentAvailability,
                 observedAt = observation?.observedAt,
                 diagnosticReason = when {
