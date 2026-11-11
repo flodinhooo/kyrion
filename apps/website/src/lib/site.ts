@@ -12,6 +12,8 @@ export const pages = [
   "about",
   "development",
   "docs",
+  "download",
+  "hardware",
   "contact",
   "account",
   "privacy",
