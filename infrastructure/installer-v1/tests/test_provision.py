@@ -71,7 +71,7 @@ class ProvisionTests(unittest.TestCase):
         installation.state["stage"] = "services-healthy"
         installation.save()
 
-    def provision(self, start=None):
+    def provision(self, start=None, identity=None):
         with (
             patch("runtime.validate_inputs"),
             patch("runtime.inventory", return_value=self.observed),
@@ -80,9 +80,15 @@ class ProvisionTests(unittest.TestCase):
                 "runtime.installation_lock",
                 side_effect=lambda target: contextlib.nullcontext(),
             ),
-            patch("runtime.authenticate", return_value=self.manifest),
+            patch(
+                "runtime.authenticated_review",
+                return_value=bundle.ReviewedBundle(self.manifest, self.digest),
+            ),
             patch("runtime.runtime_checks"),
-            patch("runtime.image_identity", return_value="sha256:fixture"),
+            patch(
+                "runtime.image_identity",
+                side_effect=identity or (lambda *_args: "sha256:fixture"),
+            ),
             patch("runtime.execute", side_effect=self.command),
             patch.object(runtime.Installation, "configure", self.configure),
             patch.object(runtime.Installation, "start", start or self.start),
@@ -103,8 +109,65 @@ class ProvisionTests(unittest.TestCase):
         self.assertEqual(state["stage"], "services-healthy")
         loads = [args for args in self.commands if args[:2] == ["docker", "load"]]
         self.assertEqual(len(loads), 4)
+        self.assertTrue(
+            all(
+                Path(command[3]).is_relative_to(self.target / "release-input")
+                for command in loads
+            )
+        )
         self.assertEqual(sentinel.read_bytes(), b"preserve")
         self.assertEqual(state["ownerSetup"], "not-verified")
+
+    def test_original_download_changes_cannot_reach_docker_load(self):
+        def identity(_path, _tag):
+            for item in self.manifest["artifacts"]:
+                (self.release / item["name"]).write_bytes(b"mutated external download")
+            return "sha256:fixture"
+
+        self.provision(identity=identity)
+        for item in self.manifest["artifacts"]:
+            self.assertEqual(
+                bundle.sha256(self.target / "release-input" / item["name"]),
+                item["sha256"],
+            )
+        self.assertTrue(
+            all(
+                str(self.target / "release-input") in command[3]
+                for command in self.commands
+                if command[:2] == ["docker", "load"]
+            )
+        )
+
+    def test_interrupted_public_staging_preserves_partial_and_resumes(self):
+        def interrupt(_source, destination, _expected):
+            destination.write_bytes(b"partial archive bytes")
+            raise OSError("synthetic staging interruption")
+
+        with (
+            patch("runtime.copy_image_input", side_effect=interrupt),
+            self.assertRaises(OSError),
+        ):
+            self.provision()
+        self.assertFalse(
+            any(command[:2] == ["docker", "load"] for command in self.commands)
+        )
+        self.commands.clear()
+        state = self.provision()
+        self.assertEqual(len(state["imageStaging"]["preserved"]), 1)
+        preserved = (
+            self.target / "release-input" / state["imageStaging"]["preserved"][0]
+        )
+        self.assertEqual(preserved.read_bytes(), b"partial archive bytes")
+        self.assertEqual(
+            len(
+                [
+                    command
+                    for command in self.commands
+                    if command[:2] == ["docker", "load"]
+                ]
+            ),
+            4,
+        )
 
     def test_runtime_failure_retains_machine_code_and_secret(self):
         def fail(installation):

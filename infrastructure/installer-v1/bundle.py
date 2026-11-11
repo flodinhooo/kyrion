@@ -6,9 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 MAX_MANIFEST = 1024 * 1024
@@ -29,12 +32,19 @@ def sha256(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def validate(root: Path, manifest_path: Path) -> dict:
+def validate(
+    root: Path, manifest_path: Path, authenticated_bytes: bytes | None = None
+) -> dict:
     if manifest_path.is_symlink() or manifest_path.stat().st_size > MAX_MANIFEST:
         raise ValueError("E_MANIFEST: invalid manifest file")
-    manifest = json.loads(
-        manifest_path.read_text(encoding="utf-8"), object_pairs_hook=unique_object
+    raw = (
+        manifest_path.read_bytes()
+        if authenticated_bytes is None
+        else authenticated_bytes
     )
+    if len(raw) > MAX_MANIFEST:
+        raise ValueError("E_MANIFEST: invalid manifest size")
+    manifest = json.loads(raw, object_pairs_hook=unique_object)
     required = {"schemaVersion", "release", "architecture", "artifacts"}
     if (
         not isinstance(manifest, dict)
@@ -84,41 +94,79 @@ def validate(root: Path, manifest_path: Path) -> dict:
     return manifest
 
 
-def authenticate(root: Path, public_key: Path) -> dict:
+@dataclass(frozen=True)
+class ReviewedBundle:
+    manifest: dict
+    manifest_sha256: str
+
+
+def authenticated_review(root: Path, public_key: Path) -> ReviewedBundle:
     """Authenticate exact manifest bytes before interpreting artifact paths."""
+    raw = verify_signature(root, public_key)
+    return ReviewedBundle(
+        validate(root, root / "manifest.json", raw), hashlib.sha256(raw).hexdigest()
+    )
+
+
+def authenticate(root: Path, public_key: Path) -> dict:
+    return authenticated_review(root, public_key).manifest
+
+
+def verify_signature(
+    root: Path, public_key: Path, maximum: int = MAX_MANIFEST
+) -> bytes:
+    """Shared detached-signature boundary; each runtime validates its own schema."""
     manifest = root / "manifest.json"
     signature = root / "manifest.sig"
+    snapshots = []
     for path, limit in (
-        (manifest, MAX_MANIFEST),
+        (manifest, maximum),
         (signature, 1024),
         (public_key, 16384),
     ):
         if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
             raise ValueError("E_SIGNATURE: missing or unsafe signature/trust material")
+        with path.open("rb") as stream:
+            value = stream.read(limit + 1)
+        if len(value) > limit:
+            raise ValueError("E_SIGNATURE: invalid signature/trust material size")
+        snapshots.append(value)
     try:
-        result = subprocess.run(
-            [
-                "openssl",
-                "pkeyutl",
-                "-verify",
-                "-rawin",
-                "-pubin",
-                "-inkey",
-                str(public_key),
-                "-sigfile",
-                str(signature),
-                "-in",
-                str(manifest),
-            ],
-            capture_output=True,
-            timeout=20,
-            check=False,
-        )
+        # Process the immutable bytes verified here, not a subsequent reopening
+        # of downloaded metadata. Assets still require private caller staging.
+        with tempfile.TemporaryDirectory(prefix="kyrion-manifest-") as directory:
+            paths = [
+                Path(directory) / name
+                for name in ("manifest", "signature", "public.pem")
+            ]
+            for path, value in zip(paths, snapshots, strict=True):
+                with os.fdopen(
+                    os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
+                ) as stream:
+                    stream.write(value)
+            result = subprocess.run(
+                [
+                    "openssl",
+                    "pkeyutl",
+                    "-verify",
+                    "-rawin",
+                    "-pubin",
+                    "-inkey",
+                    str(paths[2]),
+                    "-sigfile",
+                    str(paths[1]),
+                    "-in",
+                    str(paths[0]),
+                ],
+                capture_output=True,
+                timeout=20,
+                check=False,
+            )
     except (OSError, subprocess.TimeoutExpired) as error:
         raise ValueError("E_SIGNATURE: verifier unavailable") from error
     if result.returncode:
         raise ValueError("E_SIGNATURE: release authentication failed")
-    return validate(root, manifest)
+    return snapshots[0]
 
 
 def main() -> int:

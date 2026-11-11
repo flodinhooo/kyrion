@@ -140,3 +140,38 @@ journal, binary-integrity and ACL ownership checks, but they are not yet wired
 into the normal installer. They do not constitute completed matrix R20.
 The helper's execution-policy flag is confined to its child process; no machine
 or user execution policy is changed, and enforced Group Policy is not overridden.
+
+
+## Native payload continuation evidence
+
+The full task remains open. Current source passes 97 installer tests on Windows
+(one symlink-permission skip) and Debian 13 (one Windows COM skip). Windows COM
+validation is read-only and requires the less restricted developer execution
+context; no service or task was registered. Changed Python files pass Ruff.
+
+Signed manifest review now uses the exact immutable verified bytes; Linux OCI
+archives are privately staged with streaming digest checks before Docker load.
+Tests cover changing original source archives and interrupted private staging.
+The new native payload builder/validator performs bounded exact per-file/PE
+checks, exclusive extraction, crash resumption and compact receipt migration.
+Twelve native payload tests use explicitly synthetic PE files without execution.
+See [the native contract](../installer-native-windows.md).
+
+Actual vendor runtimes downloaded into ignored development directories were
+executed successfully: Temurin JRE 21.0.13+9, Node 22.23.3, PostgreSQL 17.11-5,
+Caddy 2.10.2 (Windows x64). Three upstream checksums matched independent official
+vendor metadata; PostgreSQL's observed checksum was recorded after the official
+EDB HTTPS download, without claiming an independently published vendor checksum.
+The local Web standalone application was separately built on Windows from clean
+public source, with no `.env` or private provider configuration. The clean public
+runtime/application profile contains 5,960 files. The unsigned development ZIP
+is 212,048,954 bytes, SHA-256
+`20d377dffe20e127fcfb0278e4865a6082d0d7061f86ce6c7a15e16e8ce52d61`.
+Only an ephemeral development key signs the extraction test; production keys and
+release acceptance remain absent. No public release or download was activated.
+
+The real large-payload extraction was deliberately interrupted, revealing an
+orphan atomic-journal temporary and an inefficient growing progress list. Both
+cases now have regression tests. Actual extraction resumption is in progress;
+the native-stack runner is prepared but has not yet supplied passing evidence.
+Do not treat executable version probes or the archive as complete Windows R20.

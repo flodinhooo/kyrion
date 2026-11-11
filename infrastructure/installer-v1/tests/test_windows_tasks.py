@@ -43,6 +43,7 @@ class TaskPlanTests(unittest.TestCase):
             r"C:\Kyrion\..\Windows",
             r"C:\Data\Kyrion:stream",
             'C:\\Data\\Kyrion"bad',
+            r"C:\Data\%USERNAME%\Kyrion",
             "relative/target",
         ):
             with self.subTest(value=value), self.assertRaises(ValueError):

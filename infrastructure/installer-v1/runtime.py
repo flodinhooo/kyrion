@@ -17,7 +17,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from bundle import authenticate, sha256
+from bundle import authenticated_review, sha256
 from host import inventory, reject_links, runtime_checks
 
 ROOT = Path(__file__).resolve().parent
@@ -495,8 +495,9 @@ def provision(
     if observed["freeBytes"] is None or observed["freeBytes"] < 12 * 1024**3:
         raise ValueError("E_DISK: 12 GiB free required")
     with installation_lock(target):
-        manifest = authenticate(bundle, public_key)
-        digest = sha256(bundle / "manifest.json")
+        reviewed = authenticated_review(bundle, public_key)
+        manifest = reviewed.manifest
+        digest = reviewed.manifest_sha256
         if (
             digest != expected_digest
             or manifest["architecture"] != "linux/" + observed["architecture"]
@@ -515,18 +516,25 @@ def provision(
                 )
         installation = Installation(target, manifest, digest, hostname, address)
         try:
+            private_bundle = stage_image_inputs(
+                installation, bundle, manifest, observed["freeBytes"]
+            )
             # Validate every archive's image metadata before the first Docker load.
             identities = {
-                name: image_identity(bundle / name, tag) for name, tag in plan.items()
+                name: image_identity(private_bundle / name, tag)
+                for name, tag in plan.items()
             }
             for name, tag in plan.items():
                 # Recheck just before loading; never glob or silently ignore failure.
                 item = next(
                     item for item in manifest["artifacts"] if item["name"] == name
                 )
-                if sha256(bundle / name) != item["sha256"]:
+                if sha256(private_bundle / name) != item["sha256"]:
                     raise ValueError("E_DIGEST: artifact changed after review")
-                execute(["docker", "load", "--input", str(bundle / name)], timeout=600)
+                execute(
+                    ["docker", "load", "--input", str(private_bundle / name)],
+                    timeout=600,
+                )
                 loaded = json.loads(execute(["docker", "image", "inspect", tag]))[0]
                 if (
                     loaded.get("Id") != identities[name]
@@ -547,3 +555,108 @@ def provision(
             )
             installation.save()
             raise
+
+
+def copy_image_input(source: Path, destination: Path, expected: dict) -> None:
+    digest = hashlib.sha256()
+    count = 0
+    with source.open("rb") as incoming, destination.open("xb") as outgoing:
+        while chunk := incoming.read(1024**2):
+            count += len(chunk)
+            if count > expected["bytes"]:
+                raise ValueError("E_DIGEST: input exceeded reviewed size")
+            outgoing.write(chunk)
+            digest.update(chunk)
+        outgoing.flush()
+        os.fsync(outgoing.fileno())
+    if count != expected["bytes"] or digest.hexdigest() != expected["sha256"]:
+        raise ValueError("E_DIGEST: input changed during private staging")
+
+
+def stage_image_inputs(
+    installation: Installation, source: Path, manifest: dict, free_bytes: int
+) -> Path:
+    """Keep Docker away from mutable user/download paths after hash review."""
+    cache = installation.target / "release-input"
+    reject_links(cache)
+    expected = {item["name"]: item for item in manifest["artifacts"]}
+    if set(expected) != set(image_plan(manifest)) or len(expected) != len(
+        manifest["artifacts"]
+    ):
+        raise ValueError("E_STAGING_ARTIFACTS")
+    state = installation.state.get("imageStaging")
+    if state is None:
+        if cache.exists():
+            raise ValueError("E_STAGING_UNOWNED")
+        state = {
+            "formatVersion": 1,
+            "manifestSha256": installation.configuration["manifestSha256"],
+            "pending": None,
+            "preserved": [],
+        }
+        installation.state["imageStaging"] = state
+        installation.save()
+    if (
+        not isinstance(state, dict)
+        or set(state) != {"formatVersion", "manifestSha256", "pending", "preserved"}
+        or type(state["formatVersion"]) is not int
+        or state["formatVersion"] != 1
+        or state["manifestSha256"] != installation.configuration["manifestSha256"]
+        or not isinstance(state["preserved"], list)
+        or len(state["preserved"]) > 128
+        or not all(
+            isinstance(name, str) and re.fullmatch(r"\.image-part-[a-f0-9]{32}", name)
+            for name in state["preserved"]
+        )
+    ):
+        raise ValueError("E_STAGING_STATE")
+    pending = state["pending"]
+    if pending is not None and (
+        not isinstance(pending, str)
+        or not re.fullmatch(r"\.image-part-[a-f0-9]{32}", pending)
+    ):
+        raise ValueError("E_STAGING_STATE")
+    cache.mkdir(mode=0o700, exist_ok=True)
+    if (
+        not cache.is_dir()
+        or os.name == "posix"
+        and (cache.stat().st_mode & 0o077 or cache.stat().st_uid != os.geteuid())
+    ):
+        raise ValueError("E_STAGING_PERMISSIONS")
+    allowed = (
+        set(expected) | set(state["preserved"]) | ({pending} if pending else set())
+    )
+    for path in cache.iterdir():
+        reject_links(path)
+        if not path.is_file() or path.name not in allowed:
+            raise ValueError("E_STAGING_UNOWNED")
+        if os.name == "posix" and (
+            path.stat().st_mode & 0o022 or path.stat().st_uid != os.geteuid()
+        ):
+            raise ValueError("E_STAGING_PERMISSIONS")
+    if pending and (cache / pending).exists():
+        if len(state["preserved"]) >= 128:
+            raise ValueError("E_STAGING_PARTIAL_REVIEW")
+        state["preserved"].append(pending)
+    state["pending"] = None
+    installation.save()
+    missing = sum(
+        item["bytes"] for name, item in expected.items() if not (cache / name).exists()
+    )
+    if free_bytes < missing + 12 * 1024**3:
+        raise ValueError("E_DISK: private staging needs additional reviewed space")
+    for name, item in expected.items():
+        path = cache / name
+        if path.exists():
+            if path.stat().st_size != item["bytes"] or sha256(path) != item["sha256"]:
+                raise ValueError("E_STAGING_CHANGED")
+            continue
+        temporary = cache / (".image-part-" + secrets.token_hex(16))
+        state["pending"] = temporary.name
+        installation.save()
+        copy_image_input(source / name, temporary, item)
+        os.link(temporary, path)
+        temporary.unlink()
+        state["pending"] = None
+        installation.save()
+    return cache

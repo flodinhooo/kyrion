@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 
-from bundle import authenticate, sha256
+from bundle import authenticated_review
 from host import inventory
 from maintenance import run as run_maintenance
 from models import guided_recommendation, load_catalog
@@ -142,9 +142,10 @@ def main() -> int:
     address = input(messages["address"] + ": ").strip()
     try:
         validate_inputs(args.target, hostname, address)
-        manifest = authenticate(args.bundle, args.public_key)
+        reviewed = authenticated_review(args.bundle, args.public_key)
+        manifest = reviewed.manifest
         image_plan(manifest)
-        digest = sha256(args.bundle / "manifest.json")
+        digest = reviewed.manifest_sha256
         if manifest["architecture"] != "linux/" + report["architecture"]:
             raise ValueError("E_ARCH: release does not match this target")
         print(messages["review"])
@@ -154,6 +155,9 @@ def main() -> int:
                     "release": manifest["release"],
                     "architecture": manifest["architecture"],
                     "artifactBytes": sum(
+                        item["bytes"] for item in manifest["artifacts"]
+                    ),
+                    "privateStagingBytes": sum(
                         item["bytes"] for item in manifest["artifacts"]
                     ),
                     "target": str(args.target),

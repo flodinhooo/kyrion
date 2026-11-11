@@ -28,7 +28,7 @@ def task_plan(installation_id: str, target: str, role: str) -> dict[str, str]:
         or root.drive.startswith("\\")
         or len(root.parts) < 3
         or len(str(root)) > 180
-        or any(character in str(root) for character in '\r\n\x00"<>|?*')
+        or any(character in str(root) for character in '\r\n\x00"<>|?*%')
         or any(
             part in {".", ".."} or part.endswith((" ", ".")) or ":" in part
             for part in root.parts[1:]
