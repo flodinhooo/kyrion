@@ -34,7 +34,7 @@ remains. A prerequisite does not convert missing code into an external blocker.
 | R17 | Linux OS/CPU/RAM/disk/GPU inventory | I/host.py | platform-unverified | Real Linux probe acceptance | hardware fixtures | Supported Linux target |
 | R18 | Permissions/runtime/network/port checks | I/host.py | verified | Native Windows and component-specific checks | runtime-check fixtures | None |
 | R19 | Existing Ollama/hardware occupancy | I/host.py | not-implemented | Models/config/USB ownership enumeration | Version observation only | Device acceptance later |
-| R20 | Windows x64 complete installation | I | not-implemented | Runtime, host credentials, services, restart | None | Disposable supported Windows VM |
+| R20 | Windows x64 complete installation | I/windows_tasks.py and windows-tasks.ps1; ADR0049 | not-implemented | Native authenticated bundle, private ACL/bootstrap, supervisor, actual guided provisioning/maintenance and service acceptance; task groundwork is not complete installation | Four plan/native COM read-only tests pass on Windows; no registration performed | Disposable supported Windows runner/VM for service/boot acceptance |
 | R21 | Linux x64/ARM64 fresh provisioning | I/runtime.py, templates | platform-unverified | Clean-host and real images acceptance | injected Compose tests/config | Native/isolated Linux host |
 | R22 | Boot before login; bounded restart and dependency order | I/templates | not-implemented | Service installation, capped restart policy, standby | Compose ordering only | Actual reboot acceptance |
 | R23 | Single-device and validated distributed tasks | I, C | not-implemented | Assignment and dependency validation | None | None |

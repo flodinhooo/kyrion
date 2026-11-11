@@ -59,9 +59,16 @@ installation acceptance have not been established.
 
 ## Developer checks
 
-- Installer Python suite: Windows 79 tests, successful with one platform skip
+- Installer Python suite: Windows 83 tests, successful with one platform skip
   (forbidden symlink creation). Debian 13 isolated run: 79 tests,
   successful with no skips.
+- Windows boot-task groundwork uses the real scheduling API for definition
+  validation and read-only lookup of a random absent task. Four additional
+  tests pass outside the constrained sandbox; its root-folder query is blocked
+  inside that sandbox. No task registration/start/removal was performed on the
+  owner's host. The native logon API, boot trigger, task-specific token SID,
+  retry/duplicate settings and input-plan protection are checked. Registration
+  and complete native installation remain unaccepted. See ADR 0049.
 - Native Win32 exclusive file-handle locking is now implemented and actually
   checked on Windows, including exclusion of a second process and release after
   exit. The existing POSIX lock has the same cross-process regression. This is
@@ -123,3 +130,13 @@ hardware detection, remaining integrations, AI/Ollama/voice provisioning,
 installed update transactions/scheduling, full application restore, and adaptive
 tutorial/final checks. Missing target hardware does not excuse these missing
 source implementations.
+
+Windows continuation: implement the authenticated native runtime bundle,
+administrator-owned ACL/bootstrap state and controlled child supervision; then
+connect the actual provisioning/maintenance flow and automate task/service
+registration in a disposable Windows runner/VM. `windows_tasks.py` and its fixed
+PowerShell helper contain real task operations with strict name/definition,
+journal, binary-integrity and ACL ownership checks, but they are not yet wired
+into the normal installer. They do not constitute completed matrix R20.
+The helper's execution-policy flag is confined to its child process; no machine
+or user execution policy is changed, and enforced Group Policy is not overridden.
