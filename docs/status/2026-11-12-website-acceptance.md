@@ -1,5 +1,7 @@
 # Current website acceptance — 2026-11-12
 
+Latest customer-account scope: browser self-registration and remembered website sessions supersede the earlier invitation-only/short-session checkpoints. See the customer-account redesign section at the end and [ADR 0051](../adr/0051-customer-website-accounts.md). Local Core link/session rules are unchanged.
+
 Latest result: **KY-020 completed; publication verified. KY-021 remains blocked by deployed contact-origin configuration.** The original audit below describes pre-publication observations; the post-deployment section supersedes its deployment-open and old-public-copy statements. KY-022?KY-024 remain open.
 
 This is the current website acceptance record. The [active backlog](TODO.md)
@@ -219,3 +221,56 @@ helper startup and the exact `npm run predev` path passed. Nine recovery tests,
 including native Windows ACL acceptance/rejection, and JavaScript syntax passed.
 No unrelated installer source, Portfolio process, schema or local-user data was
 changed. These runtime checks supersede the earlier startup-blocked observation.
+
+## Customer-account redesign
+
+Owner requested direct customer registration, a header account menu and continued
+sign-in instead of the 15-minute status screen. ADR 0051 records the website-only
+change before implementation. The header now shares account state across pages,
+with account overview, provider account settings and logout when signed in.
+The account page shows customer actions; local link instructions are collapsed.
+Anonymous users can choose Create account or Sign in directly. The same-origin
+registration POST uses standard OIDC prompt=create with PKCE/state/nonce and the
+existing exact callback. No password or provider-admin credential enters the UI.
+
+New website sessions have an opaque persistent Secure HttpOnly cookie and an
+absolute 30-day deadline. Short signed proofs are renewed on demand server-side;
+proof caching is capped at five minutes. Refresh credentials are AES-GCM encrypted
+with a domain-separated key from the server-only client secret and session digest
+binding. The dedicated database locks a session row while renewing so parallel
+requests and logout serialize. Invalid/revoked/changed identity is denied;
+transient provider failures preserve retry without granting access. Local logout
+works without renewal and removes the row before best-effort provider revocation.
+No offline token grant, sliding absolute deadline or local Core lifetime change.
+
+The dedicated central Neon database was confirmed to contain website tables and
+no Core Flyway history. Additive migration 002 was applied over certificate-verified
+TLS: nullable renewal columns and UPDATE permission only on those columns.
+No local or provider database schema was changed. Old sessions retain their
+original short expiry and need one fresh sign-in for the remembered behavior.
+
+Provider configuration was privately snapshotted and scoped changes applied:
+registration and email-as-username enabled, verified-email and brute-force
+protection preserved, password recovery enabled, optional first/last name,
+minimum 12-character policy when no prior policy existed, and online SSO/website
+session idle/max bounded to 30 days. Access-token lifetime was not increased.
+Operation correlation: `13b933d8-5378-4535-831a-dfbaf394a9be`.
+The public provider registration entry returned HTTP 200 with email fields;
+the required Password Validation execution is enabled. Keycloak's email-first
+registration intentionally requests the password after mailbox verification.
+No test registration was submitted and no unsolicited account/mail was created.
+
+Verification: full suite including actual disposable PostgreSQL passed all 50
+tests (15.2 seconds). The ordinary production-disabled suite passed 49 with the
+explicit disposable-DB test skipped. Native SQL tests cover least-privilege
+column grants, encrypted credentials, concurrent renewal/logout, revoked/changed
+identity, transient retry and absolute expiry. Signed synthetic OIDC tests cover
+initial and refreshed proofs, including unverified-email denial. Desktop/mobile
+browser checks cover the customer menu, registration forms, shared logout state
+and responsive navigation. Visual review found and corrected a left-clipped
+mobile dropdown, adding explicit viewport-bounds regression coverage.
+Lint, formatting, strict types and production build pass. DE/EN privacy copy now
+explains persistent cookies and encrypted renewal records; expiry is not a data
+retention promise. Live authenticated renewal, new customer mailbox completion
+and operational privacy/abuse review remain KY-022/KY-024 acceptance rather than
+claims derived from local fixtures.

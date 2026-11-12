@@ -56,11 +56,20 @@ dynamic LAN redirect registration or shared local client secret is supported.
 Only the website uses authorization code + PKCE S256 with state and nonce and an
 exact callback URI. Tokens are never general Core API credentials.
 
+## Website customer experience
+
+The website offers browser registration and an account menu in the header.
+Keycloak owns email/password entry, mailbox verification, recovery and account
+settings. Website sessions can be remembered for up to 30 days, with encrypted
+server-side online renewal and short proof validity. [ADR 0051](adr/0051-customer-website-accounts.md)
+supersedes the original website-only short-session restriction. This does not
+extend local Core sessions or replace explicit local account linking.
+
 ## Expiry, logout and blocking
 
 Local session validation reads only local persistence. A provider outage prevents
 new central proofs, not local password login or existing authorized requests.
-Central sessions expire within 15 minutes and no later than the ID token expiry;
+Local Core sessions created through central sign-in expire within 15 minutes and no later than the ID token expiry;
 there is no automatic refresh or indefinite offline extension. A new provider
 authorization is required afterward. Central token sets are discarded after
 identity validation. The development provider's five-minute token lifetime can

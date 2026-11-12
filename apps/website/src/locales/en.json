@@ -569,15 +569,15 @@
         },
         {
           "title": "Cookies and browser storage",
-          "body": "The site stores your theme preference in localStorage under kyrion-website-theme. When website accounts are enabled, sign-in uses short-lived HttpOnly cookies for the website session and sign-in flow. The central identity provider also uses its own sign-in cookies. Contact-form drafts are not stored."
+          "body": "The site stores your theme preference in localStorage under kyrion-website-theme. Sign-in uses a short-lived HttpOnly flow cookie and a protected HttpOnly session cookie that can keep you signed in for up to 30 days. The central identity provider also uses its own sign-in cookies. Contact-form drafts are not stored."
         },
         {
           "title": "Optional website account",
-          "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, short-lived sign-in and session records, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate."
+          "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, sign-in and session records, encrypted renewal credentials, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate."
         },
         {
           "title": "Session validity and stored records",
-          "body": "Website sessions have a limited validity and can be ended by signing out. Session expiry alone does not immediately delete all account, session and security-event records or their backups. Contact inquiries may remain in the receiving mailbox. Retention and deletion must be handled through the corresponding operating procedures; contact hello@kyrion.ch with a deletion request."
+          "body": "The website can keep you signed in on your device for up to 30 days. It renews short-lived identity checks with the central sign-in service in the background. This uses a protected session cookie and encrypted renewal credentials in the separate website account database. Signing out ends this website session. Session validity is not a deletion deadline for account and security records or backups. Contact inquiries may remain in the receiving mailbox. For retention or deletion questions, contact hello@kyrion.ch."
         },
         {
           "title": "Analytics and tracking",
@@ -730,29 +730,35 @@
     "setupLink": "Explore development status"
   },
   "account": {
-    "title": "Kyrion Account",
-    "description": "Sign in here with your central Kyrion account. Your existing local username and password belong to your local installation.",
-    "boundary": "Your local data and permissions stay in your installation. Signing in to this website does not connect a local account automatically.",
+    "title": "Your Kyrion account",
+    "description": "Create your account or sign in. Manage your account and connect your Kyrion installations here.",
     "disabled": "Central sign-in is not enabled on this website. You can continue using Kyrion locally.",
-    "login": "Sign in with Kyrion Account",
+    "login": "Sign in",
     "signedIn": "You are signed in to the Kyrion website.",
-    "expiry": "This session expires within 15 minutes. Sign in again to verify your current central account status.",
-    "logout": "Sign out of this website",
-    "logoutScope": "Signing out ends this website session. It does not disable your central account or sign out of local installations.",
+    "logout": "Sign out",
     "unavailable": "The account service is unavailable. Please try again later.",
     "cancelled": "Sign-in was cancelled.",
     "failed": "Sign-in could not be verified. Please start again.",
-    "newAccountTitle": "No central account yet?",
-    "newAccountHelp": "During the private test phase, central accounts are created by invitation. Use the email link to confirm your address and choose your own password. If you already have an invitation, open that email first. Never send us your password.",
-    "requestInvitation": "Request an account invitation",
-    "connectTitle": "Connect your local account in three steps",
-    "connectIntro": "After setting up your central account, connect it from your own Kyrion installation. This website cannot access your local accounts.",
+    "connectTitle": "Connect a Kyrion installation",
+    "connectIntro": "Connect your central account to your existing local access once. Your data and permissions stay in your installation.",
     "connectSteps": [
       "Open your local Kyrion app and sign in with your existing local username and password.",
       "Open Profile ? Kyrion account ? Connect Kyrion account. Confirm with your current local password.",
       "Open the displayed sign-in page, enter the code, and sign in with your central account. Return to your local app and confirm the connection."
     ],
-    "connectUnavailable": "If the connection option is disabled or missing, the installation needs the current version and central sign-in enabled by its operator. Your local password remains available, including offline."
+    "connectUnavailable": "If the connection option is disabled or missing, the installation needs the current version and central sign-in enabled by its operator. Your local password remains available, including offline.",
+    "menu": "My account",
+    "overview": "Account overview",
+    "signInShort": "Sign in",
+    "register": "Create account",
+    "startTitle": "Welcome to Kyrion",
+    "startHelp": "Register with your email address. Confirm it using the link in your email, then choose your own password.",
+    "remembered": "Stay signed in on your personal device. Sign out after use on shared devices.",
+    "welcome": "Good to see you. Manage your account settings or find help connecting your installation.",
+    "manage": "Account settings",
+    "manageHelp": "Manage your personal details, password and account security.",
+    "openSettings": "Open account settings",
+    "checking": "Loading account ?"
   },
   "download": {
     "eyebrow": "KYRION INSTALLER",

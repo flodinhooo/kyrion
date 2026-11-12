@@ -14,6 +14,7 @@ import { Logo } from "./logo";
 import { LanguageFlag } from "./language-flag";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./ui/button";
+import { AccountMenu } from "./account-menu";
 
 export function SiteHeader({
   locale,
@@ -41,7 +42,6 @@ export function SiteHeader({
       "development",
       "download",
       "contact",
-      "account",
     ] as const
   ).map((item) => (
     <Link
@@ -70,11 +70,11 @@ export function SiteHeader({
       >
         {t.skip}
       </a>
-      <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
+      <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-2 px-5 sm:gap-3 sm:px-8">
         <Link href={href(locale)} aria-label={t.home}>
           <Logo
             priority
-            className="w-[112px] min-[380px]:w-[132px] sm:w-[156px]"
+            className="w-[84px] min-[380px]:w-[132px] sm:w-[156px]"
           />
         </Link>
         <nav aria-label={t.label} className="hidden items-center lg:flex">
@@ -87,7 +87,8 @@ export function SiteHeader({
             <ArrowUpRight className="size-3" aria-hidden="true" />
           </a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <AccountMenu locale={locale} />
           <Link
             href={href(locale === "en" ? "de" : "en", page)}
             hrefLang={locale === "en" ? "de" : "en"}
@@ -96,7 +97,9 @@ export function SiteHeader({
             className="flex min-h-11 items-center gap-2 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
           >
             <LanguageFlag locale={locale === "en" ? "de" : "en"} />
-            {locale === "en" ? "DE" : "EN"}
+            <span className="hidden sm:inline">
+              {locale === "en" ? "DE" : "EN"}
+            </span>
           </Link>
           <ThemeToggle labels={t} />
           <Button

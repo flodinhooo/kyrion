@@ -7,36 +7,28 @@ website BFF stores website-only opaque sessions in a dedicated central database;
 it does not implement account passwords, identity brokering or an OAuth server.
 Central account management and verified email remain in Keycloak.
 
-## Invited users and local connection
+## Customer account flow
 
-The account page explains the separate local and central credentials in DE/EN.
-During the private test phase, a user requests an invitation through Contact;
-there is no public self-registration endpoint. Operators create a regular
-central user without assigning a password or marking their email verified,
-then use Keycloak's `execute-actions-email` with `VERIFY_EMAIL` and
-`UPDATE_PASSWORD` and a 30-minute lifespan. The user proves mailbox access and
-sets their password themselves. Never publish action URLs or credentials.
-Do not send the invitation to the website OIDC callback: the invitation has no
-matching browser-bound state/PKCE flow. After setup, start website login afresh.
+[ADR 0051](../../docs/adr/0051-customer-website-accounts.md) supersedes the
+invitation-only entry and short website sessions. Customers use Create account
+or Sign in directly in the browser. Registration uses OIDC `prompt=create` with
+one-use state, nonce and PKCE, not a website admin API or password grant.
+Keycloak collects email/password, confirms the mailbox and handles recovery.
+Names are optional; the email address is the username. Verified email is checked
+in the signed identity proof before a website session is issued.
 
-The page shows three local linking steps both before and after website sign-in:
-local password login, Profile / Kyrion account / Connect, then provider code
-approval and explicit local confirmation. The signed-in view omits the invitation
-request. No local URL is guessed, local credentials are never sent to this site,
-and matching email addresses do not create a link. If the option is missing or
-disabled, the local installation needs the current UI/Core and an operator's
-central-login opt-in. See [identity guide](../../docs/unified-identity.md).
+The header has a shared account control on desktop and mobile. Signed-in users
+get account overview, provider account settings and logout. The account page
+shows customer actions; local linking help is collapsed. No technical expiry
+countdown or invitation request is shown. The shared session state rechecks on
+focus, visibility and once per minute while visible, with stale-request guards
+so an old request cannot resurrect the UI after logout.
 
-## Current acceptance (2026-11-12)
-
-The public anonymous session endpoint reports enabled=true and HTTPS provider
-discovery succeeds. The private local production file and example templates
-still default to disabled; that is not evidence that Vercel is disabled. The
-dedicated Neon setup has dated evidence, but current Vercel database settings
-and successful public user journeys were not authenticated or exercised in this
-audit. See [current acceptance](../../docs/status/2026-11-12-website-acceptance.md)
-and KY-022, within the wider KY-003 identity gate. No registration, reset mail or
-login/logout acceptance follows from the enabled flag alone.
+Local connection still requires local password login, Profile / Kyrion account /
+Connect, provider code approval and explicit local confirmation. Website login
+never guesses a local address, sends local credentials or joins accounts by email.
+See [identity guide](../../docs/unified-identity.md) and the
+[current acceptance](../../docs/status/2026-11-12-website-acceptance.md).
 
 ## Configuration
 
@@ -101,8 +93,8 @@ build/tests keep accounts disabled and make no external identity request.
 
 ## Contracts and security
 
-- `POST /api/account/login`: same-origin form, only a DE/EN locale is accepted.
-  Uses Authorization Code with PKCE S256, random state/nonce, forced fresh login.
+- `POST /api/account/login` and `POST /api/account/register`: same-origin form, only a DE/EN locale is accepted.
+  Uses Authorization Code with PKCE S256, random state/nonce, normal provider SSO. Registration adds `prompt=create`.
 - `GET /api/account/callback`: consumes a five-minute browser-bound flow exactly
   once with atomic PostgreSQL `DELETE RETURNING`, then uses `openid-client` to
   check state, nonce, issuer, audience, expiry and RS256 signature through JWKS.
@@ -110,12 +102,15 @@ build/tests keep accounts disabled and make no external identity request.
 - `GET /api/account/session`: returns website account UUID, expiry and CSRF value,
   never provider/session tokens. Responses use `Cache-Control: no-store`.
 - `POST /api/account/logout`: requires exact configured Origin and session-bound
-  CSRF header. Revokes this website session, then clears its cookie.
+  CSRF header. Removes this website session, attempts provider renewal-credential
+  revocation and clears its cookie. Logout does not require a successful refresh.
+- `GET /api/account/manage`: redirects to the configured provider account console;
+  no arbitrary return URL or administration endpoint is accepted.
 
 Account records contain only generated UUID, exact issuer and subject, uniquely
 constrained together. No email, name, password, role or local user is copied.
-Pairwise subjects across clients are deliberately not equated. All provider
-tokens are discarded after validation, and are never used as general API tokens.
+Pairwise subjects across clients are deliberately not equated. Identity/access tokens are discarded after validation. Renewal credentials are
+encrypted server-side and are never used as local Core API tokens.
 The database stores only SHA-256 digests of random 256-bit session/flow cookie
 credentials. Pending state/nonce/PKCE material is server-side and short lived.
 Protect that database and backups as authentication material.
@@ -131,21 +126,31 @@ configure reverse proxies/hosting to omit its query string from access logs and
 retain the no-referrer header. Authentication errors expose stable generic codes,
 never provider exception details or tokens.
 
-Sessions last at most 15 minutes and never beyond the ID token's expiry (the
-development realm currently gives five-minute tokens). There is no refresh-token
-storage or silent indefinite renewal. Central suspension becomes effective at
-the next login; an already issued website session may remain valid for its
-bounded remaining duration. Website logout, central account suspension, local
-access suspension and removing a local account link are separate operations.
-These validity bounds are not data-retention promises: the current store removes
-expired flow rows when beginning a new flow, excludes expired sessions from reads
-and deletes a session on logout, while account/security records and backups have
-separate lifecycles. Confirm retention/deletion procedures under KY-024; do not
-describe token expiry as deletion of all stored records.
-Provider-wide logout/backchannel revocation is a future improvement; no claim
-of immediate global logout is made. Operators may revoke central website
-sessions directly by account UUID in `website_session` if incident response
-requires immediate website revocation.
+New website sessions have a persistent cookie and an absolute 30-day deadline.
+A short-lived proof is renewed on demand at expiry (at most five minutes cached),
+checking signature, issuer, audience, verified email and unchanged subject.
+Renewal/logout serialize through a PostgreSQL row lock. Revoked proof deletes
+the website session; transient provider failure denies access but retains the
+credential for retry. Logout deletes locally before best-effort provider
+revocation. Existing pre-migration sessions retain their original short expiry.
+No offline grant or unbounded sliding deadline is used.
+
+Refresh credentials use AES-256-GCM, a domain-separated HKDF key from the existing
+high-entropy website client secret and the session digest as AAD. Only the
+server holds the key; ciphertext is never returned through session JSON.
+Rotating the client secret requires remembered users to sign in again. Apply
+`migrations/002-remembered-sessions.sql` to the dedicated website DB before this
+code is deployed; it adds nullable renewal columns and narrowly scoped UPDATE
+rights. Fresh databases use the updated base schema and grants. Reapplying the
+migration is safe. Local/Core schemas and session lifetimes are unchanged.
+
+The configured provider needs online SSO and website-client idle/max sessions
+bounded to 30 days; access/identity tokens remain short lived. Central blocking
+is observed on the next renewal, not as instant global logout. Local linking,
+local disablement and local password access remain independent.
+
+Cookie validity is not data retention: expiry alone does not delete account,
+security records or backups. Confirm operational deletion under KY-024.
 
 ## Verification
 
@@ -162,3 +167,10 @@ README for execution and actual results in the unified identity handover.
 Dependencies: `openid-client` supplies maintained OAuth/OIDC validation instead
 of handwritten protocol code; `pg` supplies transactional server-side session
 persistence that works across website processes.
+
+`tests/account-store.spec.ts` also checks encrypted credential tampering and
+binding. With `KYRION_ACCOUNT_TEST_DATABASE` pointing strictly to the disposable
+loopback database on 15559/website_acceptance, it exercises real PostgreSQL,
+column-level least privilege, concurrent renewal/logout, revoked or changed
+identities, temporary outages and absolute expiry. Ordinary CI skips only that
+explicit database test; no production credentials are accepted by it.

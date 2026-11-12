@@ -5,7 +5,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import pilotRealm from "../../../infrastructure/identity/pilot-realm.json";
 import { accountConfig, type AccountConfig } from "../src/lib/account/config";
-import { authenticate, authorizationUrl } from "../src/lib/account/oidc";
+import {
+  authenticate,
+  authorizationUrl,
+  renewIdentity,
+} from "../src/lib/account/oidc";
 import { hash, secret } from "../src/lib/account/store";
 import { dictionaries } from "../src/lib/site";
 
@@ -184,6 +188,7 @@ for (const defect of [
   "expired",
   "state",
   "algorithm",
+  "unverified-email",
 ] as const) {
   test(`OIDC validates real RSA signatures and claims: ${defect}`, async () => {
     const key = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -241,6 +246,7 @@ for (const defect of [
           aud: defect === "audience" ? "foreign-client" : "website",
           iat: now,
           auth_time: now,
+          email_verified: defect !== "unverified-email",
           exp: defect === "expired" ? now - 100 : now + 300,
           nonce: defect === "nonce" ? "foreign-nonce" : flow.nonce,
         });
@@ -253,6 +259,7 @@ for (const defect of [
         response.end(
           JSON.stringify({
             access_token: "not-an-api-credential",
+            refresh_token: "fixture-renewal-credential",
             token_type: "Bearer",
             expires_in: 300,
             id_token: `${payload}.${signature}`,
@@ -286,6 +293,13 @@ for (const defect of [
         flow.verifier,
       );
       expect(authorize.searchParams.get("redirect_uri")).toBe(config.callback);
+      expect(authorize.searchParams.has("max_age")).toBe(false);
+      const registration = await authorizationUrl(config, flow, true);
+      expect(registration.searchParams.get("prompt")).toBe("create");
+      expect(registration.searchParams.get("state")).toBe(flow.state);
+      expect(registration.searchParams.get("code_challenge")).toBe(
+        authorize.searchParams.get("code_challenge"),
+      );
       const callback = new URL(
         `${config.callback}?code=single-use-code&state=${defect === "state" ? "foreign-state" : flow.state}`,
       );
@@ -295,8 +309,19 @@ for (const defect of [
           subject: "stable-subject",
         });
         expect(exchangedVerifier).toBe(flow.verifier);
+        expect(
+          await renewIdentity(config, "fixture-renewal-credential"),
+        ).toMatchObject({
+          issuer,
+          subject: "stable-subject",
+          refreshToken: "fixture-renewal-credential",
+        });
       } else {
         await expect(authenticate(config, callback, flow)).rejects.toThrow();
+        if (defect !== "state" && defect !== "nonce")
+          await expect(
+            renewIdentity(config, "fixture-renewal-credential"),
+          ).rejects.toThrow();
       }
     } finally {
       await new Promise<void>((resolve, reject) =>
@@ -311,14 +336,14 @@ test("account pages explain independence in both languages", async ({
 }) => {
   await page.goto("/en/account");
   await expect(
-    page.getByRole("heading", { name: "Kyrion Account" }),
+    page.getByRole("heading", { name: dictionaries.en.account.title }),
   ).toBeVisible();
   await expect(
     page.getByText("Central sign-in is not enabled", { exact: false }),
   ).toBeVisible();
   await page.goto("/account");
   await expect(
-    page.getByRole("heading", { name: "Kyrion-Account" }),
+    page.getByRole("heading", { name: dictionaries.de.account.title }),
   ).toBeVisible();
   await expect(
     page.getByText(
@@ -328,7 +353,7 @@ test("account pages explain independence in both languages", async ({
   ).toBeVisible();
 });
 
-test("account onboarding guides invited users and keeps local linking separate", async ({
+test("customer account menu, browser registration and local help work in both languages", async ({
   page,
 }) => {
   for (const locale of ["de", "en"] as const) {
@@ -343,37 +368,78 @@ test("account onboarding guides invited users and keeps local linking separate",
               ? {
                   id: "browser-fixture",
                   csrf: "fixture-csrf",
-                  expiresAt: new Date(Date.now() + 600000).toISOString(),
+                  expiresAt: new Date(Date.now() + 86400000).toISOString(),
                 }
               : null,
           },
         }),
       );
       await page.goto(`${prefix}/account`);
-      await expect(
-        page.getByRole("heading", { name: copy.connectTitle }),
-      ).toBeVisible();
-      await expect(page.locator("main ol li")).toHaveCount(3);
-      await expect(
-        page.getByText(copy.connectUnavailable, { exact: true }),
-      ).toBeVisible();
       if (signedIn) {
         await expect(
-          page.getByText(copy.signedIn, { exact: true }),
+          page.getByRole("heading", { name: copy.menu, exact: true }),
         ).toBeVisible();
         await expect(
-          page.getByRole("link", { name: copy.requestInvitation }),
-        ).toHaveCount(0);
+          page.getByText(copy.connectIntro, { exact: true }),
+        ).not.toBeVisible();
+        await page.locator("main summary").click();
+        await expect(page.locator("main ol li")).toHaveCount(3);
+        await expect(
+          page.getByText(copy.connectIntro, { exact: true }),
+        ).toBeVisible();
+        await expect(page.locator("main")).not.toContainText("15");
+        await page.locator("header summary").click();
+        await page.setViewportSize({ width: 320, height: 900 });
+        const menuBounds = await page
+          .getByRole("navigation", { name: copy.menu })
+          .boundingBox();
+        expect(menuBounds).not.toBeNull();
+        expect(menuBounds!.x).toBeGreaterThanOrEqual(0);
+        expect(menuBounds!.x + menuBounds!.width).toBeLessThanOrEqual(320);
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await expect(
+          page
+            .getByRole("navigation", { name: copy.menu })
+            .getByRole("link", { name: copy.overview }),
+        ).toHaveAttribute("href", `${prefix}/account`);
+        await page.keyboard.press("Escape");
+        await expect(
+          page.getByRole("navigation", { name: copy.menu }),
+        ).not.toBeVisible();
+        await page.locator("header summary").click();
+        await page.route("**/api/account/logout", (route) => {
+          expect(route.request().headers()["x-kyrion-csrf"]).toBe(
+            "fixture-csrf",
+          );
+          return route.fulfill({ json: { ok: true } });
+        });
+        await page
+          .getByRole("navigation", { name: copy.menu })
+          .getByRole("button", { name: copy.logout })
+          .click();
+        await expect(
+          page.getByRole("heading", { name: copy.title, exact: true }),
+        ).toBeVisible();
+        await expect(page.locator("header summary")).toHaveCount(0);
+        await page.unroute("**/api/account/logout");
       } else {
         await expect(
-          page.getByRole("button", { name: copy.login, exact: true }),
+          page.getByRole("button", { name: copy.register, exact: true }),
         ).toBeVisible();
-        const invitation = page.getByRole("link", {
-          name: copy.requestInvitation,
-        });
-        await expect(invitation).toHaveAttribute("href", `${prefix}/contact`);
-        await invitation.click();
-        await expect(page).toHaveURL(new RegExp(`${prefix}/contact$`));
+        await expect(
+          page.locator('form[action="/api/account/register"]'),
+        ).toHaveAttribute("method", "post");
+        await expect(
+          page.locator(
+            'form[action="/api/account/register"] input[name="locale"]',
+          ),
+        ).toHaveValue(locale);
+        await expect(page.locator("main")).not.toContainText("Einladung");
+        await expect(
+          page
+            .locator("header")
+            .getByRole("link", { name: copy.login, exact: true }),
+        ).toBeVisible();
       }
       await page.unroute("**/api/account/session");
     }

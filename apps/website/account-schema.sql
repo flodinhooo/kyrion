@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS website_session (
     token_hash text PRIMARY KEY,
     account_id uuid NOT NULL REFERENCES website_account(id) ON DELETE CASCADE,
     csrf text NOT NULL,
+    refresh_credential text,
+    verified_until timestamptz,
     expires_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS website_session_expiry ON website_session(expires_at);

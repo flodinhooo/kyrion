@@ -569,15 +569,15 @@
         },
         {
           "title": "Cookies und Browserspeicher",
-          "body": "Deine Designpräferenz wird in localStorage unter kyrion-website-theme gespeichert. Bei aktivierten Website-Accounts verwendet die Anmeldung kurzlebige HttpOnly-Cookies für die Website-Sitzung und den Anmeldevorgang. Der zentrale Identitätsanbieter verwendet außerdem eigene Anmelde-Cookies. Kontaktentwürfe werden nicht gespeichert."
+          "body": "Deine Designpräferenz wird in localStorage unter kyrion-website-theme gespeichert. Die Anmeldung verwendet einen kurzlebigen HttpOnly-Cookie für den Anmeldevorgang und einen geschützten HttpOnly-Sitzungscookie, der dich bis zu 30 Tage angemeldet halten kann. Der zentrale Identitätsanbieter verwendet außerdem eigene Anmelde-Cookies. Kontaktentwürfe werden nicht gespeichert."
         },
         {
           "title": "Optionaler Website-Account",
-          "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, kurzlebige Anmelde- und Sitzungsdatensätze sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt."
+          "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, Anmelde- und Sitzungsdatensätze, verschlüsselte Erneuerungsdaten sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt."
         },
         {
           "title": "Sitzungsgültigkeit und gespeicherte Datensätze",
-          "body": "Website-Sitzungen sind zeitlich begrenzt und können durch Abmelden beendet werden. Ihr Ablauf löscht nicht sofort sämtliche Account-, Sitzungs- und Sicherheitsdatensätze oder deren Sicherungskopien. Kontaktanfragen können im empfangenden Postfach verbleiben. Aufbewahrung und Löschung müssen über die entsprechenden Betriebsverfahren behandelt werden; Löschanfragen kannst du an hello@kyrion.ch richten."
+          "body": "Die Website kann dich auf deinem Gerät bis zu 30 Tage angemeldet halten. Die kurze Identitätsprüfung wird im Hintergrund beim zentralen Anmeldedienst erneuert. Dafür speichert die Website einen geschützten Sitzungscookie und verschlüsselte Erneuerungsdaten in ihrer separaten Kontodatenbank. Abmelden beendet diese Website-Sitzung. Die Gültigkeit einer Sitzung ist keine Löschfrist für Konto- und Sicherheitsdaten oder Backups. Kontaktanfragen können im Empfängerpostfach verbleiben. Für Fragen zur Aufbewahrung oder Löschung kontaktiere hello@kyrion.ch."
         },
         {
           "title": "Analyse und Tracking",
@@ -730,29 +730,35 @@
     "setupLink": "Entwicklungsstand ansehen"
   },
   "account": {
-    "title": "Kyrion-Account",
-    "description": "Melde dich hier mit deinem zentralen Kyrion-Account an. Dein bisheriger lokaler Benutzername und dein lokales Passwort geh?ren zu deiner eigenen Installation.",
-    "boundary": "Deine lokalen Daten und Berechtigungen bleiben in deiner Installation. Die Anmeldung auf dieser Website verkn?pft deinen lokalen Zugang nicht automatisch.",
+    "title": "Dein Kyrion-Account",
+    "description": "Erstelle deinen Account oder melde dich an. Hier verwaltest du dein Konto und verbindest deine Kyrion-Installationen.",
     "disabled": "Die zentrale Anmeldung ist auf dieser Website nicht aktiviert. Kyrion bleibt lokal nutzbar.",
-    "login": "Mit Kyrion-Account anmelden",
+    "login": "Anmelden",
     "signedIn": "Du bist auf der Kyrion-Website angemeldet.",
-    "expiry": "Diese Sitzung läuft innerhalb von 15 Minuten ab. Melde dich erneut an, um den aktuellen zentralen Kontostatus zu prüfen.",
-    "logout": "Von dieser Website abmelden",
-    "logoutScope": "Abmelden beendet diese Website-Sitzung. Es sperrt weder deinen zentralen Account noch meldet es lokale Installationen ab.",
+    "logout": "Abmelden",
     "unavailable": "Der Account-Dienst ist nicht erreichbar. Versuche es später erneut.",
     "cancelled": "Die Anmeldung wurde abgebrochen.",
     "failed": "Die Anmeldung konnte nicht bestätigt werden. Bitte starte sie erneut.",
-    "newAccountTitle": "Noch keinen zentralen Account?",
-    "newAccountHelp": "W?hrend der privaten Testphase erh?ltst du deinen zentralen Account per Einladung. Mit dem Link in der E-Mail best?tigst du deine Adresse und w?hlst dein eigenes Passwort. Hast du bereits eine Einladung, ?ffne zuerst diese E-Mail. Sende uns niemals dein Passwort.",
-    "requestInvitation": "Account-Einladung anfragen",
-    "connectTitle": "Lokalen Account in drei Schritten verkn?pfen",
-    "connectIntro": "Nach der Einrichtung deines zentralen Accounts verbindest du ihn in deiner eigenen Kyrion-Installation. Diese Website hat keinen Zugriff auf deine lokalen Accounts.",
+    "connectTitle": "Kyrion-Installation verbinden",
+    "connectIntro": "Verbinde deinen zentralen Account einmal mit deinem bestehenden lokalen Zugang. Deine Daten und Berechtigungen bleiben in deiner Installation.",
     "connectSteps": [
-      "?ffne deine lokale Kyrion-App und melde dich mit deinem bisherigen lokalen Benutzernamen und Passwort an.",
-      "?ffne Profil ? Kyrion-Account ? Kyrion-Account verbinden. Best?tige mit deinem aktuellen lokalen Passwort.",
-      "?ffne die angezeigte Anmeldeseite, gib den Code ein und melde dich mit deinem zentralen Account an. Kehre zur lokalen App zur?ck und best?tige die Verkn?pfung."
+      "Öffne deine lokale Kyrion-App und melde dich mit deinem bisherigen lokalen Benutzernamen und Passwort an.",
+      "Öffne Profil → Kyrion-Account → Kyrion-Account verbinden. Bestätige mit deinem aktuellen lokalen Passwort.",
+      "Öffne die angezeigte Anmeldeseite, gib den Code ein und melde dich mit deinem zentralen Account an. Kehre zur lokalen App zurück und bestätige die Verknüpfung."
     ],
-    "connectUnavailable": "Fehlt die Verkn?pfungsoption oder ist sie deaktiviert, braucht die Installation die aktuelle Version und eine vom Betreiber aktivierte zentrale Anmeldung. Dein lokales Passwort bleibt auch offline nutzbar."
+    "connectUnavailable": "Fehlt die Verknüpfungsoption oder ist sie deaktiviert, braucht die Installation die aktuelle Version und eine vom Betreiber aktivierte zentrale Anmeldung. Dein lokales Passwort bleibt auch offline nutzbar.",
+    "menu": "Mein Konto",
+    "overview": "Kontoübersicht",
+    "signInShort": "Anmelden",
+    "register": "Account erstellen",
+    "startTitle": "Willkommen bei Kyrion",
+    "startHelp": "Registriere dich mit deiner E-Mail-Adresse. Bestätige sie über den Link in deiner E-Mail und lege dann dein eigenes Passwort fest.",
+    "remembered": "Auf deinem persönlichen Gerät bleibst du angemeldet. Auf gemeinsam genutzten Geräten melde dich nach der Nutzung ab.",
+    "welcome": "Schön, dass du da bist. Hier findest du deine Kontoeinstellungen und die Hilfe zum Verbinden deiner Installation.",
+    "manage": "Kontoeinstellungen",
+    "manageHelp": "Verwalte deine persönlichen Angaben, dein Passwort und die Sicherheit deines Accounts.",
+    "openSettings": "Kontoeinstellungen öffnen",
+    "checking": "Account wird geladen …"
   },
   "download": {
     "eyebrow": "KYRION-INSTALLER",

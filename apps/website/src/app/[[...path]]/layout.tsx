@@ -5,6 +5,7 @@ import { dictionaries, resolveRoute, siteUrl } from "@/lib/site";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AccountSessionProvider } from "@/components/account-session";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -32,11 +33,13 @@ export default async function RootLayout({
     <html lang={route.locale} suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider>
-          <SiteHeader locale={route.locale} page={route.page} t={t.nav} />
-          <main id="main" tabIndex={-1}>
-            {children}
-          </main>
-          <SiteFooter locale={route.locale} t={t} />
+          <AccountSessionProvider>
+            <SiteHeader locale={route.locale} page={route.page} t={t.nav} />
+            <main id="main" tabIndex={-1}>
+              {children}
+            </main>
+            <SiteFooter locale={route.locale} t={t} />
+          </AccountSessionProvider>
           <Analytics />
         </ThemeProvider>
       </body>

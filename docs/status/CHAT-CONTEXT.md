@@ -47,3 +47,11 @@ KY-020 complete. Contact still allows apex Origin and rejects final www Origin:
 change Production `CONTACT_FORM_ORIGIN` then redeploy (KY-021). Website CI passed;
 installer validation failed four tests with `E_STAGING_PERMISSIONS`.
 See current acceptance for evidence and owner inputs.
+
+Customer website redesign: see ADR 0051 and the latest current acceptance section.
+Browser self-registration replaces invitations; header account menu and encrypted
+online renewal support remembered website sessions up to 30 days. Additive website
+migration 002 applied to dedicated Neon DB; local Core lifetimes/links unchanged.
+Provider registration, verified-email policy and 30-day online session bounds are
+configured with a private snapshot. Local fixtures pass 50 tests including real
+PostgreSQL; authenticated live new-user and renewal acceptance remains separate.

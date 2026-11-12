@@ -2,6 +2,10 @@
 
 Status: accepted for implementation; no production infrastructure is implied.
 
+For the later customer website registration and remembered-session decision,
+see [ADR 0051](0051-customer-website-accounts.md). It supersedes only this ADR's
+website session lifetime/token-storage restriction; local Core rules remain.
+
 ## Context
 
 At `fe5e65a`, Core implements Argon2id passwords, opaque hashed sessions,

@@ -2,7 +2,11 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { accountConfig } from "@/lib/account/config";
-import { authenticate, authorizationUrl } from "@/lib/account/oidc";
+import {
+  authenticate,
+  authorizationUrl,
+  revokeRefresh,
+} from "@/lib/account/oidc";
 import { AccountStore, database, secret } from "@/lib/account/store";
 
 export const runtime = "nodejs";
@@ -31,13 +35,23 @@ export async function GET(request: NextRequest, context: Context) {
   }
   if (!config)
     return protect(NextResponse.json({ enabled: false }, { status: 200 }));
-  const store = new AccountStore(database(config.databaseUrl));
+  if (operation === "manage")
+    return protect(
+      NextResponse.redirect(
+        new URL(`${config.issuer.href.replace(/\/$/, "")}/account/`),
+        303,
+      ),
+    );
+  const store = new AccountStore(database(config.databaseUrl), config);
   try {
     if (operation === "session") {
       const session = await store.session(
         request.cookies.get(sessionCookie)?.value ?? "",
       );
-      return protect(NextResponse.json({ enabled: true, session }));
+      const response = protect(NextResponse.json({ enabled: true, session }));
+      if (!session && request.cookies.has(sessionCookie))
+        response.cookies.delete(sessionCookie);
+      return response;
     }
     if (operation !== "callback")
       return protect(NextResponse.json({ code: "NOT_FOUND" }, { status: 404 }));
@@ -56,6 +70,7 @@ export async function GET(request: NextRequest, context: Context) {
           identity.issuer,
           identity.subject,
           identity.expiresAt,
+          identity.refreshToken,
         );
         const previous = request.cookies.get(sessionCookie)?.value;
         if (previous) await store.revoke(previous);
@@ -115,8 +130,8 @@ export async function POST(request: NextRequest, context: Context) {
       return protect(
         NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
       );
-    const store = new AccountStore(database(config.databaseUrl));
-    if (operation === "login") {
+    const store = new AccountStore(database(config.databaseUrl), config);
+    if (operation === "login" || operation === "register") {
       const form = await request.formData();
       const locale = form.get("locale") === "en" ? "en" : "de";
       failureTarget = new URL(
@@ -129,7 +144,11 @@ export async function POST(request: NextRequest, context: Context) {
         verifier: secret(),
         locale,
       } as const;
-      const url = await authorizationUrl(config, flow);
+      const url = await authorizationUrl(
+        config,
+        flow,
+        operation === "register",
+      );
       const id = secret();
       await store.begin(id, flow);
       const response = NextResponse.redirect(url, 303);
@@ -144,7 +163,7 @@ export async function POST(request: NextRequest, context: Context) {
     }
     if (operation === "logout") {
       const token = request.cookies.get(sessionCookie)?.value ?? "";
-      const session = await store.session(token);
+      const session = await store.forLogout(token);
       const csrf = request.headers.get("x-kyrion-csrf") ?? "";
       const csrfBytes = Buffer.from(csrf);
       const expectedCsrf = Buffer.from(session?.csrf ?? "");
@@ -156,7 +175,14 @@ export async function POST(request: NextRequest, context: Context) {
         return protect(
           NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
         );
-      await store.revoke(token);
+      const refreshToken = await store.revoke(token);
+      if (refreshToken) {
+        try {
+          await revokeRefresh(config, refreshToken);
+        } catch {
+          /* Local logout already committed. */
+        }
+      }
       const response = NextResponse.json({ ok: true });
       response.cookies.delete(sessionCookie);
       return protect(response);

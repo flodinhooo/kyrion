@@ -46,8 +46,9 @@ is the current work order, with stable IDs and completion criteria.
   account endpoint were rechecked on 2026-11-12; real registration, login,
   verification/reset mail and local linking acceptance remain separate. Cloud
   invitations are not established by website login.
-- **Public website:** bilingual informational, Contact, Account, Privacy,
-  Download and Hardware pages are integrated. The audited source passes 46
+- **Public website:** customer browser registration, remembered account sessions,
+  a shared header account menu, and bilingual informational, Contact, Privacy,
+  Download and Hardware pages are integrated. The audited source passes 50
   isolated tests, lint, formatting, TypeScript and production build. Seven old
   generated builds were removed. Canonical-host and factual privacy corrections
   were published and verified on 2026-11-12 (commit `48d064a`); actual contact delivery,
