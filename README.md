@@ -19,7 +19,10 @@ The Web interface and public website support German and English.
 
 > **LLM proposes. Core decides. Adapter executes. Result confirms.**
 
-**Status reviewed 2026-11-07:** source work is integrated on `master`.
+**Website/documentation reviewed 2026-11-12:** website source is integrated on
+`master`; [current website acceptance](docs/status/2026-11-12-website-acceptance.md)
+separates passing local verification from outstanding production acceptance.
+Parallel installer work and older platform evidence retain their own scope.
 The [current status](docs/status/README.md) separates implementation, tests,
 deployment and physical/provider acceptance. The [active backlog](docs/status/TODO.md)
 is the current work order, with stable IDs and completion criteria.
@@ -39,8 +42,17 @@ is the current work order, with stable IDs and completion criteria.
 - **Optional central identity:** explicit [account linking, central login and
   unlinking](docs/unified-identity.md) preserve local accounts, roles and independent
   local password login. Website login grants no local membership. Real isolated
-  identity acceptance exists; the staged central-provider pilot does not establish
-  public registration, productive login or cloud invitations.
+  identity acceptance exists. Public HTTPS discovery and the enabled website
+  account endpoint were rechecked on 2026-11-12; real registration, login,
+  verification/reset mail and local linking acceptance remain separate. Cloud
+  invitations are not established by website login.
+- **Public website:** bilingual informational, Contact, Account, Privacy,
+  Download and Hardware pages are integrated. The audited source passes 46
+  isolated tests, lint, formatting, TypeScript and production build. Seven old
+  generated builds were removed. Canonical-host and factual privacy corrections
+  are local source changes awaiting publication; actual contact delivery,
+  account journeys, deployed abuse controls and installer downloads remain open.
+  See [website status](apps/website/STATUS.md) and KY-020–KY-024 in the backlog.
 - **HOME calendar:** local events and jointly editable native household events,
   explicit participants, revision conflicts, creator-only deletion, voluntary
   private/availability/details disclosure and manual selected-recipient Google
@@ -51,8 +63,11 @@ is the current work order, with stable IDs and completion criteria.
 - **Rooms, lighting and integrations:** persistent rooms/catalog/availability,
   Nanoleaf controls, selected Hue/Zigbee and MELK-OA20 Bluetooth commands via an
   authenticated gateway. [Home Assistant](docs/home-assistant-import.md) is a
-  bounded read-only import, awaiting full physical acceptance; direct Shelly code
-  remains experimental. Discovery does not grant control. Legacy button bindings
+  selected inventory import with separately consented light/switch power control
+  through Core. Source-built synthetic full-stack evidence is recorded in the
+  [2026-11-11 continuation](docs/status/2026-11-11-installer-continuation.md);
+  full physical acceptance remains open. Direct Shelly code remains experimental.
+  Discovery does not grant control. Legacy button bindings
   require explicit human review/resave before grants become effective.
 - **Media:** [Lounge](docs/lounge.md) includes Core-owned Spotify OAuth/Connect
   controls and validated YouTube links with a visible browser player. Phone-to-Pi
@@ -80,8 +95,9 @@ is the current work order, with stable IDs and completion criteria.
 
 The next acceptance gates are authenticated HOME/calendar use, explicit legacy
 binding review, optional productive central identity, physical Voice/audio and
-full-host/off-host recovery. Installer clean-room/release acceptance follows its
-own gates. Details and deferred work are in the [backlog](docs/status/TODO.md).
+full-host/off-host recovery. Website publication, mail, account and privacy/abuse
+acceptance are now explicit KY-020–KY-024 gates. Installer clean-room/release
+acceptance follows its own gates. Details are in the [backlog](docs/status/TODO.md).
 
 The [2026-11-06 Windows/Pi V46 report](docs/agent-handoffs/2026-11-06-v46-live-rollout.md)
 records actual Core/Web activation, original-key restore drills and anonymous
@@ -89,8 +105,12 @@ DE/EN production browser checks. It does not prove an authenticated owner/family
 journey, provider writes or hardware acceptance. The
 [isolated identity scenario](docs/agent-handoffs/2026-11-06-identity-master-integration.md)
 used real fixture services, separate from productive identity.
-The [Pi identity pilot](docs/agent-handoffs/2026-11-06-central-identity-pi-pilot.md)
-is loopback-only, with public TLS, SMTP, lifecycle and website prerequisites open.
+The [original Pi identity pilot](docs/agent-handoffs/2026-11-06-central-identity-pi-pilot.md)
+was loopback-only. [Later public transport and central SMTP evidence](docs/agent-handoffs/2026-11-07-central-identity-tunnel.md)
+and the [current website recheck](docs/status/2026-11-12-website-acceptance.md)
+supersede that blanket deployment description. Central SMTP evidence does not
+prove contact-form delivery from Vercel; lifecycle/recovery and real-user
+acceptance remain open.
 These reports are dated evidence, not current runtime-health guarantees.
 
 ## Architecture

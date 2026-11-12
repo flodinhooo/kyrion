@@ -9,7 +9,9 @@ import { authenticate, authorizationUrl } from "../src/lib/account/oidc";
 import { hash, secret } from "../src/lib/account/store";
 import { dictionaries } from "../src/lib/site";
 
-test("privacy resources disclose website account cookies and separate session storage in both languages", () => {
+test("privacy pages explain cookies and retention and are linked from the localized contact form", async ({
+  page,
+}) => {
   for (const locale of ["en", "de"] as const) {
     const sections = dictionaries[locale].legal.privacy.sections;
     expect(sections.some((section) => section.body.includes("HttpOnly"))).toBe(
@@ -24,6 +26,26 @@ test("privacy resources disclose website account cookies and separate session st
             : "Optionaler Website-Account"),
       ),
     ).toBe(true);
+    const prefix = locale === "en" ? "/en" : "";
+    await page.goto(`${prefix}/privacy`);
+    await expect(page.locator("main")).toContainText("HttpOnly");
+    await expect(
+      page.getByRole("heading", {
+        name:
+          locale === "en"
+            ? "Session validity and stored records"
+            : "Sitzungsgültigkeit und gespeicherte Datensätze",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.goto(`${prefix}/contact`);
+    const notice = page.getByRole("link", {
+      name: dictionaries[locale].contact.privacyLink,
+      exact: true,
+    });
+    await expect(notice).toHaveAttribute("href", `${prefix}/privacy`);
+    await notice.click();
+    await expect(page).toHaveURL(`http://127.0.0.1:3101${prefix}/privacy`);
   }
 });
 

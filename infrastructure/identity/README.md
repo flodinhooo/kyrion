@@ -1,7 +1,10 @@
 # Isolated Keycloak development environment
 
-For the separate, gated home-hosted pilot (production mode, fixed HTTPS issuer,
-loopback-only staging), see [PILOT.md](PILOT.md). Do not publish this development
+For the separate home-hosted provider, originally a loopback-only staged pilot
+with a fixed HTTPS issuer, see [PILOT.md](PILOT.md) and the
+[current public website/identity observations](../../docs/status/2026-11-12-website-acceptance.md).
+Do not infer current public availability from the original staging boundary.
+Do not publish this development
 Compose project or development realm to the internet.
 
 For the complete real Website→Web→Core→Keycloak browser flow, including

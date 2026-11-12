@@ -7,6 +7,17 @@ website BFF stores website-only opaque sessions in a dedicated central database;
 it does not implement account passwords, identity brokering or an OAuth server.
 Central account management and verified email remain in Keycloak.
 
+## Current acceptance (2026-11-12)
+
+The public anonymous session endpoint reports enabled=true and HTTPS provider
+discovery succeeds. The private local production file and example templates
+still default to disabled; that is not evidence that Vercel is disabled. The
+dedicated Neon setup has dated evidence, but current Vercel database settings
+and successful public user journeys were not authenticated or exercised in this
+audit. See [current acceptance](../../docs/status/2026-11-12-website-acceptance.md)
+and KY-022, within the wider KY-003 identity gate. No registration, reset mail or
+login/logout acceptance follows from the enabled flag alone.
+
 ## Configuration
 
 Copy `account.env.example` values to protected deployment configuration.
@@ -39,8 +50,9 @@ creation and audit deletion, and can be reapplied. The website does not use the
 owner/migration credential. The existing `pg` driver enables SCRAM channel binding
 when the server offers it, in addition to verified TLS.
 On Vercel configure a managed PostgreSQL endpoint suitable for the runtime,
-TLS and restricted credentials; the existing informational deployment does not
-already provide that infrastructure. No hosting or DNS changes are included.
+TLS and restricted credentials. The dedicated Neon provisioning described below
+is separate from confirming the current Vercel runtime's deployed configuration.
+No hosting or DNS changes are performed by these instructions.
 
 Enabled account configuration rejects malformed PostgreSQL URLs without including
 credentials in error messages. Production and every remote database require
@@ -57,8 +69,10 @@ differs from the provisioning credential. Only the `KYRION_WEBSITE_*` fields
 are needed by the account feature. `DATABASE_URL` is the same restricted runtime
 URL for tooling compatibility, not the provider-owner URL. Local files do not
 update Vercel settings automatically: import the private variables into the
-website project's Production environment only, retaining accounts disabled until
-activation acceptance. Do not copy production credentials into Preview or local
+website project's Production environment only. The initial provisioning retained
+accounts disabled; the public endpoint now reports enabled, while full acceptance
+is still open. Do not infer today's Vercel flag from the local file or copy
+production credentials into Preview or local
 installation configuration. Passwords and connection strings are never documentation.
 
 For local start use [the isolated identity environment](../../infrastructure/identity/README.md).
@@ -103,6 +117,11 @@ storage or silent indefinite renewal. Central suspension becomes effective at
 the next login; an already issued website session may remain valid for its
 bounded remaining duration. Website logout, central account suspension, local
 access suspension and removing a local account link are separate operations.
+These validity bounds are not data-retention promises: the current store removes
+expired flow rows when beginning a new flow, excludes expired sessions from reads
+and deletes a session on logout, while account/security records and backups have
+separate lifecycles. Confirm retention/deletion procedures under KY-024; do not
+describe token expiry as deletion of all stored records.
 Provider-wide logout/backchannel revocation is a future improvement; no claim
 of immediate global logout is made. Operators may revoke central website
 sessions directly by account UUID in `website_session` if incident response

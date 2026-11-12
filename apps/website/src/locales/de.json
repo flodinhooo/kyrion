@@ -49,6 +49,7 @@
     "honeypotLabel": "Dieses Feld leer lassen",
     "privacyAcknowledgement": "Ich stimme zu, dass meine Angaben zur Beantwortung meiner Anfrage verwendet werden dürfen.",
     "privacyNote": "Deine Anfrage wird per E-Mail gesendet. Bitte keine Passwörter oder sensiblen persönlichen Angaben eintragen.",
+    "privacyLink": "Datenschutzhinweise lesen",
     "send": "Nachricht senden",
     "sending": "Wird gesendet…",
     "successTitle": "Danke für deine Nachricht.",
@@ -573,6 +574,10 @@
         {
           "title": "Optionaler Website-Account",
           "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, kurzlebige Anmelde- und Sitzungsdatensätze sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt."
+        },
+        {
+          "title": "Sitzungsgültigkeit und gespeicherte Datensätze",
+          "body": "Website-Sitzungen sind zeitlich begrenzt und können durch Abmelden beendet werden. Ihr Ablauf löscht nicht sofort sämtliche Account-, Sitzungs- und Sicherheitsdatensätze oder deren Sicherungskopien. Kontaktanfragen können im empfangenden Postfach verbleiben. Aufbewahrung und Löschung müssen über die entsprechenden Betriebsverfahren behandelt werden; Löschanfragen kannst du an hello@kyrion.ch richten."
         },
         {
           "title": "Analyse und Tracking",

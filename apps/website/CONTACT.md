@@ -1,5 +1,11 @@
 # Public contact form operations
 
+Current acceptance: [2026-11-12 website report](../../docs/status/2026-11-12-website-acceptance.md),
+KY-021 for productive contact mail and KY-024 for deployed abuse/privacy
+operations. The source/tests are verified; Vercel SMTP settings and actual
+contact inbox delivery were not authenticated or exercised by that audit.
+Historical central-provider SMTP receipt does not close website contact mail.
+
 ## Architecture
 
 `/contact` (German) and `/en/contact` (English) use the public site's normal metadata, layout,
@@ -25,7 +31,8 @@ local parts, display names, lists or internationalized local parts. Limits:
 Lengths use JavaScript UTF-16 string units, matching HTML `maxLength`. Contact
 reason, experience and ecosystem choices are allowlisted. “None” is exclusive.
 Testing fields remain optional and are omitted from mail for other reasons.
-Privacy acknowledgement must be the boolean `true`; no policy link is invented.
+Privacy acknowledgement must be the boolean `true`. The form links directly to
+the real `/privacy` or `/en/privacy` page in the selected language.
 
 The route accepts only same-origin JSON POST requests with a maximum streamed
 body size of 32 KiB, including requests with absent/inaccurate Content-Length.
@@ -135,6 +142,9 @@ Provider references:
   procedures, and document Vercel/Infomaniak processing as appropriate. The required
   acknowledgement is not a complete policy. Bilingual `/privacy` pages now exist;
   their existence does not establish a completed legal or operational review.
+  The current copy distinguishes account-cookie/session validity from record
+  retention: expired sessions being denied is not deletion of account/audit data
+  or backups. Verify the actual deletion/retention procedures under KY-024.
 - Restrict mailbox access and monitor volume, delivery failures and provider
   sending limits. This endpoint has no newsletter subscription or marketing opt-in.
 - Client locking prevents accidental duplicates during submission and removes

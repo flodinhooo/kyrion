@@ -8,7 +8,7 @@ export function ContactPage({ t, locale }: { t: Dictionary; locale: Locale }) {
     <>
       <PageHero {...t.contact} />
       <Container className="grid items-start gap-10 py-14 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
-        <ContactForm t={t.contact} />
+        <ContactForm t={t.contact} locale={locale} />
         <aside className="space-y-8 lg:sticky lg:top-28">
           <div className="rounded-xl border border-border bg-muted/35 p-6">
             <MessageSquare

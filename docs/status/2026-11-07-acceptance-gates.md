@@ -1,5 +1,11 @@
 # KY-002–KY-005 software verification and operational gates
 
+Historical evidence from 2026-11-07. For later public website/identity
+observations and current website acceptance gates, use the
+[2026-11-12 website acceptance](2026-11-12-website-acceptance.md) and the
+[active backlog](TODO.md). This report's early loopback, disabled-website, SMTP
+and DNS observations are not current global status.
+
 This evidence supplements the existing [backlog](TODO.md); it is not another
 task list. Work starts on `master` at `fb3f87c`, preserving the installed Pi Web
 `871c46a` / `aaUX9C2_I6tMOcrV1sImr`. KY-001 is unchanged and awaits the actual

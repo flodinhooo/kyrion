@@ -46,8 +46,9 @@ in the historical [October product review](PRODUCT-STATUS.md). Spaces, optional
 central identity, personal Knowledge and HOME calendar work are integrated on
 master. Household events, voluntary calendar disclosure and manual selected
 Google delivery are implemented; real family/provider acceptance remains open.
-The one-Space and Business Voice guards remain. Public central identity requires
-separate operational activation; website login grants no local membership.
+The one-Space and Business Voice guards remain. The public website account API
+reports enabled as observed on 2026-11-12; actual user journeys are still open.
+Installation Core opt-ins remain separate; website login grants no local membership.
 
 The November content review updates Home, Product, Private/HOME, Business and
 Development in both locales without changing routes or design. About, Docs,

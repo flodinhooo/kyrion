@@ -2,8 +2,16 @@
 
 The central account is optional. Existing local users retain their usernames,
 Argon2id credentials, sessions, membership and roles. Enabling central login does
-not enroll or migrate anyone. [ADR 0039](adr/0041-optional-central-identity.md)
+not enroll or migrate anyone. [ADR 0041](adr/0041-optional-central-identity.md)
 records the provider and deployment decision.
+
+For current deployment observations, use the
+[2026-11-12 website acceptance](status/2026-11-12-website-acceptance.md). The
+public website account flag and HTTPS discovery are observable independently
+from installation Core opt-ins. They do not prove registration, recovery,
+website sessions or an authorized local account link. The original loopback pilot
+and later public transport/SMTP evidence are dated stages, not competing current
+deployment descriptions.
 
 ## Ownership and identifiers
 

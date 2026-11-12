@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { CheckCircle2, LoaderCircle, Send } from "lucide-react";
-import type { Dictionary } from "@/lib/site";
+import Link from "next/link";
+import { href, type Dictionary, type Locale } from "@/lib/site";
 import {
   ecosystems,
   experiences,
@@ -66,7 +67,7 @@ function Field({
   );
 }
 
-export function ContactForm({ t }: { t: Copy }) {
+export function ContactForm({ t, locale }: { t: Copy; locale: Locale }) {
   const [reason, setReason] = useState("");
   const [privacy, setPrivacy] = useState(false);
   const [selected, setSelected] = useState<Ecosystem[]>([]);
@@ -386,6 +387,12 @@ export function ContactForm({ t }: { t: Copy }) {
           <p className="mt-3 text-xs leading-6 text-muted-foreground">
             {t.privacyNote}
           </p>
+          <Link
+            className="mt-2 inline-flex min-h-11 items-center text-sm underline underline-offset-4 hover:text-foreground"
+            href={href(locale, "privacy")}
+          >
+            {t.privacyLink}
+          </Link>
         </div>
       </fieldset>
       {failure && (

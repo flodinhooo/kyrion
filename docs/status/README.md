@@ -1,7 +1,10 @@
 # Kyrion development status
 
-Last reviewed: 2026-11-07. Start with the [active backlog](TODO.md).
-Development continues on `master`; there is no pending worktree integration.
+Website/documentation reviewed: 2026-11-12. Start with the [active backlog](TODO.md)
+and [current website acceptance](2026-11-12-website-acceptance.md).
+Development continues on `master`; no additional worktree integration was found
+in the website audit. Unrelated installer work is in progress and is not included
+in the website acceptance. Other platform evidence retains its stated date.
 
 Maintenance baseline `4f6ea01` passed [hosted CI](https://github.com/flodinhooo/kyrion/actions/runs/42359230467).
 That completed round was not repeated. [Current KY-001 checks](2026-11-07-home-calendar-acceptance.md)
@@ -12,20 +15,29 @@ A correction makes conflict feedback visible; `871c46a` passed
 **KY-001 remains open** pending actual HOME/user acceptance.
 
 The [KY-002–KY-005 recheck](2026-11-07-acceptance-gates.md) records source-only
-binding/Voice fixes, real isolated identity acceptance, current DNSSEC failure
+binding/Voice fixes, real isolated identity acceptance, an earlier DNSSEC failure
 and same-host original-key restore evidence. Personal/physical/full-host/off-host
 acceptance stays open; no later source fix is silently deployed.
 
+The website audit removed seven unused generated builds, corrected canonical
+host/contact-origin templates and inaccurate DE/EN cookie disclosures, and passed
+46 isolated tests plus the production build, types, lint and formatting checks.
+The public account API currently reports enabled and public provider discovery
+works. The public pages still returned the older apex metadata and privacy copy
+on 2026-11-12; publishing the corrections and real mail/account acceptance remain
+open. These are KY-020–KY-024, not missing integration of generated directories.
+
 ## Current capabilities and evidence
 
-| Area | Implemented | Verification and limits |
-| --- | --- | --- |
-| Local platform | Core-owned local login, protected first owner, roles/invitations, audit, one HOME/BUSINESS Space per installation | [Security baseline](2026-10-11-security-hardening.md), [Spaces audit](../spaces-tenant-audit.md). Multi-Space runtime and Business Voice stay blocked. |
-| Optional identity | Explicit central-account linking/login/unlink, independent local password login, optional website account | [Real isolated Keycloak/Mailpit/Core/Web/Website acceptance](../agent-handoffs/2026-11-06-identity-master-integration.md). [Pi pilot](../agent-handoffs/2026-11-06-central-identity-pi-pilot.md) is loopback only; productive central login is not activated. |
-| HOME calendar | Joint native events, selected participants, revision conflicts, voluntary personal disclosure, explicit manual Google delivery/retry and retained copies | [Source results](../agent-handoffs/2026-11-06-home-calendar-results.md), [disclosure](../agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md), [delivery](../agent-handoffs/2026-11-06-household-calendar-delivery-results.md), [browser fixtures](../agent-handoffs/2026-11-06-calendar-usability-results.md). Authenticated real-family/provider acceptance remains open. |
-| Devices/media | Nanoleaf, selected Zigbee/Hue and OA20 commands; HA read-only import; Spotify and YouTube Lounge | [Hardware roadmap](../hardware-roadmap.md), [HA](../home-assistant-import.md), [Lounge](../lounge.md). Device-specific evidence is bounded; legacy button grants require explicit review. |
-| AI/Velora/Knowledge | Provider-neutral chat/proposals, local and opt-in cloud profiles, personal context/Knowledge; local wake/STT/batch TTS and voice sessions | [AI](../ai-model-providers.md), [K-Data](../agent-handoffs/kdata-handover.md), [Voice](2026-10-31-voice-no-speech-rollout.md). Cloud adapters simulated; real RAG, audio/latency and lifecycle acceptance remain open. |
-| Installer | Guarded fresh-install tooling, bundle digest/signature verification and templates | [Implementation status](../installer-v1-implementation-status.md). No installable public signed release or clean-host acceptance. |
+| Area                | Implemented                                                                                                                                              | Verification and limits                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local platform      | Core-owned local login, protected first owner, roles/invitations, audit, one HOME/BUSINESS Space per installation                                        | [Security baseline](2026-10-11-security-hardening.md), [Spaces audit](../spaces-tenant-audit.md). Multi-Space runtime and Business Voice stay blocked.                                                                                                                                                                                                                                    |
+| Optional identity   | Explicit central-account linking/login/unlink, independent local password login, optional website account                                                | [Real isolated acceptance](../agent-handoffs/2026-11-06-identity-master-integration.md); [later public ingress/central SMTP evidence](../agent-handoffs/2026-11-07-central-identity-tunnel.md). Public website account API enabled and HTTPS discovery rechecked on 2026-11-12. Real public user journeys and installation Core opt-ins are not certified by that check.                  |
+| Public website      | DE/EN informational, Contact, Account, Privacy, Download and Hardware routes; separate server-side account/contact boundaries                            | [Current acceptance](2026-11-12-website-acceptance.md), [detailed website audit](../../apps/website/STATUS.md). 46 isolated tests and build/types/lint/format pass; seven old generated builds removed. Local corrections await publication. Actual contact mail, public account journeys and deployed abuse/privacy controls remain open; release catalog empty.                         |
+| HOME calendar       | Joint native events, selected participants, revision conflicts, voluntary personal disclosure, explicit manual Google delivery/retry and retained copies | [Source results](../agent-handoffs/2026-11-06-home-calendar-results.md), [disclosure](../agent-handoffs/2026-11-06-personal-calendar-disclosure-results.md), [delivery](../agent-handoffs/2026-11-06-household-calendar-delivery-results.md), [browser fixtures](../agent-handoffs/2026-11-06-calendar-usability-results.md). Authenticated real-family/provider acceptance remains open. |
+| Devices/media       | Nanoleaf, selected Zigbee/Hue and OA20 commands; selected HA inventory and separately consented power control; Spotify and YouTube Lounge                | [Hardware roadmap](../hardware-roadmap.md), [HA](../home-assistant-import.md), [Lounge](../lounge.md). Device-specific evidence is bounded; legacy button grants require explicit review.                                                                                                                                                                                                 |
+| AI/Velora/Knowledge | Provider-neutral chat/proposals, local and opt-in cloud profiles, personal context/Knowledge; local wake/STT/batch TTS and voice sessions                | [AI](../ai-model-providers.md), [K-Data](../agent-handoffs/kdata-handover.md), [Voice](2026-10-31-voice-no-speech-rollout.md). Cloud adapters simulated; real RAG, audio/latency and lifecycle acceptance remain open.                                                                                                                                                                    |
+| Installer           | Guarded fresh-install tooling, bundle digest/signature verification and templates                                                                        | [Implementation status](../installer-v1-implementation-status.md), [committed Nov11 continuation](2026-11-11-installer-continuation.md): synthetic fresh-stack/recovery and developer-native artifacts have evidence; ongoing native Windows work is separate. No installable public signed release or clean-host acceptance.                                                             |
 
 ## Deployment is separate
 

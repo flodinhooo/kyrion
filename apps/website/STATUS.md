@@ -2,6 +2,9 @@
 
 Reviewed **2026-11-12**. This is the current website status; older review and
 handover documents describe their respective dates, not present production health.
+The current platform entry point is the
+[website acceptance](../../docs/status/2026-11-12-website-acceptance.md); open
+outcomes are KY-020–KY-024 in the [active backlog](../../docs/status/TODO.md#website-acceptance).
 
 ## Result
 
@@ -64,18 +67,30 @@ links describe those dated runs and are not required runtime paths.
 
 ## Still open, with concrete completion evidence
 
-| Priority                 | Item                                   | What closes it                                                                                                                                                                                                                                                                                                                            |
-| ------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P1                       | Deploy the audited corrections         | Review and deploy this source to the Vercel project; verify canonical, OG, robots, sitemap and DE/EN privacy text on the deployed final host. Current production's exact deployment commit was not accessible in this audit.                                                                                                              |
-| P1                       | Production contact mail                | Inspect the seven server-only Vercel contact variables without exposing values; confirm `CONTACT_FORM_ORIGIN=https://www.kyrion.ch`. Submit an explicitly authorized owner test and confirm inbox/spam, Reply-To and error handling. No real mail was sent by this audit. Source does not read the Pi's SMTP password file automatically. |
-| P1                       | Real central account journey           | With an authorized test account, verify registration availability, verification/reset mail, login callback, persisted session, logout and expiry in production. The public enabled flag and provider discovery alone are insufficient. Do not infer these journeys from the locally disabled test suite.                                  |
-| P1 before wider exposure | Abuse controls and operational privacy | Confirm deployed request limits for `POST /api/contact` in Vercel or another distributed boundary. Source exposes an abuse-check extension point but no shared limiter; platform rules were not accessible. Review privacy content, provider handling, retention/deletion and mailbox ownership against actual operations.                |
-| Release gate             | Actual installer downloads             | `src/content/releases.json` contains no releases. Publish and validate the intended signed/native artifacts, then populate the catalog from that publication. Download/Hardware pages are implemented; an empty catalog intentionally offers no installer links. This does not establish that no release exists anywhere else.            |
-| Planned scope            | Dedicated docs portal/search/history   | The Docs page links to real repository guides. A separate documentation portal, search and historical article browser remain planned, not missing integration from the removed build folders.                                                                                                                                             |
+| Priority                 | Item                                           | What closes it                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1                       | KY-020: Deploy the audited corrections         | Review and deploy this source to the Vercel project; verify canonical, OG, robots, sitemap and DE/EN privacy text on the deployed final host. Current production's exact deployment commit was not accessible in this audit.                                                                                                              |
+| P1                       | KY-021: Production contact mail                | Inspect the seven server-only Vercel contact variables without exposing values; confirm `CONTACT_FORM_ORIGIN=https://www.kyrion.ch`. Submit an explicitly authorized owner test and confirm inbox/spam, Reply-To and error handling. No real mail was sent by this audit. Source does not read the Pi's SMTP password file automatically. |
+| P1                       | KY-022: Real central account journey           | With an authorized test account, verify registration availability, verification/reset mail, login callback, persisted session, logout and expiry in production. The public enabled flag and provider discovery alone are insufficient. Do not infer these journeys from the locally disabled test suite.                                  |
+| P1 before wider exposure | KY-024: Abuse controls and operational privacy | Confirm deployed request limits for `POST /api/contact` in Vercel or another distributed boundary. Source exposes an abuse-check extension point but no shared limiter; platform rules were not accessible. Review privacy content, provider handling, retention/deletion and mailbox ownership against actual operations.                |
+| Release gate             | KY-023: Actual installer downloads             | `src/content/releases.json` contains no releases. Publish and validate the intended signed/native artifacts, then populate the catalog from that publication. Download/Hardware pages are implemented; an empty catalog intentionally offers no installer links. This does not establish that no release exists anywhere else.            |
+| Planned scope            | Dedicated docs portal/search/history           | The Docs page links to real repository guides. A separate documentation portal, search and historical article browser remain planned, not missing integration from the removed build folders.                                                                                                                                             |
 
 No authenticated Vercel connector or CLI was available. Environment values,
 deployment logs and firewall rules therefore remain unverified; no production
 settings, DNS, database, identity account or public deployment was changed.
+
+## Documentation and privacy follow-up
+
+The root README, status index, single active TODO and continuation context now
+share the same current acceptance report and KY-020–KY-024 gates. Account and
+identity instructions distinguish the old loopback staging from current public
+enabled/discovery observations; historical evidence is kept dated. The current
+privacy pages explicitly distinguish session validity from stored-record and
+backup retention, and each contact form links to its localized privacy page.
+The existing browser regression now follows those links and checks rendered
+cookie/retention copy in both languages. No retention duration or completed legal
+review is invented. No further obsolete `.next-*` folders were found on recheck.
 
 ## Final verification
 
@@ -91,7 +106,13 @@ pnpm --filter website test
 
 Final results after the corrective changes: **ESLint passed, Prettier passed,
 TypeScript passed, production build passed, all 46 Playwright tests passed**
-(complete final suite: 14.4 seconds). The initial unchanged baseline had 44
+(complete documentation/privacy follow-up suite: 19.0 seconds). The initial unchanged baseline had 44
 passing tests and five formatting failures. The two added regressions cover the
 contact template's final origin and bilingual account-cookie disclosure; existing
 metadata, sitemap and robots checks now enforce the final public host.
+
+The documentation/privacy follow-up also verifies rendered DE/EN cookie and
+retention content, follows each contact form's localized privacy link, and checks
+relative documentation links plus unique active backlog IDs. The current public
+recheck still sees the old privacy copy and canonical host, so publication and
+real production acceptance remain open.

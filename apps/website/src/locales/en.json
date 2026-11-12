@@ -49,6 +49,7 @@
     "honeypotLabel": "Leave this field empty",
     "privacyAcknowledgement": "I agree that my information may be used to respond to my inquiry.",
     "privacyNote": "Your inquiry is sent by email. Please do not include passwords or sensitive personal details.",
+    "privacyLink": "Read privacy notice",
     "send": "Send message",
     "sending": "Sending…",
     "successTitle": "Thank you for getting in touch.",
@@ -573,6 +574,10 @@
         {
           "title": "Optional website account",
           "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, short-lived sign-in and session records, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate."
+        },
+        {
+          "title": "Session validity and stored records",
+          "body": "Website sessions have a limited validity and can be ended by signing out. Session expiry alone does not immediately delete all account, session and security-event records or their backups. Contact inquiries may remain in the receiving mailbox. Retention and deletion must be handled through the corresponding operating procedures; contact hello@kyrion.ch with a deletion request."
         },
         {
           "title": "Analytics and tracking",
