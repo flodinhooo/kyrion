@@ -274,3 +274,38 @@ explains persistent cookies and encrypted renewal records; expiry is not a data
 retention promise. Live authenticated renewal, new customer mailbox completion
 and operational privacy/abuse review remain KY-022/KY-024 acceptance rather than
 claims derived from local fixtures.
+
+## Visible code-linking follow-up
+
+The owner clarified that the local linking entry must be prominent and its code
+must be entered on the website. ADR 0052 records this user flow before changes.
+The local Profile now starts with its own Link account section and navigation
+item; the avatar targets that section. The code is large and has Copy/Open
+website actions. Official-provider operations open the website's localized
+account code-entry tab. Provider approval automatically completes LINK through
+Core's unchanged session-bound, one-use completion endpoint. Password proof,
+provider validation, expiry, identity uniqueness, permissions and audit remain.
+
+The website account menu and account navigation now expose Link account with a
+real code form. Same-origin/session/CSRF checks precede a fixed-issuer device
+verification redirect. Invalid codes produce localized errors. No webhook,
+local callback host, general relay, installation DB access or automatic email
+matching is introduced. The website does not assert link success from entry.
+German labels are stored as Unicode source; the earlier lossy shell-generated
+question marks were corrected in the preceding redesign. Fresh browser loading
+is required for already-open old application bundles.
+
+Verification: Website lint, strict types and production build passed; 50 regular
+Website tests passed with the opt-in disposable-DB test intentionally skipped.
+Local Web lint, strict types, 277 unit tests and production build passed. The
+real isolated Keycloak/Mailpit/PostgreSQL/Core/Website/Web acceptance passed
+(1 test, 2.0 minutes), including real registration/mail verification, website
+code entry, automatic local LINK, unchanged Space rights, central local-login
+expiry, provider outage/local password login, unlink and remembered website
+session across reload/short proof expiry, then website logout. The initial
+cold provider startup exceeded its readiness window; the rerun used the same
+isolated stack after readiness. An old final assertion expecting website expiry
+was updated to verify the requested remembered behavior. Test service containers
+were stopped afterward; personal Windows/Pi services and data were preserved.
+Generated test-only tsconfig additions were compared structurally and restored.
+Historical earlier counts retain their scope.

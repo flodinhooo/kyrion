@@ -758,7 +758,17 @@
     "manage": "Kontoeinstellungen",
     "manageHelp": "Verwalte deine persönlichen Angaben, dein Passwort und die Sicherheit deines Accounts.",
     "openSettings": "Kontoeinstellungen öffnen",
-    "checking": "Account wird geladen …"
+    "checking": "Account wird geladen …",
+    "accountNavigation": "Account-Bereiche",
+    "linkTab": "Account verknüpfen",
+    "linkTitle": "Code aus deiner lokalen Kyrion-App eingeben",
+    "linkHelp": "Öffne in deiner lokalen App Profil → Account verknüpfen. Bestätige dort dein lokales Passwort und gib den angezeigten Code hier ein.",
+    "linkCodeLabel": "Verknüpfungscode",
+    "linkHint": "Der Code besteht aus acht Zeichen, zum Beispiel ABCD-EFGH.",
+    "linkSubmit": "Code bestätigen",
+    "linkOutcome": "Bestätige anschließend deinen Account auf der Anmeldeseite. Deine lokale App schließt die Verknüpfung automatisch ab und zeigt dir den Erfolg.",
+    "linkCodeInvalid": "Bitte gib den achtstelligen Code aus deiner lokalen App ein.",
+    "linkSignIn": "Melde dich bitte an, um deinen lokalen Account zu verknüpfen."
   },
   "download": {
     "eyebrow": "KYRION-INSTALLER",

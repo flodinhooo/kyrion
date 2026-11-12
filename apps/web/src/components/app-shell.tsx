@@ -431,10 +431,10 @@ export function AppShell({ children, userId, username, canInvite = false, roles 
             </Sheet>
             <div className="topbar-title">
               <span>{pageTitle}</span>
-              {space && <small style={{ maxWidth: "35vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Link href="/settings/space">{space.name} ? {space.type === "HOME" ? spaceMessages[locale].home : spaceMessages[locale].business}</Link> ? {roles.join(", ")}</small>}
+              {space && <small style={{ maxWidth: "35vw", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Link href="/settings/space">{space.name} · {space.type === "HOME" ? spaceMessages[locale].home : spaceMessages[locale].business}</Link> · {roles.join(", ")}</small>}
             </div>
             <div className="topbar-actions">
-              <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile" aria-label={t.profile} title={username}>
+              <Link className={`profile-button ${pathname === "/profile" ? "active" : ""}`} href="/profile#account-link" aria-label={t.profile} title={username}>
                 <span>{username.slice(0, 1).toUpperCase()}</span>
                 <Icons.user />
               </Link>

@@ -8,12 +8,24 @@ import { useAccountSession } from "@/components/account-session";
 export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
   const { status, error, logout, busy } = useAccountSession();
   const [code, setCode] = useState("");
+  const [connecting, setConnecting] = useState(false);
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("error");
     if (value) {
-      window.history.replaceState(null, "", window.location.pathname);
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.hash,
+      );
       queueMicrotask(() => setCode(value));
     }
+    const syncTab = () => setConnecting(window.location.hash === "#connect");
+    const initial = window.setTimeout(syncTab, 0);
+    window.addEventListener("hashchange", syncTab);
+    return () => {
+      clearTimeout(initial);
+      window.removeEventListener("hashchange", syncTab);
+    };
   }, []);
   const signedIn = Boolean(status?.session);
   return (
@@ -26,11 +38,15 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       </p>
       {(error || code) && (
         <p role="alert" className="mt-5">
-          {error || code === "ACCOUNT_UNAVAILABLE"
-            ? t.account.unavailable
-            : code === "ACCOUNT_CANCELLED"
-              ? t.account.cancelled
-              : t.account.failed}
+          {code === "CONNECT_CODE_INVALID"
+            ? t.account.linkCodeInvalid
+            : code === "CONNECT_SIGN_IN_REQUIRED"
+              ? t.account.linkSignIn
+              : error || code === "ACCOUNT_UNAVAILABLE"
+                ? t.account.unavailable
+                : code === "ACCOUNT_CANCELLED"
+                  ? t.account.cancelled
+                  : t.account.failed}
         </p>
       )}
       {!status && !error && (
@@ -43,7 +59,32 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       )}
       {signedIn ? (
         <div className="mt-8 space-y-6">
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <nav
+            aria-label={t.account.accountNavigation}
+            className="flex flex-wrap gap-2 rounded-xl border border-border p-2"
+          >
+            <a
+              href="#overview"
+              onClick={() => setConnecting(false)}
+              aria-current={!connecting ? "page" : undefined}
+              className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-muted aria-[current=page]:bg-muted"
+            >
+              {t.account.overview}
+            </a>
+            <a
+              href="#connect"
+              onClick={() => setConnecting(true)}
+              aria-current={connecting ? "page" : undefined}
+              className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-muted aria-[current=page]:bg-muted"
+            >
+              {t.account.linkTab}
+            </a>
+          </nav>
+          <div
+            hidden={connecting}
+            id="overview"
+            className="rounded-2xl border border-border bg-card p-6"
+          >
             <h2 className="text-xl font-semibold">{t.account.manage}</h2>
             <p className="mt-3 text-muted-foreground">{t.account.manageHelp}</p>
             <form action="/api/account/manage" method="get">
@@ -55,22 +96,52 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
               </button>
             </form>
           </div>
-          <details className="rounded-2xl border border-border p-6">
-            <summary className="cursor-pointer text-lg font-semibold">
-              {t.account.connectTitle}
-            </summary>
-            <p className="mt-4 text-muted-foreground">
-              {t.account.connectIntro}
-            </p>
-            <ol className="mt-5 list-decimal space-y-4 pl-5 text-muted-foreground">
-              {t.account.connectSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
+          <section
+            hidden={!connecting}
+            id="connect"
+            className="rounded-2xl border border-border bg-card p-6 sm:p-8"
+          >
+            <h2 className="text-2xl font-semibold">{t.account.linkTitle}</h2>
+            <p className="mt-3 text-muted-foreground">{t.account.linkHelp}</p>
+            <form
+              action="/api/account/connect"
+              method="post"
+              className="mt-6 space-y-4"
+            >
+              <input type="hidden" name="locale" value={locale} />
+              <input
+                type="hidden"
+                name="csrf"
+                value={status?.session?.csrf ?? ""}
+              />
+              <label htmlFor="installation-code" className="block font-medium">
+                {t.account.linkCodeLabel}
+              </label>
+              <input
+                id="installation-code"
+                name="userCode"
+                placeholder="ABCD-EFGH"
+                autoComplete="one-time-code"
+                spellCheck={false}
+                autoCapitalize="characters"
+                minLength={8}
+                maxLength={12}
+                required
+                aria-describedby="installation-code-hint"
+                className="min-h-14 w-full rounded-xl border border-border bg-background px-4 py-3 font-mono text-2xl tracking-widest uppercase"
+              />
+              <p
+                id="installation-code-hint"
+                className="text-sm text-muted-foreground"
+              >
+                {t.account.linkHint}
+              </p>
+              <Button type="submit">{t.account.linkSubmit}</Button>
+            </form>
             <p className="mt-5 text-sm text-muted-foreground">
-              {t.account.connectUnavailable}
+              {t.account.linkOutcome}
             </p>
-          </details>
+          </section>
           <Button
             variant="outline"
             disabled={busy}

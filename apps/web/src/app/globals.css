@@ -413,6 +413,18 @@ button, textarea { font: inherit; }
 .profile-backup-section { margin-top: 6px; }
 .profile-placeholder { cursor: default; }
 .settings-link-card.profile-security-panel { display: block; cursor: default; }
+.profile-account-link-section { margin-top: 8px; }
+.account-link-panel { border-color: var(--border-strong); background: var(--surface-muted); }
+.account-link-panel > h2 { margin: 0 0 10px; font-size: 20px; }
+.account-link-panel > p { margin: 8px 0; color: var(--text-muted); line-height: 1.6; }
+.account-link-panel > .auth-form { width: min(560px, 100%); margin-top: 20px; }
+.account-link-code { display: grid; gap: 10px; padding: 20px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--surface); text-align: center; }
+.account-link-code > span { color: var(--text-muted); font-size: 13px; }
+.account-link-code code { color: var(--primary); font-size: clamp(26px, 5vw, 38px); font-weight: 800; letter-spacing: .12em; overflow-wrap: anywhere; }
+.account-link-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.account-link-actions button, .account-link-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 11px 18px; border: 1px solid var(--border-strong); border-radius: 11px; font-size: 14px; font-weight: 750; text-decoration: none; }
+.account-link-actions .account-link-copy { width: auto; background: var(--surface); color: var(--primary); }
+.account-link-open { background: var(--primary); color: var(--primary-foreground, white); }
 .settings-link-card.profile-sessions-panel { display: block; cursor: default; }
 .session-panel-heading { display: grid; gap: 4px; }
 .session-list { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }

@@ -1,5 +1,8 @@
 export const centralMessages = {
   en: {
+    navLabel: "Link account", linkIntro: "Use your Kyrion account to sign in to this installation. Your data and local access stay here.",
+    websiteHelp: "Enter this code on the Kyrion website, then approve the connection. This page finishes automatically.",
+    openWebsite: "Enter code on website", copyCode: "Copy code", copied: "Code copied", copyFailed: "Select and copy the code above.", finishing: "Finishing connection…",
     title: "Kyrion account", localLogin: "Sign in locally", login: "Sign in with Kyrion account",
     connect: "Connect Kyrion account", localOnly: "Use locally only", setupChoice: "Account connection",
     setupHelp: "First create a protected local account. You can then connect your Kyrion account. Your local password remains available offline.",
@@ -31,6 +34,9 @@ export const centralMessages = {
     },
   },
   de: {
+    navLabel: "Account verknüpfen", linkIntro: "Melde dich künftig mit deinem Kyrion-Account an dieser Installation an. Deine Daten und dein lokaler Zugang bleiben hier.",
+    websiteHelp: "Gib diesen Code auf der Kyrion-Website ein und bestätige die Verbindung. Diese Seite schließt sie automatisch ab.",
+    openWebsite: "Code auf Website eingeben", copyCode: "Code kopieren", copied: "Code kopiert", copyFailed: "Markiere und kopiere den Code oben.", finishing: "Verbindung wird abgeschlossen …",
     title: "Kyrion-Account", localLogin: "Lokal anmelden", login: "Mit Kyrion-Account anmelden",
     connect: "Kyrion-Account verbinden", localOnly: "Nur lokal verwenden", setupChoice: "Account-Verknüpfung",
     setupHelp: "Erstelle zuerst einen geschützten lokalen Zugang. Anschliessend kannst du deinen Kyrion-Account verbinden. Dein lokales Passwort bleibt offline nutzbar.",

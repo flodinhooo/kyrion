@@ -379,14 +379,29 @@ test("customer account menu, browser registration and local help work in both la
         await expect(
           page.getByRole("heading", { name: copy.menu, exact: true }),
         ).toBeVisible();
+        await page.locator("header summary").click();
+        await page
+          .getByRole("navigation", { name: copy.menu })
+          .getByRole("link", { name: copy.linkTab })
+          .click();
         await expect(
-          page.getByText(copy.connectIntro, { exact: true }),
-        ).not.toBeVisible();
-        await page.locator("main summary").click();
-        await expect(page.locator("main ol li")).toHaveCount(3);
-        await expect(
-          page.getByText(copy.connectIntro, { exact: true }),
+          page.getByLabel(copy.linkCodeLabel, { exact: true }),
         ).toBeVisible();
+        await page
+          .getByRole("navigation", { name: copy.accountNavigation })
+          .getByRole("link", { name: copy.linkTab })
+          .click();
+        await expect(
+          page.getByLabel(copy.linkCodeLabel, { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.locator(
+            'form[action="/api/account/connect"] input[name="csrf"]',
+          ),
+        ).toHaveValue("fixture-csrf");
+        await expect(
+          page.locator('form[action="/api/account/connect"]'),
+        ).toHaveAttribute("method", "post");
         await expect(page.locator("main")).not.toContainText("15");
         await page.locator("header summary").click();
         await page.setViewportSize({ width: 320, height: 900 });

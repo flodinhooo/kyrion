@@ -19,13 +19,14 @@ in the signed identity proof before a website session is issued.
 
 The header has a shared account control on desktop and mobile. Signed-in users
 get account overview, provider account settings and logout. The account page
-shows customer actions; local linking help is collapsed. No technical expiry
+shows customer actions and a separate Link account tab with code entry. No technical expiry
 countdown or invitation request is shown. The shared session state rechecks on
 focus, visibility and once per minute while visible, with stale-request guards
 so an old request cannot resurrect the UI after logout.
 
-Local connection still requires local password login, Profile / Kyrion account /
-Connect, provider code approval and explicit local confirmation. Website login
+Local connection still requires local password login, Profile / Link account, local password confirmation,
+website code entry and provider approval. The local UI completes the approved
+LINK automatically through Core; LOGIN keeps its existing confirmation. Website login
 never guesses a local address, sends local credentials or joins accounts by email.
 See [identity guide](../../docs/unified-identity.md) and the
 [current acceptance](../../docs/status/2026-11-12-website-acceptance.md).
@@ -174,3 +175,16 @@ loopback database on 15559/website_acceptance, it exercises real PostgreSQL,
 column-level least privilege, concurrent renewal/logout, revoked or changed
 identities, temporary outages and absolute expiry. Ordinary CI skips only that
 explicit database test; no production credentials are accepted by it.
+
+## Visible code linking
+
+[ADR 0052](../../docs/adr/0052-visible-code-account-linking.md) records the
+streamlined consent/UI flow. The header exposes Link account, opening
+`/account#connect` (or `/en/account#connect`). The code form POSTs to
+`/api/account/connect`; it requires the website session, exact configured Origin
+and session-bound CSRF. It normalizes the eight-character code and redirects
+only to the configured issuer's `/device` page with `user_code` and locale.
+No user-controlled host, local address or callback is accepted. The provider
+checks the code; the local Core alone creates the link after signed proof.
+The website does not claim success from submission or access local databases.
+No webhook, inbound installation port or new general token relay is introduced.

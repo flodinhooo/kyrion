@@ -34,9 +34,10 @@ cross-client identity join or invented global-account claim.
 1. **Local only:** use the existing protected first-owner setup or an invitation,
    choose “Only use locally”, and log in with the local password. Neither
    provider configuration nor internet access is required.
-2. **Connect:** log in locally, open Profile/Identity, enter the current local
-   password, authorize the displayed device code at the configured Keycloak,
-   and explicitly confirm the local link. The current local session must remain
+2. **Connect:** log in locally, open Profile / Link account, enter the current local
+   password and explicitly start linking. Enter the code on the website Account /
+   Link account tab and approve it at the configured provider. The local UI
+   completes the approved link automatically. The current local session must remain
    valid throughout. Codes/operations expire, are one-use and cannot switch user
    or local session. A restart abandons pending operations.
 3. **Central login:** authorize a fresh device code and confirm. Only an existing
@@ -144,3 +145,21 @@ controlled registration/email delivery, client policy and ingress abuse limits.
 Development credentials are operator supplied and ignored; tests are not evidence
 of production DNS, mail, TLS or release acceptance. See the
 [handover](agent-handoffs/unified-identity-handover.md) for actual test evidence.
+
+## Code linking user experience
+
+The first local Profile section and its first navigation item are Link account.
+The avatar shortcut targets `/profile#account-link`. A prominent code, Copy and
+Open website actions replace the buried security-card workflow. Official
+`auth.kyrion.ch/realms/kyrion/device` operations open the official website's
+localized code-entry tab; other/isolated providers retain their own verification
+page. Codes are entered in a same-origin, CSRF-protected website form and passed
+only to the configured provider. The website stores no installation membership.
+
+After local password-confirmed Link and provider approval, the local UI calls
+Core's existing one-use `complete(confirm:true)` automatically. The current
+local session, operation secret, expiry and signed identity remain required;
+Core remains authoritative. This removes only the redundant final LINK click,
+as recorded in [ADR 0052](adr/0052-visible-code-account-linking.md). LOGIN and
+unlink confirmation remain unchanged. There are no new webhooks or inbound
+callbacks to local installations.

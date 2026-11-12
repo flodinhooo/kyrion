@@ -8,6 +8,10 @@ import {
   revokeRefresh,
 } from "@/lib/account/oidc";
 import { AccountStore, database, secret } from "@/lib/account/store";
+import {
+  normalizedLinkCode,
+  deviceVerificationUrl,
+} from "@/lib/account/device-link";
 
 export const runtime = "nodejs";
 const sessionCookie = "kyrion_website_session";
@@ -131,6 +135,42 @@ export async function POST(request: NextRequest, context: Context) {
         NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
       );
     const store = new AccountStore(database(config.databaseUrl), config);
+    if (operation === "connect") {
+      const form = await request.formData();
+      const locale = form.get("locale") === "en" ? "en" : "de";
+      failureTarget = new URL(
+        locale === "en" ? "/en/account#connect" : "/account#connect",
+        config.origin,
+      );
+      const session = await store.session(
+        request.cookies.get(sessionCookie)?.value ?? "",
+      );
+      if (!session) {
+        failureTarget.searchParams.set("error", "CONNECT_SIGN_IN_REQUIRED");
+        return protect(NextResponse.redirect(failureTarget, 303));
+      }
+      const supplied = form.get("csrf");
+      const expected = Buffer.from(session.csrf);
+      const actual = Buffer.from(typeof supplied === "string" ? supplied : "");
+      if (
+        expected.length !== actual.length ||
+        !timingSafeEqual(expected, actual)
+      )
+        return protect(
+          NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
+        );
+      const code = normalizedLinkCode(form.get("userCode"));
+      if (!code) {
+        failureTarget.searchParams.set("error", "CONNECT_CODE_INVALID");
+        return protect(NextResponse.redirect(failureTarget, 303));
+      }
+      return protect(
+        NextResponse.redirect(
+          deviceVerificationUrl(config.issuer, code, locale),
+          303,
+        ),
+      );
+    }
     if (operation === "login" || operation === "register") {
       const form = await request.formData();
       const locale = form.get("locale") === "en" ? "en" : "de";

@@ -72,6 +72,7 @@ async function approveDevice(
   context: BrowserContext,
   username: string,
   password: string,
+  viaWebsite = false,
 ) {
   const section = page.getByRole("region", {
     name: "Kyrion account",
@@ -84,9 +85,19 @@ async function approveDevice(
   if (!href || new URL(href).origin !== provider)
     throw new Error("Unexpected verification origin");
   const approval = await context.newPage();
-  await approval.goto(href);
-  await approval.locator('input[type="text"]').fill(userCode);
-  await approval.locator('input[type="submit"],button[type="submit"]').click();
+  if (viaWebsite) {
+    await approval.goto(`${website}/en/account#connect`);
+    await approval.getByLabel("Linking code", { exact: true }).fill(userCode);
+    await approval
+      .getByRole("button", { name: "Confirm code", exact: true })
+      .click();
+  } else {
+    await approval.goto(href);
+    await approval.locator('input[type="text"]').fill(userCode);
+    await approval
+      .locator('input[type="submit"],button[type="submit"]')
+      .click();
+  }
   if (await approval.locator("#password").isVisible()) {
     if (await approval.locator("#username").isVisible())
       await approval.locator("#username").fill(username);
@@ -156,9 +167,8 @@ test("real registration, verified email, website and local login/link/offline/un
 
   await page.goto(`${website}/en/account`);
   await page
-    .getByRole("button", { name: "Sign in with Kyrion Account", exact: true })
+    .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await page.getByRole("link", { name: "Register", exact: true }).click();
   await page.locator("#username").fill(centralUsername);
   await page.locator("#email").fill(email);
   await page.locator("#firstName").fill("Isolated");
@@ -206,18 +216,18 @@ test("real registration, verified email, website and local login/link/offline/un
     await page.getByRole("button", { name: "Submit", exact: true }).click();
   }
   await expect(
-    page.getByText("You are signed in to the Kyrion website."),
+    page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible({ timeout: 30_000 });
-  await page.getByRole("button", { name: "Sign out of this website" }).click();
-  await page
-    .getByRole("button", { name: "Sign in with Kyrion Account", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   if (await page.locator("#username").count())
     await page.locator("#username").fill(centralUsername);
-  await page.locator("#password").fill(centralPassword);
-  await page.locator("#kc-login").click();
+  if (await page.locator("#password").isVisible()) {
+    await page.locator("#password").fill(centralPassword);
+    await page.locator("#kc-login").click();
+  }
   await expect(
-    page.getByText("You are signed in to the Kyrion website."),
+    page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();
 
   // Protected first setup uses the real existing UI and a host-provisioned proof.
@@ -312,13 +322,10 @@ test("real registration, verified email, website and local login/link/offline/un
   await panel
     .getByRole("button", { name: "Connect Kyrion account", exact: true })
     .click();
-  await approveDevice(page, context, centralUsername, centralPassword);
-  await panel
-    .getByRole("button", { name: "Confirm account connection" })
-    .click({ timeout: 45_000 });
-  await expect(
-    panel.getByText("Your local account is connected."),
-  ).toBeVisible();
+  await approveDevice(page, context, centralUsername, centralPassword, true);
+  await expect(panel.getByText("Your local account is connected.")).toBeVisible(
+    { timeout: 45_000 },
+  );
   expect((await me(context)).permissions).toEqual(member.permissions);
   expect((await webMutation(page, "/api/auth/logout")).status).toBe(204);
   await page.goto(`${web}/login`);
@@ -394,10 +401,39 @@ test("real registration, verified email, website and local login/link/offline/un
   } finally {
     providerLifecycle("start");
   }
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (
+            await fetch(
+              `${provider}/realms/kyrion/.well-known/openid-configuration`,
+            )
+          ).status;
+        } catch {
+          return 0;
+        }
+      },
+      { timeout: 60_000 },
+    )
+    .toBe(200);
   await page.goto(`${website}/en/account`);
   await expect(
+    page.getByRole("heading", { name: "My account", exact: true }),
+  ).toBeVisible();
+  expect(
+    (await context.cookies(website)).find(
+      (cookie) => cookie.name === "kyrion_website_session",
+    )?.expires ?? 0,
+  ).toBeGreaterThan(Date.now() / 1000 + 86400);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "My account", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(
     page.getByRole("button", {
-      name: "Sign in with Kyrion Account",
+      name: "Sign in",
       exact: true,
     }),
   ).toBeVisible();

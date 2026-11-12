@@ -57,10 +57,41 @@ export function AccountMenu({ locale }: { locale: Locale }) {
       >
         <Link
           href={href(locale, "account")}
-          onClick={() => menu.current?.removeAttribute("open")}
+          onClick={(event) => {
+            menu.current?.removeAttribute("open");
+            if (
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.shiftKey &&
+              !event.altKey &&
+              window.location.pathname === href(locale, "account")
+            ) {
+              event.preventDefault();
+              window.location.hash = "overview";
+            }
+          }}
           className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-muted"
         >
           {t.overview}
+        </Link>
+        <Link
+          href={`${href(locale, "account")}#connect`}
+          onClick={(event) => {
+            menu.current?.removeAttribute("open");
+            if (
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.shiftKey &&
+              !event.altKey &&
+              window.location.pathname === href(locale, "account")
+            ) {
+              event.preventDefault();
+              window.location.hash = "connect";
+            }
+          }}
+          className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-muted"
+        >
+          {t.linkTab}
         </Link>
         <form action="/api/account/manage" method="get">
           <button

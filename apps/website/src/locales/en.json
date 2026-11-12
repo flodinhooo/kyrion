@@ -758,7 +758,17 @@
     "manage": "Account settings",
     "manageHelp": "Manage your personal details, password and account security.",
     "openSettings": "Open account settings",
-    "checking": "Loading account ?"
+    "checking": "Loading account …",
+    "accountNavigation": "Account sections",
+    "linkTab": "Link account",
+    "linkTitle": "Enter the code from your local Kyrion app",
+    "linkHelp": "In your local app, open Profile → Link account. Confirm your local password there, then enter the displayed code here.",
+    "linkCodeLabel": "Linking code",
+    "linkHint": "The code has eight characters, for example ABCD-EFGH.",
+    "linkSubmit": "Confirm code",
+    "linkOutcome": "Then confirm your account on the sign-in page. Your local app finishes the connection automatically and shows success.",
+    "linkCodeInvalid": "Enter the eight-character code from your local app.",
+    "linkSignIn": "Please sign in to link your local account."
   },
   "download": {
     "eyebrow": "KYRION INSTALLER",

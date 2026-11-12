@@ -10,9 +10,11 @@ import { InvitationPanel } from "@/components/invitation-panel";
 import { RetentionPolicyPanel } from "@/components/retention-policy-panel";
 import { PersonalBackupPanel } from "@/components/personal-backup-panel";
 import { CentralAccountPanel } from "@/components/central-account-panel";
+import { centralMessages } from "@/features/auth/central-messages";
 
 export default function ProfilePage() {
   const { username, t, locale } = useWorkspace();
+  const account = centralMessages[locale];
   return (
     <section className="settings-stage">
       <div className="settings-card profile-card">
@@ -22,8 +24,13 @@ export default function ProfilePage() {
         </header>
 
         <nav className="profile-section-nav" aria-label={t.profile}>
-          <a href="#backup">{t.backupTitle}</a><a href="#security">{t.profileSecurity}</a><a href="#memory">{t.memoryTitle}</a>
+          <a href="#account-link">{account.navLabel}</a><a href="#backup">{t.backupTitle}</a><a href="#security">{t.profileSecurity}</a><a href="#memory">{t.memoryTitle}</a>
         </nav>
+
+        <section className="profile-section profile-account-link-section" id="account-link">
+          <div className="profile-section-heading"><Icons.user /><div><p className="eyebrow">{account.navLabel}</p><h2>{account.linkIntro}</h2></div></div>
+          <CentralAccountPanel locale={locale} />
+        </section>
 
         <section className="profile-section profile-backup-section" id="backup">
           <div className="profile-section-heading"><Icons.shield /><div><p className="eyebrow">{t.backupTitle}</p><h2>{t.backupDescription}</h2></div></div>
@@ -36,7 +43,6 @@ export default function ProfilePage() {
             <div className="settings-link-card profile-security-panel"><span><strong>{t.changePassword}</strong><small>{t.profileSecurityDescription}</small></span><PasswordChangeForm /></div>
             <ActiveSessionsPanel />
             <InvitationPanel />
-            <CentralAccountPanel locale={locale} />
           </div>
         </section>
 
