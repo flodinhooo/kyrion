@@ -84,6 +84,37 @@ The Windows standalone `0.0.0-dev.20261113.1` executable and matching one-direct
 service host were built and smoke-tested locally; their metadata retains false
 installation/boot acceptance. Latest source verification passes 185 Windows
 installer tests (one skip), whole-installer Ruff and parsed workflow YAML.
-Earlier integration source passes 179 tests in Debian (16 skips). An updated
-Linux frozen build and source suite are being run separately; do not infer a
-passing result from this continuation record.
+The same version source passes 185 tests in Debian (16 platform skips), and its
+standalone Linux archive passed both the frozen inventory probe and exact
+embedded-version check. These are development downloads in `build/native-installer`:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `kyrion-installer-0.0.0-dev.20261113.1-windows-amd64.exe` | 12346411 | `eecb419aa1675ed92527fbb0ead88bb324553469588cf01212bc8ea48160ce0b` |
+| `kyrion-installer-0.0.0-dev.20261113.1-linux-amd64.tar.gz` | 14148769 | `7d8f3afd24d8319be21947813a76c93426a361f9ea0ce3fd0956b0da0d620961` |
+
+Each artifact's adjacent metadata records its actual sealed input hashes. They
+are unsigned, unpublished, and do not claim platform installation acceptance.
+The Linux executable was built/probed on Debian 13 AMD64; this does not prove
+older glibc distributions, ARM64/Pi, Docker provisioning or system boot.
+
+## Software-removal interruption follow-up
+
+Native Windows software-only removal now resumes after a partial payload
+deletion. Only a protected journal already in `uninstalled` state can tolerate
+missing payload files; remaining payload bytes, keys and non-payload metadata
+retain strict integrity checks. Ordinary loading/writing/repair does not acquire
+this exception. Repair after removal asks for a reviewed bundle before touching
+services. Service removal closes each SCM handle and waits for actual deletion
+before program-file cleanup.
+
+Five tests use real private temporary files plus mocked SCM/elevation. They prove
+interruption/reload/repeat, data preservation, rejection of changed payload or
+missing retained keys, and handle-close/wait ordering. They do not establish
+real elevated uninstall acceptance. Fully resumable deletion of the complete
+installation including its final journal is still source work; the software-only
+fix does not close that requirement.
+The complete updated Windows source suite passes 190 tests (one platform skip)
+and whole-installer Ruff; the five cleanup tests also pass independently in the
+normal developer context. The restricted sandbox cannot apply test-file owner/
+group descriptors, so this is distinct from a sandbox-only run.

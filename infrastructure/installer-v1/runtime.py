@@ -271,12 +271,27 @@ class Installation:
             source = self.path if self.path.exists() else self.target
         atomic_json(self.path, self.state, security_source=source)
 
-    def verify_files(self) -> None:
+    def verify_files(self, *, removing_payload: bool = False) -> None:
+        if removing_payload and (
+            self.state.get("backend") != "windows-native"
+            or self.state.get("stage") != "uninstalled"
+        ):
+            raise ValueError("E_STATE: payload cleanup has not been journaled")
         for relative, digest in self.state["files"].items():
             path = self.target / relative
             if path.resolve().is_relative_to(self.target.resolve()) is False:
                 raise ValueError("E_STATE: invalid managed path")
             reject_links(path)
+            if (
+                removing_payload
+                and not path.exists()
+                and path != self.target / "payload"
+                and path.resolve().is_relative_to((self.target / "payload").resolve())
+            ):
+                # Only a journaled native software removal may have already
+                # deleted payload members. Existing bytes and retained data/
+                # keys/metadata still require the ordinary integrity proof.
+                continue
             if not path.is_file() or sha256(path) != digest:
                 raise ValueError(
                     "E_CHANGED: managed file changed; automatic repair refused"

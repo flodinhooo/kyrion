@@ -474,6 +474,10 @@ def stop_services(installation: Installation, remove=False) -> None:
                         scm.remove(handle, plan)
                     else:
                         scm.stop(handle, plan)
+            if remove:
+                # DeleteService is asynchronous. Release our service handle
+                # before waiting; never remove its program files while pending.
+                scm.wait_removed(plan["name"])
 
 
 def provision_native(
@@ -556,10 +560,11 @@ def repair_native(target: Path) -> dict:
 
     with installation_lock(target):
         permissions(target, "verify")
-        installation = load_installation(target)
-        read_configuration(target)
+        installation = load_installation(target, verify=False)
         if installation.state.get("stage") == "uninstalled":
             raise ValueError("E_NATIVE_SIGNED_BUNDLE_REQUIRED")
+        installation.verify_files()
+        read_configuration(target)
         # Validate all existing definitions before stopping any component.
         with ServiceManager() as scm:
             for role in ROLES:
@@ -587,7 +592,10 @@ def uninstall_native(target: Path, purge: bool = False) -> dict:
         raise ValueError("E_NATIVE_USE_DOWNLOADED_INSTALLER")
     with installation_lock(target):
         permissions(target, "verify")
-        installation = load_installation(target)
+        installation = load_installation(target, verify=False)
+        installation.verify_files(
+            removing_payload=installation.state.get("stage") == "uninstalled"
+        )
         # Inspect every definition before any service removal or filesystem change.
         with ServiceManager() as scm:
             for role in ROLES:
