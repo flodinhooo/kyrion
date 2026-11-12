@@ -49,6 +49,7 @@ def main() -> int:
     actions.add_argument("--repair", action="store_true")
     actions.add_argument("--uninstall", action="store_true")
     actions.add_argument("--check-updates", action="store_true")
+    actions.add_argument("--refresh-model-catalog", action="store_true")
     parser.add_argument("--feed")
     parser.add_argument("--trust-store", type=Path)
     parser.add_argument(
@@ -127,13 +128,25 @@ def main() -> int:
         try:
             if args.model_catalog is not None and args.trust_store is None:
                 raise ValueError("E_MODEL_TRUST_REQUIRED")
-            catalog = load_catalog(
-                args.model_catalog.read_bytes() if args.model_catalog else None,
-                json.loads(args.trust_store.read_text(encoding="utf-8"))
-                if args.trust_store
-                else None,
-                args.minimum_catalog_sequence,
-            )
+            if (
+                args.model_catalog is None
+                and (args.target / "install-state.json").is_file()
+            ):
+                from model_cache import cached_catalog
+                from models import validate_catalog
+                from recovery import load_installation
+
+                with installation_lock(args.target):
+                    catalog = cached_catalog(load_installation(args.target))
+                validate_catalog(catalog, args.minimum_catalog_sequence)
+            else:
+                catalog = load_catalog(
+                    args.model_catalog.read_bytes() if args.model_catalog else None,
+                    json.loads(args.trust_store.read_text(encoding="utf-8"))
+                    if args.trust_store
+                    else None,
+                    args.minimum_catalog_sequence,
+                )
             guided_recommendation(inventory(args.target), messages, catalog)
             return 0
         except (OSError, ValueError, TypeError, KeyError):
@@ -146,6 +159,7 @@ def main() -> int:
         or args.repair
         or args.uninstall
         or args.check_updates
+        or args.refresh_model_catalog
     ):
         try:
             return run_maintenance(args, messages)

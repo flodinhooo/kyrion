@@ -307,7 +307,13 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         installation.save()
         if "ha" in selection:
             guided_home_assistant(client, messages)
-        recommendation = guided_recommendation(inventory(installation.target), messages)
+        from model_cache import cached_catalog
+
+        recommendation = guided_recommendation(
+            inventory(installation.target),
+            messages,
+            lambda: cached_catalog(installation),
+        )
         if recommendation is not None:
             installation.state["aiRecommendation"] = recommendation
             installation.save()
@@ -495,6 +501,12 @@ def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
 def provision_recovery(
     installation: Installation, space_id: str, messages: dict[str, str]
 ) -> None:
+    if installation.state.get("backend") == "windows-native":
+        from native_recovery import provision_owner_recovery
+
+        print(messages["recoveryConsole"])
+        provision_owner_recovery(installation, space_id)
+        return
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM")
     space_id = str(uuid.UUID(space_id))

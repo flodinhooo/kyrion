@@ -72,3 +72,36 @@ transactional installed updates, full application restore and the adaptive
 tutorial still require implementation. Continue those independent tasks against
 the existing Core authority, then run complete isolated journey tests. Never
 describe this checkpoint as ready for the user's overall installation test.
+
+## Further implementation in the same continuation
+
+Windows recovery now invokes the existing Core host-only tool with the real
+console, stops only validated owned Core/Web/Caddy services, preserves existing
+keys and restarts services even on tool failure. Four orchestration tests pass;
+interactive elevated execution/ACL acceptance is explicitly still unverified.
+
+Authenticated model-catalog refresh is wired into local maintenance and the
+existing journal. Signed HTTPS input, accepted sequence, digest and public trust
+are published atomically; stale sequences, same-sequence changed payloads,
+tampering and trust-epoch rollback are refused. Installed recommendations read
+the verified cache after restart without networking. An expired bundled catalog
+does not prevent refreshing; expired cached data is not silently downgraded.
+Skipping AI does not load the catalog. This is manual refresh, not an automatic
+scheduled feed or public release infrastructure.
+
+The extended full suites passed 135 tests on Windows (one skip) and Debian 13
+(13 skips). Two additional catalog-expiry regressions subsequently passed on
+both systems as part of the eight-test signed-cache suite. The final Windows
+full suite passed all 137 tests (one platform skip). Ruff passed for all
+new/changed modules. The new build is `0.0.0-dev.20261112.4`; earlier artifact
+rows above describe the reproducible service checkpoint and remain historical.
+
+| Latest local development artifact | Size / SHA256 |
+| --- | --- |
+| `build/native-installer/kyrion-installer-0.0.0-dev.20261112.4-windows-amd64.exe` | 12,298,847 bytes / `4b97c00bffd873ee0d58de67c583909b2033ed6aaa2d606cbd9fd54a3d92cdaf` |
+| `build/native-service-host-dev4/` | updated frozen host with exact source inventory |
+| `build/windows-service-bundle-dev4/kyrion-windows-amd64.zip` | 224,268,185 bytes / `5a7f6863e60e9180a33a69cac44ef09bd748f6e409ac97bac5e34cb7cfa502bf` |
+| schema-3 manifest | `9430785071c91d4be8dadeb0a97c781394f22faca595fabbf1bbbd6d793f5a3f` |
+
+The latest EXE and host native smoke pass. Public download/service acceptance
+is still false. Remaining whole-product source work listed above is unchanged.

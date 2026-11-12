@@ -156,3 +156,11 @@ use SCM, not scheduled boot tasks. The manual workflow
 virtual-account negative-access checks, idempotence and repair/restart on a
 disposable hosted runner. It has not been dispatched and is not evidence of a
 passing service installation. The current developer token is not elevated.
+
+The guided recovery step now dispatches to the existing Core
+`LocalSecurityAdmin` host-only tool on Windows as well as Linux. Windows stops
+only validated owned Core/Web/Caddy services, leaves PostgreSQL running, inherits
+the interactive console, and restarts services in a finally block. It never
+captures the password/recovery code or overwrites a host key. Four orchestration
+fixtures cover success, failed tool execution, existing keys and foreign
+services. Actual elevated terminal/ACL recovery acceptance remains outstanding.

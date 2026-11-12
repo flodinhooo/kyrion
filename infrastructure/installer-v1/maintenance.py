@@ -198,6 +198,28 @@ def run(args, messages: dict[str, str]) -> int:
         diagnostic(args.target, args.diagnostics)
         print(messages["diagnosticSaved"])
         return 0
+    if args.refresh_model_catalog:
+        from model_cache import refresh_catalog
+        from release_policy import parse
+
+        if not args.feed or args.trust_store is None:
+            raise ValueError("E_MODEL_TRUST_REQUIRED")
+        reject_links(args.trust_store)
+        if args.trust_store.stat().st_size > 256 * 1024:
+            raise ValueError("E_TRUST_STORE")
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            if installation.state.get("backend") == "windows-native":
+                from native_runtime import permissions
+
+                permissions(args.target, "verify")
+            elif os.name != "posix" or os.geteuid() != 0:
+                raise ValueError("E_PLATFORM")
+            result = refresh_catalog(
+                installation, args.feed, parse(args.trust_store.read_bytes())
+            )
+        print(json.dumps(result))
+        return 0
     if os.name == "nt" and (args.repair or args.uninstall):
         from native_runtime import repair_native, uninstall_native
 

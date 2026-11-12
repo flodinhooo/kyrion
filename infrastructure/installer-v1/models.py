@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -235,12 +236,16 @@ def recommend(catalog: dict, target: dict, preferences: Preferences) -> dict:
 
 
 def guided_recommendation(
-    target: dict, messages: dict[str, str], catalog: dict | None = None
+    target: dict,
+    messages: dict[str, str],
+    catalog: dict | Callable[[], dict] | None = None,
 ) -> dict | None:
     import json
 
     if input(messages["aiPlanNow"] + " [PLAN/skip]: ").strip() != "PLAN":
         return None
+    if callable(catalog):
+        catalog = catalog()
     purpose = input(messages["aiPurpose"] + " [everyday/smart-home/coding]: ").strip()
     languages = tuple(
         part.strip()

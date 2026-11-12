@@ -29,9 +29,21 @@ catalog is accepted only as an Ed25519 `model-catalog` envelope using the existi
 trust policy, with expiry and caller-supplied minimum sequence checks. For a
 developer invocation use `--recommend-ai --model-catalog <envelope>
 --trust-store <trusted-public-store> --minimum-catalog-sequence <accepted>`.
-Production feed fetching, persisted accepted-catalog sequence and release root
-distribution remain open in matrix R48. Do not claim automatic authenticated
-catalog updates from this loader alone.
+`--refresh-model-catalog --target <installation> --feed <HTTPS-envelope-URL>
+--trust-store <trusted-public-store>` performs an explicitly confirmed local
+maintenance operation on Windows or Linux. It verifies the signed catalog before
+atomically saving bytes, public trust snapshot, digest and accepted sequence in
+the existing installation journal. No model is downloaded. Older sequences,
+same-sequence different payloads, invalid signatures and lower trust epochs are
+refused. A failed journal write preserves the previous process and disk state.
+HTTPS retrieval uses bounded responses without proxy inheritance or redirects.
+
+The optional installer flow and `--recommend-ai` reuse that cache after restart
+without network access and reverify authenticity/expiry. Expired cached data is
+never silently replaced with older bundled data; skip does not open the catalog.
+Refreshing can replace expired data even after the bundled document expires.
+Automatic scheduling, release-root distribution and the public feed itself stay
+open in R48; this maintenance command does not claim those are available.
 
 Recommending a model does not download it or change Ollama settings. Runtime
 installation/adoption, hash-verified model pull, active Core profile selection,
