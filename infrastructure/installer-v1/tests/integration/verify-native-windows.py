@@ -23,6 +23,7 @@ from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import native_bundle
+from bundle import sha256
 from crypto_support import certificate, private_tls_key
 from native_web_transport import WebTransport
 
@@ -70,6 +71,10 @@ def main(
         raise ValueError("E_LINKED_FIXTURE_SOURCE_CORE_REQUIRED")
     # Authenticate and verify every actual executable before starting anything.
     native_bundle.unpack(bundle, key, payload)
+    selected_core = (
+        core_jar if core_jar is not None else payload / "app/core/core-runtime.jar"
+    )
+    core_digest = sha256(selected_core)
     runtime = payload / "runtime"
     environment = {
         name: os.environ[name]
@@ -319,6 +324,32 @@ def main(
             ]
             core = start(core_command, "core", core_environment)
             wait_core()
+            schema_result = subprocess.run(
+                [
+                    str(pg / "psql.exe"),
+                    "-h",
+                    "127.0.0.1",
+                    "-p",
+                    str(pg_port),
+                    "-U",
+                    "kyrion",
+                    "-d",
+                    "kyrion",
+                    "--no-password",
+                    "-Atc",
+                    "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
+                ],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=20,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if schema_result.returncode or not schema_result.stdout.strip().isdigit():
+                raise ValueError("E_NATIVE_FIXTURE_SCHEMA")
+            observed_schema = int(schema_result.stdout.strip())
             if request("GET", "/v1/auth/setup/status")["setupRequired"] is not True:
                 raise ValueError("E_NATIVE_FIXTURE_NOT_FRESH")
             if provider is not None:
@@ -485,8 +516,12 @@ https://localhost:PORT {
                 linked_evidence["providerStoppedBeforeRestart"] = provider.closed
             if request("GET", "/v1/auth/setup/status")["setupRequired"] is not False:
                 raise ValueError("E_NATIVE_FIXTURE_BOOTSTRAP_REOPENED")
+            if sha256(selected_core) != core_digest:
+                raise ValueError("E_NATIVE_FIXTURE_CORE_CHANGED")
             return {
                 **linked_evidence,
+                "coreJarSha256": core_digest,
+                "observedSchema": observed_schema,
                 "sourceCoreOverride": core_jar is not None,
                 "nativeProcesses": True,
                 "freshDatabase": True,

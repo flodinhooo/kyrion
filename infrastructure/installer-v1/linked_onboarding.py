@@ -14,7 +14,14 @@ from urllib.parse import urlsplit
 
 
 @contextmanager
-def provider_proof(client, messages, fresh: bool, invitation: str | None = None):
+def provider_proof(
+    client,
+    messages,
+    fresh: bool,
+    invitation: str | None = None,
+    mode: str = "LOGIN",
+    current_password: str | None = None,
+):
     secret = (
         (client.installation.target / "secrets/bootstrap.secret").read_text().strip()
         if fresh
@@ -22,6 +29,17 @@ def provider_proof(client, messages, fresh: bool, invitation: str | None = None)
     )
     prefix = "/v1/auth/central/setup" if fresh else "/v1/auth/central"
     start_body = None if fresh else {"mode": "LOGIN"}
+    if mode == "LINK":
+        if (
+            fresh
+            or invitation is not None
+            or client.session is None
+            or current_password is None
+        ):
+            raise ValueError("E_IDENTITY_OPERATION")
+        start_body = {"mode": "LINK", "currentPassword": current_password}
+    elif mode != "LOGIN":
+        raise ValueError("E_IDENTITY_OPERATION")
     if invitation is not None:
         if fresh or not re.fullmatch(r"[A-Za-z0-9_-]{43}", invitation):
             raise ValueError("E_INVITATION")
@@ -111,11 +129,15 @@ def adopt_session(client, response):
     return user
 
 
-def join_invited_space(client, messages):
-    if (
-        input(messages["spaceInvitationChoice"] + " [JOIN/CANCEL]: ").strip().upper()
-        != "JOIN"
-    ):
+def resolve_existing_access(client, messages):
+    action = (
+        input(messages["spaceInvitationChoice"] + " [LINK/JOIN/CANCEL]: ")
+        .strip()
+        .upper()
+    )
+    if action == "LINK":
+        return connect_local_account(client, messages, confirmed=True)
+    if action != "JOIN":
         raise ValueError("E_IDENTITY_CANCELLED")
     invitation = getpass.getpass(messages["spaceInvitationCode"] + ": ").strip()
     if not re.fullmatch(r"[A-Za-z0-9_-]{43}", invitation):
@@ -155,6 +177,38 @@ def join_invited_space(client, messages):
         return adopt_session(client, response)
 
 
+def connect_local_account(client, messages, user=None, password=None, confirmed=False):
+    if (
+        not confirmed
+        and input(messages["linkExistingLocal"] + " [LINK/CANCEL]: ").strip().upper()
+        != "LINK"
+    ):
+        raise ValueError("E_IDENTITY_LINK_REQUIRED")
+    if client.request("GET", "/v1/auth/central/config").get("enabled") is not True:
+        raise ValueError("E_IDENTITY_NOT_CONFIGURED")
+    if user is None:
+        username = input(messages["localUsername"] + ": ").strip()
+        password = getpass.getpass(messages["localPassword"] + ": ")
+        user = client.login_or_setup(username, password)
+    if client.request("GET", "/v1/auth/central/status").get("linked") is True:
+        raise ValueError("E_IDENTITY_ALREADY_LINKED")
+    with provider_proof(
+        client, messages, False, mode="LINK", current_password=password
+    ) as (token, _, prefix):
+        response = client.request(
+            "POST", prefix + "/complete", {"operationToken": token, "confirm": True}
+        )
+        if response.get("linked") is not True:
+            raise ValueError("E_IDENTITY_LINK")
+    current = client.request("GET", "/v1/auth/me")
+    if (
+        current.get("id") != user.get("id")
+        or client.request("GET", "/v1/auth/central/status").get("linked") is not True
+    ):
+        raise ValueError("E_IDENTITY_LINK")
+    return current
+
+
 def select_current_space(client, user, messages):
     space = client.request("GET", "/v1/space")
     identity = str(uuid.UUID(space["id"]))
@@ -192,9 +246,9 @@ def linked_setup(client, messages):
         username = input(messages["localUsername"] + ": ").strip()
         password = getpass.getpass(messages["localPassword"] + ": ")
         user = client.login_or_setup(username, password)
-        del password
         if client.request("GET", "/v1/auth/central/status").get("linked") is not True:
-            raise ValueError("E_IDENTITY_LINK_REQUIRED")
+            user = connect_local_account(client, messages, user, password)
+        del password
     else:
         if client.request("GET", "/v1/auth/central/config").get("enabled") is not True:
             client.installation.state["centralIdentity"] = "provider-required"
@@ -233,6 +287,6 @@ def linked_setup(client, messages):
         except ValueError as error:
             if fresh or getattr(error, "code", None) != "SPACE_ACCESS_REQUIRED":
                 raise
-            user = join_invited_space(client, messages)
+            user = resolve_existing_access(client, messages)
     select_current_space(client, user, messages)
     return user

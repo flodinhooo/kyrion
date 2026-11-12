@@ -8,7 +8,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from linked_onboarding import linked_setup
-from onboarding import CoreClient
+from onboarding import CoreClient, guided_setup
 from runtime import Installation
 
 
@@ -259,6 +259,49 @@ def _exercise_linked_account(request, root, ports, provider, target):
         },
     )
     provider.subject = "synthetic-linked-owner"
+    with (
+        patch(
+            "builtins.input",
+            side_effect=["YES", "ONLINE", "CHECK", "USE", "skip", "none", "skip"],
+        ),
+        patch("builtins.print"),
+    ):
+        guided_setup(installation, messages)
+    if (
+        installation.state.get("hardwareSelection") != ["none"]
+        or "aiRecommendation" in installation.state
+    ):
+        raise ValueError("E_LINKED_FIXTURE_OPTIONAL_SETUP")
+    legacy_invitation = request("POST", "/v1/space/invitations", {}, token=token)
+    legacy_credentials = {
+        "username": "legacy-local-member",
+        "password": "Synthetic-legacy-password-123456",
+        "invitationCode": legacy_invitation["code"],
+    }
+    legacy = request("POST", "/v1/auth/register", legacy_credentials)
+    request("POST", "/v1/auth/logout", token=legacy["sessionToken"])
+    provider.subject = "synthetic-legacy-linked-member"
+    try:
+        with (
+            patch(
+                "builtins.input",
+                side_effect=["OFFLINE", "legacy-local-member", "LINK", "CHECK", "USE"],
+            ),
+            patch(
+                "linked_onboarding.getpass.getpass",
+                return_value=legacy_credentials["password"],
+            ),
+            patch("builtins.print"),
+        ):
+            linked_legacy = linked_setup(client, messages)
+        if (
+            linked_legacy["id"] != legacy["user"]["id"]
+            or "OWNER" in linked_legacy["roles"]
+        ):
+            raise ValueError("E_LINKED_FIXTURE_LEGACY_IDENTITY")
+    finally:
+        client.close()
+    provider.subject = "synthetic-linked-owner"
     return (
         credentials,
         token,
@@ -279,5 +322,7 @@ def _exercise_linked_account(request, root, ports, provider, target):
             "duplicateIdentityRolledBackInvitation": True,
             "spentInvitationRejected": True,
             "memberCannotAdministerSpace": True,
+            "guidedSetupWithoutOptionalEquipment": True,
+            "legacyLocalIdentityLinkedInPlace": True,
         },
     )

@@ -17,6 +17,64 @@ from runtime import Installation
 
 
 class LinkedOnboarding(unittest.TestCase):
+    def test_legacy_local_identity_is_linked_in_place_after_explicit_consent(self):
+        linked = False
+        user = {"id": "existing-local-user", "roles": ["USER"]}
+
+        def local_login(username, password):
+            self.assertEqual(
+                (username, password), ("legacy-user", "legacy-local-password")
+            )
+            self.client.session = "s" * 43
+            return user
+
+        def api(method, route, body=None, bootstrap=None):
+            nonlocal linked
+            if route.endswith("setup/status"):
+                return {"setupRequired": False}
+            if route.endswith("/config"):
+                return {"enabled": True}
+            if route == "/v1/auth/central/status":
+                return {"linked": linked}
+            if route.endswith("/start"):
+                self.assertEqual(
+                    body, {"mode": "LINK", "currentPassword": "legacy-local-password"}
+                )
+                return self.operation
+            if route.endswith("/poll"):
+                return {"status": "CONFIRM"}
+            if route.endswith("/complete"):
+                linked = True
+                return {"linked": True}
+            if route == "/v1/auth/me":
+                return user
+            if route == "/v1/space":
+                return self.space
+            raise AssertionError(route)
+
+        with (
+            patch.object(self.client, "request", side_effect=api) as calls,
+            patch.object(self.client, "login_or_setup", side_effect=local_login),
+            patch(
+                "builtins.input",
+                side_effect=["OFFLINE", "legacy-user", "LINK", "CHECK", "USE"],
+            ),
+            patch(
+                "linked_onboarding.getpass.getpass",
+                return_value="legacy-local-password",
+            ),
+            patch("linked_onboarding.time.sleep"),
+            patch("builtins.print"),
+        ):
+            self.assertEqual(linked_setup(self.client, self.messages)["id"], user["id"])
+        self.assertTrue(linked)
+        self.assertFalse(
+            any(
+                "/setup/complete" in call.args[1] or "/registration/" in call.args[1]
+                for call in calls.call_args_list
+            )
+        )
+
     def test_invitation_join_never_requests_owner_or_creates_another_space(self):
         def api(method, route, body=None, bootstrap=None):
             if route.endswith("setup/status"):

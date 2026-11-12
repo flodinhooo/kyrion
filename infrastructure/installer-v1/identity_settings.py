@@ -17,6 +17,7 @@ def validate_identity(value: dict) -> dict:
     if (
         not isinstance(issuer, str)
         or len(issuer) > 512
+        or not issuer.startswith(("https://", "http://"))
         or not re.fullmatch(r"[A-Za-z0-9:/._-]+", issuer)
     ):
         raise ValueError("E_IDENTITY_CONFIG")
