@@ -29,10 +29,17 @@ class CredentialCipher(
     }
 
     fun reveal(value: IntegrationConnection): String {
+        return reveal(
+            ProtectedCredential(value.credentialCiphertext, value.credentialNonce, value.credentialVersion),
+            "${value.ownerId}:${value.id}:${value.provider}"
+        )
+    }
+
+    fun reveal(value: ProtectedCredential, context: String): String {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, value.credentialNonce))
-        cipher.updateAAD("${value.ownerId}:${value.id}:${value.provider}".toByteArray())
-        return String(cipher.doFinal(value.credentialCiphertext))
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, value.nonce))
+        cipher.updateAAD(context.toByteArray())
+        return String(cipher.doFinal(value.ciphertext))
     }
 
     private fun loadOrCreateKey(): ByteArray {

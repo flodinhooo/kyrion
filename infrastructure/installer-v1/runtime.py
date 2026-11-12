@@ -351,7 +351,10 @@ class Installation:
         del self.state["pendingWrite"]
         self.save()
 
-    def configure(self) -> None:
+    def configure(self, identity: dict | None = None) -> None:
+        from identity_settings import configure_identity
+
+        identity_environment = configure_identity(self, identity)
         for name in (
             "bootstrap.secret",
             "credential.key",
@@ -377,6 +380,7 @@ class Installation:
                     "KYRION_BIND_ADDRESS=" + config["address"],
                     "KYRION_DATA_DIR=" + str(self.target / "data"),
                     "KYRION_SECRETS_DIR=" + str(self.target / "secrets"),
+                    *identity_environment,
                     "",
                 ]
             ),
@@ -512,6 +516,7 @@ def provision(
     hostname: str,
     address: str,
     expected_digest: str,
+    identity: dict | None = None,
 ) -> dict:
     validate_inputs(target, hostname, address)
     observed = inventory(target)
@@ -573,7 +578,7 @@ def provision(
                     raise ValueError(
                         "E_IMAGE: loaded image identity or architecture differs"
                     )
-            installation.configure()
+            installation.configure(identity=identity)
             installation.start()
             return installation.state
         except (Exception, KeyboardInterrupt) as error:

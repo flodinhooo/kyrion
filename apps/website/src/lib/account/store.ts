@@ -12,6 +12,7 @@ export type Flow = {
   nonce: string;
   verifier: string;
   locale: "en" | "de";
+  destination?: "account" | "connect";
 };
 export type WebsiteSession = { id: string; csrf: string; expiresAt: string };
 export const rememberedLifetime = 30 * 24 * 60 * 60_000;
@@ -50,14 +51,14 @@ export class AccountStore {
       "DELETE FROM website_oidc_flow WHERE expires_at < now()",
     );
     await this.pool.query(
-      "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,expires_at) VALUES ($1,$2,$3,$4,$5,now()+interval '5 minutes')",
-      [hash(id), flow.state, flow.nonce, flow.verifier, flow.locale],
+      "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expires_at) VALUES ($1,$2,$3,$4,$5,$6,now()+interval '5 minutes')",
+      [hash(id), flow.state, flow.nonce, flow.verifier, flow.locale, flow.destination ?? "account"],
     );
   }
 
   async consume(id: string): Promise<Flow | null> {
     const result = await this.pool.query<Flow>(
-      "DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale",
+      "DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale,destination",
       [hash(id)],
     );
     return result.rows[0] ?? null;

@@ -27,6 +27,10 @@ ROUTES = {
     ("POST", "/v1/auth/central/poll"),
     ("POST", "/v1/auth/central/complete"),
     ("POST", "/v1/auth/central/cancel"),
+    ("POST", "/v1/auth/central/setup/start"),
+    ("POST", "/v1/auth/central/setup/poll"),
+    ("POST", "/v1/auth/central/setup/complete"),
+    ("POST", "/v1/auth/central/setup/cancel"),
     ("GET", "/v1/integrations/home-assistant"),
     ("POST", "/v1/integrations/home-assistant/probe"),
     ("POST", "/v1/integrations/home-assistant/connect"),
@@ -252,35 +256,9 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         return
     client = CoreClient(installation)
     try:
-        status = client.request("GET", "/v1/auth/setup/status")
-        space_name = (
-            input(messages["spaceName"] + ": ").strip()
-            if status.get("setupRequired") is True
-            else None
-        )
-        space_type = (
-            input(messages["spaceType"] + " [HOME/BUSINESS]: ").strip().upper()
-            if space_name is not None
-            else "HOME"
-        )
-        username = input(messages["localUsername"] + ": ").strip()
-        password = getpass.getpass(messages["localPassword"] + ": ")
-        if space_name is not None and password != getpass.getpass(
-            messages["repeatPassword"] + ": "
-        ):
-            raise ValueError("E_PASSWORD_MISMATCH")
-        user = client.login_or_setup(username, password, space_name, space_type)
-        # Linking the same account uses Core's RFC8628 flow; the installer never
-        # collects a website password, handles a provider token or grants a role.
-        config = client.request("GET", "/v1/auth/central/config")
-        if (
-            config.get("enabled") is True
-            and input(messages["linkNow"] + " [YES]: ").strip() == "YES"
-        ):
-            link_existing_identity(client, password, messages)
-        else:
-            print(messages["linkLater"])
-        del password
+        from linked_onboarding import linked_setup
+
+        user = linked_setup(client, messages)
         if (
             "OWNER" in user.get("roles", [])
             and input(messages["recoveryNow"] + " [RECOVERY]: ").strip() == "RECOVERY"

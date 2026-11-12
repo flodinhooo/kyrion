@@ -159,8 +159,11 @@ def pg_run(
 
 
 def configure(
-    installation: Installation, manifest: dict, digest: str, ports=None
+    installation: Installation, manifest: dict, digest: str, ports=None, identity=None
 ) -> None:
+    from identity_settings import configure_identity
+
+    configure_identity(installation, identity)
     root = installation.target
     config = {
         "formatVersion": 1,
@@ -482,6 +485,7 @@ def provision_native(
     expected_manifest: str,
     worker: Path | None = None,
     ports: dict | None = None,
+    identity: dict | None = None,
 ) -> dict:
     if os.name != "nt":
         raise ValueError("E_NATIVE_PLATFORM")
@@ -521,7 +525,13 @@ def provision_native(
             permissions(target, "verify")
             private_bundle = stage_bundle(installation, bundle, public_key, reviewed)
             unpack(private_bundle, private_bundle / "public.pem", target / "payload")
-            configure(installation, reviewed.manifest, expected_manifest, ports=ports)
+            configure(
+                installation,
+                reviewed.manifest,
+                expected_manifest,
+                ports=ports,
+                identity=identity,
+            )
             initialize_database(installation)
             register_services(installation)
             if installation.state.get("nativeAccessConfigured") is not True:

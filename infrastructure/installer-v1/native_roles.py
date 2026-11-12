@@ -54,6 +54,10 @@ def read_configuration(root: Path) -> dict:
         reject_links(path)
         if not path.is_file() or sha256(path) != state["files"].get(name):
             raise ValueError("E_NATIVE_INTEGRITY")
+    if (root / "identity-provider.json").exists() and sha256(
+        root / "identity-provider.json"
+    ) != state["files"].get("identity-provider.json"):
+        raise ValueError("E_NATIVE_INTEGRITY")
     if (root / "native-runtime.json").stat().st_size > 16384:
         raise ValueError("E_NATIVE_CONFIGURATION")
     config = json.loads(
@@ -118,6 +122,21 @@ def role_plan(
             KYRION_AI_CLOUD_ENABLED="false",
             KYRION_CENTRAL_ENABLED="false",
         )
+        identity_file = root / "identity-provider.json"
+        if identity_file.exists():
+            from identity_settings import validate_identity
+
+            if identity_file.stat().st_size > 4096:
+                raise ValueError("E_IDENTITY_CONFIG")
+            identity = validate_identity(json.loads(identity_file.read_text()))
+            environment.update(
+                KYRION_CENTRAL_ENABLED="true",
+                KYRION_CENTRAL_ISSUER=identity["issuer"],
+                KYRION_CENTRAL_CLIENT_ID=identity["clientId"],
+                KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP=str(
+                    identity["allowLoopbackHttp"]
+                ).lower(),
+            )
         return (
             runtime / "java/bin/java.exe",
             ["-jar", str(payload / "app/core/core-runtime.jar")],

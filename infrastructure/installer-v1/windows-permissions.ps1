@@ -81,7 +81,8 @@ try {
             $rootAcl=New-DirectoryPolicy @() @()
             foreach ($sid in $all) { $rootAcl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,'ReadAndExecute','Allow'))) }
             Set-Acl -LiteralPath $root -AclObject $rootAcl
-            foreach ($leaf in @('installer.exe','install-state.json','native-runtime.json','native-manifest.json','core-cert.pem','web-cert.pem','data/Caddyfile')) {
+            foreach ($leaf in @('installer.exe','install-state.json','native-runtime.json','native-manifest.json','core-cert.pem','web-cert.pem','identity-provider.json','data/Caddyfile')) {
+                if ($leaf -eq 'identity-provider.json' -and -not (Test-Path -LiteralPath (Join-Path $root $leaf))) { continue }
                 $fileAcl=New-Object Security.AccessControl.FileSecurity
                 $fileAcl.SetOwner($administrators); $fileAcl.SetAccessRuleProtection($true,$false)
                 foreach ($sid in @($administrators,$system)) { $fileAcl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,'FullControl','Allow'))) }

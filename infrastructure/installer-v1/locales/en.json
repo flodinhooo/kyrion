@@ -72,5 +72,11 @@
   "nativeErrorPort": "A required local port is already occupied, or the selected address is unavailable. Resolve the reported conflict deliberately or choose another target device; existing services are preserved.",
   "nativeErrorVersion": "This native service candidate requires Windows 11 x64 (build 22000 or later). A candidate is not a platform release approval.",
   "nativeErrorServiceHost": "This historical runtime package has no signed native service host. Use a compatible schema-3 service bundle. Verification alone does not install it.",
-  "nativeErrorOwnership": "The service or installation path does not meet the ownership policy. Review its permissions and identity before continuing; foreign services are not replaced."
+  "nativeErrorOwnership": "The service or installation path does not meet the ownership policy. Review its permissions and identity before continuing; foreign services are not replaced.",
+  "centralOpen": "Open secure provider login, or check after approving the displayed code in your browser. Cancel leaves account creation pending.",
+  "linkedOfflineIdentity": "Web identity confirmed. Choose a local username and a separate offline password for this same identity. Never enter your web password here.",
+  "spaceAuthorized": "Core verified your membership in this installation’s active Space. Other installations require a prepared, authorized device connection.",
+  "spaceUse": "Use this authorized Space for the remaining setup?",
+  "identityAccess": "Connect your web account, or use the already linked identity with its local offline password",
+  "identityReview": "Core identity provider for browser-only sign-in; no website password or shared client secret is stored"
 }

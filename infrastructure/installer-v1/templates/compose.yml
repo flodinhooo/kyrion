@@ -16,6 +16,10 @@ services:
     depends_on: { postgres: { condition: service_healthy } }
     environment:
       KYRION_CORE_ADDRESS: 0.0.0.0
+      KYRION_CENTRAL_ENABLED: ${KYRION_CENTRAL_ENABLED:-false}
+      KYRION_CENTRAL_ISSUER: ${KYRION_CENTRAL_ISSUER:-}
+      KYRION_CENTRAL_CLIENT_ID: ${KYRION_CENTRAL_CLIENT_ID:-kyrion-local}
+      KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP: ${KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP:-false}
       KYRION_DATABASE_URL: jdbc:postgresql://postgres:5432/kyrion
       KYRION_DATABASE_USER: kyrion
       KYRION_DATABASE_PASSWORD_FILE: /run/secrets/postgres-password

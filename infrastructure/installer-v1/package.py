@@ -31,6 +31,8 @@ FILES = (
     "windows-tasks.ps1",
     "runtime.py",
     "onboarding.py",
+    "identity_settings.py",
+    "linked_onboarding.py",
     "verify.py",
     "maintenance.py",
     "recovery.py",

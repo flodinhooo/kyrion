@@ -49,6 +49,7 @@ class KeycloakCentralIdentityProvider(
     @Value("\${KYRION_CENTRAL_ISSUER:}") private val issuer: String = "",
     @Value("\${KYRION_CENTRAL_CLIENT_ID:kyrion-local}") private val clientId: String = "kyrion-local",
     @Value("\${KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP:false}") private val allowLoopbackHttp: Boolean = false,
+    private val proofCache: CentralProofCache? = null,
 ) : CentralIdentityProvider {
     private val mapper = jacksonObjectMapper()
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
@@ -68,7 +69,10 @@ class KeycloakCentralIdentityProvider(
 
     override fun startDevice(): DeviceAuthorization = guarded {
         val metadata = metadata()
-        val response = post(endpoint(metadata, "device_authorization_endpoint"), mapOf("client_id" to clientId, "scope" to "openid"))
+        val response = post(
+            endpoint(metadata, "device_authorization_endpoint"),
+            mapOf("client_id" to clientId, "scope" to "openid email profile")
+        )
         if (response.first != 200) throw CentralIdentityException("CENTRAL_UNAVAILABLE")
         val body = response.second
         val verification = checkedUri(requiredText(body, "verification_uri", 2048))
@@ -112,6 +116,23 @@ class KeycloakCentralIdentityProvider(
             (claims.authorizedParty != null && claims.authorizedParty.value != clientId)) {
             throw CentralIdentityException("CENTRAL_INVALID_RESPONSE")
         }
+        fun bounded(value: String?, limit: Int): String? =
+            value?.trim()?.takeIf { it.isNotEmpty() && it.length <= limit && it.none(Char::isISOControl) }
+
+        val email =
+            bounded(claims.getStringClaim("email"), 254)?.takeIf { claims.getBooleanClaim("email_verified") == true }
+        val name =
+            bounded(claims.getStringClaim("name"), 160) ?: bounded(claims.getStringClaim("preferred_username"), 160)
+        proofCache?.remember(
+            CentralDisplayProof(
+                issuer,
+                claims.subject.value,
+                email,
+                name,
+                body.path("access_token").takeIf { it.isTextual }?.asText()?.takeIf { it.length <= 32768 },
+                expires
+            )
+        )
         ConfirmedCentralIdentity(issuer, claims.subject.value, expires)
     }
 
@@ -185,7 +206,7 @@ class KeycloakCentralIdentityProvider(
 }
 
 /** Cancels oversized responses while streaming, without allocating an unbounded byte array. */
-private class LimitedIdentityBody : HttpResponse.BodySubscriber<ByteArray> {
+internal class LimitedIdentityBody : HttpResponse.BodySubscriber<ByteArray> {
     private val completed = CompletableFuture<ByteArray>()
     private val output = ByteArrayOutputStream()
     @Volatile private var subscription: Flow.Subscription? = null

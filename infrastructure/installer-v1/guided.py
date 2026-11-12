@@ -51,6 +51,10 @@ def main() -> int:
     actions.add_argument("--check-updates", action="store_true")
     actions.add_argument("--refresh-model-catalog", action="store_true")
     parser.add_argument("--feed")
+    parser.add_argument(
+        "--identity-issuer", default="https://auth.kyrion.ch/realms/kyrion"
+    )
+    parser.add_argument("--identity-client-id", default="kyrion-local")
     parser.add_argument("--trust-store", type=Path)
     parser.add_argument(
         "--model-catalog",
@@ -194,6 +198,15 @@ def main() -> int:
     hostname = input(messages["hostname"] + ": ").strip()
     address = input(messages["address"] + ": ").strip()
     try:
+        from identity_settings import validate_identity
+
+        identity = validate_identity(
+            {
+                "issuer": args.identity_issuer,
+                "clientId": args.identity_client_id,
+                "allowLoopbackHttp": False,
+            }
+        )
         if native_windows:
             from native_bundle import authenticated_review as native_review
             from native_runtime import preflight, provision_native
@@ -236,13 +249,21 @@ def main() -> int:
                 indent=2,
             )
         )
+        print(messages["identityReview"])
+        print(json.dumps(identity, ensure_ascii=True))
         if input(messages["approve"] + " [INSTALL]: ").strip() != "INSTALL":
             print(messages["cancelled"])
             return 0
         print(messages["working"])
         selected_provision = provision_native if native_windows else provision
         state = selected_provision(
-            args.target, args.bundle, args.public_key, hostname, address, digest
+            args.target,
+            args.bundle,
+            args.public_key,
+            hostname,
+            address,
+            digest,
+            identity=identity,
         )
         print(messages["servicesHealthy"])
         print("https://" + hostname)

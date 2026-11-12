@@ -72,5 +72,11 @@
   "nativeErrorPort": "Ein ben?tigter lokaler Port ist bereits belegt oder die gew?hlte Adresse ist nicht verf?gbar. Beheben Sie den gemeldeten Konflikt bewusst oder w?hlen Sie ein anderes Zielger?t; vorhandene Dienste bleiben erhalten.",
   "nativeErrorVersion": "Dieser native Dienstkandidat ben?tigt Windows 11 x64 ab Build 22000. Ein Kandidat bedeutet noch keine Plattformfreigabe.",
   "nativeErrorServiceHost": "Dieses ?ltere Laufzeitpaket enth?lt keinen signierten nativen Diensthost. Verwenden Sie ein kompatibles Dienstpaket mit Schema 3. Eine Pr?fung allein installiert es nicht.",
-  "nativeErrorOwnership": "Der Dienst oder Installationspfad erf?llt die Eigent?mer- und Berechtigungsvorgaben nicht. Pr?fen Sie Berechtigungen und Identit?t vor der Fortsetzung; fremde Dienste werden nicht ersetzt."
+  "nativeErrorOwnership": "Der Dienst oder Installationspfad erf?llt die Eigent?mer- und Berechtigungsvorgaben nicht. Pr?fen Sie Berechtigungen und Identit?t vor der Fortsetzung; fremde Dienste werden nicht ersetzt.",
+  "centralOpen": "Sichere Anbieter-Anmeldung öffnen oder nach Freigabe des angezeigten Codes im Browser prüfen. Abbrechen lässt die Kontoanlage offen.",
+  "linkedOfflineIdentity": "Web-Identität bestätigt. Wähle einen lokalen Namen und ein separates Offline-Passwort für dieselbe Identität. Gib hier niemals dein Web-Passwort ein.",
+  "spaceAuthorized": "Core hat deine Mitgliedschaft im aktiven Space dieser Installation geprüft. Andere Installationen benötigen eine vorbereitete, autorisierte Geräteverbindung.",
+  "spaceUse": "Diesen berechtigten Space für die weitere Einrichtung verwenden?",
+  "identityAccess": "Web-Account verbinden oder die bereits verknüpfte Identität mit dem lokalen Offline-Passwort verwenden",
+  "identityReview": "Core-Identitätsanbieter für sichere Browser-Anmeldung; Web-Passwörter und gemeinsame Client-Geheimnisse werden nicht gespeichert"
 }

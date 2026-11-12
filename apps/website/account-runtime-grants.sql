@@ -25,6 +25,7 @@ REVOKE ALL ON website_account, website_oidc_flow, website_session,
 GRANT SELECT, INSERT, UPDATE ON website_account TO kyrion_website_app;
 GRANT SELECT, INSERT, DELETE ON website_oidc_flow, website_session TO kyrion_website_app;
 GRANT UPDATE (refresh_credential, verified_until) ON website_session TO kyrion_website_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON website_installation_link TO kyrion_website_app;
 GRANT INSERT ON website_account_event TO kyrion_website_app;
 
 DO $$

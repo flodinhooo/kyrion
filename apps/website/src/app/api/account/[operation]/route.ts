@@ -80,7 +80,7 @@ export async function GET(request: NextRequest, context: Context) {
         if (previous) await store.revoke(previous);
         const response = NextResponse.redirect(
           new URL(
-            flow.locale === "en" ? "/en/account" : "/account",
+            `${flow.locale === "en" ? "/en" : ""}/${flow.destination === "connect" ? "connect" : "account"}`,
             config.origin,
           ),
           303,
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest, context: Context) {
       const form = await request.formData();
       const locale = form.get("locale") === "en" ? "en" : "de";
       failureTarget = new URL(
-        locale === "en" ? "/en/account#connect" : "/account#connect",
+        locale === "en" ? "/en/connect" : "/connect",
         config.origin,
       );
       const session = await store.session(
@@ -183,6 +183,7 @@ export async function POST(request: NextRequest, context: Context) {
         nonce: secret(),
         verifier: secret(),
         locale,
+        destination: form.get("destination") === "connect" ? "connect" : "account",
       } as const;
       const url = await authorizationUrl(
         config,

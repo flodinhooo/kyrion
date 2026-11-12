@@ -29,6 +29,7 @@ class UnifiedIdentityService(
     private val activity: ActivityService,
     private val transactions: TransactionTemplate,
     private val clock: Clock = Clock.systemUTC(),
+    private val bootstrap: FirstOwnerBootstrap? = null,
 ) {
     private data class Operation(
         val deviceCode: String,
@@ -39,6 +40,7 @@ class UnifiedIdentityService(
         var nextPoll: Instant,
         var identity: ConfirmedCentralIdentity? = null,
         @Volatile var consumed: Boolean = false,
+        val setupBootstrapHash: String? = null,
     )
     private val tokens = SessionTokenService()
     private val operations = LinkedHashMap<String, Operation>()
@@ -46,6 +48,72 @@ class UnifiedIdentityService(
     private val starts = java.util.ArrayDeque<Instant>()
 
     fun available() = provider.available()
+
+    fun startSetup(setupSecret: String?): CentralDeviceStart {
+        verifySetupSecret(setupSecret)
+        val started = start("LOGIN", null, null)
+        synchronized(operations) {
+            val key = tokens.hash(started.operationToken)
+            operations[key] = operations.getValue(key).copy(setupBootstrapHash = tokens.hash(setupSecret!!))
+        }
+        return started
+    }
+
+    fun pollSetup(operationToken: String, setupSecret: String?): CentralPollStatus {
+        verifySetupSecret(setupSecret)
+        if (operation(operationToken).setupBootstrapHash == null) fail("CENTRAL_OPERATION_INVALID")
+        return poll(operationToken, setupSecret)
+    }
+
+    fun cancelSetup(operationToken: String, setupSecret: String?) {
+        verifySetupSecret(setupSecret)
+        if (operation(operationToken).setupBootstrapHash == null) fail("CENTRAL_OPERATION_INVALID")
+        cancel(operationToken, setupSecret)
+    }
+
+    fun completeSetup(
+        operationToken: String,
+        setupSecret: String?,
+        credentials: CredentialsRequest,
+        confirm: Boolean
+    ): AuthenticatedOwner {
+        verifySetupSecret(setupSecret)
+        val operation = operation(operationToken)
+        synchronized(operation) {
+            verify(operation, setupSecret)
+            if (operation.setupBootstrapHash == null || !confirm) fail("CENTRAL_OPERATION_INVALID")
+            val identity = operation.identity ?: fail("CENTRAL_OPERATION_PENDING")
+            if (!identity.expiresAt.isAfter(clock.instant())) fail("CENTRAL_OPERATION_INVALID")
+            operation.consumed = true
+            return transactions.execute {
+                jdbc.sql("SELECT pg_advisory_xact_lock(5544332211)").query { _, _ -> true }.single()
+                if (!operation.expiresAt.isAfter(clock.instant()) || !identity.expiresAt.isAfter(clock.instant())) fail(
+                    "CENTRAL_OPERATION_INVALID"
+                )
+                val owner = authentication.setup(
+                    credentials.username,
+                    credentials.password,
+                    setupSecret,
+                    credentials.spaceType ?: SpaceType.HOME,
+                    credentials.spaceName ?: "Kyrion"
+                )
+                val inserted = jdbc.sql(
+                    """INSERT INTO central_identity_link(user_id,issuer,subject,linked_at)
+                    VALUES(:user,:issuer,:subject,:now) ON CONFLICT DO NOTHING"""
+                )
+                    .param("user", owner.user.id).param("issuer", identity.issuer).param("subject", identity.subject)
+                    .param("now", Timestamp.from(clock.instant())).update()
+                if (inserted != 1) fail("CENTRAL_IDENTITY_ALREADY_LINKED")
+                audit("identity.central.linked", owner.user)
+                owner
+            } ?: fail("CENTRAL_OPERATION_INVALID")
+        }
+    }
+
+    private fun verifySetupSecret(secret: String?) {
+        if (!authentication.setupRequired()) throw SetupAlreadyCompletedException()
+        (bootstrap ?: throw BootstrapForbiddenException()).verify(secret)
+    }
 
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 60_000)
     fun expireOperations() = synchronized(operations) {
@@ -113,6 +181,7 @@ class UnifiedIdentityService(
     fun complete(operationToken: String, rawSession: String?, confirm: Boolean): AuthenticatedOwner? {
         val operation = operation(operationToken)
         synchronized(operation) {
+            if (operation.setupBootstrapHash != null) fail("CENTRAL_OPERATION_INVALID")
             verify(operation, rawSession)
             if (!confirm) fail("CENTRAL_OPERATION_INVALID")
             val identity = operation.identity ?: fail("CENTRAL_OPERATION_PENDING")
@@ -197,6 +266,8 @@ class UnifiedIdentityService(
     }
     private fun verify(operation: Operation, rawSession: String?) {
         if (operation.consumed || !operation.expiresAt.isAfter(clock.instant())) fail("CENTRAL_OPERATION_INVALID")
+        if (operation.setupBootstrapHash != null && (rawSession == null || tokens.hash(rawSession) != operation.setupBootstrapHash))
+            fail("CENTRAL_OPERATION_INVALID")
         if (operation.user != null && (rawSession == null || tokens.hash(rawSession) != operation.localSession || current(rawSession).id != operation.user))
             fail("CENTRAL_OPERATION_INVALID")
     }

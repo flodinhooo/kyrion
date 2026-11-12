@@ -52,6 +52,69 @@ class UnifiedIdentityIntegrationTest @Autowired constructor(
 ) {
     @MockitoBean lateinit var provider: CentralIdentityProvider
 
+    @Test
+    fun `linked first owner creates one identity and business space with offline access`() {
+        val operation = identities.startSetup(setupSecret)
+        assertThat(authentication.setupRequired()).isTrue()
+        testClock.now = testClock.now.plusSeconds(2)
+        assertThat(identities.pollSetup(operation.operationToken, setupSecret).status).isEqualTo("CONFIRM")
+        val result = identities.completeSetup(
+            operation.operationToken, setupSecret,
+            CredentialsRequest("linked-owner", PASSWORD, SpaceType.BUSINESS, "Linked company"), true
+        )
+        assertThat(identities.status(result.session.rawToken).linked).isTrue()
+        assertThat(rbac.isOwner(result.user.id)).isTrue()
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM user_account").query(Int::class.java).single()).isEqualTo(1)
+        assertThat(jdbc.sql("SELECT type FROM kyrion_space").query(String::class.java).single()).isEqualTo("BUSINESS")
+        `when`(provider.available()).thenReturn(false)
+        assertThat(authentication.login("linked-owner", PASSWORD).user.id).isEqualTo(result.user.id)
+        assertThatThrownBy {
+            identities.completeSetup(
+                operation.operationToken, setupSecret,
+                CredentialsRequest("other", PASSWORD), true
+            )
+        }.isInstanceOf(SetupAlreadyCompletedException::class.java)
+    }
+
+    @Test
+    fun `linked setup requires host secret and cannot use normal login completion`() {
+        assertThatThrownBy { identities.startSetup(null) }.isInstanceOf(BootstrapForbiddenException::class.java)
+        verify(provider, never()).startDevice()
+        val operation = identities.startSetup(setupSecret)
+        testClock.now = testClock.now.plusSeconds(2)
+        identities.pollSetup(operation.operationToken, setupSecret)
+        assertThatThrownBy { identities.complete(operation.operationToken, setupSecret, true) }
+            .isInstanceOf(CentralIdentityException::class.java)
+        assertThat(authentication.setupRequired()).isTrue()
+        identities.cancelSetup(operation.operationToken, setupSecret)
+        assertThatThrownBy { identities.pollSetup(operation.operationToken, setupSecret) }
+            .isInstanceOf(CentralIdentityException::class.java)
+    }
+
+    @Test
+    fun `failed linked setup rolls back owner space roles and audit and consumes proof`() {
+        val operation = identities.startSetup(setupSecret)
+        testClock.now = testClock.now.plusSeconds(2)
+        identities.pollSetup(operation.operationToken, setupSecret)
+        assertThatThrownBy {
+            identities.completeSetup(
+                operation.operationToken, setupSecret,
+                CredentialsRequest("linked-owner", PASSWORD, SpaceType.HOME, "\u0001"), true
+            )
+        }
+            .isInstanceOf(InvalidSpaceSettingsException::class.java)
+        assertThat(authentication.setupRequired()).isTrue()
+        for (table in listOf("user_account", "kyrion_space", "central_identity_link", "auth_session")) {
+            assertThat(jdbc.sql("SELECT COUNT(*) FROM $table").query(Int::class.java).single()).isZero()
+        }
+        assertThatThrownBy {
+            identities.completeSetup(
+                operation.operationToken, setupSecret,
+                CredentialsRequest("linked-owner", PASSWORD), true
+            )
+        }.isInstanceOf(CentralIdentityException::class.java)
+    }
+
     @BeforeEach fun resetDatabase() {
         testClock.now = Instant.now()
         jdbc.sql("TRUNCATE TABLE user_account, activity_event, activity_integrity_chain CASCADE").update()
