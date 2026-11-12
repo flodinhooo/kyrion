@@ -128,3 +128,30 @@ tests; the Windows matrix partner was cancelled. Core/fresh-stack jobs were
 still running at that observation. This separate installer defect needs
 investigation in the ongoing installer work; no owner credential or decision
 is needed to diagnose it. No full-repository green-CI claim is made.
+
+## Website client activation, 2026-11-12
+
+The owner subsequently reported Keycloak's "Client disabled" page and explicitly
+authorized checking private administration and activating the website client.
+Existing host-key-verified SSH access to the Pi and the loopback-only Admin REST
+API worked. The existing `kyrion-website` client had the exact www callback and
+origin, confidential client authentication, authorization code flow, S256 PKCE
+and RS256; implicit and direct password grants were disabled. Only `enabled`
+changed from false to true. Registration remains closed and verified-email
+policy unchanged; no users, passwords, roles, client secrets or local Core flags
+were changed. No service restart or website deployment was required.
+
+A private mode-0600 client snapshot and operation evidence were retained on the
+Pi under its existing identity directory. Activation timestamp:
+`20261112T164256Z`; correlation ID:
+`0e55ed0d-373a-41c7-a0a6-1447668c5624`. Scoped rollback is to disable this client
+again without deleting users or restoring a stale database.
+
+An actual anonymous Production website login POST redirected to auth.kyrion.ch
+and returned HTTP 200 with username/password fields and no disabled-client error.
+The website issued its browser flow cookie. No credentials were entered; this
+proves login initiation, not authenticated callback, user existence, verified
+email, session issuance, reset or logout. KY-022 remains open for those journeys.
+The owner also supplied a screenshot of successful contact submission after
+correcting Vercel; mailbox receipt and Reply-To are still unconfirmed. Earlier
+contact-origin rejection evidence above is historical after that correction.
