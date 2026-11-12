@@ -30,7 +30,11 @@ async function localLogin(page: Page, username: string) {
   await page.goto(`${web}/login`);
   await page.locator('input[name="username"]').fill(username);
   await page.locator('input[name="password"]').fill(settings.LOCAL_PASSWORD);
-  const response = page.waitForResponse(r => new URL(r.url()).pathname === "/api/auth/login" && r.request().method() === "POST");
+  const response = page.waitForResponse(
+    (r) =>
+      new URL(r.url()).pathname === "/api/auth/login" &&
+      r.request().method() === "POST",
+  );
   await page
     .getByRole("button", { name: "Sign in locally", exact: true })
     .click();
@@ -331,11 +335,15 @@ test("real registration, verified email, website and local login/link/offline/un
   await expect(panel.getByText(email, {exact: true})).toBeVisible();
   const directoryPage = await context.newPage();
   await directoryPage.goto(`${website}/en/account`);
-  await expect(directoryPage.getByRole("heading", {
-    name: "Isolated identity acceptance",
-    exact: true
-  })).toBeVisible({timeout: 45_000});
-  await expect(directoryPage.getByText(memberName, {exact: true})).toBeVisible();
+  await expect(
+    directoryPage.getByRole("heading", {
+      name: "Isolated identity acceptance",
+      exact: true,
+    }),
+  ).toBeVisible({timeout: 45_000});
+  await expect(
+    directoryPage.getByText(memberName, {exact: true}),
+  ).toBeVisible();
   await directoryPage.close();
   expect((await me(context)).permissions).toEqual(member.permissions);
   expect((await webMutation(page, "/api/auth/logout")).status).toBe(204);
@@ -429,7 +437,9 @@ test("real registration, verified email, website and local login/link/offline/un
     )
     .toBe(200);
   await page.goto(`${website}/en/account`);
-  await expect(page.getByText("Isolated identity acceptance", {exact: true})).toHaveCount(0, {timeout: 45_000});
+  await expect(
+    page.getByText("Isolated identity acceptance", {exact: true}),
+  ).toHaveCount(0, {timeout: 45_000});
   await expect(
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();
