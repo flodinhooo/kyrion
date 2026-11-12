@@ -14,17 +14,23 @@ from urllib.parse import urlsplit
 
 
 @contextmanager
-def provider_proof(client, messages, fresh: bool):
+def provider_proof(client, messages, fresh: bool, invitation: str | None = None):
     secret = (
         (client.installation.target / "secrets/bootstrap.secret").read_text().strip()
         if fresh
         else None
     )
     prefix = "/v1/auth/central/setup" if fresh else "/v1/auth/central"
+    start_body = None if fresh else {"mode": "LOGIN"}
+    if invitation is not None:
+        if fresh or not re.fullmatch(r"[A-Za-z0-9_-]{43}", invitation):
+            raise ValueError("E_INVITATION")
+        prefix = "/v1/auth/central/registration"
+        start_body = {"invitationCode": invitation}
     operation = client.request(
         "POST",
         prefix + "/start",
-        None if fresh else {"mode": "LOGIN"},
+        start_body,
         bootstrap=secret,
     )
     token = operation.get("operationToken")
@@ -47,6 +53,11 @@ def provider_proof(client, messages, fresh: bool):
         )
         remaining = (expiry - datetime.datetime.now(datetime.UTC)).total_seconds()
         interval = operation["interval"]
+        code = operation.get("userCode")
+        if not isinstance(code, str) or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9 -]{0,127}", code
+        ):
+            raise ValueError("E_IDENTITY_OPERATION")
         if (
             not 0 < remaining <= 601
             or type(interval) is not int
@@ -55,7 +66,7 @@ def provider_proof(client, messages, fresh: bool):
             raise ValueError("E_IDENTITY_OPERATION")
         print(messages["centralBrowser"])
         print(uri)
-        print(messages["centralCode"] + ": " + operation["userCode"])
+        print(messages["centralCode"] + ": " + code)
         action = (
             input(messages["centralOpen"] + " [OPEN/CHECK/CANCEL]: ").strip().upper()
         )
@@ -98,6 +109,50 @@ def adopt_session(client, response):
     if client.request("GET", "/v1/auth/central/status").get("linked") is not True:
         raise ValueError("E_IDENTITY_LINK_REQUIRED")
     return user
+
+
+def join_invited_space(client, messages):
+    if (
+        input(messages["spaceInvitationChoice"] + " [JOIN/CANCEL]: ").strip().upper()
+        != "JOIN"
+    ):
+        raise ValueError("E_IDENTITY_CANCELLED")
+    invitation = getpass.getpass(messages["spaceInvitationCode"] + ": ").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{43}", invitation):
+        raise ValueError("E_INVITATION")
+    email = input(messages["spaceInvitationEmail"] + ": ").strip()
+    proof = None
+    if email:
+        client.request(
+            "POST",
+            "/v1/auth/registration-email",
+            {"invitationCode": invitation, "email": email},
+        )
+        proof = getpass.getpass(messages["spaceInvitationEmailProof"] + ": ").strip()
+    with provider_proof(client, messages, False, invitation) as (token, _, prefix):
+        print(messages["linkedOfflineIdentity"])
+        print(messages["offlineIdentityPolicy"])
+        username = input(messages["localUsername"] + ": ").strip()
+        password = getpass.getpass(messages["localPassword"] + ": ")
+        if password != getpass.getpass(messages["repeatPassword"] + ": "):
+            raise ValueError("E_PASSWORD_MISMATCH")
+        credentials = {
+            "username": username,
+            "password": password,
+            "invitationCode": invitation,
+            "email": email or None,
+            "emailProof": proof,
+        }
+        del password
+        try:
+            response = client.request(
+                "POST",
+                prefix + "/complete",
+                {"operationToken": token, "confirm": True, "credentials": credentials},
+            )
+        finally:
+            credentials.pop("password", None)
+        return adopt_session(client, response)
 
 
 def select_current_space(client, user, messages):
@@ -145,31 +200,39 @@ def linked_setup(client, messages):
             client.installation.state["centralIdentity"] = "provider-required"
             client.installation.save()
             raise ValueError("E_IDENTITY_NOT_CONFIGURED")
-        with provider_proof(client, messages, fresh) as (token, secret, prefix):
-            body = {"operationToken": token, "confirm": True}
-            if fresh:
-                print(messages["linkedOfflineIdentity"])
-                username = input(messages["localUsername"] + ": ").strip()
-                password = getpass.getpass(messages["localPassword"] + ": ")
-                if password != getpass.getpass(messages["repeatPassword"] + ": "):
-                    raise ValueError("E_PASSWORD_MISMATCH")
-                kind = (
-                    input(messages["spaceType"] + " [HOME/BUSINESS]: ").strip().upper()
+        try:
+            with provider_proof(client, messages, fresh) as (token, secret, prefix):
+                body = {"operationToken": token, "confirm": True}
+                if fresh:
+                    print(messages["linkedOfflineIdentity"])
+                    print(messages["offlineIdentityPolicy"])
+                    username = input(messages["localUsername"] + ": ").strip()
+                    password = getpass.getpass(messages["localPassword"] + ": ")
+                    if password != getpass.getpass(messages["repeatPassword"] + ": "):
+                        raise ValueError("E_PASSWORD_MISMATCH")
+                    kind = (
+                        input(messages["spaceType"] + " [HOME/BUSINESS]: ")
+                        .strip()
+                        .upper()
+                    )
+                    name = input(messages["spaceName"] + ": ").strip()
+                    if kind not in {"HOME", "BUSINESS"} or not 1 <= len(name) <= 120:
+                        raise ValueError("E_SPACE_TYPE")
+                    body["credentials"] = {
+                        "username": username,
+                        "password": password,
+                        "spaceType": kind,
+                        "spaceName": name,
+                    }
+                response = client.request(
+                    "POST", prefix + "/complete", body, bootstrap=secret
                 )
-                name = input(messages["spaceName"] + ": ").strip()
-                if kind not in {"HOME", "BUSINESS"} or not 1 <= len(name) <= 120:
-                    raise ValueError("E_SPACE_TYPE")
-                body["credentials"] = {
-                    "username": username,
-                    "password": password,
-                    "spaceType": kind,
-                    "spaceName": name,
-                }
-            response = client.request(
-                "POST", prefix + "/complete", body, bootstrap=secret
-            )
-            if fresh:
-                del password
-            user = adopt_session(client, response)
+                if fresh:
+                    del password
+                user = adopt_session(client, response)
+        except ValueError as error:
+            if fresh or getattr(error, "code", None) != "SPACE_ACCESS_REQUIRED":
+                raise
+            user = join_invited_space(client, messages)
     select_current_space(client, user, messages)
     return user

@@ -64,8 +64,8 @@ def extract_artifact(artifact, expected, directory):
                 libraries[filename] = digest(content)
                 (directory / "lib" / filename).write_bytes(content)
     require(
-        sorted(catalog) in (list(range(1, 46)), list(range(1, 47)), list(range(1, 48))),
-        "ARTIFACT_CATALOG_NOT_V1_TO_V45_V46_OR_V47",
+        sorted(catalog) in tuple(list(range(1, end + 1)) for end in (45, 46, 47, 48, 49)),
+        "ARTIFACT_CATALOG_NOT_V1_TO_V45_THROUGH_V49",
     )
     for prefix in ("flyway-core-", "flyway-database-postgresql-", "postgresql-"):
         require(
@@ -247,7 +247,7 @@ def main():
         type=Path,
         default=Path(os.environ["JAVA_HOME"]) if os.environ.get("JAVA_HOME") else None,
     )
-    parser.add_argument("--target-version", type=int, choices=(45, 46, 47), default=45)
+    parser.add_argument("--target-version", type=int, choices=(45, 46, 47, 48, 49), default=45)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--approve-plan-sha256")
     parser.add_argument("--expected-target")

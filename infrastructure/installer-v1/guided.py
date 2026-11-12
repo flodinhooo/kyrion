@@ -50,6 +50,7 @@ def main() -> int:
     actions.add_argument("--uninstall", action="store_true")
     actions.add_argument("--check-updates", action="store_true")
     actions.add_argument("--refresh-model-catalog", action="store_true")
+    actions.add_argument("--continue-setup", action="store_true")
     parser.add_argument("--feed")
     parser.add_argument(
         "--identity-issuer", default="https://auth.kyrion.ch/realms/kyrion"
@@ -164,6 +165,7 @@ def main() -> int:
         or args.uninstall
         or args.check_updates
         or args.refresh_model_catalog
+        or args.continue_setup
     ):
         try:
             return run_maintenance(args, messages)

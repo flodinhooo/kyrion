@@ -1,6 +1,7 @@
 """Actual Core/SQL/TLS linked setup driven by isolated terminal input fixtures."""
 
 import json
+import tempfile
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -12,6 +13,16 @@ from runtime import Installation
 
 
 def exercise_linked_account(request, root, ports, provider):
+    # This is an unprivileged protocol fixture, not SCM acceptance. Use the same
+    # private user-temp policy as native journal unit tests, rather than adopting
+    # a workspace parent's administrator-owned primary group.
+    with tempfile.TemporaryDirectory(prefix="kyrion-linked-journal-") as directory:
+        return _exercise_linked_account(
+            request, root, ports, provider, Path(directory) / "installation"
+        )
+
+
+def _exercise_linked_account(request, root, ports, provider, target):
     bootstrap = (root / "bootstrap").read_text()
 
     def refused(statuses, method, route, body=None, secret=None):
@@ -63,7 +74,6 @@ def exercise_linked_account(request, root, ports, provider):
     invalid["credentials"]["spaceName"] = "Must not create a second attempt"
     refused({400}, "POST", "/v1/auth/central/setup/complete", invalid, bootstrap)
 
-    target = root / "installer-state"
     installation = Installation(
         target,
         {"release": "1.2.3", "architecture": "windows/amd64"},
@@ -149,6 +159,7 @@ def exercise_linked_account(request, root, ports, provider):
     return (
         credentials,
         token,
+        owner_id,
         {
             "linkedFirstOwner": True,
             "authorizedBusinessSpace": True,

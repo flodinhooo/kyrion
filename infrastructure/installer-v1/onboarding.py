@@ -31,6 +31,11 @@ ROUTES = {
     ("POST", "/v1/auth/central/setup/poll"),
     ("POST", "/v1/auth/central/setup/complete"),
     ("POST", "/v1/auth/central/setup/cancel"),
+    ("POST", "/v1/auth/central/registration/start"),
+    ("POST", "/v1/auth/central/registration/poll"),
+    ("POST", "/v1/auth/central/registration/complete"),
+    ("POST", "/v1/auth/central/registration/cancel"),
+    ("POST", "/v1/auth/registration-email"),
     ("GET", "/v1/integrations/home-assistant"),
     ("POST", "/v1/integrations/home-assistant/probe"),
     ("POST", "/v1/integrations/home-assistant/connect"),
@@ -259,6 +264,11 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         from linked_onboarding import linked_setup
 
         user = linked_setup(client, messages)
+        if "system_settings:update" not in user.get("permissions", []):
+            print(messages["setupMemberOnly"])
+            installation.state["setupAccess"] = "member-only"
+            installation.save()
+            return
         if (
             "OWNER" in user.get("roles", [])
             and input(messages["recoveryNow"] + " [RECOVERY]: ").strip() == "RECOVERY"

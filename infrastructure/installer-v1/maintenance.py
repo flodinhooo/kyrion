@@ -198,6 +198,30 @@ def run(args, messages: dict[str, str]) -> int:
         diagnostic(args.target, args.diagnostics)
         print(messages["diagnosticSaved"])
         return 0
+    if getattr(args, "continue_setup", False):
+        from onboarding import guided_setup
+
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            if installation.state.get("backend") == "windows-native":
+                from native_runtime import permissions
+
+                permissions(args.target, "verify")
+            elif os.name != "posix" or os.geteuid() != 0:
+                raise ValueError("E_PLATFORM")
+            guided_setup(installation, messages)
+            print(
+                json.dumps(
+                    {
+                        "ownerSetup": installation.state.get("ownerSetup"),
+                        "centralIdentity": installation.state.get(
+                            "centralIdentity", "not-verified"
+                        ),
+                        "selectedSpace": installation.state.get("selectedSpace"),
+                    }
+                )
+            )
+        return 0
     if args.refresh_model_catalog:
         from model_cache import refresh_catalog
         from release_policy import parse
