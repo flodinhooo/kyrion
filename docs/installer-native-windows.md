@@ -53,6 +53,14 @@ Private download staging is journalled and checks archive/manifest hashes again
 after copying; it never extracts directly from a mutable original download.
 Interrupted archives are preserved and never adopted without verification.
 
+Windows journal replacement preserves native owner/group and protected DACL,
+including runtime read grants. Exclusive new managed files and temporary journal
+files receive their policy in CreateFileW before bytes are written. Three actual
+SDK regressions exercise existing-file refusal, protected descriptor preservation
+and failed-policy publication without replacing the original. This fixes the
+ownership/read-grant loss of naive atomic replacement; development artifacts
+through `dev.20261112.4` are superseded and must not be used for SCM acceptance.
+
 Signature verification returns the exact verified manifest bytes. Review and
 provisioning bind their digest to those bytes, rather than reopening mutable
 metadata after signature verification. Linux image input is copied into the
@@ -121,8 +129,8 @@ module; no boot/service acceptance is claimed by these process tests.
 
 | Platform | Actual developer evidence | Outstanding acceptance |
 | --- | --- | --- |
-| Windows x64, build 10.0.26300.0 | 125 tests (one symlink skip); new one-file and one-directory builds; real Core/Web/PostgreSQL/Caddy with pinned internal TLS, verified Node peer and restart login | Actual service registration/virtual-account ACL normalization; supported-version/cold-boot acceptance; complete product journey |
-| Debian 13 x64 | 125 tests (13 platform skips) in separate WSL guest with drive mounts/interop disabled; historical standalone smoke, source stack and encrypted restore evidence retained | Full installed host boot/maintenance and complete product journey |
+| Windows x64, build 10.0.26300.0 | 140 tests (one symlink skip); new one-file and one-directory builds; real Core/Web/PostgreSQL/Caddy with pinned internal TLS, verified Node peer and restart login | Actual service registration/virtual-account ACL normalization; supported-version/cold-boot acceptance; complete product journey |
+| Debian 13 x64 | 140 tests (16 platform skips) in separate WSL guest with drive mounts/interop disabled; historical standalone smoke, source stack and encrypted restore evidence retained | Full installed host boot/maintenance and complete product journey |
 | Linux ARM64 / suitable Raspberry Pi | Native build jobs prepared; bounded inventory/manifest contracts tested | Actual native artifact build, target installation and hardware/boot acceptance; no current release claim |
 
 The successful native stack uses Java 21.0.13+9, Node 22.23.3, PostgreSQL 17.11-5

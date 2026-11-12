@@ -39,11 +39,17 @@ def execute(args: list[str], timeout: int = 120) -> str:
     return result.stdout
 
 
-def atomic_json(path: Path, value: dict) -> None:
+def atomic_json(path: Path, value: dict, security_source: Path | None = None) -> None:
     temporary = path.with_name("." + path.name + "." + secrets.token_hex(8))
     try:
+        if security_source is not None:
+            from windows_security import open_secured_file
+
+            descriptor = open_secured_file(temporary, security_source)
+        else:
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(
-            os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+            descriptor,
             "w",
             encoding="utf-8",
         ) as stream:
@@ -51,6 +57,10 @@ def atomic_json(path: Path, value: dict) -> None:
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
+        if security_source is not None:
+            from windows_security import copy_file_security
+
+            copy_file_security(security_source, temporary)
         os.replace(temporary, path)
         if os.name == "posix":
             descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
@@ -256,7 +266,10 @@ class Installation:
             self.save()
 
     def save(self) -> None:
-        atomic_json(self.path, self.state)
+        source = None
+        if os.name == "nt" and self.configuration["architecture"] == "windows/amd64":
+            source = self.path if self.path.exists() else self.target
+        atomic_json(self.path, self.state, security_source=source)
 
     def verify_files(self) -> None:
         for relative, digest in self.state["files"].items():
@@ -318,14 +331,22 @@ class Installation:
             else (os.geteuid() if os.name == "posix" else None),
         }
         self.save()
-        with os.fdopen(
-            os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
-        ) as stream:
+        if os.name == "nt" and self.configuration["architecture"] == "windows/amd64":
+            from windows_security import open_secured_file
+
+            descriptor = open_secured_file(path, path.parent)
+        else:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
             stream.write(payload)
             if uid is not None:
                 os.chown(path, uid, uid)
             stream.flush()
             os.fsync(stream.fileno())
+        if os.name == "nt" and self.configuration["architecture"] == "windows/amd64":
+            from windows_security import copy_file_security
+
+            copy_file_security(path.parent, path)
         self.state["files"][relative] = sha256(path)
         del self.state["pendingWrite"]
         self.save()

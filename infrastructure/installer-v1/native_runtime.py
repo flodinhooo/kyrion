@@ -107,7 +107,11 @@ def permissions(target: Path, action: str) -> None:
 def create_journalled_root(target: Path, state: dict) -> None:
     staging = target.with_name(target.name + ".creating-" + state["installationId"])
     permissions(staging, "create")
-    atomic_json(staging / "install-state.json", state)
+    atomic_json(
+        staging / "install-state.json",
+        state,
+        security_source=staging if os.name == "nt" else None,
+    )
     # Windows rename refuses an existing destination. Until publication this
     # private directory has no secrets, live runtime or externally used identity.
     reject_links(target)

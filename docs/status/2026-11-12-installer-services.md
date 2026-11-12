@@ -105,3 +105,38 @@ rows above describe the reproducible service checkpoint and remain historical.
 
 The latest EXE and host native smoke pass. Public download/service acceptance
 is still false. Remaining whole-product source work listed above is unchanged.
+
+## Atomic Windows file security correction
+
+Further source review found that replacing a journal with a normally created
+temporary file would drop its explicit runtime read grants and administrator
+ownership. Initial managed files could likewise acquire the interactive
+administrator's owner SID before policy assignment. This would break the first
+real service acceptance and is a source defect, not an external test limitation.
+
+New managed/temporary files now use exclusive CreateFileW with owner/group/DACL
+in SECURITY_ATTRIBUTES before writing. Journal replacement copies the original
+protected descriptor before publication. Three actual Windows SDK tests prove
+exclusive creation without truncation, descriptor preservation and failure
+before replacement. The current full Windows suite passes 140 tests (one skip).
+
+Development artifacts up to `.20261112.4` above are historical and superseded;
+do not use them for SCM acceptance. The corrected standalone build is
+`build/native-installer/kyrion-installer-0.0.0-dev.20261112.5-windows-amd64.exe`,
+12,302,284 bytes, SHA256
+`b6eafcd6e90c9f12c2fae5f4d5f28b9d243492a97fbc7c4964d1b0ece104abb6`.
+The corresponding direct host is `build/native-service-host-dev5/`, with exact
+source hashes in `build-source.json`. Both native smoke tests pass. This still
+does not claim actual registered-service or boot acceptance.
+
+The final corrected Debian 13 full suite also passes 140 tests (16 Windows-only
+skips), using the same current source. The guest is the isolated fixture named
+in `build/isolated-linux/fixture.json`; mounts/interop remain disabled.
+
+The corrected schema-3 runtime bundle is
+`build/windows-service-bundle-dev5/kyrion-windows-amd64.zip`, 224,271,856 bytes,
+SHA256 `c51846381373d53fcc902844fd812b5103af3e6a7587e45597e0569c1d9b2a95`.
+Its manifest hash is
+`3ec09df1557f2d0886aa99eeab1036d778705109930c31aa2e1c055637c13ba0`.
+The built EXE verifies its ephemeral test-authority signature. Private test
+signing material is not persisted; no artifact has been published.

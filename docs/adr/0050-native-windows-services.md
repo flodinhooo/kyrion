@@ -83,3 +83,12 @@ Transport references:
 - https://docs.spring.io/spring-boot/appendix/application-properties/
 - https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
 - https://learn.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getextendedtcptable
+
+Installer file publication must retain the same identity boundary as directory
+creation. A temporary journal or new managed file is exclusively created using
+CreateFileW with the existing file's or protected parent's owner/group/DACL in
+SECURITY_ATTRIBUTES. The existing journal's policy is copied before replacement;
+the owner and protected DACL must survive every save. Creating a file as the
+interactive administrator and only fixing its owner afterward leaves an
+unnecessary owner-policy window and is not the publication contract. Runtime
+status files remain ordinary writes inside their dedicated identity directories.

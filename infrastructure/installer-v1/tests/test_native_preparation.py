@@ -124,8 +124,8 @@ class Preparation(unittest.TestCase):
         def create(path, _action):
             path.mkdir(mode=0o700)
 
-        def interrupted(path, value):
-            atomic_json(path, value)
+        def interrupted(path, value, **kwargs):
+            atomic_json(path, value, **kwargs)
             raise OSError("synthetic publication interruption")
 
         with (
