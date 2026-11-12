@@ -1,9 +1,9 @@
 "use client";
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import {href, type Dictionary, type Locale} from "@/lib/site";
-import {useAccountSession} from "./account-session";
-import type {LinkedInstallation} from "@/lib/account/installations";
+import { href, type Dictionary, type Locale } from "@/lib/site";
+import { useAccountSession } from "./account-session";
+import type { LinkedInstallation } from "@/lib/account/installations";
 
 function readRows(value: unknown): LinkedInstallation[] {
   if (
@@ -46,13 +46,13 @@ function readRows(value: unknown): LinkedInstallation[] {
 }
 
 export function LinkedInstallations({
-                                      t,
-                                      locale,
-                                    }: {
+  t,
+  locale,
+}: {
   t: Dictionary;
   locale: Locale;
 }) {
-  const {status} = useAccountSession();
+  const { status } = useAccountSession();
   const id = status?.session?.id;
   const [rows, setRows] = useState<LinkedInstallation[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -88,7 +88,7 @@ export function LinkedInstallations({
     };
   }, [id]);
   const date = (v: string) =>
-    new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(
+    new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
       new Date(v),
     );
   return (

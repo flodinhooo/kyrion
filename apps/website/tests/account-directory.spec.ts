@@ -1,9 +1,9 @@
-import {test, expect} from "@playwright/test";
-import {dictionaries} from "../src/lib/site";
+import { test, expect } from "@playwright/test";
+import { dictionaries } from "../src/lib/site";
 
 test("linked installations are visible in the account overview and code entry has its own page", async ({
-                                                                                                          page,
-                                                                                                        }, info) => {
+  page,
+}, info) => {
   await page.route("**/api/account/session", (r) =>
     r.fulfill({
       json: {
@@ -37,15 +37,15 @@ test("linked installations are visible in the account overview and code entry ha
       prefix = locale === "de" ? "" : "/en";
     await page.goto(`${prefix}/account`);
     await expect(
-      page.getByRole("heading", {name: t.installationsTitle, exact: true}),
+      page.getByRole("heading", { name: t.installationsTitle, exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", {name: "Kyrion Zuhause", exact: true}),
+      page.getByRole("heading", { name: "Kyrion Zuhause", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("florian-fixture", {exact: true}),
+      page.getByText("florian-fixture", { exact: true }),
     ).toBeVisible();
-    await page.setViewportSize({width: 360, height: 900});
+    await page.setViewportSize({ width: 360, height: 900 });
     expect(
       await page.locator("body").evaluate((x) => x.scrollWidth <= innerWidth),
     ).toBe(true);
@@ -56,11 +56,11 @@ test("linked installations are visible in the account overview and code entry ha
       });
     await page.goto(`${prefix}/connect`);
     await expect(
-      page.getByLabel(t.linkCodeLabel, {exact: true}),
+      page.getByLabel(t.linkCodeLabel, { exact: true }),
     ).toBeVisible();
     await expect(
       page.locator('form[action="/api/account/connect"]'),
     ).toHaveAttribute("method", "post");
-    await page.setViewportSize({width: 1280, height: 720});
+    await page.setViewportSize({ width: 1280, height: 720 });
   }
 });

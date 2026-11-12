@@ -109,7 +109,7 @@ async function approveDevice(
       async () =>
         (await approval.locator("#password").isVisible()) ||
         (await approval
-          .getByRole("button", {name: /Yes|Confirm|Allow/i})
+          .getByRole("button", { name: /Yes|Confirm|Allow/i })
           .isVisible()),
     )
     .toBe(true);
@@ -240,7 +240,7 @@ test("real registration, verified email, website and local login/link/offline/un
       async () =>
         (await page.locator("#password").isVisible()) ||
         (await page
-          .getByRole("heading", {name: "My account", exact: true})
+          .getByRole("heading", { name: "My account", exact: true })
           .isVisible()),
     )
     .toBe(true);
@@ -350,7 +350,7 @@ test("real registration, verified email, website and local login/link/offline/un
   await expect(panel.getByText("Your local account is connected.")).toBeVisible(
     { timeout: 45_000 },
   );
-  await expect(panel.getByText(email, {exact: true})).toBeVisible();
+  await expect(panel.getByText(email, { exact: true })).toBeVisible();
   const directoryPage = await context.newPage();
   await directoryPage.goto(`${website}/en/account`);
   await expect(
@@ -358,9 +358,9 @@ test("real registration, verified email, website and local login/link/offline/un
       name: "Isolated identity acceptance",
       exact: true,
     }),
-  ).toBeVisible({timeout: 45_000});
+  ).toBeVisible({ timeout: 45_000 });
   await expect(
-    directoryPage.getByText(memberName, {exact: true}),
+    directoryPage.getByText(memberName, { exact: true }),
   ).toBeVisible();
   await directoryPage.close();
   expect((await me(context)).permissions).toEqual(member.permissions);
@@ -456,8 +456,8 @@ test("real registration, verified email, website and local login/link/offline/un
     .toBe(200);
   await page.goto(`${website}/en/account`);
   await expect(
-    page.getByText("Isolated identity acceptance", {exact: true}),
-  ).toHaveCount(0, {timeout: 45_000});
+    page.getByText("Isolated identity acceptance", { exact: true }),
+  ).toHaveCount(0, { timeout: 45_000 });
   await expect(
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();

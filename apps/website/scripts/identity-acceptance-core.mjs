@@ -114,7 +114,7 @@ const child = spawn(
   [
     "-jar",
     process.env.KYRION_ACCOUNT_ACCEPTANCE_JAR ||
-    "build/libs/kyrion-core-0.1.0-SNAPSHOT.jar",
+      "build/libs/kyrion-core-0.1.0-SNAPSHOT.jar",
     // Do not import the personal installation's infrastructure/.env into tests.
     "--spring.config.import=",
   ],

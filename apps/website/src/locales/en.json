@@ -143,18 +143,9 @@
     "diagramLabel": "The Kyrion ecosystem",
     "diagramTop": "DEVICES & INTEGRATIONS",
     "diagramCore": "ONE TRUSTED CORE",
-    "diagramBottom": [
-      "Web",
-      "Voice",
-      "Automations",
-      "Intelligence"
-    ],
+    "diagramBottom": ["Web", "Voice", "Automations", "Intelligence"],
     "diagramCaption": "An ecosystem vision. Core validates actions across every interface; voice is evolving and automations are planned.",
-    "diagramDevices": [
-      "Lighting",
-      "Sensors",
-      "Services"
-    ],
+    "diagramDevices": ["Lighting", "Sensors", "Services"],
     "diagramCenter": "Connection. Control. Clarity.",
     "principles": [
       "Local by design",
@@ -198,12 +189,7 @@
     "worksEnvironment": {
       "title": "Your home",
       "description": "Selected lighting, sensors and media through bounded integrations.",
-      "items": [
-        "Nanoleaf",
-        "Zigbee",
-        "Spotify",
-        "Home Assistant"
-      ]
+      "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
     },
     "worksCloud": {
       "title": "Cloud when you need it.",

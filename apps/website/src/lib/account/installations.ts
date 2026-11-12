@@ -1,7 +1,7 @@
-import {Pool} from "pg";
-import {hash, secret} from "./store";
-import type {AccountConfig} from "./config";
-import {discover} from "./oidc";
+import { Pool } from "pg";
+import { hash, secret } from "./store";
+import type { AccountConfig } from "./config";
+import { discover } from "./oidc";
 import * as oidc from "openid-client";
 
 export type InstallationReport = {
@@ -67,20 +67,19 @@ export async function reportSubject(
   const value = await oidc.tokenIntrospection(await discover(config), token);
   const audience = typeof value.aud === "string" ? [value.aud] : value.aud;
   return value.active &&
-  value.iss === config.issuer.href &&
-  value.client_id === "kyrion-local" &&
-  Array.isArray(audience) &&
-  audience.includes(config.clientId) &&
-  typeof value.sub === "string" &&
-  value.sub.length <= 255 &&
-  value.sub.length > 0
+    value.iss === config.issuer.href &&
+    value.client_id === "kyrion-local" &&
+    Array.isArray(audience) &&
+    audience.includes(config.clientId) &&
+    typeof value.sub === "string" &&
+    value.sub.length <= 255 &&
+    value.sub.length > 0
     ? value.sub
     : null;
 }
 
 export class InstallationStore {
-  constructor(private pool: Pool) {
-  }
+  constructor(private pool: Pool) {}
 
   async list(accountId: string): Promise<LinkedInstallation[]> {
     const result = await this.pool.query<LinkedInstallation>(
@@ -121,7 +120,7 @@ export class InstallationStore {
         [account.rows[0].id, result.rows[0].id],
       );
       await client.query("COMMIT");
-      return {id: result.rows[0].id, credential};
+      return { id: result.rows[0].id, credential };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;

@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { type Dictionary, type Locale } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { useAccountSession } from "@/components/account-session";
-import {LinkedInstallations} from "@/components/linked-installations";
+import { LinkedInstallations } from "@/components/linked-installations";
 
 export function AccountPage({
-                              t,
-                              locale,
-                              connectOnly = false,
-                            }: {
+  t,
+  locale,
+  connectOnly = false,
+}: {
   t: Dictionary;
   locale: Locale;
   connectOnly?: boolean;
@@ -211,6 +211,6 @@ export function AccountPage({
   );
 }
 
-export function ConnectPage({t, locale}: { t: Dictionary; locale: Locale }) {
-  return <AccountPage t={t} locale={locale} connectOnly/>;
+export function ConnectPage({ t, locale }: { t: Dictionary; locale: Locale }) {
+  return <AccountPage t={t} locale={locale} connectOnly />;
 }

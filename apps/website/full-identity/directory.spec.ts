@@ -1,7 +1,7 @@
-import {test, expect} from "@playwright/test";
-import {readFileSync} from "node:fs";
-import {randomUUID} from "node:crypto";
-import {Pool} from "pg";
+import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { Pool } from "pg";
 import {
   InstallationStore,
   installationReport,
@@ -35,9 +35,9 @@ test("directory rows isolate accounts, hash receipts and reject cross-row mainte
     linkedAt: new Date().toISOString(),
   };
   try {
-    expect(installationReport({...body, name: "bad\nname"})).toBeNull();
+    expect(installationReport({ ...body, name: "bad\nname" })).toBeNull();
     expect(
-      installationReport({...body, installationId: "not-a-uuid"}),
+      installationReport({ ...body, installationId: "not-a-uuid" }),
     ).toBeNull();
     const a = await store.report(issuer, "account-a", body),
       b = await store.report(issuer, "account-b", body);
