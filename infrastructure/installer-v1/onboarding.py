@@ -261,6 +261,9 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         return
     client = CoreClient(installation)
     try:
+        from bootstrap_maintenance import offer_bootstrap_extension
+
+        offer_bootstrap_extension(installation, messages)
         from linked_onboarding import linked_setup
 
         user = linked_setup(client, messages)

@@ -32,6 +32,8 @@ FILES = (
     "runtime.py",
     "onboarding.py",
     "identity_settings.py",
+    "bootstrap_maintenance.py",
+    "error_guidance.py",
     "linked_onboarding.py",
     "verify.py",
     "maintenance.py",

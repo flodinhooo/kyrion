@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from bundle import authenticated_review
+from error_guidance import guidance
 from host import inventory
 from maintenance import run as run_maintenance
 from models import guided_recommendation, load_catalog
@@ -51,6 +52,7 @@ def main() -> int:
     actions.add_argument("--check-updates", action="store_true")
     actions.add_argument("--refresh-model-catalog", action="store_true")
     actions.add_argument("--continue-setup", action="store_true")
+    actions.add_argument("--extend-bootstrap", action="store_true")
     parser.add_argument("--feed")
     parser.add_argument(
         "--identity-issuer", default="https://auth.kyrion.ch/realms/kyrion"
@@ -166,11 +168,17 @@ def main() -> int:
         or args.check_updates
         or args.refresh_model_catalog
         or args.continue_setup
+        or args.extend_bootstrap
     ):
         try:
             return run_maintenance(args, messages)
         except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
             code = str(error).split(":", 1)[0]
+            advice = guidance(code, messages)
+            if advice:
+                print(advice, file=sys.stderr)
+            if code in {"E_IDENTITY_CANCELLED", "E_SPACE_CANCELLED"}:
+                return 3
             print(
                 code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_MAINTENANCE",
                 file=sys.stderr,
@@ -302,6 +310,11 @@ def main() -> int:
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         # Error details from untrusted files, TLS or command output aren't logs.
         code = str(error).split(":", 1)[0]
+        advice = guidance(code, messages)
+        if advice:
+            print(advice, file=sys.stderr)
+        if code in {"E_IDENTITY_CANCELLED", "E_SPACE_CANCELLED"}:
+            return 3
         help_key = (
             "nativeErrorElevation"
             if code == "E_NATIVE_ELEVATION"

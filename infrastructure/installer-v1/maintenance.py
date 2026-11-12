@@ -222,6 +222,15 @@ def run(args, messages: dict[str, str]) -> int:
                 )
             )
         return 0
+    if getattr(args, "extend_bootstrap", False):
+        from bootstrap_maintenance import extend_bootstrap
+
+        if input(messages["bootstrapExtendReview"] + " [EXTEND/CANCEL]: ").strip() != "EXTEND":
+            raise ValueError("E_CONFIRMATION")
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            print(json.dumps(extend_bootstrap(installation)))
+        return 0
     if args.refresh_model_catalog:
         from model_cache import refresh_catalog
         from release_policy import parse
