@@ -409,6 +409,7 @@ test("real registration, verified email, website and local login/link/offline/un
     await expect(
       panel.getByText("Your local account is connected."),
     ).toBeVisible();
+    await panel.locator("summary").filter({ hasText: "Manage connection" }).click();
     await panel
       .locator('input[name="currentPassword"]')
       .fill(settings.LOCAL_PASSWORD);
