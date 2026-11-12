@@ -12,11 +12,66 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from identity_settings import configure_identity, validate_identity
 from linked_onboarding import linked_setup, provider_proof
-from onboarding import CoreClient
+from onboarding import CoreClient, CoreError
 from runtime import Installation
 
 
 class LinkedOnboarding(unittest.TestCase):
+    def test_invitation_join_never_requests_owner_or_creates_another_space(self):
+        def api(method, route, body=None, bootstrap=None):
+            if route.endswith("setup/status"):
+                return {"setupRequired": False}
+            if route.endswith("/config"):
+                return {"enabled": True}
+            if route.endswith("/start"):
+                if "/registration/" in route:
+                    self.assertEqual(body, {"invitationCode": "i" * 43})
+                return self.operation
+            if route.endswith("/poll"):
+                return {"status": "CONFIRM"}
+            if route == "/v1/auth/central/complete":
+                raise CoreError("SPACE_ACCESS_REQUIRED", 403)
+            if route.endswith("/cancel"):
+                return None
+            if route.endswith("/registration/complete"):
+                self.assertEqual(body["credentials"]["invitationCode"], "i" * 43)
+                self.assertNotIn("spaceType", body["credentials"])
+                self.assertNotIn("role", body["credentials"])
+                return {"sessionToken": "n" * 43}
+            if route == "/v1/auth/me":
+                return {"roles": ["USER"], "permissions": ["devices:read"]}
+            if route == "/v1/auth/central/status":
+                return {"linked": True}
+            if route == "/v1/space":
+                return self.space
+            raise AssertionError(route)
+
+        with (
+            patch.object(self.client, "request", side_effect=api),
+            patch(
+                "builtins.input",
+                side_effect=["ONLINE", "CHECK", "JOIN", "", "CHECK", "member", "USE"],
+            ),
+            patch(
+                "linked_onboarding.getpass.getpass",
+                side_effect=[
+                    "i" * 43,
+                    "member-local-password",
+                    "member-local-password",
+                ],
+            ),
+            patch("linked_onboarding.time.sleep"),
+            patch("builtins.print"),
+        ):
+            user = linked_setup(self.client, self.messages)
+        self.assertEqual(user["roles"], ["USER"])
+        self.assertEqual(
+            self.installation.state["selectedSpace"]["id"], self.space["id"]
+        )
+        self.assertNotIn(
+            "i" * 43, (self.installation.target / "install-state.json").read_text()
+        )
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

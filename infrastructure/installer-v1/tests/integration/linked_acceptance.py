@@ -25,9 +25,9 @@ def exercise_linked_account(request, root, ports, provider):
 def _exercise_linked_account(request, root, ports, provider, target):
     bootstrap = (root / "bootstrap").read_text()
 
-    def refused(statuses, method, route, body=None, secret=None):
+    def refused(statuses, method, route, body=None, secret=None, auth=None):
         try:
-            request(method, route, body, bootstrap=secret)
+            request(method, route, body, token=auth, bootstrap=secret)
         except HTTPError as error:
             if error.code not in statuses:
                 raise ValueError("E_LINKED_FIXTURE_WRONG_REJECTION") from None
@@ -156,6 +156,98 @@ def _exercise_linked_account(request, root, ports, provider, target):
     request("POST", "/v1/auth/central/poll", body)
     refused({403}, "POST", "/v1/auth/central/complete", {**body, "confirm": True})
     provider.subject = "synthetic-linked-owner"
+    invitation = request("POST", "/v1/space/invitations", {}, token=token)
+    registration = request(
+        "POST",
+        "/v1/auth/central/registration/start",
+        {"invitationCode": invitation["code"]},
+    )
+    time.sleep(registration["interval"])
+    registration_body = {"operationToken": registration["operationToken"]}
+    request("POST", "/v1/auth/central/registration/poll", registration_body)
+    refused(
+        {409},
+        "POST",
+        "/v1/auth/central/registration/complete",
+        {
+            **registration_body,
+            "confirm": True,
+            "credentials": {
+                "username": "duplicate-identity-probe",
+                "password": credentials["password"],
+                "invitationCode": invitation["code"],
+            },
+        },
+    )
+    invitations = request("GET", "/v1/space/invitations", token=token)
+    retained = next(item for item in invitations if item["id"] == invitation["id"])
+    if retained["useCount"] != 0 or retained["status"] != "ACTIVE":
+        raise ValueError("E_LINKED_FIXTURE_INVITATION_ROLLBACK")
+    provider.subject = "synthetic-linked-member"
+    try:
+        with (
+            patch(
+                "builtins.input",
+                side_effect=[
+                    "ONLINE",
+                    "CHECK",
+                    "JOIN",
+                    "",
+                    "CHECK",
+                    "fixture-member",
+                    "USE",
+                ],
+            ),
+            patch(
+                "linked_onboarding.getpass.getpass",
+                side_effect=[
+                    invitation["code"],
+                    "Synthetic-member-password-123456",
+                    "Synthetic-member-password-123456",
+                ],
+            ),
+            patch("builtins.print"),
+        ):
+            member = linked_setup(client, messages)
+        if (
+            member["id"] == owner_id
+            or "OWNER" in member["roles"]
+            or member["space"]["id"] != owner_id
+        ):
+            raise ValueError("E_LINKED_FIXTURE_INVITATION_ROLE")
+        refused(
+            {403},
+            "PUT",
+            "/v1/space",
+            {"name": "Must not rename", "type": "HOME"},
+            auth=client.session,
+        )
+    finally:
+        client.close()
+    provider.subject = "synthetic-spent-invitation-probe"
+    replay = request(
+        "POST",
+        "/v1/auth/central/registration/start",
+        {"invitationCode": invitation["code"]},
+    )
+    time.sleep(replay["interval"])
+    replay_body = {"operationToken": replay["operationToken"]}
+    request("POST", "/v1/auth/central/registration/poll", replay_body)
+    refused(
+        {400},
+        "POST",
+        "/v1/auth/central/registration/complete",
+        {
+            **replay_body,
+            "confirm": True,
+            "credentials": {
+                "username": "spent-invitation-probe",
+                "password": credentials["password"],
+                "invitationCode": invitation["code"],
+            },
+        },
+    )
+    provider.subject = "synthetic-linked-owner"
     return (
         credentials,
         token,
@@ -170,5 +262,10 @@ def _exercise_linked_account(request, root, ports, provider, target):
             "unmappedAccountDenied": True,
             "syntheticOidcProvider": True,
             "providerTlsVerified": True,
+            "invitationMemberJoinedExistingSpace": True,
+            "invitationRolePreserved": True,
+            "duplicateIdentityRolledBackInvitation": True,
+            "spentInvitationRejected": True,
+            "memberCannotAdministerSpace": True,
         },
     )

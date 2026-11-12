@@ -71,17 +71,21 @@ class SchemaToolTest(unittest.TestCase):
             TOOL.extract_artifact(self.jar, "0" * 64, self.extract)
         self.assertEqual([], list((self.extract / "sql").iterdir()))
 
+    def test_accepts_directory_v49_catalog(self):
+        catalog = TOOL.extract_artifact(self.jar, self.artifact(range(1, 50)), self.extract)
+        self.assertEqual(49, len(catalog["migrations"]))
+
     def test_rejects_missing_migrations(self):
         with self.assertRaisesRegex(
-            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_V46_OR_V47"
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_THROUGH_V49"
         ):
             TOOL.extract_artifact(self.jar, self.artifact(range(1, 45)), self.extract)
 
     def test_rejects_future_migration(self):
         with self.assertRaisesRegex(
-            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_V46_OR_V47"
+            ValueError, "ARTIFACT_CATALOG_NOT_V1_TO_V45_THROUGH_V49"
         ):
-            TOOL.extract_artifact(self.jar, self.artifact(range(1, 49)), self.extract)
+            TOOL.extract_artifact(self.jar, self.artifact(range(1, 51)), self.extract)
 
     def test_rejects_callback_or_path_traversal(self):
         for name in ("beforeMigrate.sql", "../../escape.sql"):

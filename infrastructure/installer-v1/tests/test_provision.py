@@ -61,7 +61,7 @@ class ProvisionTests(unittest.TestCase):
         return ""
 
     @staticmethod
-    def configure(installation):
+    def configure(installation, identity=None):
         installation.write("secrets/test.key", b"first fixture credential")
         installation.state["stage"] = "configured"
         installation.save()

@@ -27,15 +27,47 @@ from crypto_support import certificate, private_tls_key
 from native_web_transport import WebTransport
 
 
+class FixtureDirectory(tempfile.TemporaryDirectory):
+    def __init__(self, *args, **kwargs):
+        self.intended_parent = Path(kwargs["dir"]).resolve()
+        super().__init__(*args, **kwargs)
+
+    def cleanup(self):
+        # PostgreSQL's Windows logger may release inherited file handles just
+        # after pg_ctl confirms stop. Retry only this newly created fixture.
+        target = Path(self.name).resolve()
+        if (
+            not target.name.startswith("kyrion-native-stack-")
+            or target.parent != self.intended_parent
+        ):
+            raise ValueError("E_NATIVE_FIXTURE_CLEANUP_SCOPE")
+        for attempt in range(60):
+            try:
+                return super().cleanup()
+            except PermissionError:
+                if attempt == 59:
+                    raise
+                time.sleep(0.5)
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
-def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
+def main(
+    bundle: Path,
+    key: Path,
+    payload: Path,
+    work_parent: Path,
+    core_jar: Path | None = None,
+    linked_account: bool = False,
+) -> dict:
     if os.name != "nt":
         raise ValueError("E_WINDOWS_FIXTURE_PLATFORM")
+    if linked_account and (core_jar is None or not core_jar.is_file()):
+        raise ValueError("E_LINKED_FIXTURE_SOURCE_CORE_REQUIRED")
     # Authenticate and verify every actual executable before starting anything.
     native_bundle.unpack(bundle, key, payload)
     runtime = payload / "runtime"
@@ -83,9 +115,7 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
                 raise ValueError("E_NATIVE_FIXTURE_RESPONSE")
             return json.loads(data) if data else None
 
-    with tempfile.TemporaryDirectory(
-        prefix="kyrion-native-stack-", dir=work_parent
-    ) as directory:
+    with FixtureDirectory(prefix="kyrion-native-stack-", dir=work_parent) as directory:
         root = Path(directory)
         (root / "data/web-tls").mkdir(parents=True)
         for role in ("core", "web"):
@@ -104,6 +134,9 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
             ),
         )
         web_transport = None
+        provider = None
+        linked_evidence = {}
+        expected_owner = None
         environment.update(
             APPDATA=str(root / "appdata"),
             LOCALAPPDATA=str(root / "localappdata"),
@@ -191,6 +224,11 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
             raise ValueError("E_NATIVE_FIXTURE_CORE_READY")
 
         try:
+            if linked_account:
+                from identity_fixture import IdentityFixture
+
+                provider = IdentityFixture(root)
+                provider.start()
             run(
                 [
                     pg / "initdb.exe",
@@ -262,30 +300,59 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
                 "KYRION_AI_CLOUD_ENABLED": "false",
                 "KYRION_CENTRAL_ENABLED": "false",
             }
+            if provider is not None:
+                core_environment.update(
+                    KYRION_CENTRAL_ENABLED="true",
+                    KYRION_CENTRAL_ISSUER=provider.issuer,
+                    KYRION_CENTRAL_CLIENT_ID="kyrion-local",
+                    KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP="false",
+                    JAVA_TOOL_OPTIONS='-Djavax.net.ssl.trustStore="'
+                                      + str(provider.truststore)
+                                      + '" -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.trustStorePassword=isolated-test-store',
+                )
             core_command = [
                 runtime / "java/bin/java.exe",
                 "-jar",
-                payload / "app/core/core-runtime.jar",
+                core_jar
+                if core_jar is not None
+                else payload / "app/core/core-runtime.jar",
             ]
             core = start(core_command, "core", core_environment)
             wait_core()
             if request("GET", "/v1/auth/setup/status")["setupRequired"] is not True:
                 raise ValueError("E_NATIVE_FIXTURE_NOT_FRESH")
-            credentials = {
-                "username": "fixture-owner",
-                "password": "Synthetic-local-password-123456",
-            }
-            response = request(
-                "POST",
-                "/v1/auth/setup",
-                {
-                    **credentials,
-                    "spaceType": "HOME",
-                    "spaceName": "Native developer fixture",
-                },
-                bootstrap=bootstrap,
-            )
-            token = response["sessionToken"]
+            if provider is not None:
+                from linked_acceptance import exercise_linked_account
+
+                credentials, token, expected_owner, linked_evidence = (
+                    exercise_linked_account(
+                        request,
+                        root,
+                        {
+                            "postgres": pg_port,
+                            "core": core_port,
+                            "web": web_port,
+                            "caddy": tls_port,
+                        },
+                        provider,
+                    )
+                )
+            else:
+                credentials = {
+                    "username": "fixture-owner",
+                    "password": "Synthetic-local-password-123456",
+                }
+                response = request(
+                    "POST",
+                    "/v1/auth/setup",
+                    {
+                        **credentials,
+                        "spaceType": "HOME",
+                        "spaceName": "Native developer fixture",
+                    },
+                    bootstrap=bootstrap,
+                )
+                token = response["sessionToken"]
             if "OWNER" not in request("GET", "/v1/auth/me", token=token)["roles"]:
                 raise ValueError("E_NATIVE_FIXTURE_OWNER")
             request("GET", "/v1/space", token=token)
@@ -382,6 +449,8 @@ https://localhost:PORT {
                 time.sleep(1)
             else:
                 raise ValueError("E_NATIVE_FIXTURE_TLS_WEB")
+            if provider is not None:
+                provider.stop()
             stop(core)
             run(
                 [
@@ -399,11 +468,26 @@ https://localhost:PORT {
             core = start(core_command, "core-restarted", core_environment)
             wait_core()
             token = request("POST", "/v1/auth/login", credentials)["sessionToken"]
-            if "OWNER" not in request("GET", "/v1/auth/me", token=token)["roles"]:
+            restarted_user = request("GET", "/v1/auth/me", token=token)
+            if "OWNER" not in restarted_user["roles"]:
                 raise ValueError("E_NATIVE_FIXTURE_RESTART_LOGIN")
+            if expected_owner is not None:
+                if (
+                    restarted_user["id"] != expected_owner
+                    or request("GET", "/v1/auth/central/status", token=token).get(
+                    "linked"
+                )
+                    is not True
+                    or restarted_user["space"]["type"] != "BUSINESS"
+                ):
+                    raise ValueError("E_LINKED_FIXTURE_OFFLINE_IDENTITY")
+                linked_evidence["offlineSameLinkedIdentityAfterRestart"] = True
+                linked_evidence["providerStoppedBeforeRestart"] = provider.closed
             if request("GET", "/v1/auth/setup/status")["setupRequired"] is not False:
                 raise ValueError("E_NATIVE_FIXTURE_BOOTSTRAP_REOPENED")
             return {
+                **linked_evidence,
+                "sourceCoreOverride": core_jar is not None,
                 "nativeProcesses": True,
                 "freshDatabase": True,
                 "coreMigrations": True,
@@ -425,6 +509,8 @@ https://localhost:PORT {
                 shutil.copyfile(log, failure / log.name)
             raise
         finally:
+            if provider is not None:
+                provider.stop()
             if web_transport is not None:
                 web_transport.__exit__(None, None, None)
             for process in reversed(processes):
@@ -451,12 +537,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("bundle", "key", "payload", "work-parent", "report"):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument("--core-jar", type=Path)
+    parser.add_argument("--linked-account", action="store_true")
     args = parser.parse_args()
     result = main(
         args.bundle.resolve(),
         args.key.resolve(),
         args.payload.resolve(),
         args.work_parent.resolve(),
+        args.core_jar.resolve() if args.core_jar else None,
+        args.linked_account,
     )
     args.report.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result))
