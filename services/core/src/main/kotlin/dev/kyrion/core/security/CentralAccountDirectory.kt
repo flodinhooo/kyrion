@@ -44,7 +44,8 @@ class CentralAccountDirectory(
     private val log = LoggerFactory.getLogger(CentralAccountDirectory::class.java)
     private val mapper = jacksonObjectMapper()
     private val http =
-        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build()
+        HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3))
+            .followRedirects(HttpClient.Redirect.NEVER).build()
     private val origin =
         (configuredOrigin.ifBlank { if (issuer == "https://auth.kyrion.ch/realms/kyrion") "https://www.kyrion.ch" else "" }).takeIf(
             String::isNotBlank

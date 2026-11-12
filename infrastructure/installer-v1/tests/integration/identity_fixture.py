@@ -26,6 +26,7 @@ class IdentityFixture:
     def __init__(self, root):
         self.approved = False
         self.subject = "synthetic-linked-owner"
+        self.device_lifetime = 600
         self.codes = set()
         self.closed = False
         self.key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -95,7 +96,7 @@ class IdentityFixture:
                             "device_code": code,
                             "user_code": "ISOLATED-CODE",
                             "verification_uri": owner.issuer + "/verify",
-                            "expires_in": 600,
+                            "expires_in": owner.device_lifetime,
                             "interval": 1,
                         },
                     )

@@ -35,6 +35,17 @@ def _exercise_linked_account(request, root, ports, provider, target):
             raise ValueError("E_LINKED_FIXTURE_UNEXPECTED_ADMISSION")
 
     refused({403}, "POST", "/v1/auth/central/setup/start")
+    provider.device_lifetime = 1
+    expired = request("POST", "/v1/auth/central/setup/start", bootstrap=bootstrap)
+    time.sleep(1.2)
+    refused(
+        {400},
+        "POST",
+        "/v1/auth/central/setup/poll",
+        {"operationToken": expired["operationToken"]},
+        bootstrap,
+    )
+    provider.device_lifetime = 600
     operation = request("POST", "/v1/auth/central/setup/start", bootstrap=bootstrap)
     time.sleep(operation["interval"])
     body = {"operationToken": operation["operationToken"]}
@@ -257,6 +268,7 @@ def _exercise_linked_account(request, root, ports, provider, target):
             "authorizedBusinessSpace": True,
             "existingLinkedIdentityReused": True,
             "pendingAndCancelledProof": True,
+            "expiredProofRejected": True,
             "setupTransactionRollback": True,
             "consumedFailedProof": True,
             "unmappedAccountDenied": True,
