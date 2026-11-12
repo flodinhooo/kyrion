@@ -52,7 +52,9 @@
     ".next-kdata-build/types/**/*.ts",
     ".next-kdata-build/dev/types/**/*.ts",
     ".next-final-integration-build/types/**/*.ts",
-    ".next-final-integration-build/dev/types/**/*.ts"
+    ".next-final-integration-build/dev/types/**/*.ts",
+    ".next-account-state-check/types/**/*.ts",
+    ".next-account-state-check/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

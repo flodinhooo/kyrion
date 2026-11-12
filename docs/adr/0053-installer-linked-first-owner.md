@@ -38,3 +38,19 @@ and creates the identity link. Membership, expiry, use limits, email policy and
 delegated role are still checked at redemption by the existing Space code. A
 duplicate central link rolls back both account creation and invitation use.
 Neither regular LOGIN completion nor setup completion can redeem this purpose.
+
+An expired installer-owned bootstrap file must not permanently strand an
+unfinished installation. An explicitly confirmed privileged host operation may
+extend the existing unused credential's timestamp window for Core's existing
+30-minute verification policy. It first requires Core to report setup pending
+and refuses journals that expect an established owner. It changes no credential
+bytes, inode, permissions or identity; Compose's read-only secret bind therefore
+continues to reference the same file. A pending journal intent fixes the renewal
+timestamp across interruption/retry. OAuth proofs keep their independent expiry,
+single-use and bootstrap/session binding. Core's transactional owner lock remains
+the authority if setup completes concurrently. No automatic indefinite extension
+or bootstrap recovery for a lost established owner is introduced.
+
+Windows sets last-write time through a non-reparse handle with
+FILE_WRITE_ATTRIBUTES; Linux uses a no-follow timestamp update. Reference:
+https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime

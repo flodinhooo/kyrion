@@ -85,5 +85,19 @@
   "spaceInvitationEmail": "Einladungs-E-Mail, falls dieser Space sie verlangt (sonst leer lassen)",
   "spaceInvitationEmailProof": "Postfach-Prüfcode (benötigt den eingerichteten Maildienst dieser Installation)",
   "setupMemberOnly": "Deine Mitgliedschaft ist bestätigt. Deine Rolle erlaubt keine Installationsverwaltung. Geräte und Integrationen muss ein berechtigter Administrator einrichten.",
-  "linkExistingLocal": "Dieses lokale Konto ist noch nicht verknüpft. Dieselbe Identität jetzt bewusst verbinden? Mitgliedschaft, Rollen und Passwort bleiben erhalten."
+  "linkExistingLocal": "Dieses lokale Konto ist noch nicht verknüpft. Dieselbe Identität jetzt bewusst verbinden? Mitgliedschaft, Rollen und Passwort bleiben erhalten.",
+  "bootstrapExtendReview": "Das geschützte Zeitfenster für die erste Kontoeinrichtung um 30 Minuten verlängern. Nur verfügbar, solange noch kein Eigentümer eingerichtet ist. Anmeldenachweise behalten ihre eigene kürzere Laufzeit.",
+  "identityErrorUnavailable": "Der Identitätsanbieter ist nicht erreichbar. Versuche es später erneut. Eine bereits verknüpfte Installation kann OFFLINE verwenden. Eine neue Kontoeinrichtung bleibt offen.",
+  "identityErrorConfiguration": "Der Core-Identitätsanbieter ist deaktiviert oder nicht konfiguriert. Richte den geprüften Issuer und öffentlichen Client ein, bevor du fortfährst.",
+  "identityErrorRestart": "Starte eine neue Anmeldung und bestätige ihren aktuellen Code. Abgelaufene, abgelehnte oder verbrauchte Nachweise sind nicht erneut verwendbar.",
+  "identityErrorBootstrap": "Der geschützte Erstzugang fehlt, ist ungültig oder abgelaufen. Verwende bei einer unvollständigen eigenen Installation --continue-setup oder --extend-bootstrap mit Host-Administratorrechten.",
+  "identityErrorExistingOwner": "Diese Installation hat bereits einen Eigentümer oder erwartet dessen Daten. Verwende den bestehenden lokalen Zugang oder seinen Wiederherstellungsweg. Die Ersteinrichtung ist hier nicht verfügbar.",
+  "identityErrorMembership": "Eine Anmeldung allein gewährt keinen Space-Zugang. LINK verbindet ein bestehendes lokales Konto; JOIN verwendet eine berechtigte Space-Einladung.",
+  "identityErrorInvitation": "Die Einladung oder der nötige Postfach-Nachweis konnte nicht eingelöst werden. Prüfe Ablauf, verbleibende Nutzungen, E-Mail-Bindung und den ausstellenden Space.",
+  "identityErrorLinked": "Diese Identität ist bereits verknüpft. Verwende das bestehende Konto. Dieser Vorgang ersetzt keine Verknüpfung und führt keine Benutzer zusammen.",
+  "identityErrorLocalAccess": "Die lokale Anmeldung ist fehlgeschlagen oder die Sitzung beendet. Melde dich mit dem lokalen Offline-Passwort erneut an oder verwende den bewusst eingerichteten Host-Wiederherstellungsweg.",
+  "identityErrorRateLimit": "Core begrenzt wiederholte Anmeldeversuche. Warte vor einem neuen Versuch. Weitere Fehlversuche können die Wartezeit verlängern.",
+  "identityErrorPermission": "Deine aktuelle Rolle erlaubt diese Aktion nicht. Ein Space-Administrator muss sie ausführen oder die nötige Berechtigung bewusst erteilen.",
+  "identityErrorPasswordMismatch": "Die lokalen Offline-Passwörter stimmen nicht überein. Starte den Zugangsschritt erneut. Der Installer speichert das Passwort nicht.",
+  "identitySetupPaused": "Die Konto-/Space-Einrichtung ist pausiert. Setze sie auf dieser Installation mit --continue-setup fort. Bestätigte Core-Änderungen und lokaler Fortschritt bleiben verfügbar."
 }

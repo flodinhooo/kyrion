@@ -85,5 +85,19 @@
   "spaceInvitationEmail": "Invitation email, if required by this Space (leave blank otherwise)",
   "spaceInvitationEmailProof": "Mailbox verification code (requires this installation’s configured mail service)",
   "setupMemberOnly": "Your membership is confirmed. Your role does not permit installation administration; an authorized administrator must configure devices and integrations.",
-  "linkExistingLocal": "This local account has no web link. Explicitly connect this same identity now? Existing membership, roles and password are retained."
+  "linkExistingLocal": "This local account has no web link. Explicitly connect this same identity now? Existing membership, roles and password are retained.",
+  "bootstrapExtendReview": "Extend the protected first-owner setup window for 30 minutes. Available only before an owner exists. Sign-in proofs retain their separate shorter expiry.",
+  "identityErrorUnavailable": "The identity provider is unavailable. Retry later; an already linked installation can use OFFLINE access. New account setup remains pending.",
+  "identityErrorConfiguration": "The Core identity provider is disabled or not configured. Configure the reviewed issuer/public client before continuing; no local account has been linked by this error.",
+  "identityErrorRestart": "Start a fresh sign-in operation and approve its current code. Expired, denied or consumed proofs cannot be reused.",
+  "identityErrorBootstrap": "The protected first-owner credential is missing, invalid or expired. For an unfinished owned installation use --continue-setup or --extend-bootstrap with host administrator rights.",
+  "identityErrorExistingOwner": "This installation already has, or is expected to have, an owner. Use the existing local identity or its recovery path; first-owner setup is unavailable.",
+  "identityErrorMembership": "Sign-in alone does not grant Space access. LINK an existing local account or JOIN using an authorized Space invitation.",
+  "identityErrorInvitation": "The invitation or required mailbox proof could not be redeemed. Check its expiry, remaining uses, email restriction and the issuing Space before requesting a new proof.",
+  "identityErrorLinked": "This identity is already linked. Use the existing linked account; this operation does not replace a link or merge users.",
+  "identityErrorLocalAccess": "Local authentication failed or the session ended. Sign in again with the local offline password, or use the consciously configured host recovery path.",
+  "identityErrorRateLimit": "Core has limited repeated authentication attempts. Wait before retrying; further failed attempts can increase the delay.",
+  "identityErrorPermission": "Your current role does not authorize this action. Ask a Space administrator to perform or explicitly grant the required operation.",
+  "identityErrorPasswordMismatch": "The local offline passwords do not match. Restart the credential step; no password is stored by the installer.",
+  "identitySetupPaused": "Account/Space setup is paused. Continue with --continue-setup on this installation; confirmed Core changes and local progress remain available."
 }
