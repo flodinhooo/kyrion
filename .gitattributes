@@ -5,3 +5,6 @@ services/core/gradlew text eol=lf
 # Keep formatter output stable in Windows and Linux checkouts.
 .github/workflows/*.yml text eol=lf
 apps/website/** text=auto eol=lf
+
+# Preserve the verified upstream guidance bytes and provenance checksum.
+.agents/skills/modern-web-guidance/** text eol=lf
