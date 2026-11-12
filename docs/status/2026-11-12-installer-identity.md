@@ -77,9 +77,9 @@ devices, productive installation or release publication were used.
 
 ## Continue autonomously
 
-Finish explicit same-account linking for legacy local users through existing
-LINK consent, extend available acceptance, rebuild updated frozen artifacts and
-keep the ledger current. Then continue the remaining device enrollment/task
+Explicit legacy-account LINK consent is implemented and passed the live fixture,
+preserving the same user and membership. Continue rebuilding updated frozen
+artifacts and keeping the ledger current, followed by device enrollment/task
 handover, integration/hardware, Ollama/Velora, transactional installed updates,
 portable restore and adaptive tutorial requirements. Do not ask for partial user
 acceptance or describe the whole installer as complete.
@@ -88,3 +88,21 @@ Windows recovery still needs actual elevated console/ACL acceptance, including
 review of the owner assigned to the Java-created recovery key. This is separate
 from successful Core identity/Space protocol tests and must not be hidden as a
 hardware-only limitation if source changes are necessary.
+
+### Windows peer verification follow-up
+
+The developer host sometimes reports the exact reverse TCP tuple and expected
+child PID with state 0 or LISTEN rather than ESTABLISHED, even after waiting.
+Those snapshots are rejected. The TLS transport now closes the rejected socket
+and makes at most four new connections, each subject to the same strict kernel
+ownership proof and child-liveness checks before any decrypted bytes are sent.
+Malformed table errors and child exit are not retried. Microsoft documents the
+[row layout and established-state field](https://learn.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcprow_owner_pid);
+no unsupported state is treated as proof of an established peer.
+
+The updated Windows suite passed 162 tests (one platform skip). Four policy
+fixtures cover socket cleanup, bounded failure, child exit and malformed table
+failure; these are mocks. A separate actual Windows SDK run proved 100 consecutive
+connections to an isolated child process, sending no application bytes. The
+actual TLS test also checks that a wrong expected PID receives no credentials.
+This does not establish cold-boot or elevated service acceptance.

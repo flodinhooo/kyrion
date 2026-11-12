@@ -14,22 +14,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from crypto_support import certificate, private_tls_key
 from native_web_transport import WebTransport
 from socket_owner_fixture import owner_server
-from windows_network import assert_peer
+from windows_network import assert_peer, verified_connection
 
 
 @unittest.skipUnless(os.name == "nt", "Windows TCP ownership SDK")
 class Transport(unittest.TestCase):
     def test_established_peer_and_wrong_pid(self):
-        # Same-process accepted sockets intermittently report non-established
-        # states on this Windows build. Match the actual separate-child topology;
-        # never weaken the production validator to accept those snapshots.
+        # Match the contained child topology. Every returned connection must
+        # have a proven established tuple, even on inconsistent OS snapshots.
         with (
             owner_server() as (child, port),
-            socket.create_connection(("127.0.0.1", port)) as client,
+            verified_connection(port, child) as client,
+            self.assertRaisesRegex(ValueError, "E_NATIVE_TCP_OWNER"),
         ):
-            assert_peer(client, child.pid)
-            with self.assertRaisesRegex(ValueError, "E_NATIVE_TCP_OWNER"):
-                assert_peer(client, os.getpid())
+            assert_peer(client, os.getpid())
 
     def test_tls_forwards_only_to_expected_owner(self):
         with (

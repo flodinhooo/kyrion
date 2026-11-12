@@ -7,6 +7,36 @@ import os
 import socket
 import struct
 import time
+from contextlib import contextmanager
+
+
+@contextmanager
+def verified_connection(port: int, child):
+    """Reconnect boundedly when a kernel snapshot cannot prove peer ownership.
+
+    No application bytes are sent until one exact established tuple belongs to
+    the still-running contained child. Never reuse a rejected connection.
+    """
+    connection = None
+    try:
+        for attempt in range(4):
+            if child.poll() is not None:
+                raise ValueError("E_NATIVE_CHILD_EXIT")
+            connection = socket.create_connection(("127.0.0.1", port), timeout=3)
+            try:
+                assert_peer(connection, child.pid)
+                if child.poll() is not None:
+                    raise ValueError("E_NATIVE_CHILD_EXIT")
+                break
+            except ValueError as error:
+                connection.close()
+                connection = None
+                if str(error) != "E_NATIVE_TCP_OWNER" or attempt == 3:
+                    raise
+        yield connection
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 def assert_peer(connection: socket.socket, expected_pid: int) -> None:

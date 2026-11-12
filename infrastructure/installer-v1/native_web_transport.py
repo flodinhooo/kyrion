@@ -9,7 +9,7 @@ import ssl
 import threading
 import time
 
-from windows_network import assert_peer
+from windows_network import verified_connection
 
 
 class WebTransport:
@@ -74,16 +74,9 @@ class WebTransport:
             with self.lock:
                 self.sockets.add(secured)
             try:
-                with socket.create_connection(
-                    ("127.0.0.1", self.child_port), timeout=3
-                ) as upstream:
+                with verified_connection(self.child_port, self.child) as upstream:
                     # Verify the connected peer's kernel tuple before forwarding
                     # any decrypted bytes; a listener check before connect races.
-                    if self.child.poll() is not None:
-                        raise ValueError("E_NATIVE_CHILD_EXIT")
-                    assert_peer(upstream, self.child.pid)
-                    if self.child.poll() is not None:
-                        raise ValueError("E_NATIVE_CHILD_EXIT")
                     deadline = time.monotonic() + 300
                     while not self.closed.is_set() and self.child.poll() is None:
                         ready, _, _ = select.select([secured, upstream], [], [], 0.5)
