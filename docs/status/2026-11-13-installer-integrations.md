@@ -118,3 +118,38 @@ The complete updated Windows source suite passes 190 tests (one platform skip)
 and whole-installer Ruff; the five cleanup tests also pass independently in the
 normal developer context. The restricted sandbox cannot apply test-file owner/
 group descriptors, so this is distinct from a sandbox-only run.
+The updated Debian source suite also passes 190 tests with 16 platform skips.
+
+## Complete bundled Windows process acceptance
+
+The clean Web build was prepared from tracked public `apps/web` sources in a
+new build directory, with offline locked dependencies, a minimal build
+environment and no copied `.env` files. Its source-hash receipt is
+`build/windows-web-native-dev7-source.json`. The actual source Core JAR, parser,
+this Web build, the versioned service host and pinned public vendor binaries
+were assembled into `build/windows-native-bundle-dev7`. Schema 49 was derived
+from the actual JAR rather than supplied manually.
+
+The test-only signer retained no private key. The frozen standalone installer
+accepted the signed manifest and verified the payload without activating it.
+Bundle ZIP SHA-256 is
+`bee083ecfe1858121f32ee234d298e0af728d77f75621344c86dfa79b0377927`;
+manifest SHA-256 is
+`5b08e7ce38bd9d5a8697346e1b38488826d68687e569f31c4f4fbda5911af993`.
+
+`verify-native-windows.py --linked-account` then ran the **bundled** Core and
+Web, with fresh native PostgreSQL and a synthetic HTTPS/RSA provider. Unlike
+the historical dev5 run, `sourceCoreOverride` is false. The source Core digest
+is `c6dc816f731b7c84e83b0a238a1e7428b80a0062ae740c6311f6d7a0fb40d425`.
+All report assertions passed: linked first owner, BUSINESS Space, invited USER
+membership and denied administration, legacy identity linking in place,
+cancelled/expired/reused proof rejection, transactional rollback including
+invitation use, setup without optional equipment, unchanged linked identity
+after provider shutdown/process restart, closed bootstrap, pinned Core/Web TLS
+and verified Web-child ownership. Report:
+`build/installer-linked-native-dev7-report.json`.
+
+This starts only disposable user processes and synthetic data. It registers no
+services/tasks, changes no global trust store and claims neither network
+isolation nor elevated Windows/host-boot acceptance. Development bundles and
+downloads remain unpublished and are not ready for overall user acceptance.

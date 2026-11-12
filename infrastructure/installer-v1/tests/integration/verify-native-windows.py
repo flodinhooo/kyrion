@@ -67,7 +67,7 @@ def main(
 ) -> dict:
     if os.name != "nt":
         raise ValueError("E_WINDOWS_FIXTURE_PLATFORM")
-    if linked_account and (core_jar is None or not core_jar.is_file()):
+    if core_jar is not None and not core_jar.is_file():
         raise ValueError("E_LINKED_FIXTURE_SOURCE_CORE_REQUIRED")
     # Authenticate and verify every actual executable before starting anything.
     native_bundle.unpack(bundle, key, payload)
