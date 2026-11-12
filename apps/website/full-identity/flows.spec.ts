@@ -30,9 +30,11 @@ async function localLogin(page: Page, username: string) {
   await page.goto(`${web}/login`);
   await page.locator('input[name="username"]').fill(username);
   await page.locator('input[name="password"]').fill(settings.LOCAL_PASSWORD);
+  const response = page.waitForResponse(r => new URL(r.url()).pathname === "/api/auth/login" && r.request().method() === "POST");
   await page
     .getByRole("button", { name: "Sign in locally", exact: true })
     .click();
+  expect((await response).status()).toBe(200);
   await expect(page).toHaveURL(`${web}/`);
 }
 async function webMutation(page: Page, endpoint: string, body: unknown = {}) {

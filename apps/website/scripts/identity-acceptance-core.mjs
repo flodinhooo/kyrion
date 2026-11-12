@@ -113,6 +113,7 @@ const child = spawn(
   ),
   [
     "-jar",
+    process.env.KYRION_ACCOUNT_ACCEPTANCE_JAR ||
     "build/libs/kyrion-core-0.1.0-SNAPSHOT.jar",
     // Do not import the personal installation's infrastructure/.env into tests.
     "--spring.config.import=",
@@ -138,6 +139,7 @@ const child = spawn(
       KYRION_CENTRAL_ISSUER: "http://localhost:18089/realms/kyrion",
       KYRION_CENTRAL_CLIENT_ID: "kyrion-local",
       KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP: "true",
+      KYRION_ACCOUNT_DIRECTORY_ORIGIN: "http://localhost:3119",
       KYRION_KNOWLEDGE_WORKER_ENABLED: "false",
       KYRION_CALENDAR_SYNC_SCHEDULER_ENABLED: "false",
       KYRION_HOME_ASSISTANT_REFRESH_ENABLED: "false",

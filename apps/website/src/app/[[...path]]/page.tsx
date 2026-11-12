@@ -16,7 +16,7 @@ import { DevelopmentPage } from "@/components/pages/development";
 import { DocsPage } from "@/components/pages/docs";
 import { ContactPage } from "@/components/pages/contact";
 import { LegalPage } from "@/components/pages/legal";
-import { AccountPage } from "@/components/pages/account";
+import {AccountPage, ConnectPage} from "@/components/pages/account";
 import { DownloadPage, HardwarePage } from "@/components/pages/installation";
 
 type Props = { params: Promise<{ path?: string[] }> };
@@ -96,6 +96,7 @@ const components = {
   hardware: HardwarePage,
   contact: ContactPage,
   account: AccountPage,
+  connect: ConnectPage,
   privacy: LegalPage,
   terms: LegalPage,
 };

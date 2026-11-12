@@ -30,6 +30,19 @@
     },
     {
       "clientId": "kyrion-local",
+      "protocolMappers": [
+        {
+          "name": "website-directory-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "kyrion-website",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
       "name": "Kyrion local installations",
       "protocol": "openid-connect",
       "enabled": true,

@@ -21,6 +21,8 @@ const settings = Object.fromEntries(
 export default defineConfig({
   testDir: "./full-identity",
   workers: 1,
+  expect: {timeout: 30_000},
+  outputDir: "test-results/full-identity",
   timeout: 180_000,
   use: {
     trace: "off",
