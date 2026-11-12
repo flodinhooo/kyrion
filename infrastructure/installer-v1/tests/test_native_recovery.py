@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import native_recovery
+from bundle import sha256
 
 
 class Recovery(unittest.TestCase):
@@ -43,6 +44,21 @@ class Recovery(unittest.TestCase):
             self.addCleanup(patcher.stop)
         self.platform = patch.object(native_recovery.os, "name", "nt")
 
+        def prepare(installation, space):
+            if self.key.exists():
+                raise ValueError("E_RECOVERY_EXISTING")
+            self.key.parent.mkdir(exist_ok=True)
+            self.key.write_bytes(b"a" * 43)
+            installation.state["recoveryKey"] = {
+                "spaceId": space,
+                "sha256": sha256(self.key),
+            }
+            return self.key
+
+        patcher = patch.object(native_recovery, "prepare_key", side_effect=prepare)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_core_tool_inherits_console_and_restarts_without_capturing_code(self):
         def complete(*_args, **_kwargs):
             self.key.write_bytes(b"a" * 43)
@@ -63,7 +79,9 @@ class Recovery(unittest.TestCase):
         self.assertIn(
             "-Dloader.main=dev.kyrion.core.security.LocalSecurityAdmin", arguments[0]
         )
-        self.assertEqual(arguments[0][-3:], ["provision", self.space, str(self.key)])
+        self.assertEqual(
+            arguments[0][-3:], ["provision-prepared", self.space, str(self.key)]
+        )
         self.assertFalse(
             set(options)
             & {"input", "stdout", "stderr", "capture_output", "stdin", "creationflags"}
@@ -71,7 +89,7 @@ class Recovery(unittest.TestCase):
         self.assertEqual(self.manager.stop.call_count, 3)
         restart.assert_called_once_with(self.installation)
         self.assertEqual(
-            self.installation.state, {"recovery": "provisioned-by-core-host-tool"}
+            self.installation.state["recovery"], "provisioned-by-core-host-tool"
         )
 
     def test_tool_failure_restores_services_without_claiming_recovery(self):
@@ -87,7 +105,32 @@ class Recovery(unittest.TestCase):
         ):
             native_recovery.provision_owner_recovery(self.installation, self.space)
         restart.assert_called_once()
-        self.assertEqual(self.installation.state, {})
+        self.assertNotIn("recovery", self.installation.state)
+        self.assertTrue(self.key.is_file())
+
+    def test_existing_recovery_commands_reuse_material_without_capture(self):
+        self.key.parent.mkdir()
+        self.key.write_bytes(b"a" * 43)
+        self.installation.state["recoveryKey"] = {
+            "spaceId": self.space,
+            "sha256": sha256(self.key),
+        }
+        for command in ("open", "complete", "rotate"):
+            with (
+                self.platform,
+                patch.object(
+                    native_recovery.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(returncode=0),
+                ) as tool,
+                patch.object(native_recovery, "start_services"),
+            ):
+                native_recovery.owner_recovery(self.installation, self.space, command)
+                self.assertEqual(
+                    tool.call_args.args[0][-3:], [command, self.space, str(self.key)]
+                )
+                self.assertNotIn("capture_output", tool.call_args.kwargs)
+        self.assertEqual(self.key.read_bytes(), b"a" * 43)
 
     def test_existing_key_is_preserved_before_service_mutation(self):
         self.key.parent.mkdir()

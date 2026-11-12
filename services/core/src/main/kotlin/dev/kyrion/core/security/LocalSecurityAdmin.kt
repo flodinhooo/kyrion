@@ -23,10 +23,12 @@ object LocalSecurityAdmin {
             System.console()
                 ?: error("Interactive host console required; redirected input/output is prohibited")
         require(args.size in 3..5) {
-            "Usage: provision|open|complete|rotate|attest SPACE_UUID HOST_KEY_FILE [USER_UUID EMAIL]"
+            "Usage: provision|provision-prepared|open|complete|rotate|attest SPACE_UUID HOST_KEY_FILE [USER_UUID EMAIL]"
         }
         val command = args[0]
-        require(command in setOf("provision", "open", "complete", "rotate", "attest"))
+        require(
+            command in setOf("provision", "provision-prepared", "open", "complete", "rotate", "attest")
+        )
         val space = UUID.fromString(args[1])
         val path = Path.of(args[2]).toAbsolutePath().normalize()
         val url = required("KYRION_DATABASE_URL")
@@ -97,6 +99,11 @@ object LocalSecurityAdmin {
             } else {
                 val host = ProtectedSecurityFile.read(path)
                 when (command) {
+                    "provision-prepared" ->
+                        console.printf(
+                            "Store this offline recovery code privately. It is shown once:%n%s%n",
+                            recovery.provision(space, secret("Current OWNER password"), host),
+                        )
                     "rotate" ->
                         console.printf(
                             "New offline code (previous codes and recovery sessions invalidated):%n%s%n",

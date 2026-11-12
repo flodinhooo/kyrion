@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][ValidateSet('plan-create','root-only','verify','grant')][string]$Action)
+param([Parameter(Mandatory=$true)][ValidateSet('plan-create','root-only','verify','grant','verify-recovery')][string]$Action)
 $ErrorActionPreference='Stop'
 [Console]::InputEncoding=New-Object Text.UTF8Encoding($false)
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
@@ -66,6 +66,20 @@ try {
             $state.installationId -cnotmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or
             [IO.Path]::GetFullPath($state.rootPath) -ine $root -or $state.files.'installer.exe' -notmatch '^[a-f0-9]{64}$') { throw 'E_NATIVE_JOURNAL' }
         Assert-Protected $journalPath
+        if ($Action -eq 'verify-recovery') {
+            $recoveryPath=Join-Path $root 'recovery'
+            $items=@(Get-Item -LiteralPath $recoveryPath -Force)
+            $items+=@(Get-ChildItem -LiteralPath $recoveryPath -Force)
+            foreach ($item in $items) {
+                if ($item.FullName -ine $recoveryPath -and
+                    ($item.PSIsContainer -or $item.Name -cnotmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.host-key$')) { throw 'E_NATIVE_RECOVERY_PATH' }
+                Assert-Protected $item.FullName
+                $acl=Get-Acl -LiteralPath $item.FullName
+                foreach ($rule in $acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])) {
+                    if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @('S-1-5-18','S-1-5-32-544')) { throw 'E_NATIVE_RECOVERY_ACL' }
+                }
+            }
+        }
         $executable=Join-Path $root 'installer.exe'
         Assert-Protected $executable
         if ((Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant() -cne $state.files.'installer.exe') { throw 'E_NATIVE_INTEGRITY' }

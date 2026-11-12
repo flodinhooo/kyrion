@@ -1,11 +1,17 @@
-import hashlib, json, os, stat, subprocess, sys, tempfile, unittest
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 
 
 def run(script, *args): return subprocess.run([sys.executable, str(ROOT / script), *map(str, args)],
-                                              capture_output=True, text=True)
+                                              capture_output=True, text=True, check=False)
 
 
 class InstallerTests(unittest.TestCase):

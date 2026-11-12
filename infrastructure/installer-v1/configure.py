@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Create fresh-install secrets and protected configuration atomically."""
 from __future__ import annotations
-import argparse, base64, json, os, secrets, stat
+
+import argparse
+import base64
+import json
+import os
+import secrets
 from pathlib import Path
 
 

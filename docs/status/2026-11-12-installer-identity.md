@@ -84,10 +84,19 @@ handover, integration/hardware, Ollama/Velora, transactional installed updates,
 portable restore and adaptive tutorial requirements. Do not ask for partial user
 acceptance or describe the whole installer as complete.
 
-Windows recovery still needs actual elevated console/ACL acceptance, including
-review of the owner assigned to the Java-created recovery key. This is separate
-from successful Core identity/Space protocol tests and must not be hidden as a
-hardware-only limitation if source changes are necessary.
+Windows recovery now creates the host key through the installer's atomic
+Administrators-owned file API, before invoking Core's `provision-prepared`
+console command. Protected key intent precedes creation in the journal; failed
+Core operations preserve it for retry. Installer maintenance also dispatches
+existing Core open/complete/rotate operations on Windows and Linux, without
+capturing passwords or codes. Prepared-file and orchestration tests are distinct
+from elevated console/ACL and cold-boot acceptance, which remain unperformed.
+
+The independent Linux AMD64 `.6` native archive was built inside the isolated
+Debian guest and passed its frozen-program probe. Its local metadata records
+source digests and `platformInstallationAccepted: false`; this is neither a
+published download nor an installation/boot acceptance. Build-only dependencies
+binutils and libpython3.13 were added only inside that guest.
 
 ### Windows peer verification follow-up
 
@@ -106,3 +115,10 @@ failure; these are mocks. A separate actual Windows SDK run proved 100 consecuti
 connections to an isolated child process, sending no application bytes. The
 actual TLS test also checks that a wrong expected PID receives no credentials.
 This does not establish cold-boot or elevated service acceptance.
+
+The subsequent recovery-maintenance source passes 169 installer tests on
+Windows (one skip) and in the isolated Debian guest (16 platform skips).
+Whole-installer Ruff passes; the changed PowerShell helper parses successfully.
+Core's protected-security-file JVM test and bootJar build pass with the private
+JDK 21 toolchain. Recovery journal, dispatch and cancellation cases use mocks;
+they do not prove real elevated service/interactive-console behavior.

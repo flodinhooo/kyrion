@@ -490,13 +490,18 @@ def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
 
 
 def provision_recovery(
-    installation: Installation, space_id: str, messages: dict[str, str]
+    installation: Installation,
+    space_id: str,
+    messages: dict[str, str],
+    command: str = "provision",
 ) -> None:
+    if command not in {"provision", "open", "complete", "rotate"}:
+        raise ValueError("E_RECOVERY_COMMAND")
     if installation.state.get("backend") == "windows-native":
-        from native_recovery import provision_owner_recovery
+        from native_recovery import owner_recovery
 
         print(messages["recoveryConsole"])
-        provision_owner_recovery(installation, space_id)
+        owner_recovery(installation, space_id, command)
         return
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM")
@@ -507,12 +512,20 @@ def provision_recovery(
     os.chmod(directory, 0o700)
     os.chown(directory, 10001, 10001)
     key = directory / (space_id + ".host-key")
-    if key.exists() or key.is_symlink():
+    reject_links(key)
+    if command == "provision" and key.exists():
         raise ValueError("E_RECOVERY_EXISTING: existing recovery is never overwritten")
+    if command != "provision" and (
+        not key.is_file()
+        or key.stat().st_mode & 0o077
+        or key.stat().st_uid != 10001
+        or key.stat().st_size != 43
+    ):
+        raise ValueError("E_RECOVERY_KEY_MISSING")
     print(messages["recoveryConsole"])
     installation.compose("stop", "--timeout", "30", "web", "core")
     try:
-        command = [
+        arguments = [
             "docker",
             "compose",
             "--project-name",
@@ -533,13 +546,13 @@ def provision_recovery(
             "-cp",
             "/opt/kyrion/app.jar",
             "org.springframework.boot.loader.launch.PropertiesLauncher",
-            "provision",
+            command,
             space_id,
             "/run/kyrion-recovery/" + space_id + ".host-key",
         ]
         # Inherit the real terminal. The existing host-only tool refuses pipes,
         # verifies OWNER password and audit integrity, and shows a code once.
-        result = subprocess.run(command, check=False)
+        result = subprocess.run(arguments, check=False)
         if (
             result.returncode
             or not key.is_file()
@@ -547,7 +560,15 @@ def provision_recovery(
             or key.stat().st_uid != 10001
         ):
             raise ValueError("E_RECOVERY_NOT_PROVISIONED")
-        installation.state["recovery"] = "provisioned-by-core-host-tool"
+        installation.state["recovery"] = (
+            "provisioned-by-core-host-tool"
+            if command == "provision"
+            else "completed-by-core-host-tool"
+            if command == "complete"
+            else "rotated-by-core-host-tool"
+            if command == "rotate"
+            else "one-use-session-opened-by-core-host-tool"
+        )
         installation.save()
     finally:
         installation.compose("start", "core", "web")

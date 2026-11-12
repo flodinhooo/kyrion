@@ -53,6 +53,10 @@ def main() -> int:
     actions.add_argument("--refresh-model-catalog", action="store_true")
     actions.add_argument("--continue-setup", action="store_true")
     actions.add_argument("--extend-bootstrap", action="store_true")
+    actions.add_argument(
+        "--owner-recovery", choices=("provision", "open", "complete", "rotate")
+    )
+    parser.add_argument("--recovery-space", help="Existing local Space UUID")
     parser.add_argument("--feed")
     parser.add_argument(
         "--identity-issuer", default="https://auth.kyrion.ch/realms/kyrion"
@@ -169,6 +173,7 @@ def main() -> int:
         or args.refresh_model_catalog
         or args.continue_setup
         or args.extend_bootstrap
+        or args.owner_recovery
     ):
         try:
             return run_maintenance(args, messages)

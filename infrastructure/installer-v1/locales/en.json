@@ -99,5 +99,6 @@
   "identityErrorRateLimit": "Core has limited repeated authentication attempts. Wait before retrying; further failed attempts can increase the delay.",
   "identityErrorPermission": "Your current role does not authorize this action. Ask a Space administrator to perform or explicitly grant the required operation.",
   "identityErrorPasswordMismatch": "The local offline passwords do not match. Restart the credential step; no password is stored by the installer.",
-  "identitySetupPaused": "Account/Space setup is paused. Continue with --continue-setup on this installation; confirmed Core changes and local progress remain available."
+  "identitySetupPaused": "Account/Space setup is paused. Continue with --continue-setup on this installation; confirmed Core changes and local progress remain available.",
+  "recoveryMaintenanceReview": "This host-console operation briefly stops Core and Web, leaving the database running. Core requests secrets privately. Open consumes the recovery code; complete changes the OWNER password and revokes sessions; rotate invalidates previous recovery codes. Keep newly displayed codes privately."
 }

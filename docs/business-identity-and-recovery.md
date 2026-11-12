@@ -219,6 +219,29 @@ No automatic installer success or deployment is claimed by this milestone.
 
 ## Windows development procedure
 
+The downloaded native installer uses an Administrators-owned private key,
+prepared with its final ACL before the existing Core host-console tool runs.
+`provision-prepared` is the internal Core command for this path; it preserves
+prepared material if authorization or provisioning fails. It uses the same
+OWNER password, audit-chain verification and recovery transactions as `provision`.
+No recovery service or HTTP endpoint is added.
+
+Installed maintenance is available with `--owner-recovery provision|open|complete|rotate`
+and `--target` pointing to the managed installation. The selected Space is reused;
+`--recovery-space SPACE_UUID` explicitly selects an existing local Space if the
+progress journal predates that selection. Core still authorizes the operation.
+The installer confirms temporary downtime first, keeps PostgreSQL available and
+restarts Core/Web afterward. Use a real privileged host console, keep every code
+private, and do not redirect or capture output. Open consumes the offline code;
+complete changes the OWNER password/revokes sessions, and rotate invalidates
+old recovery codes. A code lost after successful provisioning requires explicit
+rotation with the OWNER password. Existing untracked host keys are refused,
+never silently replaced. Linux dispatches the same existing interactive tool
+through its private administrative Compose container.
+
+The following direct invocation is a **development** alternative, not the
+installed native profile's ownership policy:
+
 Use a private PowerShell terminal and the worktree's built
 `services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar`. Export the same database/
 audit environment variables using Windows paths. Create a private recovery directory

@@ -198,6 +198,26 @@ def run(args, messages: dict[str, str]) -> int:
         diagnostic(args.target, args.diagnostics)
         print(messages["diagnosticSaved"])
         return 0
+    if getattr(args, "owner_recovery", None):
+        from onboarding import provision_recovery
+
+        if (
+            input(
+                messages["recoveryMaintenanceReview"] + " [RECOVERY/CANCEL]: "
+            ).strip()
+            != "RECOVERY"
+        ):
+            raise ValueError("E_CONFIRMATION")
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            selected = installation.state.get("selectedSpace", {})
+            space = getattr(args, "recovery_space", None) or selected.get("id")
+            if not isinstance(space, str):
+                raise TypeError("E_RECOVERY_SPACE_REQUIRED")
+            provision_recovery(
+                installation, str(uuid.UUID(space)), messages, args.owner_recovery
+            )
+        return 0
     if getattr(args, "continue_setup", False):
         from onboarding import guided_setup
 
@@ -225,7 +245,10 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "extend_bootstrap", False):
         from bootstrap_maintenance import extend_bootstrap
 
-        if input(messages["bootstrapExtendReview"] + " [EXTEND/CANCEL]: ").strip() != "EXTEND":
+        if (
+            input(messages["bootstrapExtendReview"] + " [EXTEND/CANCEL]: ").strip()
+            != "EXTEND"
+        ):
             raise ValueError("E_CONFIRMATION")
         with installation_lock(args.target):
             installation = load_installation(args.target)
