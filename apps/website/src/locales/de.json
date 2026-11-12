@@ -105,6 +105,7 @@
     "private": "Für Privatkunden",
     "business": "Für Unternehmen",
     "account": "Kyrion-Account",
+    "connect": "Installation verbinden",
     "download": "Download",
     "hardware": "Hardware"
   },
@@ -142,9 +143,18 @@
     "diagramLabel": "Das Kyrion-Ökosystem",
     "diagramTop": "GERÄTE & INTEGRATIONEN",
     "diagramCore": "EIN VERTRAUENSWÜRDIGER CORE",
-    "diagramBottom": ["Web", "Sprache", "Automationen", "Intelligenz"],
+    "diagramBottom": [
+      "Web",
+      "Sprache",
+      "Automationen",
+      "Intelligenz"
+    ],
     "diagramCaption": "Die Vision des Ökosystems. Core prüft Aktionen über alle Oberflächen; Sprache wird weiterentwickelt und Automationen sind geplant.",
-    "diagramDevices": ["Licht", "Sensoren", "Dienste"],
+    "diagramDevices": [
+      "Licht",
+      "Sensoren",
+      "Dienste"
+    ],
     "diagramCenter": "Verbindung. Kontrolle. Klarheit.",
     "principles": [
       "Lokal konzipiert",
@@ -188,7 +198,12 @@
     "worksEnvironment": {
       "title": "Dein Zuhause",
       "description": "Ausgewählte Lampen, Sensoren und Medien über klar begrenzte Integrationen.",
-      "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
+      "items": [
+        "Nanoleaf",
+        "Zigbee",
+        "Spotify",
+        "Home Assistant"
+      ]
     },
     "worksCloud": {
       "title": "Cloud, wenn du sie brauchst.",
@@ -573,7 +588,7 @@
         },
         {
           "title": "Optionaler Website-Account",
-          "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, Anmelde- und Sitzungsdatensätze, verschlüsselte Erneuerungsdaten sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt."
+          "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, Anmelde- und Sitzungsdatensätze, verschlüsselte Erneuerungsdaten sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt. Bei einer Verknüpfung speichert die Website außerdem Installations- und lokale Benutzerkennungen, den Namen und Typ des Bereichs, den lokalen Benutzernamen sowie Verknüpfungs- und Bestätigungszeitpunkte. Die lokale Installation speichert die verifizierte zentrale E-Mail-Adresse und den Anzeigenamen. Beim lokalen Trennen wird die Entfernung des Website-Eintrags gemeldet; ohne Verbindung kann sich dies verzögern. Inhalte, Geräte und lokale Passwörter werden dafür nicht übertragen."
         },
         {
           "title": "Sitzungsgültigkeit und gespeicherte Datensätze",
@@ -768,7 +783,20 @@
     "linkSubmit": "Code bestätigen",
     "linkOutcome": "Bestätige anschließend deinen Account auf der Anmeldeseite. Deine lokale App schließt die Verknüpfung automatisch ab und zeigt dir den Erfolg.",
     "linkCodeInvalid": "Bitte gib den achtstelligen Code aus deiner lokalen App ein.",
-    "linkSignIn": "Melde dich bitte an, um deinen lokalen Account zu verknüpfen."
+    "linkSignIn": "Melde dich bitte an, um deinen lokalen Account zu verknüpfen.",
+    "linkEntryHelp": "Hier gibst du den Code deiner lokalen Kyrion-App ein. Dies ist die Verknüpfung, nicht die Seite für persönliche Kontoeinstellungen.",
+    "installationsTitle": "Deine verknüpften Installationen",
+    "installationsHelp": "Hier siehst du die von deinen lokalen Installationen bestätigten Verbindungen. Neue Verknüpfungen erscheinen nach wenigen Sekunden.",
+    "installationsEmpty": "Noch keine bestätigte Installation in dieser Übersicht.",
+    "installationsFailed": "Die Installationsübersicht konnte nicht geladen werden. Versuche es gleich noch einmal.",
+    "homeInstallation": "Zuhause",
+    "businessInstallation": "Unternehmen",
+    "localAccount": "Lokaler Benutzer",
+    "linkedOn": "Verknüpft am",
+    "lastConfirmed": "Zuletzt bestätigt"
+  },
+  "connect": {
+    "description": "Verbinde deine lokale Kyrion-Installation mit deinem zentralen Account über den angezeigten Code."
   },
   "download": {
     "eyebrow": "KYRION-INSTALLER",

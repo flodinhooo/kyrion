@@ -105,6 +105,7 @@
     "private": "For individuals",
     "business": "For business",
     "account": "Kyrion Account",
+    "connect": "Connect installation",
     "download": "Download",
     "hardware": "Hardware"
   },
@@ -142,9 +143,18 @@
     "diagramLabel": "The Kyrion ecosystem",
     "diagramTop": "DEVICES & INTEGRATIONS",
     "diagramCore": "ONE TRUSTED CORE",
-    "diagramBottom": ["Web", "Voice", "Automations", "Intelligence"],
+    "diagramBottom": [
+      "Web",
+      "Voice",
+      "Automations",
+      "Intelligence"
+    ],
     "diagramCaption": "An ecosystem vision. Core validates actions across every interface; voice is evolving and automations are planned.",
-    "diagramDevices": ["Lighting", "Sensors", "Services"],
+    "diagramDevices": [
+      "Lighting",
+      "Sensors",
+      "Services"
+    ],
     "diagramCenter": "Connection. Control. Clarity.",
     "principles": [
       "Local by design",
@@ -188,7 +198,12 @@
     "worksEnvironment": {
       "title": "Your home",
       "description": "Selected lighting, sensors and media through bounded integrations.",
-      "items": ["Nanoleaf", "Zigbee", "Spotify", "Home Assistant"]
+      "items": [
+        "Nanoleaf",
+        "Zigbee",
+        "Spotify",
+        "Home Assistant"
+      ]
     },
     "worksCloud": {
       "title": "Cloud when you need it.",
@@ -573,7 +588,7 @@
         },
         {
           "title": "Optional website account",
-          "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, sign-in and session records, encrypted renewal credentials, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate."
+          "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, sign-in and session records, encrypted renewal credentials, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate. When you link an installation, the website also stores installation and local-user identifiers, Space name and type, local username, and linking and confirmation times. The local installation stores the verified central email address and display name. Local unlink reports removal of the website entry; this can be delayed while offline. Content, devices and local passwords are not transferred for this directory."
         },
         {
           "title": "Session validity and stored records",
@@ -768,7 +783,20 @@
     "linkSubmit": "Confirm code",
     "linkOutcome": "Then confirm your account on the sign-in page. Your local app finishes the connection automatically and shows success.",
     "linkCodeInvalid": "Enter the eight-character code from your local app.",
-    "linkSignIn": "Please sign in to link your local account."
+    "linkSignIn": "Please sign in to link your local account.",
+    "linkEntryHelp": "Enter the code from your local Kyrion app here. This connects your installation; personal account settings are separate.",
+    "installationsTitle": "Your linked installations",
+    "installationsHelp": "Connections confirmed by your local installations appear here. New links usually appear within a few seconds.",
+    "installationsEmpty": "No confirmed installation in this overview yet.",
+    "installationsFailed": "Your installation overview could not be loaded. Please try again shortly.",
+    "homeInstallation": "Home",
+    "businessInstallation": "Business",
+    "localAccount": "Local username",
+    "linkedOn": "Linked on",
+    "lastConfirmed": "Last confirmed"
+  },
+  "connect": {
+    "description": "Connect your local Kyrion installation to your central account using its displayed code."
   },
   "download": {
     "eyebrow": "KYRION INSTALLER",

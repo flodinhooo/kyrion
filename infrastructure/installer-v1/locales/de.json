@@ -78,5 +78,11 @@
   "spaceAuthorized": "Core hat deine Mitgliedschaft im aktiven Space dieser Installation geprüft. Andere Installationen benötigen eine vorbereitete, autorisierte Geräteverbindung.",
   "spaceUse": "Diesen berechtigten Space für die weitere Einrichtung verwenden?",
   "identityAccess": "Web-Account verbinden oder die bereits verknüpfte Identität mit dem lokalen Offline-Passwort verwenden",
-  "identityReview": "Core-Identitätsanbieter für sichere Browser-Anmeldung; Web-Passwörter und gemeinsame Client-Geheimnisse werden nicht gespeichert"
+  "identityReview": "Core-Identitätsanbieter für sichere Browser-Anmeldung; Web-Passwörter und gemeinsame Client-Geheimnisse werden nicht gespeichert",
+  "offlineIdentityPolicy": "Der Offline-Zugang verwendet dieselbe verknüpfte lokale Identität und die Mitgliedschaftsregeln von Core. Lokale Passwort-Sitzungen laufen nach sieben Tagen ab. Eine Web-Kontosperre verhindert neue zentrale Anmeldungen, widerruft Offline-Zugang aber nicht sofort. Lokale Konto- und Mitgliedschaftssperren prüft Core direkt.",
+  "spaceInvitationChoice": "Dieser Web-Account hat noch keine lokale Mitgliedschaft. Tritt diesem bestehenden Space nur mit einer Einladung eines berechtigten Mitglieds bei.",
+  "spaceInvitationCode": "Privater Space-Einladungscode",
+  "spaceInvitationEmail": "Einladungs-E-Mail, falls dieser Space sie verlangt (sonst leer lassen)",
+  "spaceInvitationEmailProof": "Postfach-Prüfcode dieser Installation; kein Web-Passwort",
+  "setupMemberOnly": "Deine Mitgliedschaft ist bestätigt. Deine Rolle erlaubt keine Installationsverwaltung. Geräte und Integrationen muss ein berechtigter Administrator einrichten."
 }

@@ -78,5 +78,11 @@
   "spaceAuthorized": "Core verified your membership in this installation’s active Space. Other installations require a prepared, authorized device connection.",
   "spaceUse": "Use this authorized Space for the remaining setup?",
   "identityAccess": "Connect your web account, or use the already linked identity with its local offline password",
-  "identityReview": "Core identity provider for browser-only sign-in; no website password or shared client secret is stored"
+  "identityReview": "Core identity provider for browser-only sign-in; no website password or shared client secret is stored",
+  "offlineIdentityPolicy": "Offline access uses this same linked local identity and Core membership rules. Local password sessions expire after seven days. A web-account block prevents new central login; it does not immediately revoke offline access. Local account or membership suspension takes effect through Core checks.",
+  "spaceInvitationChoice": "This web account has no local membership. Join this existing Space only with an invitation issued by an authorized member.",
+  "spaceInvitationCode": "Private Space invitation code",
+  "spaceInvitationEmail": "Invitation email, if required by this Space (leave blank otherwise)",
+  "spaceInvitationEmailProof": "Mailbox verification code sent by this installation; no website password",
+  "setupMemberOnly": "Your membership is confirmed. Your role does not permit installation administration; an authorized administrator must configure devices and integrations."
 }
