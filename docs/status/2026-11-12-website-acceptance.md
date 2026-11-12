@@ -188,3 +188,34 @@ public and has direct password grants disabled. Docker Desktop startup was
 attempted, but its readiness command did not return; no WSL shutdown, database
 reset/migration, firewall change or automatic account link was performed. Local
 runtime availability and the owner's password-confirmed link remain pending.
+
+### Subsequent Windows runtime and setup verification
+
+The owner's central setup was read back privately: enabled=true,
+emailVerified=true, password credential present and no remaining required
+actions. No password value was read. This supersedes the pending-setup state.
+The guided website was deployed in `dba175e`; Vercel reported success and the
+public German account page contained the new connection guide.
+
+Docker subsequently became ready and PostgreSQL completed crash recovery.
+Read-only validation found 46 installed migrations, no mismatches, no pending
+migrations and no active sync leases. The hash-verified, previously accepted V46
+Core artifact was started on loopback with the prepared optional central-login
+configuration. Health returned UP and central config returned enabled=true.
+The current local web app started on `http://localhost:3002`, preserving the
+Portfolio listener on 3000. Both its login page (HTTP 200) and forwarded central
+config (HTTP 200, enabled=true) were verified. The actual local link still
+requires the owner's local-password proof, central code authorization and
+explicit confirmation; none of those proofs was bypassed.
+
+The owner then reported npm predev failing because the local recovery helper
+could not start. Its unconditional Windows ACL operation was re-propagating
+permissions across the large recovery directory, exceeding the command timeout.
+Startup now first checks owner-only, protected full-control ACLs and skips the
+mutation when they already match. Missing/inadequate protection still requires
+the native ACL operation and a successful recheck; checks do not accept inherited
+or additional read grants. The operator key remains private. Actual Node 22
+helper startup and the exact `npm run predev` path passed. Nine recovery tests,
+including native Windows ACL acceptance/rejection, and JavaScript syntax passed.
+No unrelated installer source, Portfolio process, schema or local-user data was
+changed. These runtime checks supersede the earlier startup-blocked observation.

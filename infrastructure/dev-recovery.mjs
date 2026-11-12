@@ -16,14 +16,14 @@ if (process.platform !== 'win32') throw new Error('Windows development helper on
 const root = fileURLToPath(new URL('../', import.meta.url));
 const stateDir = path.join(root, '.run', 'dev-recovery');
 await mkdir(stateDir, {recursive: true});
-await command('icacls.exe', [stateDir, '/inheritance:r', '/grant:r', `${process.env.USERDOMAIN}\\${process.env.USERNAME}:(OI)(CI)F`]);
+await protectOperatorPath(stateDir, true);
 const keyPath = path.join(stateDir, 'operator.key');
 try {
   await writeFile(keyPath, randomBytes(32).toString('hex'), {flag: 'wx', mode: 0o600});
 } catch (error) {
   if (error.code !== 'EEXIST') throw error;
 }
-await command('icacls.exe', [keyPath, '/inheritance:r', '/grant:r', `${process.env.USERDOMAIN}\\${process.env.USERNAME}:F`]);
+await protectOperatorPath(keyPath, false);
 const key = (await readFile(keyPath, 'utf8')).trim();
 if (!/^[a-f0-9]{64}$/.test(key)) throw new Error('Invalid operator key file');
 let settings = {};
@@ -72,6 +72,16 @@ function command(file, args, timeout = 30_000) {
     child.once('error', reject);
     child.once('exit', (code) => code === 0 ? resolve() : reject(new Error('COMMAND_FAILED')));
   });
+}
+
+async function protectOperatorPath(target, directory) {
+  const check = () => command('powershell.exe', ['-NoProfile', '-NonInteractive', '-File',
+    path.join(root, 'infrastructure/dev-recovery-acl.ps1'), '-LiteralPath', target,
+    ...(directory ? ['-Directory'] : [])]);
+  try { await check(); return; } catch { /* Apply protection only when needed. */ }
+  await command('icacls.exe', [target, '/inheritance:r', '/grant:r',
+    `${process.env.USERDOMAIN}\\${process.env.USERNAME}:${directory ? '(OI)(CI)' : ''}F`]);
+  await check();
 }
 
 const services = [
