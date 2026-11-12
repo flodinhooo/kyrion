@@ -175,8 +175,9 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
       {status.linkedAt &&
         <small>{t.connectedSince}: {new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(new Date(status.linkedAt))}</small>}
       <small>{status.directoryState === "confirmed" ? t.directoryConfirmed : status.directoryState === "pending" ? t.directoryPending : t.directoryUnavailable}</small>
-      <a href={`https://www.kyrion.ch${locale === "en" ? "/en" : ""}/account`} target="_blank"
-         rel="noopener noreferrer">{t.viewInstallations}</a>
+      {(status.directoryState === "confirmed" || status.directoryState === "pending") &&
+        <a href={`https://www.kyrion.ch${locale === "en" ? "/en" : ""}/account`} target="_blank"
+           rel="noopener noreferrer">{t.viewInstallations}</a>}
     </div>}
     {!login && !enabled && <p>{t.disabled}</p>}
     {error && <p role="alert" className="auth-error">{errorText}</p>}

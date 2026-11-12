@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import stat
 import sys
 import urllib.request
@@ -20,6 +21,31 @@ from host import reject_links
 from native_bundle import MAXIMUM_EXPANDED, safe_member
 
 ROOT = Path(__file__).resolve().parent
+
+
+def core_schema(core_jar: Path) -> int:
+    reject_links(core_jar)
+    if not core_jar.is_file() or core_jar.stat().st_size > 512 * 1024 ** 2:
+        raise ValueError("E_NATIVE_CORE_SCHEMA")
+    try:
+        with zipfile.ZipFile(core_jar) as archive:
+            if len(archive.infolist()) > 100000:
+                raise ValueError("E_NATIVE_CORE_SCHEMA")
+            versions = [
+                int(match[1])
+                for name in archive.namelist()
+                if (
+                    match := re.fullmatch(
+                        r"BOOT-INF/classes/db/migration/V([1-9][0-9]*)__[^/]+\.sql",
+                        name,
+                    )
+                )
+            ]
+    except (OSError, zipfile.BadZipFile):
+        raise ValueError("E_NATIVE_CORE_SCHEMA") from None
+    if not versions or len(versions) != len(set(versions)) or max(versions) < 48:
+        raise ValueError("E_NATIVE_CORE_SCHEMA")
+    return max(versions)
 
 
 def vendor_archives(directory: Path, fetch: bool = False) -> dict:
@@ -65,15 +91,20 @@ def assemble(
     service_host: Path,
     output: Path,
     version: str,
-    schema: int,
+    schema: int | None,
 ) -> dict:
     if (
         not VERSION.fullmatch(version)
         or output.exists()
         or not output.parent.is_dir()
-        or schema < 48
+        or schema is not None
+        and (type(schema) is not int or schema < 48)
     ):
         raise ValueError("E_NATIVE_PROFILE_INPUT")
+    actual_schema = core_schema(core_jar)
+    if schema is not None and schema != actual_schema:
+        raise ValueError("E_NATIVE_PROFILE_SCHEMA")
+    schema = actual_schema
     sources = vendor_archives(archives)
     output.mkdir()
     total = 0
@@ -203,7 +234,11 @@ if __name__ == "__main__":
     parser.add_argument("--service-host", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--version")
-    parser.add_argument("--schema", type=int, default=48)
+    parser.add_argument(
+        "--schema",
+        type=int,
+        help="Optional assertion; schema is derived from the actual Core JAR",
+    )
     args = parser.parse_args()
     vendor_archives(args.archives, args.fetch)
     if args.output:

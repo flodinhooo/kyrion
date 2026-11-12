@@ -54,7 +54,7 @@ jobs:
         run: |
           $coreJar = Get-Item services/core/build/libs/kyrion-core-*-SNAPSHOT.jar
           if (@($coreJar).Count -ne 1) { throw 'E_CI_CORE_ARTIFACT' }
-          python infrastructure/installer-v1/release/assemble-windows-profile.py --fetch --archives build/windows-vendors --core-jar $coreJar.FullName --parser-jar services/core/build/libs/knowledge-parser.jar --web-build apps/web --service-host build/native-service-host --output build/windows-ci-profile --version $env:KYRION_CI_VERSION --schema 48
+          python infrastructure/installer-v1/release/assemble-windows-profile.py --fetch --archives build/windows-vendors --core-jar $coreJar.FullName --parser-jar services/core/build/libs/knowledge-parser.jar --web-build apps/web --service-host build/native-service-host --output build/windows-ci-profile --version $env:KYRION_CI_VERSION
           python infrastructure/installer-v1/release/build-windows-bundle.py --profile build/windows-ci-profile --metadata build/windows-ci-profile-metadata.json --output build/windows-ci-bundle
           python infrastructure/installer-v1/release/sign-development-bundle.py build/windows-ci-bundle
       - name: Run actual service installation, permissions, repeat and restart

@@ -15,13 +15,13 @@ deployment descriptions.
 
 ## Ownership and identifiers
 
-| Data                                                         | Authority                           | Transfer                                           |
-| ------------------------------------------------------------ | ----------------------------------- | -------------------------------------------------- |
-| Central subject, authentication methods, verified email      | Keycloak                            | Only issuer and subject imported into a local link |
-| Website account/session                                      | Separate central website PostgreSQL | No local database access                           |
-| Local username and password                                  | Local Core                          | Never sent to Keycloak or website                  |
-| Space membership, roles, permissions                         | Local Core                          | Never inferred from central claims                 |
-| Devices, automations, documents, reminders and other content | Local installation                  | No identity synchronization                        |
+| Data                                                         | Authority                           | Transfer                                                |
+|--------------------------------------------------------------|-------------------------------------|---------------------------------------------------------|
+| Central subject, authentication methods, verified email      | Keycloak                            | Issuer/subject link plus verified display email/name    |
+| Website account/session                                      | Separate central website PostgreSQL | No local database access                                |
+| Local username and password                                  | Local Core                          | Directory label includes username; password stays local |
+| Space membership, roles, permissions                         | Local Core                          | Never inferred from central claims                      |
+| Devices, automations, documents, reminders and other content | Local installation                  | No identity synchronization                             |
 
 `(issuer, subject)` is the external identity key, unique per local database. A
 local user has at most one central link. Equal email addresses or usernames are
@@ -89,8 +89,9 @@ Local session validation reads only local persistence. A provider outage prevent
 new central proofs, not local password login or existing authorized requests.
 Local Core sessions created through central sign-in expire within 15 minutes and no later than the ID token expiry;
 there is no automatic refresh or indefinite offline extension. A new provider
-authorization is required afterward. Central token sets are discarded after
-identity validation. The development provider's five-minute token lifetime can
+authorization is required afterward. Central token sets are not persisted. A bounded in-memory proof cache retains
+the short-lived access proof until expiry for optional directory reporting. The development provider's five-minute token
+lifetime can
 make actual sessions shorter than 15 minutes.
 
 - Session logout revokes the selected relying-party session; it does not disable

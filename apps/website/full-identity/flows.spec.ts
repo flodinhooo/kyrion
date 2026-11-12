@@ -104,6 +104,15 @@ async function approveDevice(
       .locator('input[type="submit"],button[type="submit"]')
       .click();
   }
+  await expect
+    .poll(
+      async () =>
+        (await approval.locator("#password").isVisible()) ||
+        (await approval
+          .getByRole("button", {name: /Yes|Confirm|Allow/i})
+          .isVisible()),
+    )
+    .toBe(true);
   if (await approval.locator("#password").isVisible()) {
     if (await approval.locator("#username").isVisible())
       await approval.locator("#username").fill(username);
@@ -226,6 +235,15 @@ test("real registration, verified email, website and local login/link/offline/un
   ).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (await page.locator("#password").isVisible()) ||
+        (await page
+          .getByRole("heading", {name: "My account", exact: true})
+          .isVisible()),
+    )
+    .toBe(true);
   if (await page.locator("#username").count())
     await page.locator("#username").fill(centralUsername);
   if (await page.locator("#password").isVisible()) {
