@@ -37,6 +37,7 @@ ROUTES = {
     ("POST", "/v1/auth/central/registration/cancel"),
     ("POST", "/v1/auth/registration-email"),
     ("GET", "/v1/integrations/home-assistant"),
+    ("DELETE", "/v1/integrations/home-assistant"),
     ("POST", "/v1/integrations/home-assistant/probe"),
     ("POST", "/v1/integrations/home-assistant/connect"),
     ("POST", "/v1/integrations/home-assistant/sync"),
@@ -45,6 +46,7 @@ ROUTES = {
     ("GET", "/v1/integrations/home-assistant/selection"),
     ("POST", "/v1/integrations/home-assistant/selection"),
     ("GET", "/v1/home/rooms"),
+    ("POST", "/v1/home/rooms"),
     ("POST", "/v1/device-commands"),
     ("GET", "/v1/devices"),
 }
@@ -332,6 +334,46 @@ def selected_indices(value: str, count: int) -> list[int]:
     return selected
 
 
+def import_source_room(client: CoreClient, name: str) -> str:
+    """Explicitly import a confirmed source area through the existing room API."""
+    if not isinstance(name, str):
+        raise TypeError("E_HA_SOURCE_ROOM")
+    name = name.strip()
+    if not 1 <= len(name) <= 120 or any(
+        ord(char) < 32 or ord(char) == 127 for char in name
+    ):
+        raise ValueError("E_HA_SOURCE_ROOM")
+
+    def existing():
+        rooms = client.request("GET", "/v1/home/rooms")
+        if not isinstance(rooms, list):
+            raise CoreError("E_HA_ROOMS")
+        matches = [
+            room for room in rooms if room["name"].strip().casefold() == name.casefold()
+        ]
+        if len(matches) > 1:
+            raise ValueError("E_HA_ROOM_AMBIGUOUS")
+        return str(uuid.UUID(matches[0]["id"])) if matches else None
+
+    room_id = existing()
+    if room_id is not None:
+        return room_id
+    try:
+        room = client.request(
+            "POST", "/v1/home/rooms", {"name": name, "roomType": "other"}
+        )
+        return str(uuid.UUID(room["id"]))
+    except CoreError as error:
+        if error.status != 409:
+            raise
+        # A concurrent explicit creation may have won the existing unique name
+        # constraint. Re-read only this authenticated Space; never create twice.
+        room_id = existing()
+        if room_id is None:
+            raise
+        return room_id
+
+
 def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
     if input(messages["haConfigure"] + " [CONFIGURE/skip]: ").strip() != "CONFIGURE":
         return
@@ -403,10 +445,23 @@ def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
                 json.dumps({"number": number, "room": room["name"]}, ensure_ascii=True)
             )
         room_choice = (
-            input(messages["haChooseRoom"] + " [auto/none/number]: ").strip().lower()
+            input(messages["haChooseRoom"] + " [auto/none/import/number]: ")
+            .strip()
+            .lower()
         )
         override, room_id = room_choice not in {"auto", ""}, None
-        if override and room_choice not in {"none", "keine"}:
+        if room_choice == "import":
+            print(
+                json.dumps({"sourceRoom": device.get("sourceRoom")}, ensure_ascii=True)
+            )
+            if (
+                input(messages["haImportRoomReview"] + " [IMPORT/CANCEL]: ").strip()
+                != "IMPORT"
+            ):
+                raise ValueError("E_HA_ROOM_CANCELLED")
+            room_id = import_source_room(client, device.get("sourceRoom"))
+            rooms = client.request("GET", "/v1/home/rooms")
+        elif override and room_choice not in {"none", "keine"}:
             indices = selected_indices(room_choice, len(rooms))
             if len(indices) != 1:
                 raise ValueError("E_HA_ROOM_SELECTION")
@@ -434,13 +489,30 @@ def guided_home_assistant(client: CoreClient, messages: dict[str, str]) -> None:
     client.installation.state["homeAssistant"] = "selected-and-imported"
     client.installation.save()
     print(messages["haImported"] + ": " + str(result["imported"]))
+    catalog = client.request("GET", "/v1/devices")
+    if not isinstance(catalog, list):
+        raise CoreError("E_HA_CATALOG")
+    for device in catalog:
+        if device.get("provider") == "home_assistant":
+            print(
+                json.dumps(
+                    {
+                        key: device.get(key)
+                        for key in (
+                            "displayName",
+                            "availability",
+                            "room",
+                            "state",
+                            "capabilities",
+                        )
+                    },
+                    ensure_ascii=True,
+                )
+            )
     if (
         any(choice["allowControl"] for choice in choices)
         and input(messages["haFirstAction"] + " [TEST/skip]: ").strip() == "TEST"
     ):
-        catalog = client.request("GET", "/v1/devices")
-        if not isinstance(catalog, list):
-            raise CoreError("E_HA_CATALOG")
         candidates = [
             device
             for device in catalog

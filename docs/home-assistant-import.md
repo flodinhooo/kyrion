@@ -39,6 +39,9 @@ performs a due refresh when the device overview requests its initial catalog.
 Both reuse the same serialized importer; a due refresh rechecks its 30-second
 throttle under the owner lock, including after failures. The existing manual
 observation refresh also imports HA. There is no parallel WebSocket path.
+The background scan and per-owner throttle are independent: a recent import
+between scans can defer refresh to the following scan, approaching 60 seconds
+plus provider latency. Do not present the scan interval as a realtime guarantee.
 `kyrion.home-assistant.refresh-enabled=false` disables the background scheduler
 (for example in integration tests); on-demand reads remain available.
 Devices appear under Devices and Home using Kyrion IDs.
@@ -60,6 +63,22 @@ room overrides and separate power consent. Core resolves keys against a fresh
 provider snapshot and validates room ownership. An expected revision prevents
 lost updates. Saving selection never invokes a device service. Configuration,
 selection, sync and control serialize through the existing owner lock.
+
+The downloaded terminal installer also displays imported devices immediately.
+For a device's room choice, `import` followed by explicit `IMPORT` creates its
+confirmed Home Assistant area through the existing authenticated Core room API,
+using type `other`. A unique case-insensitive name match is reused. Ambiguous
+matches fail; a concurrent exact-name conflict is re-read once without another
+creation. The room is a separately confirmed change and remains if later device
+selection is cancelled. No physical pairing or action occurs during room import.
+
+Use installer maintenance `--home-assistant configure|status|disconnect --target ...`
+to return to this integration independently of hardware/AI setup. It uses the
+same linked-account and authorized Space flow (including local offline login),
+then Core's existing integration permissions and endpoints. Disconnect requires
+explicit `DISCONNECT`, removes the stored token/selection through Core and checks
+that configuration is absent before recording completion. Runtime settings and
+integration management also remain in the local Web application.
 
 ## Mapping and reconciliation
 

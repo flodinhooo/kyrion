@@ -54,6 +54,9 @@ def main() -> int:
     actions.add_argument("--continue-setup", action="store_true")
     actions.add_argument("--extend-bootstrap", action="store_true")
     actions.add_argument(
+        "--home-assistant", choices=("configure", "status", "disconnect")
+    )
+    actions.add_argument(
         "--owner-recovery", choices=("provision", "open", "complete", "rotate")
     )
     parser.add_argument("--recovery-space", help="Existing local Space UUID")
@@ -174,6 +177,7 @@ def main() -> int:
         or args.continue_setup
         or args.extend_bootstrap
         or args.owner_recovery
+        or args.home_assistant
     ):
         try:
             return run_maintenance(args, messages)

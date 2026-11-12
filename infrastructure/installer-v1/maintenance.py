@@ -198,6 +198,55 @@ def run(args, messages: dict[str, str]) -> int:
         diagnostic(args.target, args.diagnostics)
         print(messages["diagnosticSaved"])
         return 0
+    if getattr(args, "home_assistant", None):
+        from linked_onboarding import linked_setup
+        from onboarding import CoreClient, guided_home_assistant
+
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            if installation.state.get("backend") == "windows-native":
+                from native_runtime import permissions
+
+                permissions(args.target, "verify")
+            elif os.name != "posix" or os.geteuid() != 0:
+                raise ValueError("E_PLATFORM")
+            client = CoreClient(installation)
+            try:
+                linked_setup(client, messages)
+                if args.home_assistant == "configure":
+                    guided_home_assistant(client, messages)
+                elif args.home_assistant == "disconnect":
+                    if (
+                        input(
+                            messages["haDisconnectReview"] + " [DISCONNECT/CANCEL]: "
+                        ).strip()
+                        != "DISCONNECT"
+                    ):
+                        raise ValueError("E_CONFIRMATION")
+                    result = client.request("DELETE", "/v1/integrations/home-assistant")
+                    status = client.request("GET", "/v1/integrations/home-assistant")
+                    if status.get("configured") is not False:
+                        raise ValueError("E_HA_DISCONNECT")
+                    installation.state["homeAssistant"] = "disconnected"
+                    installation.save()
+                    print(
+                        json.dumps(
+                            {
+                                "disconnected": result.get("disconnected") is True,
+                                "configured": False,
+                            }
+                        )
+                    )
+                else:
+                    print(
+                        json.dumps(
+                            client.request("GET", "/v1/integrations/home-assistant"),
+                            ensure_ascii=True,
+                        )
+                    )
+            finally:
+                client.close()
+        return 0
     if getattr(args, "owner_recovery", None):
         from onboarding import provision_recovery
 

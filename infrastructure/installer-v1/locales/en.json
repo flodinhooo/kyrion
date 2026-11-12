@@ -100,5 +100,7 @@
   "identityErrorPermission": "Your current role does not authorize this action. Ask a Space administrator to perform or explicitly grant the required operation.",
   "identityErrorPasswordMismatch": "The local offline passwords do not match. Restart the credential step; no password is stored by the installer.",
   "identitySetupPaused": "Account/Space setup is paused. Continue with --continue-setup on this installation; confirmed Core changes and local progress remain available.",
-  "recoveryMaintenanceReview": "This host-console operation briefly stops Core and Web, leaving the database running. Core requests secrets privately. Open consumes the recovery code; complete changes the OWNER password and revokes sessions; rotate invalidates previous recovery codes. Keep newly displayed codes privately."
+  "recoveryMaintenanceReview": "This host-console operation briefly stops Core and Web, leaving the database running. Core requests secrets privately. Open consumes the recovery code; complete changes the OWNER password and revokes sessions; rotate invalidates previous recovery codes. Keep newly displayed codes privately.",
+  "haImportRoomReview": "Import this Home Assistant area as a Kyrion room now? Existing rooms with the same name are reused; no physical devices are paired or controlled. Room creation remains saved if you later cancel device selection.",
+  "haDisconnectReview": "Disconnect Home Assistant from this Space and remove its stored token and device selection? Home Assistant itself, physical pairings and other integrations remain unchanged."
 }

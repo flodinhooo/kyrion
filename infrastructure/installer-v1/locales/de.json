@@ -100,5 +100,7 @@
   "identityErrorPermission": "Deine aktuelle Rolle erlaubt diese Aktion nicht. Ein Space-Administrator muss sie ausführen oder die nötige Berechtigung bewusst erteilen.",
   "identityErrorPasswordMismatch": "Die lokalen Offline-Passwörter stimmen nicht überein. Starte den Zugangsschritt erneut. Der Installer speichert das Passwort nicht.",
   "identitySetupPaused": "Die Konto-/Space-Einrichtung ist pausiert. Setze sie auf dieser Installation mit --continue-setup fort. Bestätigte Core-Änderungen und lokaler Fortschritt bleiben verfügbar.",
-  "recoveryMaintenanceReview": "Dieser Vorgang in der lokalen Konsole stoppt Core und Web kurzzeitig; die Datenbank bleibt aktiv. Core fragt Geheimnisse verdeckt ab. Open verbraucht den Recovery-Code; complete ersetzt das OWNER-Passwort und widerruft Sitzungen; rotate entwertet bisherige Recovery-Codes. Neu angezeigte Codes privat aufbewahren."
+  "recoveryMaintenanceReview": "Dieser Vorgang in der lokalen Konsole stoppt Core und Web kurzzeitig; die Datenbank bleibt aktiv. Core fragt Geheimnisse verdeckt ab. Open verbraucht den Recovery-Code; complete ersetzt das OWNER-Passwort und widerruft Sitzungen; rotate entwertet bisherige Recovery-Codes. Neu angezeigte Codes privat aufbewahren.",
+  "haImportRoomReview": "Diesen Home-Assistant-Bereich jetzt als Kyrion-Raum anlegen? Vorhandene gleichnamige Räume werden wiederverwendet. Es werden keine physischen Geräte gekoppelt oder gesteuert. Der Raum bleibt gespeichert, wenn die Geräteauswahl danach abgebrochen wird.",
+  "haDisconnectReview": "Home Assistant von diesem Space trennen und sein gespeichertes Token sowie die Geräteauswahl entfernen? Home Assistant selbst, physische Kopplungen und andere Integrationen bleiben erhalten."
 }
