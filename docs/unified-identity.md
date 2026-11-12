@@ -26,8 +26,10 @@ deployment descriptions.
 `(issuer, subject)` is the external identity key, unique per local database. A
 local user has at most one central link. Equal email addresses or usernames are
 irrelevant. Providers may issue pairwise subjects for different clients: the
-website's subject is not assumed equal to a local client's subject. There is no
-cross-client identity join or invented global-account claim.
+website's subject is not assumed equal to a local client's subject for arbitrary
+providers. The official installation directory explicitly requires the verified
+public-subject provider contract in [ADR 0054](adr/0054-account-installation-directory.md).
+It never joins accounts by email.
 
 ## Supported flows
 
@@ -35,8 +37,8 @@ cross-client identity join or invented global-account claim.
    choose “Only use locally”, and log in with the local password. Neither
    provider configuration nor internet access is required.
 2. **Connect:** log in locally, open Profile / Link account, enter the current local
-   password and explicitly start linking. Enter the code on the website Account /
-   Link account tab and approve it at the configured provider. The local UI
+   password and explicitly start linking. Enter the code on the website `/connect`
+   page and approve it at the configured provider. The local UI
    completes the approved link automatically. The current local session must remain
    valid throughout. Codes/operations expire, are one-use and cannot switch user
    or local session. A restart abandons pending operations.
@@ -65,6 +67,21 @@ settings. Website sessions can be remembered for up to 30 days, with encrypted
 server-side online renewal and short proof validity. [ADR 0051](adr/0051-customer-website-accounts.md)
 supersedes the original website-only short-session restriction. This does not
 extend local Core sessions or replace explicit local account linking.
+
+The account overview lists installations reported by linked local Cores, including
+Space name/type, local username, link date and last confirmation. It is an
+informational directory, not a remote-control surface or an online-status check.
+Local Profile / Link account shows the signed, verified central email/name and
+directory synchronization state. Older links need a fresh central proof to enrich
+missing display metadata. Local passwords, roles and content remain local.
+
+Core retains verified display metadata and an encrypted row-scoped maintenance
+receipt; it never persists the provider access/refresh token for this directory.
+Reports require a short-lived active local-client token with the website audience,
+authenticated introspection and the official public-subject contract. Unlink works
+offline and retries removal from the directory when the website becomes reachable.
+Directory rows can consequently lag an offline local unlink. No webhook, public LAN
+endpoint or browser callback to the installation is required.
 
 ## Expiry, logout and blocking
 

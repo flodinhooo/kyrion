@@ -72,7 +72,7 @@ public final class CoreSchemaMigration {
                 }
             }
             int version = history.size();
-            require(Set.of(39, 41, 43, 44, 45, 46, 47).contains(version), "SOURCE_VERSION_UNSUPPORTED");
+            require(Set.of(39, 41, 43, 44, 45, 46, 47, 48, 49).contains(version), "SOURCE_VERSION_UNSUPPORTED");
             state.put("version", version);
             state.put("history", history);
             // Aggregate only digests/counts, never disclose account/event/token/ciphertext data.
@@ -111,7 +111,7 @@ public final class CoreSchemaMigration {
 
     static Map<String, Object> execute(JsonNode request) throws Exception {
         int targetVersion = request.required("targetVersion").asInt();
-        require(targetVersion == 45 || targetVersion == 46 || targetVersion == 47, "TARGET_VERSION_UNSUPPORTED");
+        require(Set.of(45, 46, 47, 48, 49).contains(targetVersion), "TARGET_VERSION_UNSUPPORTED");
         JsonNode settings = request.required("connection");
         String url = "jdbc:postgresql://" + settings.required("host").asText() + ":" + settings.required("port").asInt() + "/" + settings.required("database").asText();
         Properties credentials = new Properties();

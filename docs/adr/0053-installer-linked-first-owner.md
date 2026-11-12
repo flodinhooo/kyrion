@@ -30,3 +30,11 @@ Core needs authenticated device enrollment, tracked separately in R23-R29/R35.
 The downloaded installer owns this flow. The browser only handles provider
 authentication. Provider configuration is public operator/release configuration;
 no shared customer client secret or public callback endpoint is introduced.
+
+Existing-Space invitations reuse the same proof mechanism and the existing Core
+invitation authority. A separate operation purpose binds the invitation's hash;
+completion atomically redeems it through LocalAuthenticationService.register
+and creates the identity link. Membership, expiry, use limits, email policy and
+delegated role are still checked at redemption by the existing Space code. A
+duplicate central link rolls back both account creation and invitation use.
+Neither regular LOGIN completion nor setup completion can redeem this purpose.
