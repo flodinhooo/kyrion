@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { CircleCheck } from "lucide-react";
 import { csrfHeader } from "@/features/auth/csrf";
 import { isCentralDevice, isCentralStatus, type CentralDevice, type CentralStatus } from "@/features/auth/central-contracts";
 import { centralMessages } from "@/features/auth/central-messages";
@@ -166,7 +167,7 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
   const website = device && !login ? centralWebsite(device.verificationUri, locale) : null;
   const errorText = error in t.errors ? t.errors[error as keyof typeof t.errors] : t.error;
   return <section className={login ? "central-account-panel" : "settings-link-card profile-security-panel account-link-panel"} aria-label={t.title}>
-    {!login && <><h2>{t.title}</h2><p>{status === null ? t.checking : status.linked ? t.connected : t.disconnected}</p><p>{t.localHelp}</p></>}
+    {!login && <><div className="account-link-heading"><h2>{t.title}</h2>{status?.linked && <span className="account-link-badge"><CircleCheck size={18} aria-hidden="true" />{t.connectedBadge}</span>}</div><p>{status === null ? t.checking : status.linked ? t.connected : t.disconnected}</p><p>{t.localHelp}</p></>}
     {!login && status?.linked && <div className="account-link-identity">
       <span>{t.connectedAccount}</span>
       <strong>{status.account?.email ?? status.account?.displayName ?? t.identityMissing}</strong>
@@ -200,10 +201,10 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
       <button type="button" disabled={busy || finishing} onClick={() => void finish("cancel")}>{t.cancel}</button>
     </div>}
     {!device && started && <button type="button" disabled={busy} onClick={() => void finish("cancel")}>{t.cancel}</button>}
-    {!login && status?.linked && <form className="auth-form" onSubmit={unlink}>
+    {!login && status?.linked && <details className="account-link-manage"><summary>{t.manageConnection}</summary><form className="auth-form" onSubmit={unlink}>
       <p>{t.unlinkHelp}</p><label>{t.password}<input name="currentPassword" type="password" autoComplete="current-password" minLength={12} maxLength={200} required /></label>
       <label><span><input name="confirm" type="checkbox" required /> {t.confirmUnlink}</span></label>
       <button type="submit" disabled={busy}>{busy ? t.checking : t.unlink}</button>
-    </form>}
+    </form></details>}
   </section>;
 }

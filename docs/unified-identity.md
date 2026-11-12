@@ -74,6 +74,9 @@ informational directory, not a remote-control surface or an online-status check.
 Local Profile / Link account shows the signed, verified central email/name and
 directory synchronization state. Older links need a fresh central proof to enrich
 missing display metadata. Local passwords, roles and content remain local.
+The connected state has a checkmark badge and a highlighted identity card.
+Password confirmation and unlink controls live under the collapsed Manage
+connection disclosure, so removal does not dominate the connected profile.
 
 Core retains verified display metadata and an encrypted row-scoped maintenance
 receipt; it never persists the provider access/refresh token for this directory.

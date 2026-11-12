@@ -1,5 +1,7 @@
 export const centralMessages = {
   en: {
+    connectedBadge: "Connected",
+    manageConnection: "Manage connection",
     connectedAccount: "Connected central account",
     connectedSince: "Connected since",
     identityMissing: "Account details need a fresh central sign-in",
@@ -41,6 +43,8 @@ export const centralMessages = {
     },
   },
   de: {
+    connectedBadge: "Verbunden",
+    manageConnection: "Verbindung verwalten",
     connectedAccount: "Verbundener zentraler Account",
     connectedSince: "Verknüpft seit",
     identityMissing: "Account-Daten werden nach erneuter zentraler Anmeldung angezeigt",
