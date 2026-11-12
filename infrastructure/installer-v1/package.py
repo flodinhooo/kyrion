@@ -10,6 +10,7 @@ from pathlib import Path
 
 FILES = (
     "guided.py",
+    "build_identity.py",
     "host.py",
     "bundle.py",
     "crypto_support.py",

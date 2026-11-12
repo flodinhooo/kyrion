@@ -48,7 +48,7 @@ jobs:
           $version = "0.0.0-ci.$env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT"
           "KYRION_CI_VERSION=$version" >> $env:GITHUB_ENV
           python infrastructure/installer-v1/release/build-native.py --version $version --output build/native-service-installer
-          python infrastructure/installer-v1/release/build-native-service-host.py --output build/native-service-host
+          python infrastructure/installer-v1/release/build-native-service-host.py --output build/native-service-host --version $version
       - name: Prepare public pinned native runtime bundle
         shell: pwsh
         run: |

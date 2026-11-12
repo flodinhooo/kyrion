@@ -63,3 +63,27 @@ support, actual Home Assistant compatibility across versions, distributed
 device enrollment, full encrypted application restore or installed updates.
 Continue those source requirements and available tests autonomously; no partial
 user test is needed.
+
+## Embedded installer version follow-up
+
+The frozen installer now contains an explicit build identity and implements
+`--version`. Missing/malformed/duplicate build data is rejected in a frozen
+program. Source/Python-archive runs identify as `0.0.0-dev.0`, never as a released
+`1.0.0`. The CLI cannot override its own version for compatibility checks.
+Development builds refuse stable update-feed selection before network access.
+This does not implement the still-open installed update transaction/service.
+
+Both native builders execute the actual frozen `--version` and compare it with
+the requested version. Service-host builds accept the same explicit `--version`;
+profile assembly checks their build metadata and packaged identity match the
+profile version before copying vendors. The website publication-catalog tool
+also requires embedded-version verification in addition to its existing release
+asset/platform-acceptance checks. No download is activated or published.
+
+The Windows standalone `0.0.0-dev.20261113.1` executable and matching one-directory
+service host were built and smoke-tested locally; their metadata retains false
+installation/boot acceptance. Latest source verification passes 185 Windows
+installer tests (one skip), whole-installer Ruff and parsed workflow YAML.
+Earlier integration source passes 179 tests in Debian (16 skips). An updated
+Linux frozen build and source suite are being run separately; do not infer a
+passing result from this continuation record.

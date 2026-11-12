@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(output: Path) -> dict:
+def build(output: Path, version: str | None = None) -> dict:
     if platform.system() != "Windows" or platform.machine().lower() not in {
         "amd64",
         "x86_64",
@@ -28,14 +28,23 @@ def build(output: Path) -> dict:
     if output.exists() or not output.parent.is_dir():
         raise ValueError("E_SERVICE_HOST_BUILD_TARGET")
     sys.path.insert(0, str(ROOT))
-    from bundle import sha256
+    from build_identity import DEVELOPMENT_VERSION
+    from bundle import VERSION, sha256
     from package import FILES
     from source_snapshot import stage_sources
+
+    version = version if version is not None else DEVELOPMENT_VERSION
+    if not VERSION.fullmatch(version) or "latest" in version.lower():
+        raise ValueError("E_RELEASE")
 
     with tempfile.TemporaryDirectory(prefix="kyrion-service-build-") as directory:
         temporary = Path(directory)
         source_root = temporary / "source"
         source_snapshot = stage_sources(ROOT, source_root, (*FILES, "package.py"))
+        (source_root / "installer-build.json").write_text(
+            json.dumps({"formatVersion": 1, "version": version}) + "\n",
+            encoding="utf-8",
+        )
         arguments = [
             sys.executable,
             "-m",
@@ -56,6 +65,7 @@ def build(output: Path) -> dict:
             str(temporary),
         ]
         for relative in (
+            "installer-build.json",
             "windows-permissions.ps1",
             "windows-task-security.ps1",
             "windows-tasks.ps1",
@@ -100,6 +110,15 @@ def build(output: Path) -> dict:
         value = json.loads(probe.stdout)
         if value["system"] != "Windows" or value["architecture"] != "amd64":
             raise ValueError("E_SERVICE_HOST_SMOKE")
+        version_probe = subprocess.run(
+            [str(profile / "kyrion-service.exe"), "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        if version_probe.stdout.strip() != version:
+            raise ValueError("E_SERVICE_HOST_BUILD_VERSION")
         if any(path.is_symlink() for path in profile.rglob("*")):
             raise ValueError("E_SERVICE_HOST_LINK")
         if source_snapshot != {name: sha256(ROOT / name) for name in source_snapshot}:
@@ -113,6 +132,8 @@ def build(output: Path) -> dict:
             "cryptography": importlib.metadata.version("cryptography"),
             "pyinstaller": importlib.metadata.version("pyinstaller"),
             "sources": source_snapshot,
+            "embeddedVersion": version,
+            "embeddedVersionVerified": True,
             "serviceRegistrationAccepted": False,
             "coldBootVerified": False,
         }
@@ -130,5 +151,6 @@ def build(output: Path) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--version")
     args = parser.parse_args()
-    print(json.dumps(build(args.output)))
+    print(json.dumps(build(args.output, args.version)))

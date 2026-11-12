@@ -18,7 +18,18 @@ from runtime import ROOT, installation_lock
 
 
 def check_updates(args) -> dict:
-    from release_policy import compatible_release, fetch_document, parse, verify
+    from release_policy import (
+        compatible_release,
+        fetch_document,
+        parse,
+        verify,
+        version,
+    )
+
+    try:
+        version(args.installer_version)
+    except ValueError:
+        raise ValueError("E_INSTALLER_UNRELEASED") from None
 
     if not args.feed or args.trust_store is None:
         raise ValueError("E_UPDATE_CONFIG")

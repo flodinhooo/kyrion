@@ -23,6 +23,7 @@ class PublicationTests(unittest.TestCase):
             "bytes": 10,
             "sha256": "a" * 64,
             "nativeSmokeTest": True,
+            "embeddedVersionVerified": True,
             "platformInstallationAccepted": True,
         }
         release = {
@@ -66,6 +67,16 @@ class PublicationTests(unittest.TestCase):
         metadata["platformInstallationAccepted"] = False
         with self.assertRaisesRegex(ValueError, "E_PUBLICATION_ACCEPTANCE"):
             catalog.published_record(metadata, release)
+
+    def test_missing_embedded_version_evidence_cannot_be_published(self):
+        for evidence in (None, False):
+            metadata, release = self.fixtures()
+            if evidence is None:
+                metadata.pop("embeddedVersionVerified")
+            else:
+                metadata["embeddedVersionVerified"] = evidence
+            with self.assertRaisesRegex(ValueError, "E_PUBLICATION_ACCEPTANCE"):
+                catalog.published_record(metadata, release)
 
 
 if __name__ == "__main__":

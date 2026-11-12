@@ -16,11 +16,29 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from bundle import VERSION, sha256
+from build_identity import read_build
+from bundle import VERSION, sha256, unique_object
 from host import reject_links
 from native_bundle import MAXIMUM_EXPANDED, safe_member
 
 ROOT = Path(__file__).resolve().parent
+
+
+def verify_service_identity(root: Path, version: str) -> None:
+    reject_links(root)
+    path = root / "build-source.json"
+    reject_links(path)
+    if not path.is_file() or path.stat().st_size > 1024**2:
+        raise ValueError("E_NATIVE_SERVICE_BUILD")
+    metadata = json.loads(path.read_bytes(), object_pairs_hook=unique_object)
+    if (
+        not isinstance(metadata, dict)
+        or metadata.get("format") != "onedir"
+        or metadata.get("embeddedVersion") != version
+        or metadata.get("embeddedVersionVerified") is not True
+        or read_build(root / "_internal", frozen=True)["version"] != version
+    ):
+        raise ValueError("E_NATIVE_SERVICE_BUILD")
 
 
 def core_schema(core_jar: Path) -> int:
@@ -105,6 +123,7 @@ def assemble(
     if schema is not None and schema != actual_schema:
         raise ValueError("E_NATIVE_PROFILE_SCHEMA")
     schema = actual_schema
+    verify_service_identity(service_host, version)
     sources = vendor_archives(archives)
     output.mkdir()
     total = 0

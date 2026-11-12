@@ -10,6 +10,7 @@ import re
 import sys
 from pathlib import Path
 
+from build_identity import read_build
 from bundle import authenticated_review
 from error_guidance import guidance
 from host import inventory
@@ -31,7 +32,13 @@ def main() -> int:
     if sys.version_info < (3, 12):
         print("E_PYTHON: Python 3.12 or newer is required", file=sys.stderr)
         return 2
+    try:
+        build = read_build()
+    except (OSError, ValueError):
+        print("E_INSTALLER_BUILD", file=sys.stderr)
+        return 2
     parser = argparse.ArgumentParser(description="Kyrion local guided installer")
+    parser.add_argument("--version", action="version", version=build["version"])
     parser.add_argument(
         "--probe", action="store_true", help="Read-only target inventory, no install"
     )
@@ -72,7 +79,6 @@ def main() -> int:
         help="Signed model-catalog envelope; requires --trust-store",
     )
     parser.add_argument("--minimum-catalog-sequence", type=int, default=0)
-    parser.add_argument("--installer-version", default="1.0.0")
     parser.add_argument("--installed-api", type=int, default=1)
     parser.add_argument("--installed-schema", type=int)
     parser.add_argument("--delete-data", action="store_true")
@@ -91,6 +97,7 @@ def main() -> int:
         else Path(os.environ.get("ProgramData", "C:/ProgramData")) / "Kyrion",
     )
     args = parser.parse_args()
+    args.installer_version = build["version"]
     if args.verify_bundle:
         if args.public_key is None:
             print("E_SIGNATURE_TRUST_REQUIRED", file=sys.stderr)

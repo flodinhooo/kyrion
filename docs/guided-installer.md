@@ -7,6 +7,21 @@ The detailed [binding requirement matrix](installer-requirements.md) supersedes
 the coarse historical stage table below. Continuing source/test work is recorded
 in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
 full product scope remains open; no user acceptance is requested for this state.
+The later [linked account evidence](status/2026-11-12-installer-identity.md) and
+[integration/build evidence](status/2026-11-13-installer-integrations.md) supersede
+older planned-only descriptions of those implemented slices. They do not close
+distributed enrollment, complete runtime/model/voice setup or installed updates.
+
+Native release builds embed their requested version. Inspect with `--version`;
+there is no caller-supplied `--installer-version` override. Build the standalone
+installer with `release/build-native.py --version VERSION --output OUTPUT` on
+its actual target. On Windows build the service host using
+`release/build-native-service-host.py --version VERSION --output SERVICE_OUTPUT`
+with the **same** version before profile assembly. Both builders check the
+frozen executable's version as well as its real inventory probe. Source and
+Python test archives use a development identity and cannot query a stable update
+feed by pretending to be a released installer. These builds remain unsigned
+development artifacts until the separate release and acceptance gates pass.
 
 ## Inventory and conflicts
 

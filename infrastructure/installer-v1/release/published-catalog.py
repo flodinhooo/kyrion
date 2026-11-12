@@ -34,6 +34,7 @@ def published_record(metadata: dict, release: dict) -> dict:
         metadata.get("schemaVersion") != 1
         or platform not in {"windows-amd64", "linux-amd64", "linux-arm64"}
         or metadata.get("nativeSmokeTest") is not True
+        or metadata.get("embeddedVersionVerified") is not True
         or metadata.get("platformInstallationAccepted") is not True
         or type(metadata.get("bytes")) is not int
         or metadata["bytes"] <= 0

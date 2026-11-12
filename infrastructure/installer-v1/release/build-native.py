@@ -42,6 +42,9 @@ def build(output: Path, version: str) -> Path:
         temporary = Path(directory)
         source = temporary / "source"
         source_snapshot = stage_sources(ROOT, source, (*FILES, "package.py"))
+        build_identity = {"formatVersion": 1, "version": version}
+        build_resource = source / "installer-build.json"
+        build_resource.write_text(json.dumps(build_identity) + "\n", encoding="utf-8")
         arguments = [
             sys.executable,
             "-m",
@@ -63,6 +66,7 @@ def build(output: Path, version: str) -> Path:
         ]
         # Explicit data allowlist. Python imports are analyzed by PyInstaller.
         for relative in (
+            "installer-build.json",
             "windows-permissions.ps1",
             "windows-task-security.ps1",
             "windows-tasks.ps1",
@@ -98,6 +102,15 @@ def build(output: Path, version: str) -> Path:
             or observed.get("architecture") != machine
         ):
             raise ValueError("E_NATIVE_SMOKE")
+        built_version = subprocess.run(
+            [str(binary), "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        if built_version.stdout.strip() != version:
+            raise ValueError("E_NATIVE_BUILD_VERSION")
         if source_snapshot != {
             name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
             for name in source_snapshot
@@ -125,6 +138,7 @@ def build(output: Path, version: str) -> Path:
         "platformInstallationAccepted": False,
         "signed": False,
         "sources": source_snapshot,
+        "embeddedVersionVerified": True,
     }
     artifact.with_suffix(artifact.suffix + ".json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
