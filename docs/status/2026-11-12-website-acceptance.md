@@ -155,3 +155,36 @@ email, session issuance, reset or logout. KY-022 remains open for those journeys
 The owner also supplied a screenshot of successful contact submission after
 correcting Vercel; mailbox receipt and Reply-To are still unconfirmed. Earlier
 contact-origin rejection evidence above is historical after that correction.
+
+## Invited account onboarding follow-up
+
+The owner explicitly requested a personal central account, supplied their chosen
+email privately and authorized a setup invitation. A regular enabled user was
+created with emailVerified=false, no operator-assigned password and required
+VERIFY_EMAIL/UPDATE_PASSWORD actions. Keycloak accepted one setup-email request
+(HTTP 204), with a 30-minute action-link lifespan. This does not establish inbox
+receipt, completed verification/password setup, authenticated callback or local
+linking. Account identifiers and operational evidence remain private on the Pi;
+no personal email, password or invitation URL is stored in this document.
+
+The Website now explains central versus local credentials, the invitation-only
+private test phase, and the three local connection steps in DE/EN. Invitation
+requests lead to localized Contact; the signed-in state keeps the connection
+instructions but hides the invitation request. Public self-registration remains
+closed. No local account is inferred from email or website login.
+
+Verification after these UI changes: lint, formatting, strict types, production
+build and all 47 isolated Playwright tests passed (28.6 seconds). The added browser
+coverage checks DE/EN anonymous and signed-in onboarding states, the three steps
+and the localized invitation-request destination.
+
+The requested Windows installation was checked before local activation: its Core
+was not listening on 8080 and Docker's Linux engine was unavailable. Port 3000
+belonged to the owner's Portfolio application and was preserved. Existing
+private infrastructure configuration was backed up and optional central login
+prepared with the exact HTTPS issuer and public `kyrion-local` client, with
+loopback HTTP disabled. Provider-side local device grant is already enabled,
+public and has direct password grants disabled. Docker Desktop startup was
+attempted, but its readiness command did not return; no WSL shutdown, database
+reset/migration, firewall change or automatic account link was performed. Local
+runtime availability and the owner's password-confirmed link remain pending.

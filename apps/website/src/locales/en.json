@@ -731,8 +731,8 @@
   },
   "account": {
     "title": "Kyrion Account",
-    "description": "Use your optional central Kyrion Account for this website.",
-    "boundary": "Local installations remain independent. Signing in here grants no local Space membership or OWNER permissions.",
+    "description": "Sign in here with your central Kyrion account. Your existing local username and password belong to your local installation.",
+    "boundary": "Your local data and permissions stay in your installation. Signing in to this website does not connect a local account automatically.",
     "disabled": "Central sign-in is not enabled on this website. You can continue using Kyrion locally.",
     "login": "Sign in with Kyrion Account",
     "signedIn": "You are signed in to the Kyrion website.",
@@ -741,7 +741,18 @@
     "logoutScope": "Signing out ends this website session. It does not disable your central account or sign out of local installations.",
     "unavailable": "The account service is unavailable. Please try again later.",
     "cancelled": "Sign-in was cancelled.",
-    "failed": "Sign-in could not be verified. Please start again."
+    "failed": "Sign-in could not be verified. Please start again.",
+    "newAccountTitle": "No central account yet?",
+    "newAccountHelp": "During the private test phase, central accounts are created by invitation. Use the email link to confirm your address and choose your own password. If you already have an invitation, open that email first. Never send us your password.",
+    "requestInvitation": "Request an account invitation",
+    "connectTitle": "Connect your local account in three steps",
+    "connectIntro": "After setting up your central account, connect it from your own Kyrion installation. This website cannot access your local accounts.",
+    "connectSteps": [
+      "Open your local Kyrion app and sign in with your existing local username and password.",
+      "Open Profile ? Kyrion account ? Connect Kyrion account. Confirm with your current local password.",
+      "Open the displayed sign-in page, enter the code, and sign in with your central account. Return to your local app and confirm the connection."
+    ],
+    "connectUnavailable": "If the connection option is disabled or missing, the installation needs the current version and central sign-in enabled by its operator. Your local password remains available, including offline."
   },
   "download": {
     "eyebrow": "KYRION INSTALLER",

@@ -327,3 +327,55 @@ test("account pages explain independence in both languages", async ({
     ),
   ).toBeVisible();
 });
+
+test("account onboarding guides invited users and keeps local linking separate", async ({
+  page,
+}) => {
+  for (const locale of ["de", "en"] as const) {
+    const copy = dictionaries[locale].account;
+    const prefix = locale === "en" ? "/en" : "";
+    for (const signedIn of [false, true]) {
+      await page.route("**/api/account/session", (route) =>
+        route.fulfill({
+          json: {
+            enabled: true,
+            session: signedIn
+              ? {
+                  id: "browser-fixture",
+                  csrf: "fixture-csrf",
+                  expiresAt: new Date(Date.now() + 600000).toISOString(),
+                }
+              : null,
+          },
+        }),
+      );
+      await page.goto(`${prefix}/account`);
+      await expect(
+        page.getByRole("heading", { name: copy.connectTitle }),
+      ).toBeVisible();
+      await expect(page.locator("main ol li")).toHaveCount(3);
+      await expect(
+        page.getByText(copy.connectUnavailable, { exact: true }),
+      ).toBeVisible();
+      if (signedIn) {
+        await expect(
+          page.getByText(copy.signedIn, { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("link", { name: copy.requestInvitation }),
+        ).toHaveCount(0);
+      } else {
+        await expect(
+          page.getByRole("button", { name: copy.login, exact: true }),
+        ).toBeVisible();
+        const invitation = page.getByRole("link", {
+          name: copy.requestInvitation,
+        });
+        await expect(invitation).toHaveAttribute("href", `${prefix}/contact`);
+        await invitation.click();
+        await expect(page).toHaveURL(new RegExp(`${prefix}/contact$`));
+      }
+      await page.unroute("**/api/account/session");
+    }
+  }
+});

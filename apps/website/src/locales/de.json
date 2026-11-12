@@ -731,8 +731,8 @@
   },
   "account": {
     "title": "Kyrion-Account",
-    "description": "Verwende deinen optionalen zentralen Kyrion-Account auf dieser Website.",
-    "boundary": "Lokale Installationen bleiben eigenständig. Diese Anmeldung erteilt keine lokalen Space-Mitgliedschaften oder OWNER-Rechte.",
+    "description": "Melde dich hier mit deinem zentralen Kyrion-Account an. Dein bisheriger lokaler Benutzername und dein lokales Passwort geh?ren zu deiner eigenen Installation.",
+    "boundary": "Deine lokalen Daten und Berechtigungen bleiben in deiner Installation. Die Anmeldung auf dieser Website verkn?pft deinen lokalen Zugang nicht automatisch.",
     "disabled": "Die zentrale Anmeldung ist auf dieser Website nicht aktiviert. Kyrion bleibt lokal nutzbar.",
     "login": "Mit Kyrion-Account anmelden",
     "signedIn": "Du bist auf der Kyrion-Website angemeldet.",
@@ -741,7 +741,18 @@
     "logoutScope": "Abmelden beendet diese Website-Sitzung. Es sperrt weder deinen zentralen Account noch meldet es lokale Installationen ab.",
     "unavailable": "Der Account-Dienst ist nicht erreichbar. Versuche es später erneut.",
     "cancelled": "Die Anmeldung wurde abgebrochen.",
-    "failed": "Die Anmeldung konnte nicht bestätigt werden. Bitte starte sie erneut."
+    "failed": "Die Anmeldung konnte nicht bestätigt werden. Bitte starte sie erneut.",
+    "newAccountTitle": "Noch keinen zentralen Account?",
+    "newAccountHelp": "W?hrend der privaten Testphase erh?ltst du deinen zentralen Account per Einladung. Mit dem Link in der E-Mail best?tigst du deine Adresse und w?hlst dein eigenes Passwort. Hast du bereits eine Einladung, ?ffne zuerst diese E-Mail. Sende uns niemals dein Passwort.",
+    "requestInvitation": "Account-Einladung anfragen",
+    "connectTitle": "Lokalen Account in drei Schritten verkn?pfen",
+    "connectIntro": "Nach der Einrichtung deines zentralen Accounts verbindest du ihn in deiner eigenen Kyrion-Installation. Diese Website hat keinen Zugriff auf deine lokalen Accounts.",
+    "connectSteps": [
+      "?ffne deine lokale Kyrion-App und melde dich mit deinem bisherigen lokalen Benutzernamen und Passwort an.",
+      "?ffne Profil ? Kyrion-Account ? Kyrion-Account verbinden. Best?tige mit deinem aktuellen lokalen Passwort.",
+      "?ffne die angezeigte Anmeldeseite, gib den Code ein und melde dich mit deinem zentralen Account an. Kehre zur lokalen App zur?ck und best?tige die Verkn?pfung."
+    ],
+    "connectUnavailable": "Fehlt die Verkn?pfungsoption oder ist sie deaktiviert, braucht die Installation die aktuelle Version und eine vom Betreiber aktivierte zentrale Anmeldung. Dein lokales Passwort bleibt auch offline nutzbar."
   },
   "download": {
     "eyebrow": "KYRION-INSTALLER",

@@ -7,6 +7,26 @@ website BFF stores website-only opaque sessions in a dedicated central database;
 it does not implement account passwords, identity brokering or an OAuth server.
 Central account management and verified email remain in Keycloak.
 
+## Invited users and local connection
+
+The account page explains the separate local and central credentials in DE/EN.
+During the private test phase, a user requests an invitation through Contact;
+there is no public self-registration endpoint. Operators create a regular
+central user without assigning a password or marking their email verified,
+then use Keycloak's `execute-actions-email` with `VERIFY_EMAIL` and
+`UPDATE_PASSWORD` and a 30-minute lifespan. The user proves mailbox access and
+sets their password themselves. Never publish action URLs or credentials.
+Do not send the invitation to the website OIDC callback: the invitation has no
+matching browser-bound state/PKCE flow. After setup, start website login afresh.
+
+The page shows three local linking steps both before and after website sign-in:
+local password login, Profile / Kyrion account / Connect, then provider code
+approval and explicit local confirmation. The signed-in view omits the invitation
+request. No local URL is guessed, local credentials are never sent to this site,
+and matching email addresses do not create a link. If the option is missing or
+disabled, the local installation needs the current UI/Core and an operator's
+central-login opt-in. See [identity guide](../../docs/unified-identity.md).
+
 ## Current acceptance (2026-11-12)
 
 The public anonymous session endpoint reports enabled=true and HTTPS provider

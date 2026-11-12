@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Dictionary, Locale } from "@/lib/site";
+import Link from "next/link";
+import { href, type Dictionary, type Locale } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 
 type Status = {
@@ -124,6 +125,32 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
           </form>
         )
       )}
+      {status && !status.session && (
+        <aside className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <h2 className="text-xl font-semibold">{t.account.newAccountTitle}</h2>
+          <p className="mt-3 text-muted-foreground">
+            {t.account.newAccountHelp}
+          </p>
+          <Link
+            href={href(locale, "contact")}
+            className="mt-4 inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4"
+          >
+            {t.account.requestInvitation}
+          </Link>
+        </aside>
+      )}
+      <section className="mt-10 rounded-2xl border border-border p-6">
+        <h2 className="text-xl font-semibold">{t.account.connectTitle}</h2>
+        <p className="mt-3 text-muted-foreground">{t.account.connectIntro}</p>
+        <ol className="mt-5 list-decimal space-y-4 pl-5 text-muted-foreground">
+          {t.account.connectSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+        <p className="mt-5 text-sm text-muted-foreground">
+          {t.account.connectUnavailable}
+        </p>
+      </section>
     </section>
   );
 }
