@@ -50,7 +50,7 @@ is the current work order, with stable IDs and completion criteria.
   Download and Hardware pages are integrated. The audited source passes 46
   isolated tests, lint, formatting, TypeScript and production build. Seven old
   generated builds were removed. Canonical-host and factual privacy corrections
-  are local source changes awaiting publication; actual contact delivery,
+  were published and verified on 2026-11-12 (commit `48d064a`); actual contact delivery,
   account journeys, deployed abuse controls and installer downloads remain open.
   See [website status](apps/website/STATUS.md) and KY-020–KY-024 in the backlog.
 - **HOME calendar:** local events and jointly editable native household events,

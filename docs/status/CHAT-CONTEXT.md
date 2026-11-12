@@ -40,3 +40,10 @@ No test result authorizes deployment, hardware use or real-provider spending.
 [Maintenance checks](2026-11-07-maintenance.md) distinguish local execution,
 failures and unavailable checks. Older evidence retains its original scope in
 [the archived context](CHAT-CONTEXT-archive-before-2026-11-07.md) and dated reports.
+
+Publication update: `48d064a` pushed with explicit owner approval of the committed
+master history and deployed successfully by Vercel. Public corrections verified;
+KY-020 complete. Contact still allows apex Origin and rejects final www Origin:
+change Production `CONTACT_FORM_ORIGIN` then redeploy (KY-021). Website CI passed;
+installer validation failed four tests with `E_STAGING_PERMISSIONS`.
+See current acceptance for evidence and owner inputs.

@@ -1,5 +1,7 @@
 # Current website acceptance — 2026-11-12
 
+Latest result: **KY-020 completed; publication verified. KY-021 remains blocked by deployed contact-origin configuration.** The original audit below describes pre-publication observations; the post-deployment section supersedes its deployment-open and old-public-copy statements. KY-022?KY-024 remain open.
+
 This is the current website acceptance record. The [active backlog](TODO.md)
 remains the single work order; KY-020–KY-024 identify the open website gates.
 The [detailed website audit](../../apps/website/STATUS.md) records source,
@@ -72,3 +74,57 @@ follow-up's UI/resource changes. See the recorded final results in
 [website status](../../apps/website/STATUS.md#final-verification).
 Relative documentation links and the new backlog IDs are checked together so
 the README, TODO and acceptance cannot silently point to different current work.
+
+## Post-deployment verification
+
+On 2026-11-12 the owner explicitly authorized pushing the complete committed
+master history, including the intervening installer/Home Assistant commits.
+Uncommitted native-installer changes were excluded. GitHub master advanced to
+`48d064a35f3e4d616831d84ba8669d9548625cc3`. The Vercel status for that commit
+reported success: [deployment](https://vercel.com/florianrogenmosers-projects/kyrion-website/HnhW3DTy9NGW1EECxUJ4bV9XiWvR).
+
+- Public Home, EN Home, both Privacy and Contact pages, Download, account session,
+  robots and sitemap returned HTTP 200. Apex redirects to the final www host.
+- Canonical, robots and sitemap use `https://www.kyrion.ch`. Both privacy pages
+  contain HttpOnly and record-retention explanations; contact pages expose their
+  localized privacy links. This closes KY-020 for the audited corrections.
+- Anonymous account session reports enabled=true, session=null and no-store.
+  Identity discovery returned HTTP 200 with a browser User-Agent; one plain
+  urllib request returned 403. Real browser/account lifecycle remains untested.
+- Empty JSON contact probes cannot pass validation or send mail. With the exact
+  final www Origin they returned HTTP 403 `CONTACT_REJECTED`; with the old apex
+  Origin they reached validation and returned HTTP 400 `CONTACT_INVALID`.
+  Together with the reviewed handler this identifies an old allowed Origin in
+  production. Set Production `CONTACT_FORM_ORIGIN=https://www.kyrion.ch` and
+  redeploy. No authenticated Vercel settings tool or CLI is available here.
+- No real inquiries, account creation/reset mail, authenticated sessions or
+  database changes were exercised. SMTP values and mailbox receipt remain
+  unverified; no secret value was read or printed.
+
+### Owner input still required
+
+1. Vercel project access, or an owner change of the Production contact Origin
+   followed by redeployment. Confirm the six server-only SMTP/recipient variables
+   privately; do not paste credentials into chat. Access is also needed to review
+   deployed contact request limits (KY-021/KY-024).
+2. After configuration is corrected, an approved test mailbox/account and owner
+   participation to confirm inquiry receipt/Reply-To, verification/reset delivery,
+   sign-in/logout and expiry (KY-021/KY-022). Passwords need not be shared.
+3. Operational decisions for inquiry/account/security-record and backup retention,
+   deletion and provider responsibilities (KY-024). Factual text is published;
+   operational/legal acceptance is separate.
+4. Installer release acceptance/signing/publication evidence (KY-023, linked to
+   KY-006/KY-015). An empty catalog remains intentional; no arbitrary build is
+   published as an accepted release.
+
+The repository-wide GitHub Actions run is separate from the successful Vercel
+build and the 46 locally passing website tests. Its status is available in the
+[push CI run](https://github.com/flodinhooo/kyrion/actions/runs/43254630035).
+
+Push CI observation: **Public website checks passed**, as did Web checks and all
+three native installer build jobs. Installer validation on Ubuntu failed with
+three errors and one failure, all involving `E_STAGING_PERMISSIONS` in provision
+tests; the Windows matrix partner was cancelled. Core/fresh-stack jobs were
+still running at that observation. This separate installer defect needs
+investigation in the ongoing installer work; no owner credential or decision
+is needed to diagnose it. No full-repository green-CI claim is made.
