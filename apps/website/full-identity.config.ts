@@ -42,7 +42,7 @@ export default defineConfig({
       timeout: 240_000,
     },
     {
-      command: "pnpm exec next dev --port 3119 --hostname localhost",
+      command: "pnpm exec next dev --port 3119 --hostname 127.0.0.1",
       url: "http://localhost:3119/api/account/session",
       reuseExistingServer: false,
       timeout: 120_000,
@@ -59,7 +59,7 @@ export default defineConfig({
     },
     {
       command:
-        "pnpm --dir ../web exec next dev --port 3219 --hostname localhost",
+        "pnpm --dir ../web exec next dev --port 3219 --hostname 127.0.0.1",
       url: "http://localhost:3219/login",
       reuseExistingServer: false,
       timeout: 120_000,

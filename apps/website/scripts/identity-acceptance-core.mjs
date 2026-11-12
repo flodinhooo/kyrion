@@ -139,7 +139,7 @@ const child = spawn(
       KYRION_CENTRAL_ISSUER: "http://localhost:18089/realms/kyrion",
       KYRION_CENTRAL_CLIENT_ID: "kyrion-local",
       KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP: "true",
-      KYRION_ACCOUNT_DIRECTORY_ORIGIN: "http://localhost:3119",
+      KYRION_ACCOUNT_DIRECTORY_ORIGIN: "http://127.0.0.1:3119",
       KYRION_KNOWLEDGE_WORKER_ENABLED: "false",
       KYRION_CALENDAR_SYNC_SCHEDULER_ENABLED: "false",
       KYRION_HOME_ASSISTANT_REFRESH_ENABLED: "false",

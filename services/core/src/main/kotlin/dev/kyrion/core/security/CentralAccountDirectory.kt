@@ -186,7 +186,7 @@ class CentralAccountDirectory(
             } catch (error: Exception) {
                 log.warn(
                     "Central installation directory retry: {}",
-                    if (error is DirectoryRejected) "HTTP_${error.status}" else "TRANSPORT_OR_RESPONSE"
+                    if (error is DirectoryRejected) "HTTP_${error.status}" else error.cause?.javaClass?.simpleName ?: error.javaClass.simpleName
                 )
             }
         }
