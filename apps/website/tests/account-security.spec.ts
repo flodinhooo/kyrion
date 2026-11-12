@@ -387,10 +387,7 @@ test("customer account menu, browser registration and local help work in both la
         await expect(
           page.getByLabel(copy.linkCodeLabel, { exact: true }),
         ).toBeVisible();
-        await page
-          .getByRole("navigation", { name: copy.accountNavigation })
-          .getByRole("link", { name: copy.linkTab })
-          .click();
+        await expect(page).toHaveURL(new RegExp(`${prefix}/connect$`));
         await expect(
           page.getByLabel(copy.linkCodeLabel, { exact: true }),
         ).toBeVisible();
@@ -421,6 +418,7 @@ test("customer account menu, browser registration and local help work in both la
         await expect(
           page.getByRole("navigation", { name: copy.menu }),
         ).not.toBeVisible();
+        await page.goto(`${prefix}/account`);
         await page.locator("header summary").click();
         await page.route("**/api/account/logout", (route) => {
           expect(route.request().headers()["x-kyrion-csrf"]).toBe(

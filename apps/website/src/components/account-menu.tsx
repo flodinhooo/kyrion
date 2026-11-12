@@ -75,20 +75,8 @@ export function AccountMenu({ locale }: { locale: Locale }) {
           {t.overview}
         </Link>
         <Link
-          href={`${href(locale, "account")}#connect`}
-          onClick={(event) => {
-            menu.current?.removeAttribute("open");
-            if (
-              !event.ctrlKey &&
-              !event.metaKey &&
-              !event.shiftKey &&
-              !event.altKey &&
-              window.location.pathname === href(locale, "account")
-            ) {
-              event.preventDefault();
-              window.location.hash = "connect";
-            }
-          }}
+          href={href(locale, "connect")}
+          onClick={() => menu.current?.removeAttribute("open")}
           className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-muted"
         >
           {t.linkTab}

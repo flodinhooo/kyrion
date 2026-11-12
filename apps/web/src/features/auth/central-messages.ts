@@ -1,5 +1,12 @@
 export const centralMessages = {
   en: {
+    connectedAccount: "Connected central account",
+    connectedSince: "Connected since",
+    identityMissing: "Account details need a fresh central sign-in",
+    directoryConfirmed: "Visible in your website account",
+    directoryPending: "Synchronizing your installation overview…",
+    directoryUnavailable: "Website installation overview is not configured",
+    viewInstallations: "View linked installations",
     navLabel: "Link account", linkIntro: "Use your Kyrion account to sign in to this installation. Your data and local access stay here.",
     websiteHelp: "Enter this code on the Kyrion website, then approve the connection. This page finishes automatically.",
     openWebsite: "Enter code on website", copyCode: "Copy code", copied: "Code copied", copyFailed: "Select and copy the code above.", finishing: "Finishing connection…",
@@ -34,6 +41,13 @@ export const centralMessages = {
     },
   },
   de: {
+    connectedAccount: "Verbundener zentraler Account",
+    connectedSince: "Verknüpft seit",
+    identityMissing: "Account-Daten werden nach erneuter zentraler Anmeldung angezeigt",
+    directoryConfirmed: "In deinem Website-Account sichtbar",
+    directoryPending: "Installationsübersicht wird synchronisiert …",
+    directoryUnavailable: "Website-Installationsübersicht ist nicht konfiguriert",
+    viewInstallations: "Verknüpfte Installationen anzeigen",
     navLabel: "Account verknüpfen", linkIntro: "Melde dich künftig mit deinem Kyrion-Account an dieser Installation an. Deine Daten und dein lokaler Zugang bleiben hier.",
     websiteHelp: "Gib diesen Code auf der Kyrion-Website ein und bestätige die Verbindung. Diese Seite schließt sie automatisch ab.",
     openWebsite: "Code auf Website eingeben", copyCode: "Code kopieren", copied: "Code kopiert", copyFailed: "Markiere und kopiere den Code oben.", finishing: "Verbindung wird abgeschlossen …",

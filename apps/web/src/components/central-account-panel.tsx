@@ -30,7 +30,14 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
       if (!config.ok || !value || typeof value !== "object" || !("enabled" in value) || typeof value.enabled !== "boolean") throw new Error();
       setEnabled(value.enabled);
       if (!login) {
-        const response = await fetch("/api/auth/central/status", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+        let response = await fetch("/api/auth/central/account", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(10_000)
+        });
+        if (response.status === 404) response = await fetch("/api/auth/central/status", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(10_000)
+        });
         const current: unknown = await response.json();
         if (!response.ok || !isCentralStatus(current)) throw new Error();
         setStatus(current);
@@ -42,6 +49,19 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
     const timer = window.setTimeout(() => { void refresh(); }, 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    if (login) return;
+    const update = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    window.addEventListener("focus", update);
+    const timer = status?.linked && status.directoryState === "pending" ? window.setInterval(update, 5000) : null;
+    return () => {
+      window.removeEventListener("focus", update);
+      if (timer !== null) clearInterval(timer);
+    };
+  }, [login, refresh, status?.linked, status?.directoryState]);
 
   async function request(action: string, body: unknown, method = "POST") {
     await fetch("/api/auth/csrf", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
@@ -147,6 +167,17 @@ export function CentralAccountPanel({ locale, login = false }: { locale: Locale;
   const errorText = error in t.errors ? t.errors[error as keyof typeof t.errors] : t.error;
   return <section className={login ? "central-account-panel" : "settings-link-card profile-security-panel account-link-panel"} aria-label={t.title}>
     {!login && <><h2>{t.title}</h2><p>{status === null ? t.checking : status.linked ? t.connected : t.disconnected}</p><p>{t.localHelp}</p></>}
+    {!login && status?.linked && <div className="account-link-identity">
+      <span>{t.connectedAccount}</span>
+      <strong>{status.account?.email ?? status.account?.displayName ?? t.identityMissing}</strong>
+      {status.account?.email && status.account.displayName && status.account.displayName !== status.account.email &&
+        <p>{status.account.displayName}</p>}
+      {status.linkedAt &&
+        <small>{t.connectedSince}: {new Intl.DateTimeFormat(locale, {dateStyle: "medium"}).format(new Date(status.linkedAt))}</small>}
+      <small>{status.directoryState === "confirmed" ? t.directoryConfirmed : status.directoryState === "pending" ? t.directoryPending : t.directoryUnavailable}</small>
+      <a href={`https://www.kyrion.ch${locale === "en" ? "/en" : ""}/account`} target="_blank"
+         rel="noopener noreferrer">{t.viewInstallations}</a>
+    </div>}
     {!login && !enabled && <p>{t.disabled}</p>}
     {error && <p role="alert" className="auth-error">{errorText}</p>}
     {notice && <p role="status">{notice}</p>}

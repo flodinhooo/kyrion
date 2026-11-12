@@ -4,11 +4,20 @@ import { useEffect, useState } from "react";
 import { type Dictionary, type Locale } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { useAccountSession } from "@/components/account-session";
+import {LinkedInstallations} from "@/components/linked-installations";
 
-export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
+export function AccountPage({
+                              t,
+                              locale,
+                              connectOnly = false,
+                            }: {
+  t: Dictionary;
+  locale: Locale;
+  connectOnly?: boolean;
+}) {
   const { status, error, logout, busy } = useAccountSession();
   const [code, setCode] = useState("");
-  const [connecting, setConnecting] = useState(false);
+  const [connecting, setConnecting] = useState(connectOnly);
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("error");
     if (value) {
@@ -19,22 +28,31 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       );
       queueMicrotask(() => setCode(value));
     }
-    const syncTab = () => setConnecting(window.location.hash === "#connect");
+    const syncTab = () =>
+      setConnecting(connectOnly || window.location.hash === "#connect");
     const initial = window.setTimeout(syncTab, 0);
     window.addEventListener("hashchange", syncTab);
     return () => {
       clearTimeout(initial);
       window.removeEventListener("hashchange", syncTab);
     };
-  }, []);
+  }, [connectOnly]);
   const signedIn = Boolean(status?.session);
   return (
     <section className="mx-auto max-w-3xl px-5 py-16 sm:px-8 sm:py-20">
       <h1 className="text-4xl font-semibold">
-        {signedIn ? t.account.menu : t.account.title}
+        {connectOnly
+          ? t.account.linkTab
+          : signedIn
+            ? t.account.menu
+            : t.account.title}
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">
-        {signedIn ? t.account.welcome : t.account.description}
+        {connectOnly
+          ? t.account.linkEntryHelp
+          : signedIn
+            ? t.account.welcome
+            : t.account.description}
       </p>
       {(error || code) && (
         <p role="alert" className="mt-5">
@@ -60,6 +78,7 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       {signedIn ? (
         <div className="mt-8 space-y-6">
           <nav
+            hidden={connectOnly}
             aria-label={t.account.accountNavigation}
             className="flex flex-wrap gap-2 rounded-xl border border-border p-2"
           >
@@ -80,6 +99,13 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
               {t.account.linkTab}
             </a>
           </nav>
+          {!connecting && (
+            <LinkedInstallations
+              key={status?.session?.id}
+              t={t}
+              locale={locale}
+            />
+          )}
           <div
             hidden={connecting}
             id="overview"
@@ -157,10 +183,20 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
           <div className="mt-6 flex flex-wrap gap-3">
             <form action="/api/account/register" method="post">
               <input type="hidden" name="locale" value={locale} />
+              <input
+                type="hidden"
+                name="destination"
+                value={connectOnly ? "connect" : "account"}
+              />
               <Button type="submit">{t.account.register}</Button>
             </form>
             <form action="/api/account/login" method="post">
               <input type="hidden" name="locale" value={locale} />
+              <input
+                type="hidden"
+                name="destination"
+                value={connectOnly ? "connect" : "account"}
+              />
               <Button type="submit" variant="outline">
                 {t.account.login}
               </Button>
@@ -173,4 +209,8 @@ export function AccountPage({ t, locale }: { t: Dictionary; locale: Locale }) {
       ) : null}
     </section>
   );
+}
+
+export function ConnectPage({t, locale}: { t: Dictionary; locale: Locale }) {
+  return <AccountPage t={t} locale={locale} connectOnly/>;
 }

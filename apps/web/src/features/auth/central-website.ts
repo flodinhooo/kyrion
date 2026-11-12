@@ -6,6 +6,6 @@ export function centralWebsite(verificationUri: string, locale: Locale): string 
   try {
     const uri = new URL(verificationUri);
     if (uri.origin !== "https://auth.kyrion.ch" || uri.pathname !== "/realms/kyrion/device") return null;
-    return `https://www.kyrion.ch${locale === "en" ? "/en" : ""}/account#connect`;
+    return `https://www.kyrion.ch${locale === "en" ? "/en" : ""}/connect`;
   } catch { return null; }
 }
