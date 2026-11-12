@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/GoogleChrome/modern-web-guidance",
+  "commit": "4dd968349e54ca45a05dd5c818fb035c9054b022",
+  "path": "skills/modern-web-guidance",
+  "installedAt": "2026-11-13",
+  "license": "Apache-2.0",
+  "cliVersion": "1.0.0",
+  "skillSha256": "37d68a514c25066840299356e5857b750bec3cc27c0cf57dbe88369b051b573e"
+}

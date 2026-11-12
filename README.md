@@ -31,6 +31,10 @@ The [current status](docs/status/README.md) separates implementation, tests,
 deployment and physical/provider acceptance. The [active backlog](docs/status/TODO.md)
 is the current work order, with stable IDs and completion criteria.
 
+Both web surfaces use shared [Modern Web Guidance](docs/modern-web-guidance.md)
+as development guidance. The [initial audit](docs/status/2026-11-13-modern-web-guidance-audit.md)
+records proposals only; no automatic UI refactor was performed.
+
 > **Licence:** no repository `LICENSE` has been selected. Kyrion is intended for
 > open-source publication, but the current source remains all rights reserved;
 > do not assume permission to reuse or redistribute it.

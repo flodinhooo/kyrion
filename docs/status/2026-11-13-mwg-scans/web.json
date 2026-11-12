@@ -1,0 +1,9 @@
+{
+  "targetDir": "apps/web/src",
+  "totalFindings": 0,
+  "guides": [],
+  "activeRuleCount": 35,
+  "activeGuideCount": 33,
+  "note": "No legacy patterns found across 33 guides (35 rules; ~20% of the guidance corpus). Use 'search <topic>' for feature-specific guidance.",
+  "skippedDocsAndTestsCount": 72
+}

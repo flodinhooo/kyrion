@@ -1,5 +1,10 @@
 {
   "name": "kyrion",
   "private": true,
+  "scripts": {
+    "mwg": "node infrastructure/dev/modern-web-guidance.mjs",
+    "mwg:scan:web": "pnpm mwg legacy-scan apps/web/src --json",
+    "mwg:scan:website": "pnpm mwg legacy-scan apps/website/src --json"
+  },
   "packageManager": "pnpm@10.29.3"
 }

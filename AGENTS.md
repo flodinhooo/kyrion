@@ -93,6 +93,21 @@ Follow `docs/marketplace-enterprise.md` for the long-term extension model.
 
 ## Code quality
 
+### Web platform guidance
+
+For `apps/web` and `apps/website` HTML/CSS and client-side JavaScript work, read
+the project-local [Modern Web Guidance skill](.agents/skills/modern-web-guidance/SKILL.md)
+and use the pinned `pnpm mwg` commands documented in
+[the integration policy](docs/modern-web-guidance.md). Browser support defaults
+to Baseline Widely available; newer features require feature detection and a
+usable fallback. Keep existing working component libraries unless a concrete
+benefit and browser/keyboard verification justify replacement. Kyrion security,
+strict typing, localization and installed Next.js documentation take precedence
+over generic examples, including examples using unchecked `any` casts.
+Guidance is advisory and never authorizes broad automatic application rewrites.
+
+### General rules
+
 - Prefer small, cohesive modules with explicit responsibilities.
 - Use strict types at component and service boundaries; avoid untyped payloads
   and unchecked casts.
