@@ -87,7 +87,7 @@ def diagnostic(target: Path, output: Path) -> None:
         "architecture": installation.configuration["architecture"],
         "stage": state.get("stage")
         if state.get("stage")
-           in {"reviewed", "configured", "starting", "services-healthy", "uninstalled"}
+        in {"reviewed", "configured", "starting", "services-healthy", "uninstalled"}
         else "unknown",
         "lastError": error
         if isinstance(error, str) and re.fullmatch(r"E_[A-Z_]{1,80}", error)
@@ -197,6 +197,21 @@ def run(args, messages: dict[str, str]) -> int:
     if args.diagnostics:
         diagnostic(args.target, args.diagnostics)
         print(messages["diagnosticSaved"])
+        return 0
+    if os.name == "nt" and (args.repair or args.uninstall):
+        from native_runtime import repair_native, uninstall_native
+
+        if args.repair:
+            print(json.dumps(repair_native(args.target)))
+        else:
+            purge = (
+                args.delete_data
+                and input(messages["deleteDataReview"] + " [DELETE-DATA]: ").strip()
+                == "DELETE-DATA"
+            )
+            if args.delete_data and not purge:
+                raise ValueError("E_CONFIRMATION")
+            print(json.dumps(uninstall_native(args.target, purge)))
         return 0
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM: supported Linux root maintenance required")

@@ -1,9 +1,12 @@
 # Native Windows runtime bundle (development)
 
-This is the ADR 0049 runtime payload contract, not completed Windows installer
-support. `native_bundle.py` authenticates and extracts public application/runtime
-files; activation, privileged ACL preparation, service/task installation and
-maintenance dispatch remain separate, unfinished requirements (matrix R20).
+The native payload contract from ADR 0049 now feeds the executable SCM backend
+in [ADR 0050](adr/0050-native-windows-services.md). `native_runtime.py` implements
+private journal publication, signed staging, initialization under dedicated
+virtual service identities, activation, readiness, repair and removal. This is
+not completed consumer Windows support: actual privileged service/ACL and boot
+acceptance remain outstanding, and the full product journey has open source work
+in the [requirements ledger](installer-requirements.md).
 
 ## Build and trust
 
@@ -18,13 +21,37 @@ Kyrion currently has no selected repository license: its development metadata
 uses `LicenseRef-Kyrion-All-Rights-Reserved` and a null license URL, without
 inventing redistribution permission.
 
-The schema-2 manifest records exact component versions, HTTPS source/license
+The schema-3 manifest records exact component versions, HTTPS source/license
 metadata, API/schema/PostgreSQL-major compatibility, archive size/hash and every
 file size/hash. The builder validates its completed archive before writing the
 new output directory. Signing is a separate release-authority step, using the
 existing detached Ed25519 `manifest.sig` contract. An independently trusted
 public key is required; a key included beside a download is not itself a trust
 anchor. Production trust distribution/signing remains outstanding.
+
+Schema 3 includes the one-directory frozen `runtime/installer/kyrion-service.exe`
+host and its complete dependency/license inventory. Schema 2 remains verifiable
+for historical developer payloads but is refused for SCM installation. Build the
+downloadable one-file executable with `release/build-native.py`, the installed
+host with `release/build-native-service-host.py`, then assemble the profile using
+`release/assemble-windows-profile.py`. The latter accepts only pinned verified
+vendor archives and explicit clean application/host build directories.
+
+Normal roles use separate virtual accounts; bootstrap `initdb` temporarily uses
+the PostgreSQL account before supported `pg_ctl register` replaces it. Services
+have explicit administrator/System management ACLs, bounded recovery and fixed
+dependencies. A temporary bootstrap service never automatically retries an
+initializer. The installed host verifies role payload hashes and negative secret
+and writable-code boundaries before launching its contained process tree.
+
+Core and Web each have distinct internal TLS keys/certificates. Core clients pin
+the certificate; Node uses process-scoped extra trust. Caddy pins the Web host's
+certificate; that host checks the established TCP peer belongs to its own Node
+child before forwarding request bytes. No TLS-verification bypass is installed.
+
+Private download staging is journalled and checks archive/manifest hashes again
+after copying; it never extracts directly from a mutable original download.
+Interrupted archives are preserved and never adopted without verification.
 
 Signature verification returns the exact verified manifest bytes. Review and
 provisioning bind their digest to those bytes, rather than reopening mutable
@@ -86,16 +113,16 @@ process kill or breakaway flag is used. Native FFI follows the Microsoft
 [job object contract](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 and [suspended assignment requirement](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject).
 Two actual Windows tests verify child/grandchild termination after deliberate
-close and after an abrupt supervisor exit. This module is not yet wired into
-the installed role scheduler; no boot/service acceptance is claimed.
+close and after an abrupt supervisor exit. The native SCM host now uses this
+module; no boot/service acceptance is claimed by these process tests.
 
 
 ## Current platform evidence (not consumer support approval)
 
 | Platform | Actual developer evidence | Outstanding acceptance |
 | --- | --- | --- |
-| Windows x64, build 10.0.26300.0 | Native installer smoke; 100 tests (one symlink skip); real runtime versions; signed payload extraction/resume; fresh native Core/Web/PostgreSQL/Caddy with trusted TLS and process-restart login; actual child-tree crash cleanup | Finished guided native provisioning, privileged per-role ACLs, registered services/tasks and stable Windows-version/cold-boot acceptance |
-| Debian 13 x64 | Standalone installer smoke; 100 tests (four Windows-only skips) in network-none container; fresh source Core/Web/PostgreSQL/Caddy fixture; encrypted database restore | Full installed host boot/maintenance and complete product journey |
+| Windows x64, build 10.0.26300.0 | 125 tests (one symlink skip); new one-file and one-directory builds; real Core/Web/PostgreSQL/Caddy with pinned internal TLS, verified Node peer and restart login | Actual service registration/virtual-account ACL normalization; supported-version/cold-boot acceptance; complete product journey |
+| Debian 13 x64 | 125 tests (13 platform skips) in separate WSL guest with drive mounts/interop disabled; historical standalone smoke, source stack and encrypted restore evidence retained | Full installed host boot/maintenance and complete product journey |
 | Linux ARM64 / suitable Raspberry Pi | Native build jobs prepared; bounded inventory/manifest contracts tested | Actual native artifact build, target installation and hardware/boot acceptance; no current release claim |
 
 The successful native stack uses Java 21.0.13+9, Node 22.23.3, PostgreSQL 17.11-5
@@ -122,3 +149,10 @@ write-data/reparse, deletion and ownership/DACL replacement rights outside
 System/Administrators/the resolved Windows TrustedInstaller identity. Eight
 native in-memory directory-policy cases pass; the test changes no actual file
 ACL. Real installed-directory/service acceptance remains separate.
+
+The historical task helper remains for its tests; new installations exclusively
+use SCM, not scheduled boot tasks. The manual workflow
+`.github/workflows/windows-installer-services.yml` prepares real registration,
+virtual-account negative-access checks, idempotence and repair/restart on a
+disposable hosted runner. It has not been dispatched and is not evidence of a
+passing service installation. The current developer token is not elevated.

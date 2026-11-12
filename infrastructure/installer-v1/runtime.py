@@ -127,13 +127,17 @@ def validate_inputs(target: Path, hostname: str, address: str) -> None:
     if not target.parent.is_dir():
         raise ValueError("E_TARGET: parent directory must exist")
     reject_links(target)
+    validate_network(hostname, address)
+
+
+def validate_network(hostname: str, address: str, allow_loopback: bool = False) -> None:
     if not HOSTNAME.fullmatch(hostname):
         raise ValueError("E_HOSTNAME: valid lowercase local DNS hostname required")
     try:
         ip = ipaddress.IPv4Address(address)
     except ipaddress.AddressValueError:
         raise ValueError("E_ADDRESS: private IPv4 address required") from None
-    if not any(
+    if not (allow_loopback and ip.is_loopback) and not any(
         ip in ipaddress.IPv4Network(net)
         for net in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
     ):
@@ -192,6 +196,7 @@ class Installation:
         hostname: str,
         address: str,
         verify: bool = True,
+        directory_factory=None,
     ):
         self.target = target
         self.path = target / "install-state.json"
@@ -232,7 +237,6 @@ class Installation:
             if verify:
                 self.verify_files()
         else:
-            target.mkdir(mode=0o700)
             self.state = {
                 "formatVersion": 1,
                 "installationId": str(uuid.uuid4()),
@@ -245,6 +249,10 @@ class Installation:
                 "backup": "not-configured",
                 "updates": "not-configured",
             }
+            if directory_factory is None:
+                target.mkdir(mode=0o700)
+            else:
+                directory_factory(target, self.state)
             self.save()
 
     def save(self) -> None:

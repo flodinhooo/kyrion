@@ -1,0 +1,26 @@
+{
+  "java": {
+    "version": "21.0.13+9",
+    "sourceUrl": "https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.13%2B9",
+    "license": "GPL-2.0-only WITH Classpath-exception-2.0",
+    "licenseUrl": "https://github.com/openjdk/jdk21u/blob/master/LICENSE"
+  },
+  "node": {
+    "version": "22.23.3",
+    "sourceUrl": "https://nodejs.org/download/release/v22.23.3/",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/nodejs/node/blob/v22.23.3/LICENSE"
+  },
+  "postgres": {
+    "version": "17.11-5",
+    "sourceUrl": "https://www.enterprisedb.com/download-postgresql-binaries",
+    "license": "PostgreSQL",
+    "licenseUrl": "https://www.postgresql.org/about/licence/"
+  },
+  "caddy": {
+    "version": "2.10.2",
+    "sourceUrl": "https://github.com/caddyserver/caddy/releases/tag/v2.10.2",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://github.com/caddyserver/caddy/blob/v2.10.2/LICENSE"
+  }
+}

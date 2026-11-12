@@ -68,6 +68,8 @@ class CoreClient:
     ):
         if (method, route) not in ROUTES:
             raise ValueError("E_API_ROUTE: unsupported installer operation")
+        if self.installation.state.get("backend") == "windows-native":
+            return self._native_request(method, route, body, bootstrap)
         config = [
             "silent",
             "show-error",
@@ -129,6 +131,64 @@ class CoreClient:
                 raise CoreError(code if isinstance(code, str) else "E_API", int(status))
             return value
         except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+            raise ValueError("E_API: local Core unavailable") from None
+
+    def _native_request(self, method, route, body, bootstrap):
+        import ssl
+        import urllib.error
+        import urllib.request
+
+        from native_roles import read_configuration
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, _request, _fp, _code, _message, _headers, _url):
+                return None
+
+        config = read_configuration(self.installation.target)
+        headers = {"Content-Type": "application/json"}
+        for credential, name, prefix in (
+            (self.session, "Authorization", "Bearer "),
+            (bootstrap, "X-Kyrion-Setup-Secret", ""),
+        ):
+            if credential is not None:
+                if not re.fullmatch(r"[A-Za-z0-9_-]{32,256}", credential):
+                    raise ValueError("E_API_CREDENTIAL")
+                headers[name] = prefix + credential
+        request = urllib.request.Request(
+            "https://127.0.0.1:" + str(config["ports"]["core"]) + route,
+            data=json.dumps(body, ensure_ascii=True).encode()
+            if body is not None
+            else None,
+            headers=headers,
+            method=method,
+        )
+        try:
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({}),
+                NoRedirect(),
+                urllib.request.HTTPSHandler(
+                    context=ssl.create_default_context(
+                        cafile=str(self.installation.target / "core-cert.pem")
+                    )
+                ),
+            )
+            try:
+                response = opener.open(request, timeout=30)
+            except urllib.error.HTTPError as response_error:
+                response = response_error
+            with response:
+                data = response.read(2 * 1024**2 + 1)
+                status = response.status
+            if len(data) > 2 * 1024**2:
+                raise ValueError("E_API_RESPONSE_SIZE")
+            value = json.loads(data) if data else None
+            if not 200 <= status < 300:
+                code = (
+                    value.get("code", "E_API") if isinstance(value, dict) else "E_API"
+                )
+                raise CoreError(code if isinstance(code, str) else "E_API", status)
+            return value
+        except (OSError, urllib.error.URLError, json.JSONDecodeError):
             raise ValueError("E_API: local Core unavailable") from None
 
     def login_or_setup(

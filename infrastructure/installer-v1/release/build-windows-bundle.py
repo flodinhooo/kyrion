@@ -61,7 +61,7 @@ def build(profile: Path, metadata: dict, output: Path) -> dict:
                 )
                 archive.write(path, name)
         manifest = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "runtime": "windows-native",
             "architecture": "windows/amd64",
             **metadata,
@@ -89,7 +89,7 @@ def build(profile: Path, metadata: dict, output: Path) -> dict:
                 outgoing.flush()
                 os.fsync(outgoing.fileno())
         return {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "release": manifest["release"],
             "architecture": "windows/amd64",
             "manifestSha256": hashlib.sha256(raw).hexdigest(),

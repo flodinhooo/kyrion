@@ -1,0 +1,2 @@
+# Included in frozen installers; avoids requiring a system openssl executable.
+cryptography==50.0.2

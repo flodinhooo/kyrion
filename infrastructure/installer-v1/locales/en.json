@@ -66,5 +66,11 @@
   "aiConcurrent": "Device use alongside AI: dedicated, work or gaming",
   "aiBudget": "Maximum AI memory budget in whole GiB",
   "aiEstimates": "Planning estimates at the stated context size, not measured performance. OS, Kyrion and concurrent use retain reserves. Download bytes are config plus model layers before protocol overhead; existing blobs may reduce the transfer. GPU drivers alone do not prove usable acceleration. No runtime settings have been changed.",
-  "aiAlternatives": "No suitable recommendation with known resources. Choose another AI device or continue without AI. Cloud processing requires separate explicit consent and is not enabled here."
+  "aiAlternatives": "No suitable recommendation with known resources. Choose another AI device or continue without AI. Cloud processing requires separate explicit consent and is not enabled here.",
+  "windowsServicesReview": "Native Windows services run at machine startup with separate virtual accounts. Administrator elevation, private runtime copies, loopback PostgreSQL/Core/Web and reviewed local TLS are required. Existing Java, Node, PostgreSQL and Ollama installations are preserved. This candidate is not platform-release approved.",
+  "nativeErrorElevation": "Start this downloaded installer with administrator rights to install machine services. The system review and confirmation still run before installation.",
+  "nativeErrorPort": "A required local port is already occupied, or the selected address is unavailable. Resolve the reported conflict deliberately or choose another target device; existing services are preserved.",
+  "nativeErrorVersion": "This native service candidate requires Windows 11 x64 (build 22000 or later). A candidate is not a platform release approval.",
+  "nativeErrorServiceHost": "This historical runtime package has no signed native service host. Use a compatible schema-3 service bundle. Verification alone does not install it.",
+  "nativeErrorOwnership": "The service or installation path does not meet the ownership policy. Review its permissions and identity before continuing; foreign services are not replaced."
 }

@@ -6,6 +6,7 @@ import base64
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
@@ -62,10 +63,10 @@ def validate_trust(trust: dict) -> None:
             or not isinstance(key["usages"], list)
             or not key["usages"]
             or any(
-            not isinstance(usage, str)
-            or usage not in {"release-index", "model-catalog", "trust-rotation"}
-            for usage in key["usages"]
-        )
+                not isinstance(usage, str)
+                or usage not in {"release-index", "model-catalog", "trust-rotation"}
+                for usage in key["usages"]
+            )
         ):
             raise PolicyError("E_TRUST_STORE")
         ids.add(key["id"])
@@ -95,34 +96,43 @@ def verify(
         raise PolicyError("E_SIGNATURE") from None
     if len(signature) != 64 or len(payload) > LIMIT:
         raise PolicyError("E_SIGNATURE")
-    with tempfile.TemporaryDirectory(prefix="kyrion-signature-") as directory:
-        root = Path(directory)
-        (root / "key.pem").write_text(key["pem"], encoding="ascii")
-        (root / "payload").write_bytes(payload)
-        (root / "signature").write_bytes(signature)
-        try:
-            result = subprocess.run(
-                [
-                    "openssl",
-                    "pkeyutl",
-                    "-verify",
-                    "-rawin",
-                    "-pubin",
-                    "-inkey",
-                    str(root / "key.pem"),
-                    "-sigfile",
-                    str(root / "signature"),
-                    "-in",
-                    str(root / "payload"),
-                ],
-                capture_output=True,
-                timeout=15,
-                check=False,
-            )
-        except (OSError, subprocess.TimeoutExpired):
+    try:
+        from crypto_support import verify_ed25519
+
+        verify_ed25519(payload, signature, key["pem"].encode("ascii"))
+    except ImportError:
+        if getattr(sys, "frozen", False):
             raise PolicyError("E_SIGNATURE_VERIFIER") from None
-        if result.returncode:
-            raise PolicyError("E_SIGNATURE")
+        with tempfile.TemporaryDirectory(prefix="kyrion-signature-") as directory:
+            root = Path(directory)
+            (root / "key.pem").write_text(key["pem"], encoding="ascii")
+            (root / "payload").write_bytes(payload)
+            (root / "signature").write_bytes(signature)
+            try:
+                result = subprocess.run(
+                    [
+                        "openssl",
+                        "pkeyutl",
+                        "-verify",
+                        "-rawin",
+                        "-pubin",
+                        "-inkey",
+                        str(root / "key.pem"),
+                        "-sigfile",
+                        str(root / "signature"),
+                        "-in",
+                        str(root / "payload"),
+                    ],
+                    capture_output=True,
+                    timeout=15,
+                    check=False,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                raise PolicyError("E_SIGNATURE_VERIFIER") from None
+            if result.returncode:
+                raise PolicyError("E_SIGNATURE")
+    except ValueError:
+        raise PolicyError("E_SIGNATURE") from None
     document = parse(payload)
     if (
         document.get("kind") != usage
@@ -204,9 +214,9 @@ def compatible_release(
             or not entry["fromSchemas"]
             or any(type(item) is not int or item < 0 for item in entry["fromSchemas"])
             or any(
-            type(entry[field]) is not int
-            for field in ("targetSchema", "apiMin", "apiMax")
-        )
+                type(entry[field]) is not int
+                for field in ("targetSchema", "apiMin", "apiMax")
+            )
             or entry["apiMin"] > entry["apiMax"]
             or entry["targetSchema"] < max(entry["fromSchemas"])
             or type(entry["schemaDowngradeSupported"]) is not bool
@@ -216,9 +226,9 @@ def compatible_release(
             or not isinstance(entry["components"], dict)
             or not {"core", "web", "postgres", "caddy"}.issubset(entry["components"])
             or any(
-            not isinstance(item, str) or not item
-            for item in entry["components"].values()
-        )
+                not isinstance(item, str) or not item
+                for item in entry["components"].values()
+            )
         ):
             raise PolicyError("E_RELEASE_CONTRACT")
         for field in ("manifestUrl", "notesUrl"):

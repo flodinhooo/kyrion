@@ -1,2 +1,3 @@
-# Build tooling only; not installed on end-user machines.
+# Build tools plus the crypto implementation bundled into native installers.
+-r ../runtime-requirements.txt
 PyInstaller==6.22.3

@@ -59,11 +59,14 @@ def build(output: Path, version: str) -> Path:
         ]
         # Explicit data allowlist. Python imports are analyzed by PyInstaller.
         for relative in (
-                "locales/en.json",
-                "locales/de.json",
-                "model-catalog.json",
-                "templates/compose.yml",
-                "templates/Caddyfile",
+            "windows-permissions.ps1",
+            "windows-task-security.ps1",
+            "windows-tasks.ps1",
+            "locales/en.json",
+            "locales/de.json",
+            "model-catalog.json",
+            "templates/compose.yml",
+            "templates/Caddyfile",
         ):
             arguments += [
                 "--add-data",

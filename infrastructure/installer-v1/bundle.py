@@ -132,6 +132,16 @@ def verify_signature(
             raise ValueError("E_SIGNATURE: invalid signature/trust material size")
         snapshots.append(value)
     try:
+        from crypto_support import verify_ed25519
+
+        verify_ed25519(snapshots[0], snapshots[1], snapshots[2])
+        return snapshots[0]
+    except ImportError:
+        if getattr(sys, "frozen", False):
+            raise ValueError("E_SIGNATURE: bundled verifier unavailable") from None
+        # Source-only Linux/operator workflows retain the installed OpenSSL path.
+        # Frozen installers include cryptography and never require that executable.
+    try:
         # Process the immutable bytes verified here, not a subsequent reopening
         # of downloaded metadata. Assets still require private caller staging.
         with tempfile.TemporaryDirectory(prefix="kyrion-manifest-") as directory:

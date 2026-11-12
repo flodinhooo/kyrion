@@ -19,10 +19,12 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import native_bundle
+from crypto_support import certificate, private_tls_key
+from native_web_transport import WebTransport
 
 
 def free_port() -> int:
@@ -70,7 +72,7 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
         if bootstrap:
             headers["X-Kyrion-Setup-Secret"] = bootstrap
         req = Request(
-            "http://127.0.0.1:" + str(core_port) + route,
+            "https://127.0.0.1:" + str(core_port) + route,
             data=json.dumps(body).encode() if body is not None else None,
             headers=headers,
             method=method,
@@ -85,6 +87,23 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
         prefix="kyrion-native-stack-", dir=work_parent
     ) as directory:
         root = Path(directory)
+        (root / "data/web-tls").mkdir(parents=True)
+        for role in ("core", "web"):
+            key_bytes = private_tls_key()
+            key_path = root / (
+                "core-tls.key" if role == "core" else "data/web-tls/key.pem"
+            )
+            key_path.write_bytes(key_bytes)
+            (root / (role + "-cert.pem")).write_bytes(
+                certificate("localhost", "127.0.0.1", key_bytes)
+            )
+        opener = build_opener(
+            ProxyHandler({}),
+            HTTPSHandler(
+                context=ssl.create_default_context(cafile=str(root / "core-cert.pem"))
+            ),
+        )
+        web_transport = None
         environment.update(
             APPDATA=str(root / "appdata"),
             LOCALAPPDATA=str(root / "localappdata"),
@@ -221,6 +240,9 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
             )
             core_environment = {
                 "SERVER_PORT": str(core_port),
+                "SERVER_SSL_ENABLED": "true",
+                "SERVER_SSL_CERTIFICATE": (root / "core-cert.pem").as_uri(),
+                "SERVER_SSL_CERTIFICATE_PRIVATE_KEY": (root / "core-tls.key").as_uri(),
                 "SPRING_CONFIG_IMPORT": "",
                 "KYRION_CORE_ADDRESS": "127.0.0.1",
                 "KYRION_DATABASE_URL": "jdbc:postgresql://127.0.0.1:"
@@ -268,17 +290,21 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
                 raise ValueError("E_NATIVE_FIXTURE_OWNER")
             request("GET", "/v1/space", token=token)
             request("GET", "/v1/devices", token=token)
+            child_web_port = free_port()
             web = start(
                 [runtime / "node/node.exe", payload / "app/web/server.js"],
                 "web",
                 {
                     "HOSTNAME": "127.0.0.1",
-                    "PORT": str(web_port),
-                    "CORE_SERVICE_URL": "http://127.0.0.1:" + str(core_port),
+                    "PORT": str(child_web_port),
+                    "CORE_SERVICE_URL": "https://127.0.0.1:" + str(core_port),
+                    "NODE_EXTRA_CA_CERTS": str(root / "core-cert.pem"),
                     "KYRION_PUBLIC_URL": "https://localhost:" + str(tls_port),
                     "NEXT_TELEMETRY_DISABLED": "1",
                 },
             )
+            web_transport = WebTransport(root, web_port, child_web_port, web)
+            web_transport.__enter__()
             openssl = shutil.which("openssl")
             if not openssl:
                 raise ValueError("E_NATIVE_FIXTURE_OPENSSL")
@@ -311,9 +337,14 @@ def main(bundle: Path, key: Path, payload: Path, work_parent: Path) -> dict:
 https://localhost:PORT {
     bind 127.0.0.1
     tls "CERT" "KEY"
-    reverse_proxy 127.0.0.1:WEB
+    reverse_proxy https://127.0.0.1:WEB {
+        transport http {
+            tls_trust_pool file "WEB_CERT"
+        }
+    }
 }
 """.replace("PORT", str(tls_port))
+                .replace("WEB_CERT", (root / "web-cert.pem").as_posix())
                 .replace("WEB", str(web_port))
                 .replace("CERT", (root / "tls.crt").as_posix())
                 .replace("KEY", (root / "tls.key").as_posix())
@@ -378,6 +409,8 @@ https://localhost:PORT {
                 "coreMigrations": True,
                 "ownerAndSpaceCreated": True,
                 "trustedTlsWeb": True,
+                "corePinnedTls": True,
+                "webPinnedTlsWithVerifiedChild": True,
                 "processRestartLogin": True,
                 "bootstrapRemainsClosed": True,
                 "servicesOrTasksRegistered": False,
@@ -392,6 +425,8 @@ https://localhost:PORT {
                 shutil.copyfile(log, failure / log.name)
             raise
         finally:
+            if web_transport is not None:
+                web_transport.__exit__(None, None, None)
             for process in reversed(processes):
                 stop(process)
             if pg_started:

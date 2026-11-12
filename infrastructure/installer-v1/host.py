@@ -78,8 +78,8 @@ def effective_ram(physical: int | None) -> int | None:
         return physical
     limits = [physical]
     for path in (
-            Path("/sys/fs/cgroup/memory.max"),
-            Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+        Path("/sys/fs/cgroup/memory.max"),
+        Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
     ):
         try:
             value = path.read_text().strip()
@@ -106,6 +106,10 @@ def inventory(target: Path) -> dict:
         "amd64": "amd64",
         "x86_64": "amd64",
     }.get(machine)
+    if system == "Windows" and os.name == "nt":
+        from windows_system import native_architecture
+
+        architecture = native_architecture()
     os_id = fields.get("ID", "").strip('"')
     version = fields.get("VERSION_ID", "").strip('"')
     candidate = (

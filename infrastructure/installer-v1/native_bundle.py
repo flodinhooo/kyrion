@@ -19,9 +19,13 @@ from runtime import atomic_json, installation_lock
 
 MAXIMUM_MANIFEST = 8 * 1024**2
 MAXIMUM_EXPANDED = 12 * 1024**3
-COMPONENTS = frozenset({"core", "web", "java", "node", "postgres", "caddy"})
+COMPONENTS = frozenset(
+    {"core", "web", "java", "node", "postgres", "caddy", "installer"}
+)
+LEGACY_COMPONENTS = COMPONENTS - {"installer"}
 REQUIRED_FILES = frozenset(
     {
+        "runtime/installer/kyrion-service.exe",
         "app/core/core-runtime.jar",
         "app/core/knowledge-parser.jar",
         "app/web/server.js",
@@ -46,6 +50,7 @@ REQUIRED_FILES = frozenset(
 PREFIXES = (
     "app/core/",
     "app/web/",
+    "runtime/installer/",
     "runtime/java/",
     "runtime/node/",
     "runtime/postgres/",
@@ -141,7 +146,7 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
         not isinstance(manifest, dict)
         or set(manifest) != fields
         or type(manifest["schemaVersion"]) is not int
-        or manifest["schemaVersion"] != 2
+        or manifest["schemaVersion"] not in {2, 3}
         or manifest["runtime"] != "windows-native"
         or manifest["architecture"] != "windows/amd64"
         or not isinstance(manifest["release"], str)
@@ -150,7 +155,10 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
     ):
         raise ValueError("E_NATIVE_MANIFEST")
     components = manifest["components"]
-    if not isinstance(components, dict) or set(components) != COMPONENTS:
+    required_components = (
+        COMPONENTS if manifest["schemaVersion"] == 3 else LEGACY_COMPONENTS
+    )
+    if not isinstance(components, dict) or set(components) != required_components:
         raise ValueError("E_NATIVE_COMPONENTS")
     for name, component in components.items():
         if (
@@ -166,12 +174,12 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
             or not (
                 https_source(component["licenseUrl"])
                 or (
-                    name in {"core", "web"}
+                    name in {"core", "web", "installer"}
                     and component["licenseUrl"] is None
                     and component["license"].startswith("LicenseRef-")
                 )
             )
-            or name in {"core", "web"}
+            or name in {"core", "web", "installer"}
             and component["version"] != manifest["release"]
         ):
             raise ValueError("E_NATIVE_COMPONENT")
@@ -182,6 +190,10 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
         or any(
             type(compatibility[key]) is not int or compatibility[key] < 1
             for key in compatibility
+        )
+        or (
+            manifest["schemaVersion"] == 3
+            and (compatibility["api"] != 1 or compatibility["schema"] < 48)
         )
         or compatibility["postgresMajor"] != 17
         or not components["postgres"]["version"].startswith("17.")
@@ -227,9 +239,15 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
             raise ValueError("E_NATIVE_FILES")
         aliases.add(path.casefold())
         files[path] = row
+    required_files = (
+        REQUIRED_FILES
+        if manifest["schemaVersion"] == 3
+        else REQUIRED_FILES
+        - {"runtime/installer/kyrion-service.exe", "licenses/installer.txt"}
+    )
     if (
-        not REQUIRED_FILES <= files.keys()
-        or any(files[name]["bytes"] <= 0 for name in REQUIRED_FILES)
+        not required_files <= files.keys()
+        or any(files[name]["bytes"] <= 0 for name in required_files)
         or sum(row["bytes"] for row in files.values()) > MAXIMUM_EXPANDED
     ):
         raise ValueError("E_NATIVE_REQUIRED_FILES")
@@ -259,7 +277,7 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
                     != files[path]["sha256"]
                 ):
                     raise ValueError("E_NATIVE_FILE_DIGEST")
-            if path.lower().endswith((".exe", ".dll", ".node")):
+            if path.lower().endswith((".exe", ".dll", ".node", ".pyd")):
                 with archive.open(member) as stream:
                     if not pe_amd64(stream):
                         raise ValueError("E_NATIVE_BINARY_ARCHITECTURE")

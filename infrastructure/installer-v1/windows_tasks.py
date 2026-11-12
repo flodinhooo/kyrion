@@ -14,6 +14,8 @@ import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path, PureWindowsPath
 
+from windows_system import base_environment, system_directory
+
 NAMESPACE = "http://schemas.microsoft.com/windows/2004/02/mit/task"
 ROLES = frozenset({"core", "web", "caddy"})
 ET.register_namespace("", NAMESPACE)
@@ -111,10 +113,7 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
         "remove",
     }:
         raise ValueError("E_WINDOWS_TASK_OPERATION")
-    powershell = (
-        Path(os.environ["SystemRoot"])
-        / "System32/WindowsPowerShell/v1.0/powershell.exe"
-    )
+    powershell = system_directory() / "WindowsPowerShell/v1.0/powershell.exe"
     result = subprocess.run(
         [
             str(powershell),
@@ -131,6 +130,7 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
         capture_output=True,
         timeout=30,
         creationflags=subprocess.CREATE_NO_WINDOW,
+        env=base_environment(),
         check=False,
     )
     if result.returncode or len(result.stdout) > 16384:

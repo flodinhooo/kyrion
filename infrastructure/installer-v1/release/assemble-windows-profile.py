@@ -1,0 +1,239 @@
+"""Reproducible public Windows profile assembly from pinned vendor archives.
+
+No services, trust stores, local .env files, signing keys or publication involved.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import stat
+import sys
+import urllib.request
+import uuid
+import zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from bundle import VERSION, sha256
+from host import reject_links
+from native_bundle import MAXIMUM_EXPANDED, safe_member
+
+ROOT = Path(__file__).resolve().parent
+
+
+def vendor_archives(directory: Path, fetch: bool = False) -> dict:
+    lock = json.loads((ROOT / "windows-runtime-lock.json").read_text())
+    directory.mkdir(parents=True, exist_ok=True)
+    for source in lock["sources"]:
+        path = directory / source["file"]
+        reject_links(path)
+        if not path.exists():
+            if not fetch:
+                raise ValueError("E_NATIVE_VENDOR_ARCHIVE_REQUIRED")
+            temporary = directory / (source["file"] + ".part-" + uuid.uuid4().hex)
+            with (
+                urllib.request.urlopen(source["url"], timeout=30) as response,
+                temporary.open("xb") as output,
+            ):
+                count = 0
+                while chunk := response.read(1024**2):
+                    count += len(chunk)
+                    if count > source["bytes"]:
+                        raise ValueError("E_NATIVE_VENDOR_SIZE")
+                    output.write(chunk)
+            if (
+                temporary.stat().st_size != source["bytes"]
+                or sha256(temporary) != source["sha256"]
+            ):
+                raise ValueError("E_NATIVE_VENDOR_DIGEST")
+            temporary.rename(path)
+        if (
+            not path.is_file()
+            or path.stat().st_size != source["bytes"]
+            or sha256(path) != source["sha256"]
+        ):
+            raise ValueError("E_NATIVE_VENDOR_DIGEST")
+    return {row["component"]: row for row in lock["sources"]}
+
+
+def assemble(
+    archives: Path,
+    core_jar: Path,
+    parser_jar: Path,
+    web_build: Path,
+    service_host: Path,
+    output: Path,
+    version: str,
+    schema: int,
+) -> dict:
+    if (
+        not VERSION.fullmatch(version)
+        or output.exists()
+        or not output.parent.is_dir()
+        or schema < 48
+    ):
+        raise ValueError("E_NATIVE_PROFILE_INPUT")
+    sources = vendor_archives(archives)
+    output.mkdir()
+    total = 0
+    names = set()
+
+    def write(name, data):
+        nonlocal total
+        safe_member(name)
+        if name.casefold() in names or len(names) >= 20000:
+            raise ValueError("E_NATIVE_PROFILE_DUPLICATE")
+        names.add(name.casefold())
+        total += len(data)
+        if total > MAXIMUM_EXPANDED or len(data) > 1024**3:
+            raise ValueError("E_NATIVE_PROFILE_SIZE")
+        path = output / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("xb") as stream:
+            stream.write(data)
+
+    def copy(name, path):
+        reject_links(path)
+        if not path.is_file() or path.stat().st_size > 1024**3:
+            raise ValueError("E_NATIVE_PROFILE_SOURCE")
+        write(name, path.read_bytes())
+
+    legal = {}
+    for component, source in sources.items():
+        with zipfile.ZipFile(archives / source["file"]) as archive:
+            for member in archive.infolist():
+                if member.is_dir():
+                    continue
+                raw = member.filename
+                selected = None
+                if component == "java" and raw.startswith("jdk-21.0.13+9-jre/"):
+                    selected = "runtime/java/" + raw.removeprefix("jdk-21.0.13+9-jre/")
+                elif component == "node" and raw == "node-v22.23.3-win-x64/node.exe":
+                    selected = "runtime/node/node.exe"
+                elif component == "caddy" and raw == "caddy.exe":
+                    selected = "runtime/caddy/caddy.exe"
+                elif component == "postgres" and (
+                    raw.startswith(
+                        ("pgsql/bin/", "pgsql/lib/", "pgsql/share/", "pgsql/doc/")
+                    )
+                    or raw
+                    in {
+                        "pgsql/server_license.txt",
+                        "pgsql/commandlinetools_3rd_party_licenses.txt",
+                    }
+                ):
+                    selected = "runtime/postgres/" + raw.removeprefix("pgsql/")
+                if selected:
+                    if (
+                        stat.S_ISLNK(member.external_attr >> 16)
+                        or member.file_size > 1024**3
+                    ):
+                        raise ValueError("E_NATIVE_VENDOR_MEMBER")
+                    write(selected, archive.read(member))
+            if component == "java":
+                legal[component] = b"\n".join(
+                    archive.read("jdk-21.0.13+9-jre/legal/java.base/" + name)
+                    for name in ("LICENSE", "ASSEMBLY_EXCEPTION")
+                )
+            elif component == "node":
+                legal[component] = archive.read("node-v22.23.3-win-x64/LICENSE")
+            elif component == "caddy":
+                legal[component] = archive.read("LICENSE")
+            else:
+                legal[component] = b"\n".join(
+                    archive.read("pgsql/" + name)
+                    for name in (
+                        "server_license.txt",
+                        "commandlinetools_3rd_party_licenses.txt",
+                    )
+                )
+    copy("app/core/core-runtime.jar", core_jar)
+    copy("app/core/knowledge-parser.jar", parser_jar)
+    for prefix, source in (
+        ("app/web", web_build / ".next/standalone"),
+        ("app/web/.next/static", web_build / ".next/static"),
+        ("app/web/public", web_build / "public"),
+    ):
+        reject_links(source)
+        if not source.is_dir():
+            raise ValueError("E_NATIVE_WEB_BUILD")
+        for path in sorted(source.rglob("*")):
+            reject_links(path)
+            if path.is_file():
+                copy(prefix + "/" + path.relative_to(source).as_posix(), path)
+    reject_links(service_host)
+    if not service_host.is_dir():
+        raise ValueError("E_NATIVE_SERVICE_HOST")
+    for path in sorted(service_host.rglob("*")):
+        reject_links(path)
+        if path.is_file():
+            copy("runtime/installer/" + path.relative_to(service_host).as_posix(), path)
+    notice = b"Kyrion has no selected repository LICENSE. All rights reserved; no redistribution grant is implied by this development build.\n"
+    for component in ("core", "web", "installer"):
+        legal[component] = notice
+    for component, data in legal.items():
+        write("licenses/" + component + ".txt", data)
+    metadata = json.loads((ROOT / "windows-runtime-components.json").read_text())
+    for component in ("core", "web", "installer"):
+        metadata[component] = {
+            "version": version,
+            "sourceUrl": "https://kyrion.ch",
+            "license": "LicenseRef-Kyrion-All-Rights-Reserved",
+            "licenseUrl": None,
+        }
+    return {
+        "release": version,
+        "components": metadata,
+        "compatibility": {"api": 1, "schema": schema, "postgresMajor": 17},
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--archives", type=Path, required=True)
+    parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help="Download only the reviewed pinned vendor archives",
+    )
+    parser.add_argument("--core-jar", type=Path)
+    parser.add_argument("--parser-jar", type=Path)
+    parser.add_argument("--web-build", type=Path)
+    parser.add_argument("--service-host", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--version")
+    parser.add_argument("--schema", type=int, default=48)
+    args = parser.parse_args()
+    vendor_archives(args.archives, args.fetch)
+    if args.output:
+        if None in (
+            args.core_jar,
+            args.parser_jar,
+            args.web_build,
+            args.service_host,
+            args.version,
+        ):
+            raise SystemExit("E_NATIVE_PROFILE_ARGUMENTS")
+        metadata = assemble(
+            args.archives,
+            args.core_jar,
+            args.parser_jar,
+            args.web_build,
+            args.service_host,
+            args.output,
+            args.version,
+            args.schema,
+        )
+        (args.output.parent / (args.output.name + "-metadata.json")).write_text(
+            json.dumps(metadata, indent=2) + "\n"
+        )
+        print(
+            json.dumps(
+                {
+                    "profile": str(args.output),
+                    "signed": False,
+                    "platformInstallationAccepted": False,
+                }
+            )
+        )

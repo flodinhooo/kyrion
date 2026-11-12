@@ -66,5 +66,11 @@
   "aiConcurrent": "Gleichzeitige Gerätenutzung: ausschliesslich KI, Arbeiten oder Spielen",
   "aiBudget": "Maximales KI-Speicherbudget in ganzen GiB",
   "aiEstimates": "Planungsschätzungen bei der angegebenen Kontextgrösse, keine gemessene Leistung. Betriebssystem, Kyrion und parallele Nutzung behalten Reserven. Downloadbytes umfassen Konfiguration und Modellschichten ohne Protokollaufwand; vorhandene Daten können die Übertragung verkleinern. GPU-Treiber allein belegen keine nutzbare Beschleunigung. Laufzeiteinstellungen wurden nicht geändert.",
-  "aiAlternatives": "Keine passende Empfehlung mit den bekannten Ressourcen. Ein anderes KI-Gerät wählen oder ohne KI fortfahren. Cloud-Verarbeitung benötigt separate ausdrückliche Zustimmung und wird hier nicht aktiviert."
+  "aiAlternatives": "Keine passende Empfehlung mit den bekannten Ressourcen. Ein anderes KI-Gerät wählen oder ohne KI fortfahren. Cloud-Verarbeitung benötigt separate ausdrückliche Zustimmung und wird hier nicht aktiviert.",
+  "windowsServicesReview": "Native Windows-Dienste starten beim Systemstart mit getrennten virtuellen Konten. Administratorrechte, private Laufzeitkopien, PostgreSQL/Core/Web auf Loopback und die gepr?fte lokale TLS-Konfiguration sind erforderlich. Bestehende Java-, Node-, PostgreSQL- und Ollama-Installationen bleiben erhalten. Dieser Kandidat hat noch keine Plattformfreigabe.",
+  "nativeErrorElevation": "Starten Sie diesen heruntergeladenen Installer mit Administratorrechten, um Systemdienste einzurichten. Systempr?fung und Best?tigung erfolgen weiterhin vor der Installation.",
+  "nativeErrorPort": "Ein ben?tigter lokaler Port ist bereits belegt oder die gew?hlte Adresse ist nicht verf?gbar. Beheben Sie den gemeldeten Konflikt bewusst oder w?hlen Sie ein anderes Zielger?t; vorhandene Dienste bleiben erhalten.",
+  "nativeErrorVersion": "Dieser native Dienstkandidat ben?tigt Windows 11 x64 ab Build 22000. Ein Kandidat bedeutet noch keine Plattformfreigabe.",
+  "nativeErrorServiceHost": "Dieses ?ltere Laufzeitpaket enth?lt keinen signierten nativen Diensthost. Verwenden Sie ein kompatibles Dienstpaket mit Schema 3. Eine Pr?fung allein installiert es nicht.",
+  "nativeErrorOwnership": "Der Dienst oder Installationspfad erf?llt die Eigent?mer- und Berechtigungsvorgaben nicht. Pr?fen Sie Berechtigungen und Identit?t vor der Fortsetzung; fremde Dienste werden nicht ersetzt."
 }

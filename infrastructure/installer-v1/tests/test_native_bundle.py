@@ -55,13 +55,14 @@ class NativeBundleTests(unittest.TestCase):
         versions = {
             "core": "1.2.3",
             "web": "1.2.3",
+            "installer": "1.2.3",
             "java": "21.0.9+10",
             "node": "22.21.1",
             "postgres": "17.6",
             "caddy": "2.10.2",
         }
         manifest = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "runtime": "windows-native",
             "release": "1.2.3",
             "architecture": "windows/amd64",
@@ -206,6 +207,21 @@ class NativeBundleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "E_NATIVE_EXISTING"):
             native_bundle.unpack(self.root, public_key, destination)
         self.assertEqual(sentinel.read_bytes(), b"preserve")
+
+    def test_historical_schema_two_remains_read_only_verifiable_without_service_host(
+        self,
+    ):
+        contents = {
+            name: value
+            for name, value in self.files.items()
+            if name
+            not in {"runtime/installer/kyrion-service.exe", "licenses/installer.txt"}
+        }
+        manifest = self.bundle(contents)
+        manifest["schemaVersion"] = 2
+        manifest["components"].pop("installer")
+        (self.root / "manifest.json").write_text(json.dumps(manifest))
+        self.assertEqual(native_bundle.validate(self.root), manifest)
 
     def test_complete_synthetic_payload_is_validated_without_execution(self):
         expected = self.bundle()

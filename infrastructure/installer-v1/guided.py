@@ -36,6 +36,12 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--verify-bundle", action="store_true")
+    actions.add_argument(
+        "--windows-service",
+        choices=("core", "web", "caddy", "postgres-init"),
+        help=argparse.SUPPRESS,
+    )
     actions.add_argument("--recommend-ai", action="store_true")
     actions.add_argument("--backup", type=Path)
     actions.add_argument("--verify-backup", type=Path)
@@ -70,6 +76,38 @@ def main() -> int:
         else Path(os.environ.get("ProgramData", "C:/ProgramData")) / "Kyrion",
     )
     args = parser.parse_args()
+    if args.verify_bundle:
+        if args.public_key is None:
+            print("E_SIGNATURE_TRUST_REQUIRED", file=sys.stderr)
+            return 2
+        try:
+            if os.name == "nt":
+                from native_bundle import authenticated_review as verify_release
+            else:
+                verify_release = authenticated_review
+            checked = verify_release(args.bundle, args.public_key)
+            print(
+                json.dumps(
+                    {
+                        "release": checked.manifest["release"],
+                        "architecture": checked.manifest["architecture"],
+                        "signatureVerified": True,
+                        "manifestSha256": checked.manifest_sha256,
+                        "runtimeActivated": False,
+                    }
+                )
+            )
+            return 0
+        except (OSError, ValueError, KeyError, TypeError):
+            print("E_BUNDLE_VERIFICATION", file=sys.stderr)
+            return 2
+    if args.windows_service:
+        from native_runtime import serve
+
+        try:
+            return serve(args.target, args.windows_service)
+        except (OSError, ValueError, KeyError, TypeError):
+            return 2
     if args.probe:
         print(json.dumps(inventory(args.target), indent=2, ensure_ascii=False))
         return 0
@@ -121,7 +159,8 @@ def main() -> int:
             return 2
     report = inventory(args.target)
     print(json.dumps(report, indent=2, ensure_ascii=False))
-    if not report["candidateProvisioning"]:
+    native_windows = report["system"] == "Windows" and report["architecture"] == "amd64"
+    if not report["candidateProvisioning"] and not native_windows:
         print(messages["unsupported"])
         return 2
     print(messages["modes"])
@@ -141,25 +180,40 @@ def main() -> int:
     hostname = input(messages["hostname"] + ": ").strip()
     address = input(messages["address"] + ": ").strip()
     try:
-        validate_inputs(args.target, hostname, address)
-        reviewed = authenticated_review(args.bundle, args.public_key)
+        if native_windows:
+            from native_bundle import authenticated_review as native_review
+            from native_runtime import preflight, provision_native
+
+            preflight(args.target, hostname, address, fresh=mode == "fresh")
+            reviewed = native_review(args.bundle, args.public_key)
+        else:
+            validate_inputs(args.target, hostname, address)
+            reviewed = authenticated_review(args.bundle, args.public_key)
         manifest = reviewed.manifest
-        image_plan(manifest)
+        if native_windows and manifest["schemaVersion"] != 3:
+            raise ValueError("E_NATIVE_SERVICE_HOST_REQUIRED")
+        if not native_windows:
+            image_plan(manifest)
         digest = reviewed.manifest_sha256
-        if manifest["architecture"] != "linux/" + report["architecture"]:
+        if (
+            manifest["architecture"]
+            != ("windows/" if native_windows else "linux/") + report["architecture"]
+        ):
             raise ValueError("E_ARCH: release does not match this target")
+        artifacts = [manifest["artifact"]] if native_windows else manifest["artifacts"]
+        if native_windows:
+            print(messages["windowsServicesReview"])
         print(messages["review"])
         print(
             json.dumps(
                 {
                     "release": manifest["release"],
                     "architecture": manifest["architecture"],
-                    "artifactBytes": sum(
-                        item["bytes"] for item in manifest["artifacts"]
-                    ),
-                    "privateStagingBytes": sum(
-                        item["bytes"] for item in manifest["artifacts"]
-                    ),
+                    "artifactBytes": sum(item["bytes"] for item in artifacts),
+                    "privateStagingBytes": sum(item["bytes"] for item in artifacts),
+                    "expandedBytes": sum(item["bytes"] for item in manifest["files"])
+                    if native_windows
+                    else None,
                     "target": str(args.target),
                     "url": "https://" + hostname,
                     "httpsBind": address + ":443",
@@ -172,7 +226,8 @@ def main() -> int:
             print(messages["cancelled"])
             return 0
         print(messages["working"])
-        state = provision(
+        selected_provision = provision_native if native_windows else provision
+        state = selected_provision(
             args.target, args.bundle, args.public_key, hostname, address, digest
         )
         print(messages["servicesHealthy"])
@@ -210,6 +265,21 @@ def main() -> int:
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         # Error details from untrusted files, TLS or command output aren't logs.
         code = str(error).split(":", 1)[0]
+        help_key = (
+            "nativeErrorElevation"
+            if code == "E_NATIVE_ELEVATION"
+            else "nativeErrorPort"
+            if code.startswith("E_NATIVE_PORT_")
+            else "nativeErrorVersion"
+            if code == "E_NATIVE_WINDOWS_VERSION"
+            else "nativeErrorServiceHost"
+            if code == "E_NATIVE_SERVICE_HOST_REQUIRED"
+            else "nativeErrorOwnership"
+            if code in {"E_SERVICE_FOREIGN", "E_NATIVE_OWNER", "E_TASK_ANCESTOR"}
+            else None
+        )
+        if help_key:
+            print(messages[help_key], file=sys.stderr)
         print(
             (code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_INSTALL")
             + ": "
