@@ -183,7 +183,8 @@ export async function POST(request: NextRequest, context: Context) {
         nonce: secret(),
         verifier: secret(),
         locale,
-        destination: form.get("destination") === "connect" ? "connect" : "account",
+        destination:
+          form.get("destination") === "connect" ? "connect" : "account",
       } as const;
       const url = await authorizationUrl(
         config,

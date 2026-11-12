@@ -33,6 +33,7 @@ export default defineConfig({
   webServer: [
     {
       command: "node scripts/identity-acceptance-core.mjs",
+      stdout: "pipe",
       url: "http://127.0.0.1:18092/actuator/health",
       reuseExistingServer: false,
       // Includes bounded DB/provider cold-start readiness before Core starts.

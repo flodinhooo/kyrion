@@ -86,7 +86,7 @@ async function approveDevice(
     throw new Error("Unexpected verification origin");
   const approval = await context.newPage();
   if (viaWebsite) {
-    await approval.goto(`${website}/en/account#connect`);
+    await approval.goto(`${website}/en/connect`);
     await approval.getByLabel("Linking code", { exact: true }).fill(userCode);
     await approval
       .getByRole("button", { name: "Confirm code", exact: true })
@@ -326,6 +326,15 @@ test("real registration, verified email, website and local login/link/offline/un
   await expect(panel.getByText("Your local account is connected.")).toBeVisible(
     { timeout: 45_000 },
   );
+  await expect(panel.getByText(email, {exact: true})).toBeVisible();
+  const directoryPage = await context.newPage();
+  await directoryPage.goto(`${website}/en/account`);
+  await expect(directoryPage.getByRole("heading", {
+    name: "Isolated identity acceptance",
+    exact: true
+  })).toBeVisible({timeout: 45_000});
+  await expect(directoryPage.getByText(memberName, {exact: true})).toBeVisible();
+  await directoryPage.close();
   expect((await me(context)).permissions).toEqual(member.permissions);
   expect((await webMutation(page, "/api/auth/logout")).status).toBe(204);
   await page.goto(`${web}/login`);
@@ -418,6 +427,7 @@ test("real registration, verified email, website and local login/link/offline/un
     )
     .toBe(200);
   await page.goto(`${website}/en/account`);
+  await expect(page.getByText("Isolated identity acceptance", {exact: true})).toHaveCount(0, {timeout: 45_000});
   await expect(
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();

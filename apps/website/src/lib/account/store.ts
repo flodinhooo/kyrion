@@ -52,7 +52,14 @@ export class AccountStore {
     );
     await this.pool.query(
       "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expires_at) VALUES ($1,$2,$3,$4,$5,$6,now()+interval '5 minutes')",
-      [hash(id), flow.state, flow.nonce, flow.verifier, flow.locale, flow.destination ?? "account"],
+      [
+        hash(id),
+        flow.state,
+        flow.nonce,
+        flow.verifier,
+        flow.locale,
+        flow.destination ?? "account",
+      ],
     );
   }
 

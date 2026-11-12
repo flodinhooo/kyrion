@@ -425,6 +425,31 @@ button, textarea { font: inherit; }
 .account-link-actions button, .account-link-open { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 11px 18px; border: 1px solid var(--border-strong); border-radius: 11px; font-size: 14px; font-weight: 750; text-decoration: none; }
 .account-link-actions .account-link-copy { width: auto; background: var(--surface); color: var(--primary); }
 .account-link-open { background: var(--primary); color: var(--primary-foreground, white); }
+
+.account-link-identity {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.account-link-identity > span, .account-link-identity small {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.account-link-identity strong {
+  font-size: 19px;
+  color: var(--primary);
+}
+
+.account-link-identity p {
+  margin: 0;
+}
 .settings-link-card.profile-sessions-panel { display: block; cursor: default; }
 .session-panel-heading { display: grid; gap: 4px; }
 .session-list { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }

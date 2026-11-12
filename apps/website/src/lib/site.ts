@@ -16,6 +16,7 @@ export const pages = [
   "hardware",
   "contact",
   "account",
+  "connect",
   "privacy",
   "terms",
 ] as const;

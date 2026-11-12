@@ -10,7 +10,16 @@ const error = (code: string, status: number) => Response.json({ code }, { status
 
 async function forward(request: Request, context: Context) {
   const { action } = await context.params;
-  if (!({ config: ["GET"], status: ["GET"], start: ["POST"], poll: ["POST"], complete: ["POST"], cancel: ["POST"], link: ["DELETE"] } as Record<string, string[]>)[action]?.includes(request.method)) return error("NOT_FOUND", 404);
+  if (!({
+    config: ["GET"],
+    status: ["GET"],
+    account: ["GET"],
+    start: ["POST"],
+    poll: ["POST"],
+    complete: ["POST"],
+    cancel: ["POST"],
+    link: ["DELETE"]
+  } as Record<string, string[]>)[action]?.includes(request.method)) return error("NOT_FOUND", 404);
   if (request.method !== "GET") {
     const origin = request.headers.get("origin");
     // Next may normalize request.url to its listening hostname. The original
@@ -30,7 +39,7 @@ async function forward(request: Request, context: Context) {
     } catch { return error("INVALID_REQUEST", 400); }
   }
   let token = await sessionToken();
-  if (action === "status" || action === "link" || (action === "start" && body.mode === "LINK")) {
+  if (action === "status" || action === "account" || action === "link" || (action === "start" && body.mode === "LINK")) {
     const auth = await requireApiSession();
     if (auth instanceof Response) return auth;
     token = auth.token;
@@ -78,9 +87,16 @@ async function forward(request: Request, context: Context) {
     if (action === "config") {
       if (!value || typeof value !== "object" || !("enabled" in value) || typeof value.enabled !== "boolean") return error("CENTRAL_INVALID_RESPONSE", 502);
       result = { enabled: value.enabled };
-    } else if (action === "status") {
+    } else if (action === "status" || action === "account") {
       if (!isCentralStatus(value)) return error("CENTRAL_INVALID_RESPONSE", 502);
-      result = { linked: value.linked, ...(value.issuer ? { issuer: value.issuer } : {}) };
+      result = {
+        linked: value.linked, ...(value.issuer ? {issuer: value.issuer} : {}),
+        ...(action === "account" ? {
+          linkedAt: value.linkedAt,
+          account: value.account ? {email: value.account.email, displayName: value.account.displayName} : null,
+          directoryState: value.directoryState
+        } : {})
+      };
     } else if (action === "poll") {
       if (!value || typeof value !== "object" || !("status" in value) || !["PENDING", "CONFIRM"].includes(String(value.status))) return error("CENTRAL_INVALID_RESPONSE", 502);
       result = { status: value.status };
