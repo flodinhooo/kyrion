@@ -41,6 +41,7 @@ class UnifiedIdentityService(
         var identity: ConfirmedCentralIdentity? = null,
         @Volatile var consumed: Boolean = false,
         val setupBootstrapHash: String? = null,
+        val registrationInvitationHash: String? = null,
     )
     private val tokens = SessionTokenService()
     private val operations = LinkedHashMap<String, Operation>()
@@ -48,6 +49,63 @@ class UnifiedIdentityService(
     private val starts = java.util.ArrayDeque<Instant>()
 
     fun available() = provider.available()
+
+    fun startRegistration(invitationCode: String): CentralDeviceStart {
+        if (!invitationCode.matches(Regex("[A-Za-z0-9_-]{43}"))) fail("CENTRAL_OPERATION_INVALID")
+        val started = start("LOGIN", null, null)
+        synchronized(operations) {
+            val key = tokens.hash(started.operationToken)
+            operations[key] = operations.getValue(key).copy(registrationInvitationHash = tokens.hash(invitationCode))
+        }
+        return started
+    }
+
+    fun pollRegistration(operationToken: String): CentralPollStatus {
+        if (operation(operationToken).registrationInvitationHash == null) fail("CENTRAL_OPERATION_INVALID")
+        return poll(operationToken, null)
+    }
+
+    fun cancelRegistration(operationToken: String) {
+        if (operation(operationToken).registrationInvitationHash == null) fail("CENTRAL_OPERATION_INVALID")
+        cancel(operationToken, null)
+    }
+
+    fun completeRegistration(
+        operationToken: String,
+        credentials: RegistrationRequest,
+        confirm: Boolean
+    ): AuthenticatedOwner {
+        val operation = operation(operationToken)
+        synchronized(operation) {
+            verify(operation, null)
+            if (!confirm || operation.registrationInvitationHash != tokens.hash(credentials.invitationCode)) fail("CENTRAL_OPERATION_INVALID")
+            val identity = operation.identity ?: fail("CENTRAL_OPERATION_PENDING")
+            if (!identity.expiresAt.isAfter(clock.instant())) fail("CENTRAL_OPERATION_INVALID")
+            operation.consumed = true
+            return transactions.execute {
+                jdbc.sql("SELECT pg_advisory_xact_lock(5544332211)").query { _, _ -> true }.single()
+                if (!operation.expiresAt.isAfter(clock.instant()) || !identity.expiresAt.isAfter(clock.instant())) fail(
+                    "CENTRAL_OPERATION_INVALID"
+                )
+                val member = authentication.register(
+                    credentials.username,
+                    credentials.password,
+                    credentials.invitationCode,
+                    credentials.email,
+                    credentials.emailProof
+                )
+                val inserted = jdbc.sql(
+                    """INSERT INTO central_identity_link(user_id,issuer,subject,linked_at)
+                    VALUES(:user,:issuer,:subject,:now) ON CONFLICT DO NOTHING"""
+                )
+                    .param("user", member.user.id).param("issuer", identity.issuer).param("subject", identity.subject)
+                    .param("now", Timestamp.from(clock.instant())).update()
+                if (inserted != 1) fail("CENTRAL_IDENTITY_ALREADY_LINKED")
+                audit("identity.central.linked", member.user)
+                member
+            } ?: fail("CENTRAL_OPERATION_INVALID")
+        }
+    }
 
     fun startSetup(setupSecret: String?): CentralDeviceStart {
         verifySetupSecret(setupSecret)
@@ -181,7 +239,7 @@ class UnifiedIdentityService(
     fun complete(operationToken: String, rawSession: String?, confirm: Boolean): AuthenticatedOwner? {
         val operation = operation(operationToken)
         synchronized(operation) {
-            if (operation.setupBootstrapHash != null) fail("CENTRAL_OPERATION_INVALID")
+            if (operation.setupBootstrapHash != null || operation.registrationInvitationHash != null) fail("CENTRAL_OPERATION_INVALID")
             verify(operation, rawSession)
             if (!confirm) fail("CENTRAL_OPERATION_INVALID")
             val identity = operation.identity ?: fail("CENTRAL_OPERATION_PENDING")

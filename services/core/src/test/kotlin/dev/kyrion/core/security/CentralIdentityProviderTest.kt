@@ -43,7 +43,7 @@ class CentralIdentityProviderTest {
         }
         server.createContext("/realm/device") { exchange ->
             val body = exchange.requestBody.readAllBytes().toString(Charsets.UTF_8)
-            assertEquals("client_id=kyrion-local&scope=openid", body)
+            assertEquals("client_id=kyrion-local&scope=openid+email+profile", body)
             val data = mapper.writeValueAsBytes(mapOf("device_code" to "private-device-code", "user_code" to "USER-CODE",
                 "verification_uri" to verificationUri, "expires_in" to 600, "interval" to 5))
             exchange.sendResponseHeaders(200, data.size.toLong()); exchange.responseBody.use { it.write(data) }

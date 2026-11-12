@@ -26,6 +26,14 @@ class CentralConfirmationDeserializer : tools.jackson.databind.ValueDeserializer
 }
 data class CentralUnlinkRequest(@field:Size(min = 12, max = 200) val currentPassword: String)
 
+data class CentralRegistrationStartRequest(@field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val invitationCode: String)
+data class CentralRegistrationCompletionRequest(
+    @field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val operationToken: String,
+    @field:Valid val credentials: RegistrationRequest,
+    @field:tools.jackson.databind.annotation.JsonDeserialize(using = CentralConfirmationDeserializer::class)
+    val confirm: Boolean,
+)
+
 data class CentralSetupCompletionRequest(
     @field:Pattern(regexp = "[A-Za-z0-9_-]{43}") val operationToken: String,
     @field:Valid val credentials: CredentialsRequest,
@@ -38,6 +46,32 @@ data class CentralSetupCompletionRequest(
 class UnifiedIdentityController(private val identities: UnifiedIdentityService, private val rbac: RbacService) {
     @ModelAttribute fun noStore(response: HttpServletResponse) { response.setHeader("Cache-Control", "no-store") }
     @GetMapping("/config") fun config() = mapOf("enabled" to identities.available())
+
+    @PostMapping("/registration/start")
+    fun startRegistration(@Valid @RequestBody body: CentralRegistrationStartRequest) =
+        identities.startRegistration(body.invitationCode)
+
+    @PostMapping("/registration/poll")
+    fun pollRegistration(@Valid @RequestBody body: CentralOperationRequest) =
+        identities.pollRegistration(body.operationToken)
+
+    @PostMapping("/registration/cancel")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun cancelRegistration(@Valid @RequestBody body: CentralOperationRequest) =
+        identities.cancelRegistration(body.operationToken)
+
+    @PostMapping("/registration/complete")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun completeRegistration(@Valid @RequestBody body: CentralRegistrationCompletionRequest): SessionResponse {
+        val result = identities.completeRegistration(body.operationToken, body.credentials, body.confirm)
+        return SessionResponse(
+            UserResponse(
+                result.user.id,
+                result.user.username,
+                "invitations:create" in rbac.permissions(result.user.id)
+            ), result.session.rawToken, result.session.session.expiresAt
+        )
+    }
     @PostMapping("/setup/start")
     fun startSetup(request: HttpServletRequest) = identities.startSetup(request.getHeader("X-Kyrion-Setup-Secret"))
     @PostMapping("/setup/poll")

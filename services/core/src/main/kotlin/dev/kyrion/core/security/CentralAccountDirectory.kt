@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 import java.net.URI
@@ -40,6 +41,7 @@ class CentralAccountDirectory(
     @Value("\${KYRION_ACCOUNT_DIRECTORY_ORIGIN:}") configuredOrigin: String = "",
     @Value("\${KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP:false}") allowLoopback: Boolean = false,
 ) {
+    private val log = LoggerFactory.getLogger(CentralAccountDirectory::class.java)
     private val mapper = jacksonObjectMapper()
     private val http =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build()
@@ -64,7 +66,7 @@ class CentralAccountDirectory(
         }
 
     fun account(rawSession: String): CentralAccountView {
-        val user = authentication.authenticate(rawSession)
+        val user = authentication.authenticate(rawSession) ?: throw UnauthenticatedException()
         return jdbc.sql(
             """SELECT l.issuer,l.subject,l.linked_at,p.email,p.display_name,p.synchronized_at
             FROM central_identity_link l LEFT JOIN central_account_profile p
@@ -115,6 +117,8 @@ class CentralAccountDirectory(
                 .param("name", proof.displayName, java.sql.Types.VARCHAR).param("now", Timestamp.from(proof.verifiedAt))
                 .update()
         }
+        jdbc.sql("DELETE FROM central_account_profile p WHERE directory_id IS NULL AND NOT EXISTS(SELECT 1 FROM central_identity_link l WHERE l.user_id=p.user_id AND l.issuer=p.issuer AND l.subject=p.subject)")
+            .update()
         if (origin == null) return
         val pending = jdbc.sql(
             """SELECT p.*,l.linked_at,u.username,s.id AS installation_id,s.name,s.type
@@ -179,7 +183,11 @@ class CentralAccountDirectory(
                         .param("id", id).param("cipher", protected.ciphertext).param("nonce", protected.nonce)
                         .param("user", l.user).param("issuer", l.issuer).param("subject", l.subject).update()
                 }
-            } catch (_: Exception) { /* Bounded retry; never log identity claims or credentials. */
+            } catch (error: Exception) {
+                log.warn(
+                    "Central installation directory retry: {}",
+                    if (error is DirectoryRejected) "HTTP_${error.status}" else "TRANSPORT_OR_RESPONSE"
+                )
             }
         }
     }
@@ -200,12 +208,14 @@ class CentralAccountDirectory(
         try {
             val result = future.get(5, TimeUnit.SECONDS)
             if (method == "DELETE" && result.statusCode() == 404) return null
-            require(result.statusCode() in 200..299)
+            if (result.statusCode() !in 200..299) throw DirectoryRejected(result.statusCode())
             return if (result.body().isEmpty()) null else mapper.readTree(result.body())
         } finally {
             limited.cancel(); if (!future.isDone) future.cancel(true)
         }
     }
+
+    private class DirectoryRejected(val status: Int) : RuntimeException()
 
     private data class Link(
         val user: UUID,

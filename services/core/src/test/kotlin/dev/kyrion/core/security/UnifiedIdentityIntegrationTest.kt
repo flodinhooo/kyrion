@@ -53,6 +53,29 @@ class UnifiedIdentityIntegrationTest @Autowired constructor(
     @MockitoBean lateinit var provider: CentralIdentityProvider
 
     @Test
+    fun `invited central identity joins existing space with delegated role only`() {
+        val owner = owner()
+        val invitation = authentication.createInvitation(owner.session.rawToken)
+        val operation = identities.startRegistration(invitation.code)
+        testClock.now = testClock.now.plusSeconds(2)
+        assertThat(identities.pollRegistration(operation.operationToken).status).isEqualTo("CONFIRM")
+        val member = identities.completeRegistration(
+            operation.operationToken,
+            RegistrationRequest("invited-linked-member", PASSWORD, invitation.code), true
+        )
+        assertThat(identities.status(member.session.rawToken).linked).isTrue()
+        assertThat(rbac.isOwner(member.user.id)).isFalse()
+        assertThat(rbac.workspace(member.user.id)).isEqualTo(rbac.workspace(owner.user.id))
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM kyrion_space").query(Int::class.java).single()).isEqualTo(1)
+        assertThatThrownBy {
+            identities.completeRegistration(
+                operation.operationToken,
+                RegistrationRequest("another-member", PASSWORD, invitation.code), true
+            )
+        }.isInstanceOf(CentralIdentityException::class.java)
+    }
+
+    @Test
     fun `linked first owner creates one identity and business space with offline access`() {
         val operation = identities.startSetup(setupSecret)
         assertThat(authentication.setupRequired()).isTrue()
