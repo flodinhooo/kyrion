@@ -30,10 +30,12 @@ def build(output: Path) -> dict:
     sys.path.insert(0, str(ROOT))
     from bundle import sha256
     from package import FILES
+    from source_snapshot import stage_sources
 
-    source_snapshot = {name: sha256(ROOT / name) for name in (*FILES, "package.py")}
     with tempfile.TemporaryDirectory(prefix="kyrion-service-build-") as directory:
         temporary = Path(directory)
+        source_root = temporary / "source"
+        source_snapshot = stage_sources(ROOT, source_root, (*FILES, "package.py"))
         arguments = [
             sys.executable,
             "-m",
@@ -45,7 +47,7 @@ def build(output: Path) -> dict:
             "--name",
             "kyrion-service",
             "--paths",
-            str(ROOT),
+            str(source_root),
             "--distpath",
             str(temporary / "dist"),
             "--workpath",
@@ -65,7 +67,7 @@ def build(output: Path) -> dict:
         ):
             arguments += [
                 "--add-data",
-                str(ROOT / relative) + ":" + str(Path(relative).parent),
+                str(source_root / relative) + ":" + str(Path(relative).parent),
             ]
         # Include exact installed runtime-package legal material. No user files.
         for package in ("cryptography", "cffi", "pycparser", "pyinstaller"):
@@ -80,7 +82,7 @@ def build(output: Path) -> dict:
                             "--add-data",
                             str(source) + ":third-party-licenses/" + package,
                         ]
-        arguments += [str(ROOT / "guided.py")]
+        arguments += [str(source_root / "guided.py")]
         subprocess.run(
             arguments,
             check=True,

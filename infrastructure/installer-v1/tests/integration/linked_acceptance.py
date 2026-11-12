@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
+from bootstrap_maintenance import set_bootstrap_time
 from linked_onboarding import linked_setup
 from onboarding import CoreClient, guided_setup
 from runtime import Installation
@@ -35,6 +36,9 @@ def _exercise_linked_account(request, root, ports, provider, target):
             raise ValueError("E_LINKED_FIXTURE_UNEXPECTED_ADMISSION")
 
     refused({403}, "POST", "/v1/auth/central/setup/start")
+    set_bootstrap_time(root / "bootstrap", int(time.time()) - 1900)
+    refused({403}, "POST", "/v1/auth/central/setup/start", secret=bootstrap)
+    set_bootstrap_time(root / "bootstrap", int(time.time()))
     provider.device_lifetime = 1
     expired = request("POST", "/v1/auth/central/setup/start", bootstrap=bootstrap)
     time.sleep(1.2)
@@ -312,6 +316,7 @@ def _exercise_linked_account(request, root, ports, provider, target):
             "existingLinkedIdentityReused": True,
             "pendingAndCancelledProof": True,
             "expiredProofRejected": True,
+            "expiredBootstrapWindowRenewal": True,
             "setupTransactionRollback": True,
             "consumedFailedProof": True,
             "unmappedAccountDenied": True,

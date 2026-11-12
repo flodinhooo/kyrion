@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def build(output: Path, version: str) -> Path:
     sys.path.insert(0, str(ROOT))
     from bundle import VERSION
+    from package import FILES
+    from source_snapshot import stage_sources
 
     if not VERSION.fullmatch(version) or "latest" in version.lower():
         raise ValueError("E_RELEASE")
@@ -38,6 +40,8 @@ def build(output: Path, version: str) -> Path:
         raise ValueError("E_EXISTING_STATE")
     with tempfile.TemporaryDirectory(prefix="kyrion-freeze-") as directory:
         temporary = Path(directory)
+        source = temporary / "source"
+        source_snapshot = stage_sources(ROOT, source, (*FILES, "package.py"))
         arguments = [
             sys.executable,
             "-m",
@@ -55,7 +59,7 @@ def build(output: Path, version: str) -> Path:
             "--specpath",
             str(temporary),
             "--paths",
-            str(ROOT),
+            str(source),
         ]
         # Explicit data allowlist. Python imports are analyzed by PyInstaller.
         for relative in (
@@ -70,9 +74,9 @@ def build(output: Path, version: str) -> Path:
         ):
             arguments += [
                 "--add-data",
-                str(ROOT / relative) + ":" + str(Path(relative).parent),
+                str(source / relative) + ":" + str(Path(relative).parent),
             ]
-        arguments += [str(ROOT / "guided.py")]
+        arguments += [str(source / "guided.py")]
         subprocess.run(
             arguments,
             env={**os.environ, "PYINSTALLER_CONFIG_DIR": str(temporary / "cache")},
@@ -94,6 +98,11 @@ def build(output: Path, version: str) -> Path:
             or observed.get("architecture") != machine
         ):
             raise ValueError("E_NATIVE_SMOKE")
+        if source_snapshot != {
+            name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+            for name in source_snapshot
+        }:
+            raise ValueError("E_NATIVE_SOURCE_CHANGED")
         if system == "windows":
             with artifact.open("xb") as stream:
                 stream.write(binary.read_bytes())
@@ -115,6 +124,7 @@ def build(output: Path, version: str) -> Path:
         "nativeSmokeTest": True,
         "platformInstallationAccepted": False,
         "signed": False,
+        "sources": source_snapshot,
     }
     artifact.with_suffix(artifact.suffix + ".json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"

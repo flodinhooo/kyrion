@@ -437,13 +437,51 @@ button, textarea { font: inherit; }
   overflow-wrap: anywhere;
 }
 
-.account-link-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.account-link-heading h2 { margin: 0; }
-.account-link-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, #36c987 45%, var(--border)); background: color-mix(in srgb, #36c987 12%, var(--surface)); color: var(--text); font-size: 13px; font-weight: 750; }
-.account-link-badge svg { color: light-dark(#16744b, #36c987); }
-.account-link-manage { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
-.account-link-manage summary { cursor: pointer; color: var(--text-muted); font-size: 14px; font-weight: 650; }
-.account-link-manage .auth-form { margin-top: 16px; }
+.account-link-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.account-link-heading h2 {
+  margin: 0;
+}
+
+.account-link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #36c987 45%, var(--border));
+  background: color-mix(in srgb, #36c987 12%, var(--surface));
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.account-link-badge svg {
+  color: light-dark(#16744b, #36c987);
+}
+
+.account-link-manage {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.account-link-manage summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.account-link-manage .auth-form {
+  margin-top: 16px;
+}
 
 .account-link-identity > span, .account-link-identity small {
   color: var(--text-muted);
