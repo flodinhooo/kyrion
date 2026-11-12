@@ -309,3 +309,43 @@ was updated to verify the requested remembered behavior. Test service containers
 were stopped afterward; personal Windows/Pi services and data were preserved.
 Generated test-only tsconfig additions were compared structurally and restored.
 Historical earlier counts retain their scope.
+
+## Linked installations and explicit code entry
+
+ADR 0054 adds an account-scoped informational installation directory. Website
+Account overview shows Space name/type, local username, linking date and last
+confirmation. A dedicated localized `/connect` route exposes the code field and
+preserves that destination through sign-in/registration. Native provider account
+settings remain separate. Local Profile displays the signed central email/name,
+link date and directory confirmation state. No email-based identity matching,
+local public endpoint, remote control or content synchronization is introduced.
+
+Core stores verified display claims and an encrypted per-row directory receipt.
+The website authenticates short-lived local-client proofs through introspection,
+requiring issuer, client, audience and subject. The official provider was checked
+for pairwise mappers (none) and received the website audience mapper, with a private
+pre-change snapshot. Website migration 003 was applied to the dedicated Neon
+database without changing session count. Local V46 backup was restored into a
+disposable PostgreSQL instance and migrated through V49; digests/counts of every
+pre-existing application table remained identical. A second quiescent backup and
+artifact/plan/target-bound migration preceded local rollout. All 49 runtime
+migrations validate, no pending migrations or active sync leases remain. Core is
+healthy on loopback; original local users and passwords are retained.
+
+Verification: local Web's 277 tests, strict types, lint and production build pass.
+The Core database test verifies per-user display isolation, unauthenticated denial,
+encrypted receipt storage and removal after unlink. Fifteen migration-tool guard
+tests pass. Two real isolated acceptance tests pass (2.1 minutes), covering receipt
+rotation/account isolation and browser registration, mail verification, code entry,
+local email display, website installation display, unchanged Space permissions,
+provider outage, offline unlink, directory removal and remembered website sessions.
+The initial directory transport failed against Next's HTTP upgrade handling;
+explicit HTTP/1.1 fixed it and the complete flow then passed. Browser assertions
+now wait for actual provider form readiness instead of racing redirect rendering.
+
+The personal installation had zero links before rollout. Its old pending code
+expires and is invalidated by Core restart: the owner must start one fresh link
+and approve it in their authenticated browser. No synthetic directory row or
+inferred personal link was created. Offline removal can lag while the installation
+cannot reach the website. Broader production recovery/mail/privacy/abuse/release
+acceptance remains separate from this verified implementation.

@@ -23,6 +23,10 @@ The Web interface and public website support German and English.
 `master`; [current website acceptance](docs/status/2026-11-12-website-acceptance.md)
 separates passing local verification from outstanding production acceptance.
 Parallel installer work and older platform evidence retain their own scope.
+The account overview now includes linked installations; the dedicated `/connect`
+page accepts local linking codes. Local Profile identifies the verified central
+account. [Directory design and acceptance](docs/adr/0054-account-installation-directory.md)
+keep these informational records separate from local access rights.
 The [current status](docs/status/README.md) separates implementation, tests,
 deployment and physical/provider acceptance. The [active backlog](docs/status/TODO.md)
 is the current work order, with stable IDs and completion criteria.

@@ -4,6 +4,12 @@ Website/documentation reviewed: 2026-11-12. Development branch: `master`.
 Other platform items retain their individually dated evidence; this review does
 not certify the ongoing installer work or repeat physical/provider acceptance.
 
+Identity visibility follow-up (KY-022): linked-installation overview, dedicated
+website `/connect`, and verified local central-account labels are implemented.
+Real isolated registration/link/directory/offline-unlink acceptance passes. The
+owner's actual pending code still requires fresh browser approval; do not infer
+a personal link from these software tests. See current website acceptance.
+
 This is the single active backlog. P1 means the next acceptance or safety gate;
 P2 means bounded follow-up; P3 means future product scope. **Open** includes
 unverified work: source, software tests, deployment and human/provider acceptance
