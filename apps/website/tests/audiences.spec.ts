@@ -91,6 +91,6 @@ test("audience routes retain language, truthful status, contact and mobile navig
   }
   const sitemap = await (await request.get("/sitemap.xml")).text();
   for (const path of ["/private", "/business", "/en/private", "/en/business"]) {
-    expect(sitemap).toContain(`https://kyrion.ch${path}`);
+    expect(sitemap).toContain(`https://www.kyrion.ch${path}`);
   }
 });

@@ -568,7 +568,11 @@
         },
         {
           "title": "Cookies und Browserspeicher",
-          "body": "Eine gewählte Designpräferenz wird in localStorage unter kyrion-website-theme gespeichert. Dies dient dem Merken des Designs. In der Website wurden keine Cookies oder sessionStorage-Nutzung gefunden; Kontaktentwürfe werden nicht gespeichert."
+          "body": "Deine Designpräferenz wird in localStorage unter kyrion-website-theme gespeichert. Bei aktivierten Website-Accounts verwendet die Anmeldung kurzlebige HttpOnly-Cookies für die Website-Sitzung und den Anmeldevorgang. Der zentrale Identitätsanbieter verwendet außerdem eigene Anmelde-Cookies. Kontaktentwürfe werden nicht gespeichert."
+        },
+        {
+          "title": "Optionaler Website-Account",
+          "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, kurzlebige Anmelde- und Sitzungsdatensätze sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt."
         },
         {
           "title": "Analyse und Tracking",

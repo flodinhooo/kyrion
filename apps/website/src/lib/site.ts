@@ -22,7 +22,7 @@ export const pages = [
 export type Page = (typeof pages)[number];
 export const dictionaries: Record<Locale, Dictionary> = { en, de };
 export const github = "https://github.com/flodinhooo/kyrion";
-export const siteUrl = "https://kyrion.ch";
+export const siteUrl = "https://www.kyrion.ch";
 
 export function href(locale: Locale, page: Page = "home") {
   return (

@@ -1,5 +1,5 @@
-import {expect, test} from "@playwright/test";
-import {publishedInstallers} from "../src/lib/releases";
+import { expect, test } from "@playwright/test";
+import { publishedInstallers } from "../src/lib/releases";
 
 const fixture = {
   version: "1.0.0",
@@ -12,22 +12,22 @@ const fixture = {
 };
 
 test("published artifact catalog rejects untrusted URLs and malformed release metadata", () => {
-  expect(publishedInstallers({schemaVersion: 1, releases: []})).toEqual([]);
+  expect(publishedInstallers({ schemaVersion: 1, releases: [] })).toEqual([]);
   expect(
-    publishedInstallers({schemaVersion: 1, releases: [fixture]}),
+    publishedInstallers({ schemaVersion: 1, releases: [fixture] }),
   ).toEqual([fixture]);
   for (const item of [
-    {...fixture, url: "https://example.test/unpublished.exe"},
-    {...fixture, bytes: -1},
-    {...fixture, sha256: "invalid"},
-    {...fixture, version: "latest"},
-    {...fixture, publishedAt: "invalid"},
+    { ...fixture, url: "https://example.test/unpublished.exe" },
+    { ...fixture, bytes: -1 },
+    { ...fixture, sha256: "invalid" },
+    { ...fixture, version: "latest" },
+    { ...fixture, publishedAt: "invalid" },
   ]) {
     expect(() =>
-      publishedInstallers({schemaVersion: 1, releases: [item]}),
+      publishedInstallers({ schemaVersion: 1, releases: [item] }),
     ).toThrow("RELEASE_CATALOG_INVALID");
   }
   expect(() =>
-    publishedInstallers({schemaVersion: 1, releases: [fixture, fixture]}),
+    publishedInstallers({ schemaVersion: 1, releases: [fixture, fixture] }),
   ).toThrow("RELEASE_CATALOG_INVALID");
 });

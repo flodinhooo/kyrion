@@ -29,11 +29,11 @@ test("all public pages and translations render with metadata and no runtime erro
       );
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
-        path === "/" ? "https://kyrion.ch" : `https://kyrion.ch${path}`,
+        path === "/" ? "https://www.kyrion.ch" : `https://www.kyrion.ch${path}`,
       );
       await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
         "content",
-        "https://kyrion.ch/branding/og-image.png",
+        "https://www.kyrion.ch/branding/og-image.png",
       );
       expect(
         await page
@@ -289,7 +289,7 @@ test("German is canonical, legacy URLs redirect and language links retain the pa
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.locator('link[hreflang="x-default"]')).toHaveAttribute(
     "href",
-    "https://kyrion.ch/product",
+    "https://www.kyrion.ch/product",
   );
   const english = page.locator('header a[hreflang="en"]').first();
   await expect(english).toContainText("EN");
@@ -302,8 +302,13 @@ test("German is canonical, legacy URLs redirect and language links retain the pa
   await german.click();
   await expect(page).toHaveURL("http://127.0.0.1:3101/product");
   const sitemap = await request.get("/sitemap.xml");
-  expect(await sitemap.text()).toContain("https://kyrion.ch/en/product");
-  expect(await sitemap.text()).not.toContain("https://kyrion.ch/de/");
+  expect(await sitemap.text()).toContain("https://www.kyrion.ch/en/product");
+  expect(await sitemap.text()).not.toContain("https://www.kyrion.ch/de/");
+  expect(await sitemap.text()).not.toContain("<loc>https://kyrion.ch");
+  const robots = await request.get("/robots.txt");
+  expect(await robots.text()).toContain(
+    "Sitemap: https://www.kyrion.ch/sitemap.xml",
+  );
 });
 
 test("prototype claims and real documentation stay explicit", async ({

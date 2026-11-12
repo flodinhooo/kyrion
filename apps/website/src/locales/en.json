@@ -568,7 +568,11 @@
         },
         {
           "title": "Cookies and browser storage",
-          "body": "When you choose an explicit theme, the site stores that preference in localStorage under kyrion-website-theme. This is used to remember the theme. No cookies or sessionStorage usage were identified in the website application, and contact-form drafts are not stored."
+          "body": "The site stores your theme preference in localStorage under kyrion-website-theme. When website accounts are enabled, sign-in uses short-lived HttpOnly cookies for the website session and sign-in flow. The central identity provider also uses its own sign-in cookies. Contact-form drafts are not stored."
+        },
+        {
+          "title": "Optional website account",
+          "body": "Website sign-in uses the central identity provider and a separate website session database. The website stores a generated account identifier, provider issuer and subject, short-lived sign-in and session records, and security events. Passwords and email verification are handled by the identity provider. A website account does not grant access to a local Kyrion installation. Website logout, central-provider logout and local installation sessions are separate."
         },
         {
           "title": "Analytics and tracking",

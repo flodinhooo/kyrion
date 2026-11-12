@@ -7,6 +7,25 @@ import pilotRealm from "../../../infrastructure/identity/pilot-realm.json";
 import { accountConfig, type AccountConfig } from "../src/lib/account/config";
 import { authenticate, authorizationUrl } from "../src/lib/account/oidc";
 import { hash, secret } from "../src/lib/account/store";
+import { dictionaries } from "../src/lib/site";
+
+test("privacy resources disclose website account cookies and separate session storage in both languages", () => {
+  for (const locale of ["en", "de"] as const) {
+    const sections = dictionaries[locale].legal.privacy.sections;
+    expect(sections.some((section) => section.body.includes("HttpOnly"))).toBe(
+      true,
+    );
+    expect(
+      sections.some(
+        (section) =>
+          section.title ===
+          (locale === "en"
+            ? "Optional website account"
+            : "Optionaler Website-Account"),
+      ),
+    ).toBe(true);
+  }
+});
 
 test("optional accounts do not require provider configuration", () => {
   expect(accountConfig({})).toBeNull();

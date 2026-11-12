@@ -1,9 +1,9 @@
 import Link from "next/link";
-import {github, href, type Dictionary, type Locale} from "@/lib/site";
-import {installers} from "@/lib/releases";
-import {Container, PageHero} from "../site-ui";
+import { github, href, type Dictionary, type Locale } from "@/lib/site";
+import { installers } from "@/lib/releases";
+import { Container, PageHero } from "../site-ui";
 
-export function DownloadPage({t, locale}: { t: Dictionary; locale: Locale }) {
+export function DownloadPage({ t, locale }: { t: Dictionary; locale: Locale }) {
   const content = t.download;
   return (
     <>
@@ -31,7 +31,7 @@ export function DownloadPage({t, locale}: { t: Dictionary; locale: Locale }) {
                   <p>
                     {new Date(item.publishedAt).toLocaleDateString(
                       locale === "de" ? "de-CH" : "en-GB",
-                      {timeZone: "UTC"},
+                      { timeZone: "UTC" },
                     )}{" "}
                     · {(item.bytes / 1024 ** 2).toFixed(1)} MiB
                   </p>
@@ -96,7 +96,7 @@ export function DownloadPage({t, locale}: { t: Dictionary; locale: Locale }) {
   );
 }
 
-export function HardwarePage({t, locale}: { t: Dictionary; locale: Locale }) {
+export function HardwarePage({ t, locale }: { t: Dictionary; locale: Locale }) {
   const content = t.hardware;
   return (
     <>

@@ -17,7 +17,7 @@ import { DocsPage } from "@/components/pages/docs";
 import { ContactPage } from "@/components/pages/contact";
 import { LegalPage } from "@/components/pages/legal";
 import { AccountPage } from "@/components/pages/account";
-import {DownloadPage, HardwarePage} from "@/components/pages/installation";
+import { DownloadPage, HardwarePage } from "@/components/pages/installation";
 
 type Props = { params: Promise<{ path?: string[] }> };
 

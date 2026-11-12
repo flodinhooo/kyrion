@@ -1,5 +1,9 @@
 # Kyrion public website
 
+Current integration, verification, cleanup and production acceptance findings:
+[website status, reviewed 2026-11-12](STATUS.md). This dated audit supersedes
+older readiness statements in historical review documents.
+
 Standalone public Next.js App Router website for kyrion.ch. It presents the
 Kyrion development prototype without device APIs, private installation data or
 a dependency on `apps/web`. Optional central OIDC website accounts use a separate
@@ -48,8 +52,10 @@ separate operational activation; website login grants no local membership.
 The November content review updates Home, Product, Private/HOME, Business and
 Development in both locales without changing routes or design. About, Docs,
 Contact, Account and legal pages were checked for consistent claims and calls to
-action. Contact expresses interest, not guaranteed access; no download or released
-installer is offered. See [maintenance evidence](../../docs/status/2026-11-07-maintenance.md).
+action. Contact expresses interest, not guaranteed access. The newer Download and
+Hardware pages are integrated; the release catalog is empty, so no installer
+artifact is currently offered. See [current website status](STATUS.md) and the
+historical [maintenance evidence](../../docs/status/2026-11-07-maintenance.md).
 
 ## Development
 
@@ -126,7 +132,8 @@ audience audit, implemented capability evidence and verification limits.
 
 ## Publication boundaries
 
-Canonical URLs, Open Graph metadata, robots and sitemap target `https://kyrion.ch`.
+Canonical URLs, Open Graph metadata, robots and sitemap target `https://www.kyrion.ch`,
+matching the final public host after the apex redirect and the account callback.
 The informational site is indexable; a preview host should set its own noindex
 policy before deployment. GitHub links use the repository's configured remote,
 `https://github.com/flodinhooo/kyrion`; confirm public access before launch.
@@ -142,9 +149,13 @@ is missing. The repository includes both DE/EN voice samples. Playback requires 
 click or keyboard activation; hover and focus alone do not start audio.
 Vercel Analytics is included by the existing root layout. It remains separate
 from the local platform; this website does not claim to be analytics-free.
-No real delivery is attempted by tests. Full public docs, search, version
-selection remain unimplemented. Optional central signup belongs to the configured
-identity provider and is unavailable until its operational gates are met. No alpha access or release dates are
+No real delivery is attempted by tests. Full public docs, search and a historical
+documentation version browser remain unimplemented. The installer catalog can
+render validated published versions, but currently contains no releases. The
+public account API reported enabled during the 2026-11-12 read-only audit; real
+signup, verification, reset and login/logout acceptance remain separately
+unverified. Optional central signup belongs to the configured identity provider.
+No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no
 software reuse or commercial-availability promise.
 

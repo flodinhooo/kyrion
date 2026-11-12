@@ -62,7 +62,7 @@ Configure these **seven names**, all server-only, for the Production environment
 
 | Variable              | Value to configure                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------- |
-| `CONTACT_FORM_ORIGIN` | `https://kyrion.ch`; exact browser origin, without a path                                |
+| `CONTACT_FORM_ORIGIN` | `https://www.kyrion.ch`; final browser origin, without a path                            |
 | `SMTP_HOST`           | `mail.infomaniak.com` for the existing Infomaniak mailbox                                |
 | `SMTP_PORT`           | `465` (implicit TLS) or `587` (required STARTTLS)                                        |
 | `SMTP_USER`           | Full mailbox login address                                                               |
@@ -79,6 +79,11 @@ test and replace values privately. Set `CONTACT_FORM_ORIGIN` to
 `http://localhost:3001` for local development, or the exact preview URL for a
 deliberate preview test. HTTPS is required except on loopback hosts. Redirect
 alternate public hostnames to the configured canonical origin.
+
+The public apex currently redirects to `www.kyrion.ch`. Use that final `www`
+origin for this setting, just as the account callback does. An apex Origin setting
+would reject a form submitted from the final `www` page. The example file is a
+template; changing it does not update the deployed Vercel environment.
 
 ### Infomaniak preparation
 
@@ -128,7 +133,8 @@ Provider references:
   tokens on the server and fail closed; keep provider secrets server-only.
 - Publish a reviewed privacy policy, decide inquiry/mailbox retention and deletion
   procedures, and document Vercel/Infomaniak processing as appropriate. The required
-  acknowledgement is not a complete policy. No `/privacy` page currently exists.
+  acknowledgement is not a complete policy. Bilingual `/privacy` pages now exist;
+  their existence does not establish a completed legal or operational review.
 - Restrict mailbox access and monitor volume, delivery failures and provider
   sending limits. This endpoint has no newsletter subscription or marketing opt-in.
 - Client locking prevents accidental duplicates during submission and removes

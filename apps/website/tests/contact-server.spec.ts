@@ -7,6 +7,9 @@ import {
 import { handleContact, MAX_BODY_BYTES } from "../src/lib/contact/handler";
 import { buildContactEmail } from "../src/lib/contact/email";
 import { readSmtpConfig, readContactOrigin } from "../src/lib/contact/config";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { siteUrl } from "../src/lib/site";
 
 const valid = {
   name: " Ada Example ",
@@ -19,6 +22,15 @@ const valid = {
   website: "",
 };
 const origin = "https://kyrion.ch";
+test("contact template uses the final public origin shared with website metadata", () => {
+  const template = readFileSync(
+    path.resolve(__dirname, "../.env.example"),
+    "utf8",
+  );
+  const configured = /^CONTACT_FORM_ORIGIN=(.+)$/m.exec(template)?.[1].trim();
+  expect(readContactOrigin({ CONTACT_FORM_ORIGIN: configured })).toBe(siteUrl);
+  expect(siteUrl).toBe("https://www.kyrion.ch");
+});
 function request(body: unknown = valid, headers: Record<string, string> = {}) {
   return new Request(`${origin}/api/contact`, {
     method: "POST",
