@@ -16,6 +16,7 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 from bundle import authenticated_review, sha256
 from host import inventory, reject_links, runtime_checks
@@ -37,6 +38,39 @@ def execute(args: list[str], timeout: int = 120) -> str:
         # Raw child output can include credentials or environment: never print it.
         raise ValueError("E_RUNTIME: operation failed: " + args[0])
     return result.stdout
+
+
+def web_readiness(opener, url: str) -> None:
+    # Compose --wait does not wait for a service without a healthcheck to
+    # accept TLS. Keep a finite real readiness test after container startup.
+    deadline = time.monotonic() + 60
+    for _attempt in range(12):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        try:
+            with opener.open(url, timeout=min(10, remaining)) as response:
+                if (
+                    response.status != 200
+                    or b"<html" not in response.read(1024**2).lower()
+                ):
+                    raise ValueError("E_WEB")
+            return
+        except HTTPError as error:
+            if error.code not in {502, 503, 504}:
+                raise ValueError("E_WEB") from None
+        except URLError as error:
+            if isinstance(error.reason, ssl.SSLError):
+                raise ValueError("E_WEB_TLS") from None  # noqa: TRY004 -- transport error classification
+        except ssl.SSLError:
+            raise ValueError("E_WEB_TLS") from None
+        except (TimeoutError, ConnectionError):
+            pass
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(2, remaining))
+    raise ValueError("E_WEB")
 
 
 def atomic_json(path: Path, value: dict, security_source: Path | None = None) -> None:
@@ -535,14 +569,7 @@ class Installation:
             urllib.request.ProxyHandler({}),
             urllib.request.HTTPSHandler(context=context),
         )
-        with opener.open(
-            "https://" + config["hostname"] + "/login", timeout=15
-        ) as response:
-            if (
-                response.status != 200
-                or b"<html" not in response.read(1024 * 1024).lower()
-            ):
-                raise ValueError("E_WEB: local login is not ready")
+        web_readiness(opener, "https://" + config["hostname"] + "/login")
         self.state["stage"] = "services-healthy"
         self.state["lastError"] = None
         self.state["lastHealthCheck"] = int(time.time())

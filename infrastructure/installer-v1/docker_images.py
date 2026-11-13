@@ -117,6 +117,7 @@ def archive_references(archive: Path, expected: str, architecture: str) -> list[
             ):
                 raise ValueError("E_IMAGE")
             platform = descriptor.get("platform")
+            unknown_platform = False
             if platform is not None:
                 if not isinstance(platform, dict):
                     raise ValueError("E_IMAGE")
@@ -124,8 +125,8 @@ def archive_references(archive: Path, expected: str, architecture: str) -> list[
                     platform.get("os") == "unknown"
                     and platform.get("architecture") == "unknown"
                 ):
-                    return False  # Non-executable build attestation.
-                if (
+                    unknown_platform = True
+                elif (
                     platform.get("os") != "linux"
                     or platform.get("architecture") != architecture
                 ):
@@ -151,7 +152,7 @@ def archive_references(archive: Path, expected: str, architecture: str) -> list[
             ):
                 raise ValueError("E_IMAGE")
             if "manifests" in value:
-                if descriptor.get("mediaType") not in {
+                if unknown_platform or descriptor.get("mediaType") not in {
                     "application/vnd.oci.image.index.v1+json",
                     "application/vnd.docker.distribution.manifest.list.v2+json",
                 }:
@@ -170,10 +171,12 @@ def archive_references(archive: Path, expected: str, architecture: str) -> list[
                 configuration = value.get("config")
                 if (
                     not isinstance(configuration, dict)
-                    or configuration.get("digest") != expected
+                    or not isinstance(configuration.get("digest"), str)
+                    or not re.fullmatch(r"sha256:[a-f0-9]{64}", configuration["digest"])
                 ):
                     raise ValueError("E_IMAGE")
-                raw_config = read("blobs/sha256/" + expected.removeprefix("sha256:"))
+                config_digest = configuration["digest"].removeprefix("sha256:")
+                raw_config = read("blobs/sha256/" + config_digest)
                 if (
                     type(configuration.get("size")) is not int
                     or configuration["size"] != len(raw_config)
@@ -181,16 +184,48 @@ def archive_references(archive: Path, expected: str, architecture: str) -> list[
                     not in {
                         "application/vnd.oci.image.config.v1+json",
                         "application/vnd.docker.container.image.v1+json",
+                        "application/vnd.oci.empty.v1+json",
                     }
                 ):
                     raise ValueError("E_IMAGE")
-                if hashlib.sha256(raw_config).hexdigest() != expected.removeprefix(
-                    "sha256:"
-                ):
+                if hashlib.sha256(raw_config).hexdigest() != config_digest:
                     raise ValueError("E_IMAGE")
                 config = json.loads(raw_config, object_pairs_hook=unique_object)
+                layers = value.get("layers")
+                attestation = isinstance(config, dict) and (
+                    (
+                        config.get("os") == "unknown"
+                        and config.get("architecture") == "unknown"
+                    )
+                    or (
+                        config == {}
+                        and value.get("artifactType")
+                        == "application/vnd.docker.attestation.manifest.v1+json"
+                        and configuration["mediaType"]
+                        == "application/vnd.oci.empty.v1+json"
+                    )
+                )
+                if attestation and (platform is None or unknown_platform):
+                    if (
+                        not isinstance(layers, list)
+                        or not 1 <= len(layers) <= 16
+                        or any(
+                            not isinstance(layer, dict)
+                            or layer.get("mediaType") != "application/vnd.in-toto+json"
+                            or not isinstance(layer.get("digest"), str)
+                            or not re.fullmatch(r"sha256:[a-f0-9]{64}", layer["digest"])
+                            or type(layer.get("size")) is not int
+                            or not 0 < layer["size"] <= 80 * 1024**2
+                            for layer in layers
+                        )
+                    ):
+                        raise ValueError("E_IMAGE")
+                    return False  # Metadata only; never an executable image ID.
                 if (
                     not isinstance(config, dict)
+                    or unknown_platform
+                    or configuration["digest"] != expected
+                    or configuration["mediaType"] == "application/vnd.oci.empty.v1+json"
                     or config.get("os") != "linux"
                     or config.get("architecture") != architecture
                 ):

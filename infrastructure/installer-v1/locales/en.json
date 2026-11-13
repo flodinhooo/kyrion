@@ -1,4 +1,6 @@
 {
+  "healthErrorWeb": "The local login page did not become ready after limited retries. Check the local hostname, HTTPS port and Web/proxy service status, then resume with unchanged inputs. Setup is not marked healthy.",
+  "healthErrorTls": "The local HTTPS certificate could not be verified. Check the configured hostname and the installation's trusted certificate. Certificate verification remains enabled; do not bypass it.",
   "updatesChannelUnavailable": "This development installer has no embedded authenticated release channel. Update scheduling remains unconfigured; no public release availability is implied. Continue local setup normally. An operator can configure a verified channel later.",
   "updatesChannelExisting": "Existing update settings are preserved. Use update status, explicit configuration or authenticated trust rotation to manage this installation's channel.",
   "updatesChannelOffer": "Recommended: enable notification-only signed update checks after system start and daily. This configures an administrator-protected local worker; it does not install updates automatically. The displayed public trust was embedded by the installer build, not downloaded from the channel. You may skip and continue later.",

@@ -18,6 +18,13 @@ metadata that would require rewriting content-addressed blobs. Preserve optional
 non-executable build attestations. Do not assume a configuration digest alone is
 the engine's reported ID. Verify that the actual container source ID also resolves.
 
+Actual vendor `docker save` exports can omit descriptor platforms for top-level
+attestations. Classify these only after validating the configuration descriptor,
+size and digest: `unknown/unknown` configuration with bounded In-Toto layers, or
+the documented OCI empty configuration plus attestation artifact type. They do
+not contribute executable image references. A Linux configuration with a different
+digest remains refused even if its layers claim an attestation media type.
+
 For an update from an existing tagged Compose configuration, derive canonical
 source pins from the actual owned containers' inspected image IDs. Retain the
 original configuration as evidence, but recovery must execute those source IDs,
@@ -38,3 +45,4 @@ acceptance; any injected prerequisite probe must be explicit in evidence.
 
 References: [Docker load](https://docs.docker.com/reference/cli/docker/image/load/)
 and [containerd reference-name handling](https://github.com/containerd/containerd/blob/9e70782d9a0e92900f402b2c7a4e2aa30754503c/core/transfer/image/imagestore.go).
+Attestation formats: [official Docker storage specification](https://docs.docker.com/build/metadata/attestations/attestation-storage/).

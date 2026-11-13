@@ -195,3 +195,16 @@ were modified. The scoped retry explicitly substitutes global discovery,
 loopback eligibility and absent systemd prerequisite probes. All project
 operations, TLS, database, encryption and migration paths remain real. A passing
 report is still required before this can count as full Compose evidence.
+
+The actual fixture now completes fresh and repeated setup, genuine Core/Web TLS
+readiness and synthetic local-owner/BUSINESS-Space authentication. It exposed
+top-level vendor attestations without descriptor platforms and a real proxy
+readiness race: running containers do not guarantee an HTTPS listener yet.
+Digest-bound non-executable attestation classification and finite real HTTPS
+retries address these. Certificate failures remain immediate errors; validation
+is never disabled. Five readiness regressions and the full Windows suite pass:
+304 tests, three platform skips. The isolated Linux suite passed 300 tests
+(16 skips) before these final six cases; its latest full repeat is pending.
+The earlier concurrent-build run exceeded its limit; the successful repeat took
+370.554 seconds and was not confused with the timeout. Full update/recovery
+container evidence remains pending while the test release contract is corrected.

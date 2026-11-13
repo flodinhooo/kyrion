@@ -20,7 +20,15 @@ class DockerImages(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
 
-    def archive(self, *, wrong_config=False, corrupt_blob=False, nested_name=False):
+    def archive(
+        self,
+        *,
+        wrong_config=False,
+        corrupt_blob=False,
+        nested_name=False,
+        root_attestation=False,
+        executable_attestation=False,
+    ):
         members = {}
 
         def blob(value, media):
@@ -64,8 +72,32 @@ class DockerImages(unittest.TestCase):
             "org.opencontainers.image.ref.name": "1",
             "org.opencontainers.image.licenses": "Apache-2.0",
         }
+        roots = [parent]
+        if root_attestation or executable_attestation:
+            metadata = blob(
+                {
+                    "os": "linux" if executable_attestation else "unknown",
+                    "architecture": "amd64" if executable_attestation else "unknown",
+                    "config": {"Labels": {"fixture": "attestation"}},
+                },
+                "application/vnd.oci.image.config.v1+json",
+            )
+            attestation = blob(
+                {
+                    "schemaVersion": 2,
+                    "config": metadata,
+                    "layers": [
+                        blob(
+                            {"_type": "https://in-toto.io/Statement/v0.1"},
+                            "application/vnd.in-toto+json",
+                        )
+                    ],
+                },
+                "application/vnd.oci.image.manifest.v1+json",
+            )
+            roots.append(attestation)
         members["index.json"] = json.dumps(
-            {"schemaVersion": 2, "manifests": [parent]}
+            {"schemaVersion": 2, "manifests": roots}
         ).encode()
         members["manifest.json"] = json.dumps(
             [
@@ -124,6 +156,19 @@ class DockerImages(unittest.TestCase):
             json.loads(scrub_names("repositories", b'{"shared":{"current":"layer"}}')),
             {},
         )
+
+    def test_docker_save_attestation_without_descriptor_platform_is_not_executable(
+        self,
+    ):
+        archive, expected, parent = self.archive(root_attestation=True)
+        references = archive_references(archive, expected, "amd64")
+        self.assertEqual(len(references), 3)
+        self.assertIn(parent, references)
+        archive, expected, _ = self.archive(executable_attestation=True)
+        run = Mock()
+        with self.assertRaises(ValueError):
+            load_untagged(self.root, archive, expected, "amd64", run)
+        run.assert_not_called()
 
     def test_owned_compose_pins_preserve_service_configuration_and_reject_unknown_layout(
         self,
