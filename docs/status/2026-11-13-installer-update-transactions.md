@@ -49,13 +49,64 @@ has not been dispatched. Core compilation and seven existing targeted security
 tests passed. Installer suite: 262 tests, one Windows skip before the subsequent
 three additional real-file recovery tests (which passed separately).
 
+## Automatic update continuation (subsequent implementation)
+
+ADR 0062 and `update_automatic.py` now implement optional UTC weekly start-window
+and maximum-download consent, bound to the signed-channel revision. The current
+frozen worker is required. A generated key is held outside Core-readable secrets
+in an administrator-only directory and exported exclusively outside the install
+root before enabling. It is never printed, journaled or included in the portable
+backup. Interrupted schedule registration can reuse the identical protected key
+and matching export. Disabling automatic installation preserves existing keys.
+
+The existing Windows SYSTEM task / Linux root timer becomes hourly with a finite
+two-hour invocation. Notification-only scheduling remains the default. A matching
+approved automatic transaction may continue offline after startup outside its
+start window; manual transactions and data-loss recovery cannot run unattended.
+Changed channel/trust revisions revoke unattended approval. The final transaction
+journal is retained before the next update. Automatic failures persist only safe
+codes and phase, with no child output. DE/EN terminal configuration and status are
+implemented; local Web administration is still open.
+
+The real Core/PG17/GPG process integration was repeated on both Windows and Linux
+with automatic approval and interrupted activation, including continuation outside
+the window. Both passed. Separate window, policy-race, download-limit, manual-flow
+refusal and real journal tests passed. Linux tests exercised actual root-only key
+and directory modes, export and interrupted registration; Windows key ACL/SCM
+execution acceptance remains open. Actual Windows COM validates the hourly
+definition without registration. `systemd-analyze verify` validates both daily
+and hourly definitions without installing them. Full suites: 276 Windows tests
+(two skips), 277 isolated Linux tests (16 skips), plus two new real image-archive
+rewrite tests on each. Docker execution in those two tests is injected, not
+container acceptance. Ruff passes.
+
+The existing full application restore integration also passed again on Windows
+and isolated Linux with the current Core JAR, including interrupted import,
+source retirement, audit-tamper refusal, transaction rollback on failed audit
+append, offline process restart and credential/command disposition. The hosted
+Windows service acceptance runner now additionally prepares a real SCM/ACL/GPG
+update and snapshot recovery using a synthetic signed release label over unchanged
+public binaries. It does not claim a new application migration. That hosted test
+has not been dispatched; no local services/tasks were installed for it.
+
+Native `0.0.0-dev.20261113.7` packages built on their actual OS, executed embedded
+probe/version/capability checks, and have no source-map drift:
+
+| Artifact in `build/native-installer/` | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `kyrion-installer-0.0.0-dev.20261113.7-windows-amd64.exe` | 12490634 | `df394d6c26b215357be171e4cbd64bb9f1e7b5dd45c544231908724a37c96274` |
+| `kyrion-installer-0.0.0-dev.20261113.7-linux-amd64.tar.gz` | 14295926 | `26ba85f1333519c907b84cfadbe493ba2ca4186602bbf3753f8f42db773e8332` |
+
+These are unsigned, unpublished development installers; they do not establish
+OS installation, cold-boot or ARM64 acceptance. Existing full runtime bundles
+predate the new Core/update fence and must be rebuilt before native acceptance.
+
 ## Continue independently
 
-Implement protected automatic-backup key custody, explicit maintenance-window
-consent and automatic transaction continuation, then complete OS lifecycle
-acceptance and distributed update barriers. The full requirements matrix remains
-authoritative for all other open installer work. Existing `.5` native artifacts
-predate this transaction and must be rebuilt before acceptance. Productive release
+Complete actual OS lifecycle/container acceptance and distributed update barriers.
+The full requirements matrix remains authoritative for all other open installer
+work. The `.7` installers contain the transaction, but full runtime bundles still
+need the compatible new Core and service host. Productive release
 keys and publication remain external prerequisites; they do not block source
 implementation or tests with isolated keys. Do not present this milestone as a
 complete installer or ask for partial user acceptance.

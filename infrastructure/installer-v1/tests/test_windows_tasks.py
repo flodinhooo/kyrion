@@ -129,6 +129,16 @@ class TaskPlanTests(unittest.TestCase):
                 self.identifier,
                 r"C:\ProgramData\Kyrion Test",
                 "maintenance-" + "a" * 32 + ".exe",
+                automatic=True,
+            )
+        )
+        self.assertTrue(result["definitionValidated"])
+        self.assertFalse(result["registered"])
+        result = operate(
+            update_check_plan(
+                self.identifier,
+                r"C:\ProgramData\Kyrion Test",
+                "maintenance-" + "a" * 32 + ".exe",
             )
         )
         self.assertTrue(result["definitionValidated"])

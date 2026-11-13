@@ -88,6 +88,18 @@ class WorkerTests(unittest.TestCase):
         )
         self.assertNotIn("private-token", str(self.installation.state))
 
+    def test_automatic_failure_records_only_safe_error_and_no_success(self):
+        self.prepare()
+
+        def failing(_target):
+            raise OSError("synthetic-secret-never-export")
+
+        self.assertEqual(update_worker.automatic_attempt(self.root, failing), 2)
+        result = self.installation.state["automaticUpdateAttempt"]
+        self.assertEqual(result["error"], "E_UPDATE_AUTOMATIC")
+        self.assertFalse(result["completed"])
+        self.assertNotIn("synthetic-secret", str(self.installation.state))
+
     def test_policy_revision_race_is_rejected_before_database_or_network(self):
         self.prepare()
         with self.assertRaisesRegex(ValueError, "E_UPDATE_POLICY_CHANGED"):

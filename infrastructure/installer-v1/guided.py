@@ -89,6 +89,8 @@ def main() -> int:
         "--updates",
         choices=(
             "configure",
+            "automatic",
+            "manual",
             "status",
             "disable",
             "rotate-trust",

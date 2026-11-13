@@ -114,7 +114,7 @@ def public_bundle(directory, jar, release, schema):
     return ReviewedBundle(manifest, hashlib.sha256(raw).hexdigest())
 
 
-def signed_inputs(installation, bundle, reviewed):
+def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
     private = Ed25519PrivateKey.generate()
     now = int(time.time())
     trust = {
@@ -140,7 +140,7 @@ def signed_inputs(installation, bundle, reviewed):
         "platform": "windows/amd64",
         "minimumInstaller": "1.0.0",
         "fromSchemas": [49],
-        "targetSchema": 50,
+        "targetSchema": target_schema,
         "apiMin": 1,
         "apiMax": 1,
         "manifestUrl": "https://synthetic.example.test/manifest.json",
@@ -592,6 +592,22 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
         else:
             rename = Path.rename
             cut = {"pending": True}
+            automatic = {
+                "formatVersion": 1,
+                "revision": str(uuid.uuid4()),
+                "policyRevision": installation.state["updatePolicy"]["revision"],
+                "enabled": True,
+                "utcDays": list(range(1, 8)),
+                "startMinute": 0,
+                "durationMinutes": 60,
+                "maximumDownloadBytes": 1024**3,
+                # Key custody has separate real-file tests. This integration
+                # passes the synthetic secret directly, never through a journal.
+                "keySha256": "a" * 64,
+            }
+            installation.state["updatePolicy"]["enabled"] = True
+            installation.state["automaticUpdatePolicy"] = automatic
+            installation.save()
 
             def interrupted(selected, destination):
                 if (
@@ -605,10 +621,16 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
                     )
                 return rename(selected, destination)
 
-            with patch.object(Path, "rename", interrupted):
+            with (
+                patch.object(Path, "rename", interrupted),
+                patch("update_automatic.in_window", return_value=True),
+            ):
                 try:
                     updater.apply(
-                        installation.target, password, review=lambda _summary: True
+                        installation.target,
+                        password,
+                        review=lambda _summary: True,
+                        automatic=automatic,
                     )
                 except KeyboardInterrupt:
                     pass
@@ -616,13 +638,16 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
                     raise ValueError("E_FIXTURE_PAYLOAD_INTERRUPT_NOT_REACHED")
             adapter.fail_activation = True
             try:
-                updater.resume(installation.target, password)
+                updater.resume(installation.target, password, automatic=automatic)
             except ValueError as error:
                 if str(error) != "E_FIXTURE_ACTIVATION_INTERRUPTED":
                     raise
             else:
                 raise ValueError("E_FIXTURE_ACTIVATION_INTERRUPT_NOT_REACHED")
-            complete = updater.resume(installation.target, password)
+            with patch("update_automatic.in_window", return_value=False):
+                complete = updater.resume(
+                    installation.target, password, automatic=automatic
+                )
             if complete["phase"] != "complete" or adapter.schema() != 50:
                 raise ValueError("E_FIXTURE_UPDATE_NOT_COMPLETE")
             if (
@@ -705,6 +730,7 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
             "recoveredCommandsAndCredentialsRevoked": True,
             "completedRecoveryDoesNotReplay": True,
             "interruptedPayloadAndActivationResume": not failing,
+            "automaticApprovalAndOutsideWindowResume": not failing,
             "interruptedDatabaseRenameResume": failing,
             "postActivationLossRequiresAcknowledgment": not failing,
             "wrongBackupPasswordDoesNotReplaceDatabase": failing,

@@ -103,7 +103,7 @@ def _backup(installation, platform, password: str, name="backup.gpg") -> dict:
         return copy.deepcopy(metadata)
 
 
-def apply(target: Path, password: str, *, review) -> dict:
+def apply(target: Path, password: str, *, review, automatic=None) -> dict:
     from build_identity import read_build
     from operational_restore import require_admin
     from update_download import revalidate
@@ -114,6 +114,10 @@ def apply(target: Path, password: str, *, review) -> dict:
     with installation_lock(target):
         installation = load_installation(target)
         require_active(installation.state)
+        if automatic is not None:
+            from update_automatic import approved
+
+            approved(installation, automatic, starting=True)
         if installation.state.get("backupServiceRecovery") is not None:
             raise ValueError("E_BACKUP_SERVICE_RECOVERY")
         if len(password) < 16 or any(ch in password for ch in "\r\n\x00"):
@@ -173,6 +177,9 @@ def apply(target: Path, password: str, *, review) -> dict:
         directory = target / installation.state["updateDownload"]["directory"]
         # Stage/verify all public code before application writers are stopped.
         configs = platform.stage(reviewed, directory, identifier, original)
+        if automatic is not None:
+            # Staging/download may have consumed the approved start window.
+            approved(installation, automatic, starting=True)
         relative = "transaction/" + uuid.UUID(identifier).hex[:16]
         changes = {}
         for name, raw in configs.items():
@@ -191,13 +198,25 @@ def apply(target: Path, password: str, *, review) -> dict:
             'services:\n  core:\n    restart: "no"\n    environment:\n      KYRION_OPERATIONAL_MAINTENANCE: "true"\n',
         )
         source = copy.deepcopy(installation.configuration)
+        previous = installation.state.get("updateTransaction")
+        if previous is not None:
+            previous = transaction(installation)
+            if previous["phase"] not in FINAL:
+                raise ValueError("E_UPDATE_IN_PROGRESS")
+            # Preserve the final journal alongside its retained backup/runtime
+            # before replacing the current transaction pointer.
+            installation.write(
+                previous["directory"] + "/completed.json",
+                json.dumps(previous, sort_keys=True).encode(),
+            )
         installation.state["updateTransaction"] = {
             "formatVersion": 1,
             "id": identifier,
             "phase": "preparing",
             "directory": relative,
             "authorizedAt": authorized_at,
-            "actor": "HOST_ADMIN",
+            "actor": "AUTOMATIC" if automatic is not None else "HOST_ADMIN",
+            "automaticApproval": copy.deepcopy(automatic),
             "source": source,
             "target": {
                 **source,
@@ -219,7 +238,7 @@ def apply(target: Path, password: str, *, review) -> dict:
         return _guarded(installation, platform, password)
 
 
-def resume(target: Path, password: str) -> dict:
+def resume(target: Path, password: str, *, automatic=None) -> dict:
     from operational_restore import require_admin
     from update_worker import validate_host
 
@@ -228,6 +247,18 @@ def resume(target: Path, password: str) -> dict:
     with installation_lock(target):
         installation = load_installation(target, verify=False)
         require_active(installation.state, update=True)
+        if automatic is not None:
+            from update_automatic import approved
+
+            approved(installation, automatic, starting=False)
+            value = transaction(installation)
+            if (
+                value.get("actor") != "AUTOMATIC"
+                or value.get("automaticApproval") != automatic
+            ):
+                raise ValueError("E_UPDATE_AUTOMATIC_CONSENT")
+            if value["phase"].startswith("recover") or value["phase"] == "reactivating":
+                raise ValueError("E_UPDATE_AUTOMATIC_MANUAL")
         reconcile(installation)
         _inputs(installation)
         return _guarded(installation, backend(installation), password)

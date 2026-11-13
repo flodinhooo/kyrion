@@ -176,6 +176,20 @@ class UpdateTransactions(unittest.TestCase):
         self.assertEqual(before, self.events)
         self.assertEqual(load_installation(self.root).configuration["release"], "1.2.0")
 
+    def test_next_transaction_preserves_previous_final_journal(self):
+        import json
+
+        self.apply()
+        before = load_installation(self.root).state["updateTransaction"]
+        self.apply()
+        saved = json.loads(
+            (self.root / before["directory"] / "completed.json").read_bytes()
+        )
+        self.assertEqual(saved, before)
+        self.assertNotEqual(
+            before["id"], load_installation(self.root).state["updateTransaction"]["id"]
+        )
+
     def test_failed_migration_keeps_fence_and_resumes_without_duplicate_backup(self):
         self.migration_failure = True
         with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
@@ -208,6 +222,62 @@ class UpdateTransactions(unittest.TestCase):
         self.assertEqual(state["updateTransaction"]["phase"], "checking")
         with self.assertRaisesRegex(ValueError, "E_UPDATE_IN_PROGRESS"):
             require_active(state)
+
+    def test_automatic_approval_is_persisted_before_stop_and_resumes_outside_window(
+        self,
+    ):
+        from test_update_automatic import policy
+
+        value = policy()
+        installation = load_installation(self.root)
+        installation.state["updatePolicy"].update(
+            revision=value["policyRevision"], enabled=True
+        )
+        installation.state["automaticUpdatePolicy"] = value
+        installation.save()
+        self.migration_failure = True
+        with (
+            patch("update_automatic.in_window", return_value=True),
+            self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"),
+        ):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                automatic=value,
+            )
+        state = load_installation(self.root).state
+        self.assertEqual(state["updateTransaction"]["actor"], "AUTOMATIC")
+        self.assertEqual(state["updateTransaction"]["automaticApproval"], value)
+        self.migration_failure = False
+        with patch("update_automatic.in_window", return_value=False):
+            outcome = updater.resume(
+                self.root, "Synthetic-password-for-tests-only", automatic=value
+            )
+        self.assertTrue(outcome["complete"])
+
+    def test_automatic_start_rejected_outside_window_before_staging_or_stop(self):
+        from test_update_automatic import policy
+
+        value = policy()
+        installation = load_installation(self.root)
+        installation.state["updatePolicy"].update(
+            revision=value["policyRevision"], enabled=True
+        )
+        installation.state["automaticUpdatePolicy"] = value
+        installation.save()
+        with (
+            patch("update_automatic.in_window", return_value=False),
+            self.assertRaisesRegex(ValueError, "E_UPDATE_AUTOMATIC_CONSENT"),
+        ):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                automatic=value,
+            )
+        self.assertEqual(self.events, [])
+        self.assertNotIn("updateTransaction", load_installation(self.root).state)
 
     def test_activation_retry_never_reimports_or_repeats_migration(self):
         self.activation_failure = True

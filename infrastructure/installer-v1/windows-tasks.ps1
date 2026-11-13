@@ -18,6 +18,12 @@ try {
         $principalSid = 'S-1-5-18'
         $bootDelay = 'PT2M'
         $executionLimit = 'PT10M'
+        $updateInterval = 'PT24H'
+        $approvedXml = [xml]$plan.xml
+        if ([string]$approvedXml.Task.Settings.ExecutionTimeLimit -eq 'PT2H') {
+            $executionLimit = 'PT2H'
+            $updateInterval = 'PT1H'
+        }
         $workerFile = [IO.Path]::GetFileName([string]$plan.command)
         if ($workerFile -cnotmatch '^maintenance-[a-f0-9]{32}\.exe$' -or
             [IO.Path]::Combine([string]$plan.directory, $workerFile) -cne $plan.command) { throw 'E_TASK_EXECUTABLE' }
@@ -35,7 +41,7 @@ try {
                 $candidateXml.Task.Principals.Principal.ProcessTokenSidType -ne 'Default') { throw 'E_TASK_TOKEN' }
         } elseif ($candidateXml.Task.Principals.Principal.ProcessTokenSidType -ne 'Unrestricted') { throw 'E_TASK_TOKEN' }
         if ($isUpdate) {
-            if ($candidate.Triggers.Item(1).Repetition.Interval -ne 'PT24H' -or
+            if ($candidate.Triggers.Item(1).Repetition.Interval -ne $updateInterval -or
                 $candidate.Triggers.Item(1).Repetition.Duration -or
                 $candidate.Triggers.Item(1).Repetition.StopAtDurationEnd) { throw 'E_TASK_INTERVAL' }
         } elseif ($candidate.Triggers.Item(1).Repetition.Interval) { throw 'E_TASK_INTERVAL' }

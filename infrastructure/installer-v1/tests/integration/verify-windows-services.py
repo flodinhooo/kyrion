@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import runpy
 import secrets
 import shutil
 import socket
@@ -18,6 +19,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from native_bundle import authenticated_review
@@ -31,6 +33,64 @@ from native_runtime import (
 from onboarding import CoreClient
 from recovery import load_installation
 from windows_service import ROLES, ServiceManager
+
+
+def verify_native_update(target: Path, bundle: Path) -> None:
+    """Real SCM/ACL update and recovery using a synthetic signed release label.
+
+    Public binaries are unchanged; this tests the actual native lifecycle, not
+    a new application migration. Migration faults have separate PG/Core tests.
+    """
+    from bundle import ReviewedBundle, sha256
+    from native_bundle import validate
+    from update_transaction import apply, recover, resume
+
+    installation = load_installation(target)
+    worker = installation.state["updatePolicy"]["workerFile"]
+    source_identity = installation.state["installationId"]
+    original_manifest = installation.configuration["manifestSha256"]
+    stage = target / "ci-update-public"
+    stage.mkdir()
+    document = json.loads((bundle / "manifest.json").read_bytes())
+    document["release"] = "1.2.0"
+    (stage / "manifest.json").write_text(json.dumps(document), encoding="utf-8")
+    shutil.copyfile(
+        bundle / document["artifact"]["name"], stage / document["artifact"]["name"]
+    )
+    validate(stage)
+    reviewed = ReviewedBundle(document, sha256(stage / "manifest.json"))
+    fixtures = runpy.run_path(
+        str(Path(__file__).with_name("verify-update-transaction.py"))
+    )
+    fixtures["signed_inputs"](
+        installation, stage, reviewed, target_schema=document["compatibility"]["schema"]
+    )
+    installation.state["updatePolicy"]["workerFile"] = worker
+    installation.save()
+    password = "Synthetic-native-update-recovery-123456"
+    # Only source-driver build identity is injected to authorize the synthetic
+    # test index. Installed service hosts, SQL, TLS, GPG, ACLs and SCM are real.
+    with patch("build_identity.read_build", return_value={"version": "1.0.0"}):
+        complete = apply(target, password, review=lambda _: True)
+        if not complete["complete"] or complete["phase"] != "complete":
+            raise ValueError("E_TEST_NATIVE_UPDATE")
+        resume(target, password)
+        recovered = recover(target, password, acknowledge_writes=True)
+    final = load_installation(target)
+    if (
+        not recovered["recovered"]
+        or final.state["installationId"] != source_identity
+        or final.configuration["manifestSha256"] != original_manifest
+    ):
+        raise ValueError("E_TEST_NATIVE_UPDATE_RECOVERY")
+    permissions(target, "verify-payload")
+    with ServiceManager() as scm:
+        for role in ROLES:
+            plan = plan_for(final, role)
+            with scm.opened(plan["name"]) as handle:
+                status = scm.assert_owned(handle, plan)
+                if status["state"] != 4 or status["start"] != 2:
+                    raise ValueError("E_TEST_NATIVE_UPDATE_SERVICE_STATE")
 
 
 def free_ports() -> dict:
@@ -262,6 +322,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
         finally:
             client.close()
         verify_update_task(target, worker)
+        verify_native_update(target, bundle)
         # Actual privileged backup capture is restricted to this fresh synthetic
         # installation. It is not a full application restore/identity acceptance.
         from native_backup import backup
@@ -372,6 +433,8 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "retiredSourceStoppedDisabledAndRepairDenied": True,
             "nativeInstalledSchemaQueryVerified": True,
             "actualSystemUpdateTaskExecution": True,
+            "nativeSingleHostUpdateAndSnapshotRecovery": True,
+            "syntheticReleaseLabelUnchangedPublicBinaries": True,
             "updateWorkerRefusesUnreleasedBuildBeforeNetwork": True,
             "coldBootVerified": False,
             "networkIsolated": False,

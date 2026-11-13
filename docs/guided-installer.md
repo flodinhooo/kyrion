@@ -231,7 +231,8 @@ payload and Ed25519 signature follow `release_policy.py`. Rotation changes the
 policy revision, preventing an in-flight check from committing under old keys.
 Protect production signing keys outside the checkout; development tests generate
 ephemeral isolated keys. Refer to ADR 0058 and the current status report for
-execution/boot acceptance boundaries and the still-open update coordinator.
+execution/boot acceptance boundaries. ADR 0061 defines the implemented single-host
+update transaction; distributed coordination remains open.
 
 `--updates download --target ROOT` rechecks the signed channel and displays the
 authenticated artifact sizes before streaming into protected local staging.
@@ -245,6 +246,52 @@ For isolated direct Core process health/migration checks,
 `KYRION_OPERATIONAL_MAINTENANCE=true` blocks application routes and application
 scheduling while preserving health and Core startup audit. It is a host-only
 startup property, not an HTTP preference. Restart with false/default to restore
-normal operation. This is not yet wired into an installed update transaction;
-refer to ADR 0060 and the status report for actual process evidence and bundle
-version boundaries.
+normal operation. The update transaction starts Core this way before activation;
+refer to ADRs 0060/0061 and the status report for actual process evidence and
+bundle version boundaries.
+
+## Transactional update and recovery
+
+After signed staging, `--updates apply --target ROOT` asks for an encryption
+password and reviews downtime, free-space reserve, source/target schema and backup
+before explicit installation confirmation. It stops writers, captures and verifies
+the encrypted backup, retains old runtime/configuration and an isolated database
+snapshot, migrates under maintenance mode and checks identities/schema/health
+before activation. Native hosts need startup-fence protocol 1; PostgreSQL runtime
+version changes are refused. No release is inferred from source changes.
+
+After interruption, use `--updates resume --target ROOT` with the same backup
+password. It verifies the exact prior signed approval and staged inputs offline.
+After the activation checkpoint it only retries service start and health, without
+repeating data imports or migrations. `--updates recover --target ROOT` offers
+explicit recovery from the original local snapshot and retained source runtime.
+Following activation it additionally requires acknowledgment of losing newer
+writes and creates a new encrypted backup before recovery. Failed data remains
+retained and connection-disabled; no schema downgrade is attempted. Existing
+offline account/Space identities are preserved; stale sessions/device authority
+are revoked following a data rewind. The final journal is preserved before a
+subsequent update. This is single-host coordination, not distributed acceptance.
+
+## Optional automatic installation
+
+Manual installation remains the default. `--updates automatic --target ROOT`
+requires the current verified frozen worker and an already configured signed
+channel. It asks for ISO weekdays, UTC start time, a 60–720 minute start window,
+maximum download per release in MiB, and a protected recovery-key export outside
+the installation. Explicit consent includes downtime, channel-license review and
+completion after the start window. The owner must keep the exported key outside
+the computer; backups do not contain it. Neither prompts, journal nor diagnostics
+print its contents. The internal key is administrator-only and separate from
+Core-readable credentials. Disabling automatic installation preserves this key
+because existing backups still need it.
+
+The existing machine schedule becomes hourly with a bounded two-hour invocation.
+Only matching automatically approved transactions may resume unattended after
+startup, including outside the start window. Manual updates and database recovery
+remain explicit. Changed trust/channel revisions invalidate unattended approval.
+`--updates manual --target ROOT` returns to notification-only daily checks;
+`--updates disable` removes all update scheduling. If an older worker is installed,
+disable it and configure the current reviewed frozen installer before enabling
+automatic installation. Status includes the last automatic attempt and transaction
+error without child-process output or secrets. Actual scheduled execution and
+cold-boot acceptance remain separate from tested definition/process behavior.

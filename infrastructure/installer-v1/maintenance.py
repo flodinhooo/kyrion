@@ -262,7 +262,49 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "updates", None):
         from update_worker import configure, remove_schedule, rotate_policy
 
-        if args.updates in {"apply", "resume", "recover"}:
+        if args.updates == "automatic":
+            from update_automatic import configure as configure_automatic
+
+            print(messages["updatesAutomaticReview"])
+            days = [
+                int(value.strip())
+                for value in input(messages["updatesAutomaticDays"] + ": ").split(",")
+            ]
+            clock = input(messages["updatesAutomaticStart"] + ": ").strip()
+            import re
+
+            if not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", clock):
+                raise ValueError("E_UPDATE_AUTOMATIC_POLICY")
+            hour, minute = map(int, clock.split(":"))
+            duration = int(input(messages["updatesAutomaticDuration"] + ": "))
+            maximum = int(input(messages["updatesAutomaticMaximum"] + ": ")) * 1024**2
+            export = Path(input(messages["updatesAutomaticExport"] + ": ").strip())
+
+            def approve_automatic(summary):
+                print(json.dumps(summary))
+                return (
+                    input("[ENABLE-AUTOMATIC-UPDATES]: ").strip()
+                    == "ENABLE-AUTOMATIC-UPDATES"
+                )
+
+            print(
+                json.dumps(
+                    configure_automatic(
+                        args.target,
+                        days=days,
+                        start=hour * 60 + minute,
+                        duration=duration,
+                        maximum=maximum,
+                        export=export,
+                        review=approve_automatic,
+                    )
+                )
+            )
+        elif args.updates == "manual":
+            from update_automatic import disable as disable_automatic
+
+            print(json.dumps(disable_automatic(args.target)))
+        elif args.updates in {"apply", "resume", "recover"}:
             from update_transaction import apply, recover, resume
 
             password = getpass.getpass(messages["backupPassword"] + ": ")
@@ -389,7 +431,15 @@ def run(args, messages: dict[str, str]) -> int:
                             "lastSuccessfulCheck": installation.state.get(
                                 "updateCheck"
                             ),
-                            "automaticInstallation": False,
+                            "automaticInstallation": installation.state.get(
+                                "automaticUpdatePolicy", {}
+                            ).get("enabled", False),
+                            "automaticPolicy": installation.state.get(
+                                "automaticUpdatePolicy"
+                            ),
+                            "lastAutomaticAttempt": installation.state.get(
+                                "automaticUpdateAttempt"
+                            ),
                             "transaction": installation.state.get(
                                 "updateTransaction", {}
                             ).get("phase"),

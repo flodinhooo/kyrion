@@ -1,6 +1,11 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_AUTOMATIC_POLICY": "updatesErrorAutomatic",
+    "E_UPDATE_AUTOMATIC_CONSENT": "updatesErrorAutomatic",
+    "E_UPDATE_AUTOMATIC_MANUAL": "updatesErrorAutomatic",
+    "E_UPDATE_AUTOMATIC_KEY": "updatesErrorAutomaticKey",
+    "E_UPDATE_AUTOMATIC_EXPORT": "updatesErrorAutomaticKey",
     "E_UPDATE_IN_PROGRESS": "updatesErrorTransaction",
     "E_UPDATE_IDENTITY_CHANGED": "updatesErrorIdentity",
     "E_UPDATE_SECURITY": "updatesErrorIdentity",

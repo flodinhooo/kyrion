@@ -45,6 +45,7 @@ FILES = (
     "verify.py",
     "maintenance.py",
     "update_worker.py",
+    "update_automatic.py",
     "update_schedule.py",
     "update_download.py",
     "update_gate.py",

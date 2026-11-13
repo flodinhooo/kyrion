@@ -198,9 +198,16 @@ def run(target: Path) -> int:
 
     require_admin()
     validate_host(target)
+    from update_gate import fenced
+
     with installation_lock(target):
-        installation = load_installation(target)
-        require_active(installation.state)
+        installation = load_installation(target, verify=False)
+        require_active(installation.state, update=True)
+        pending = fenced(installation.state)
+        if pending:
+            from update_state import reconcile
+
+            reconcile(installation)
         if installation.state.get("stage") == "uninstalled":
             return 0
         policy = copy.deepcopy(installation.state.get("updatePolicy"))
@@ -208,6 +215,15 @@ def run(target: Path) -> int:
         if not policy["enabled"]:
             return 0
         require_worker(installation, policy)
+        has_automatic_policy = (
+            installation.state.get("automaticUpdatePolicy") is not None
+        )
+    if pending:
+        if not has_automatic_policy:
+            return 2
+        from update_automatic import run as automatic_run
+
+        return automatic_attempt(target, automatic_run)
     try:
         check_updates(
             SimpleNamespace(
@@ -235,6 +251,34 @@ def run(target: Path) -> int:
             "at": int(time.time()),
             "policyRevision": policy["revision"],
             "error": error_code,
+        }
+        installation.save()
+    if error_code is not None:
+        return 2
+    if not has_automatic_policy:
+        return 0
+    from update_automatic import run as automatic_run
+
+    return automatic_attempt(target, automatic_run)
+
+
+def automatic_attempt(target, operation) -> int:
+    error_code = None
+    try:
+        outcome = operation(target)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        code = str(error).split(":", 1)[0]
+        error_code = (
+            code if re.fullmatch(r"E_[A-Z_]{1,80}", code) else "E_UPDATE_AUTOMATIC"
+        )
+        outcome = None
+    with installation_lock(target):
+        installation = load_installation(target, verify=False)
+        installation.state["automaticUpdateAttempt"] = {
+            "at": int(time.time()),
+            "error": error_code,
+            "phase": installation.state.get("updateTransaction", {}).get("phase"),
+            "completed": outcome is not None and outcome.get("complete") is True,
         }
         installation.save()
     return 0 if error_code is None else 2

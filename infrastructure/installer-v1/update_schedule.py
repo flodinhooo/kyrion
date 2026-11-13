@@ -41,7 +41,11 @@ def publish_unit(directory: Path, name: str, text: str) -> None:
             temporary.unlink(missing_ok=True)
 
 
-def linux_plan(identifier: str, target: str, worker: str) -> dict[str, str]:
+def linux_plan(
+    identifier: str, target: str, worker: str, *, automatic=False
+) -> dict[str, str]:
+    if type(automatic) is not bool:
+        raise ValueError("E_UPDATE_AUTOMATIC_POLICY")
     identifier = str(uuid.UUID(identifier))
     if not re.fullmatch(r"/[A-Za-z0-9/_-]+", target) or not re.fullmatch(
         r"maintenance-[a-f0-9]{32}", worker
@@ -62,12 +66,15 @@ def linux_plan(identifier: str, target: str, worker: str) -> dict[str, str]:
             + target
             + "\nWorkingDirectory="
             + target
-            + "\nTimeoutStartSec=10min\nNoNewPrivileges=yes\nPrivateTmp=yes\n"
+            + ("\nTimeoutStartSec=2h" if automatic else "\nTimeoutStartSec=10min")
+            + "\nNoNewPrivileges=yes\nPrivateTmp=yes\n"
         ),
         name + ".timer": (
             "[Unit]\nDescription=Kyrion daily release check "
             + identifier
-            + "\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec=24h\n"
+            + "\n\n[Timer]\nOnBootSec=2min\nOnUnitActiveSec="
+            + ("1h" if automatic else "24h")
+            + "\n"
             "AccuracySec=1min\nUnit=" + name + ".service\n"
             "\n[Install]\nWantedBy=timers.target\n"
         ),
@@ -94,6 +101,12 @@ def operate(installation, action: str) -> dict:
 
     policy = installation.state["updatePolicy"]
     require_worker(installation, policy)
+    automatic_policy = installation.state.get("automaticUpdatePolicy")
+    if automatic_policy is not None:
+        from update_automatic import validate
+
+        validate(automatic_policy)
+    automatic = automatic_policy is not None and automatic_policy["enabled"]
     if os.name == "nt":
         from windows_tasks import operate as task_operation
         from windows_tasks import update_check_plan
@@ -102,6 +115,7 @@ def operate(installation, action: str) -> dict:
             installation.state["installationId"],
             str(installation.target),
             policy["workerFile"],
+            automatic=automatic,
         )
         if action == "remove":
             task_operation(plan, "stop")
@@ -127,6 +141,7 @@ def operate(installation, action: str) -> dict:
         installation.state["installationId"],
         str(installation.target),
         policy["workerFile"],
+        automatic=automatic,
     )
     hashes = {
         name: hashlib.sha256(text.encode()).hexdigest() for name, text in units.items()

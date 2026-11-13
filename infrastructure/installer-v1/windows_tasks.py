@@ -111,6 +111,13 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
         if match[2] == "updates"
         else task_plan(match[1], plan.get("directory", ""), match[2])
     )
+    if plan != expected and match[2] == "updates":
+        expected = update_check_plan(
+            match[1],
+            plan.get("directory", ""),
+            PureWindowsPath(plan.get("command", "")).name,
+            automatic=True,
+        )
     if plan != expected:
         raise ValueError("E_WINDOWS_TASK_PLAN")
     if os.name != "nt" or action not in {
@@ -170,7 +177,11 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
     return value
 
 
-def update_check_plan(installation_id: str, target: str, worker: str) -> dict[str, str]:
+def update_check_plan(
+    installation_id: str, target: str, worker: str, *, automatic=False
+) -> dict[str, str]:
+    if type(automatic) is not bool:
+        raise ValueError("E_UPDATE_AUTOMATIC_POLICY")
     if not re.fullmatch(r"maintenance-[a-f0-9]{32}\.exe", worker):
         raise ValueError("E_UPDATE_WORKER")
     plan = task_plan(installation_id, target, "core")
@@ -195,10 +206,12 @@ def update_check_plan(installation_id: str, target: str, worker: str) -> dict[st
     item("t:Principals/t:Principal/t:UserId").text = "S-1-5-18"
     principal = item("t:Principals/t:Principal")
     principal.remove(item("t:Principals/t:Principal/t:ProcessTokenSidType"))
-    item("t:Settings/t:ExecutionTimeLimit").text = "PT10M"
+    item("t:Settings/t:ExecutionTimeLimit").text = "PT2H" if automatic else "PT10M"
     item("t:Triggers/t:BootTrigger/t:Delay").text = "PT2M"
     repetition = ET.Element("{" + NAMESPACE + "}Repetition")
-    ET.SubElement(repetition, "{" + NAMESPACE + "}Interval").text = "PT24H"
+    ET.SubElement(repetition, "{" + NAMESPACE + "}Interval").text = (
+        "PT1H" if automatic else "PT24H"
+    )
     ET.SubElement(repetition, "{" + NAMESPACE + "}StopAtDurationEnd").text = "false"
     item("t:Triggers/t:BootTrigger").insert(0, repetition)
     item("t:Actions/t:Exec/t:Command").text = plan["command"]

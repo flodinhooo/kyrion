@@ -29,6 +29,7 @@ def verify(worker: Path, work: Path) -> dict:
         shutil.copyfile(worker, root / name)
         os.chmod(root / name, 0o700)
         units = linux_plan(str(uuid.uuid4()), str(root), name)
+        units.update(linux_plan(str(uuid.uuid4()), str(root), name, automatic=True))
         for filename, text in units.items():
             (root / filename).write_text(text, encoding="utf-8")
         result = subprocess.run(
@@ -47,6 +48,7 @@ def verify(worker: Path, work: Path) -> dict:
             raise ValueError("E_TEST_SYSTEMD_SYNTAX")
     return {
         "actualSystemdDefinitionValidation": True,
+        "automaticHourlyDefinitionValidated": True,
         "workerSha256": digest,
         "unitsRegistered": False,
         "coldBootVerified": False,

@@ -66,6 +66,16 @@ try {
             $state.installationId -cnotmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or
             [IO.Path]::GetFullPath($state.rootPath) -ine $root -or $state.files.'installer.exe' -notmatch '^[a-f0-9]{64}$') { throw 'E_NATIVE_JOURNAL' }
         Assert-Protected $journalPath
+        $maintenanceSecrets=Join-Path $root '.maintenance-secrets'
+        if (Test-Path -LiteralPath $maintenanceSecrets) {
+            foreach ($item in @(Get-Item -LiteralPath $maintenanceSecrets -Force) + @(Get-ChildItem -LiteralPath $maintenanceSecrets -Force)) {
+                if ($item.FullName -ine $maintenanceSecrets -and ($item.PSIsContainer -or $item.Name -cne 'backup.key')) { throw 'E_NATIVE_MAINTENANCE_KEY_PATH' }
+                Assert-Protected $item.FullName
+                foreach ($rule in (Get-Acl -LiteralPath $item.FullName).GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])) {
+                    if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @('S-1-5-18','S-1-5-32-544')) { throw 'E_NATIVE_MAINTENANCE_KEY_ACL' }
+                }
+            }
+        }
         if ($Action -eq 'verify-recovery') {
             $recoveryPath=Join-Path $root 'recovery'
             $items=@(Get-Item -LiteralPath $recoveryPath -Force)
