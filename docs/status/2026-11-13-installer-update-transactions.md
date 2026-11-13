@@ -208,3 +208,26 @@ is never disabled. Five readiness regressions and the full Windows suite pass:
 The earlier concurrent-build run exceeded its limit; the successful repeat took
 370.554 seconds and was not confused with the timeout. Full update/recovery
 container evidence remains pending while the test release contract is corrected.
+
+The corrected full Compose fixture **passes**, including an intentionally legacy
+tagged source configuration: actual fresh/repeated setup, Core/Web TLS, local
+owner/BUSINESS Space, signed release validation, quiescent encrypted backup,
+PG template snapshot, real synthetic Flyway 49→50, interrupted activation,
+continuation, post-activation backup and acknowledged recovery to schema 49.
+Original knowledge, stable identity/login and immutable source pins are checked.
+All pre-existing developer containers remain present. Result:
+`build/compose-fixture-55a4e1d233e9410b9ba716ebd602af58/runs/7d469263e6d2413fa22b030a76f698c1/report.json`.
+Worker/container source snapshots are retained with that scoped fixture. The
+Core JAR is the `b117...` build above. The report explicitly records substituted
+loopback eligibility, systemd prerequisite observations and global foreign
+installation discovery. It does not establish systemd/SCM/boot or browser SSO
+acceptance. No TLS verification was weakened.
+
+Latest full suites: **304 Windows tests (three skips)** and **306 isolated Linux
+tests (16 skips, 294.234 seconds)**, Ruff passed. A separate actual Docker
+retention replay creates a labeled Caddy container twice through the real adapter,
+never executes its image, produces no anonymous volumes and removes only its own
+container. `build/docker-image-retention-before.json` is a passing observation,
+not a reproduced bug. Manual-only hosted Compose CI is prepared and YAML-checked;
+it has not been dispatched. Developer commands and isolation boundaries:
+[Compose transaction test](../testing/installer-compose-transactions.md).

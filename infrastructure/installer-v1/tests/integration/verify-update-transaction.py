@@ -137,7 +137,7 @@ def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
     }
     candidate = {
         "version": reviewed.manifest["release"],
-        "platform": "windows/amd64",
+        "platform": reviewed.manifest["architecture"],
         "minimumInstaller": "1.0.0",
         "fromSchemas": [49],
         "targetSchema": target_schema,
@@ -147,10 +147,19 @@ def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
         "manifestSha256": reviewed.manifest_sha256,
         "notesUrl": "https://synthetic.example.test/notes",
         "schemaDowngradeSupported": False,
-        "components": {
-            name: value["version"]
-            for name, value in reviewed.manifest["components"].items()
-        },
+        "components": (
+            {
+                name: value["version"]
+                for name, value in reviewed.manifest["components"].items()
+            }
+            if "components" in reviewed.manifest
+            else {
+                "core": reviewed.manifest["release"],
+                "web": reviewed.manifest["release"],
+                "postgres": "17.6-alpine",
+                "caddy": "2.10.2-alpine",
+            }
+        ),
     }
     index = {
         "formatVersion": 1,
@@ -175,10 +184,12 @@ def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
     installation.write(
         relative + "/trust-" + "b" * 12 + ".json", json.dumps(trust).encode()
     )
-    shutil.copyfile(
-        bundle / reviewed.manifest["artifact"]["name"],
-        installation.target / relative / reviewed.manifest["artifact"]["name"],
-    )
+    for artifact in reviewed.manifest.get(
+        "artifacts", [reviewed.manifest.get("artifact")]
+    ):
+        shutil.copyfile(
+            bundle / artifact["name"], installation.target / relative / artifact["name"]
+        )
     installation.state["updatePolicy"] = {
         "formatVersion": 1,
         "revision": str(uuid.uuid4()),
