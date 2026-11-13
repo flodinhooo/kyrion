@@ -161,12 +161,16 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             executable=target / "payload/runtime/installer/gnupg/bin/gpg.exe",
         )
         archive = inspect_archive(clear)
+        from native_runtime import installed_schema
+
         if (
             captured.get("restoreVerified") is not False
             or archive["metadata"]["verificationCounts"]["users"] != 1
             or archive["metadata"]["verificationCounts"]["spaces"] != 1
             or "secrets/credential.key" not in archive["files"]
             or any(name.startswith("payload/") for name in archive["files"])
+            or installed_schema(load_installation(target))
+            != str(archive["metadata"]["schema"])
         ):
             raise ValueError("E_TEST_NATIVE_BACKUP")
         clear.unlink()
@@ -185,6 +189,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "payloadOwnershipAndReadOnlyPolicyVerified": True,
             "nativeConsistentEncryptedCaptureVerified": True,
             "nativeFullRestoreVerified": False,
+            "nativeInstalledSchemaQueryVerified": True,
             "coldBootVerified": False,
             "networkIsolated": False,
             "runtimeManifestSha256": checked.manifest_sha256,

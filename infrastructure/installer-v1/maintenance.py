@@ -36,23 +36,28 @@ def check_updates(args) -> dict:
     reject_links(args.trust_store)
     with installation_lock(args.target):
         installation = load_installation(args.target)
-        runtime_checks(
-            installation.configuration["address"],
-            installation.configuration["hostname"],
-            fresh=False,
-        )
-        schema_text = installation.compose(
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-U",
-            "kyrion",
-            "-d",
-            "kyrion",
-            "-Atc",
-            "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
-        ).strip()
+        if installation.state.get("backend") == "windows-native":
+            from native_runtime import installed_schema
+
+            schema_text = installed_schema(installation)
+        else:
+            runtime_checks(
+                installation.configuration["address"],
+                installation.configuration["hostname"],
+                fresh=False,
+            )
+            schema_text = installation.compose(
+                "exec",
+                "-T",
+                "postgres",
+                "psql",
+                "-U",
+                "kyrion",
+                "-d",
+                "kyrion",
+                "-Atc",
+                "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
+            ).strip()
         if not schema_text.isdigit() or (
             args.installed_schema is not None
             and int(schema_text) != args.installed_schema
@@ -61,6 +66,15 @@ def check_updates(args) -> dict:
         trust = parse(args.trust_store.read_bytes())
         index = verify(fetch_document(args.feed), trust, "release-index")
         previous = installation.state.get("updateCheck", {})
+        index_digest = hashlib.sha256(
+            json.dumps(index, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if trust["epoch"] < previous.get("trustEpoch", 0):
+            raise ValueError("E_UPDATE_TRUST_ROLLBACK")
+        if index.get("sequence") == previous.get("sequence") and previous.get(
+            "indexSha256"
+        ) not in {None, index_digest}:
+            raise ValueError("E_UPDATE_INDEX_EQUIVOCATION")
         selected = compatible_release(
             index,
             args.installer_version,
@@ -78,6 +92,8 @@ def check_updates(args) -> dict:
             "available": selected is not None,
             "candidate": selected,
             "installedAutomatically": False,
+            "indexSha256": index_digest,
+            "trustEpoch": trust["epoch"],
         }
         installation.state["updateCheck"] = result
         installation.save()
@@ -358,6 +374,9 @@ def run(args, messages: dict[str, str]) -> int:
         if password != getpass.getpass(messages["repeatPassword"] + ": "):
             raise ValueError("E_PASSWORD_MISMATCH")
         print(json.dumps(native_backup(args.target, args.backup, password)))
+        return 0
+    if os.name == "nt" and args.check_updates:
+        print(json.dumps(check_updates(args)))
         return 0
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM: supported Linux root maintenance required")

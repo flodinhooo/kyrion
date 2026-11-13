@@ -1,6 +1,12 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_BACKUP_RUNTIME_REQUIRED": "maintenanceErrorRuntime",
+    "E_BACKUP_SERVICE_RECOVERY": "maintenanceErrorServices",
+    "E_UPDATE_INDEX_EQUIVOCATION": "updateErrorIndex",
+    "E_UPDATE_TRUST_ROLLBACK": "updateErrorIndex",
+    "E_UPDATE_SCHEMA": "updateErrorSchema",
+    "E_INSTALLER_UNRELEASED": "updateErrorDevelopment",
     "CENTRAL_UNAVAILABLE": "identityErrorUnavailable",
     "CENTRAL_DISABLED": "identityErrorConfiguration",
     "E_IDENTITY_NOT_CONFIGURED": "identityErrorConfiguration",

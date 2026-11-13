@@ -23,6 +23,26 @@ Python test archives use a development identity and cannot query a stable update
 feed by pretending to be a released installer. These builds remain unsigned
 development artifacts until the separate release and acceptance gates pass.
 
+## Native maintenance continuation
+
+For an owned native Windows installation, elevated terminal maintenance now
+supports `--target C:\ProgramData\Kyrion --backup E:\Backups\kyrion.gpg`.
+Choose an existing destination directory and a new output filename. The installer
+requests maintenance confirmation and a repeated backup passphrase. The runtime
+bundle must include the prepared, manifest-hashed portable GnuPG dependency;
+older development bundles without it fail before services are paused. Original
+keys/configuration are encrypted, and the passphrase is never a command argument.
+This is capture, not full restore or an automatic backup schedule.
+
+`--check-updates --target TARGET --feed FEED --trust-store TRUST_FILE` now
+supports both Linux and native Windows. FEED must be the actual signed release
+index and TRUST_FILE the reviewed public release trust store; no production
+channel is invented here. Native Windows reads its actual database schema with
+verified PostgreSQL tools. Stable-channel checks require an actually released
+installer build identity; current development artifacts are refused. The default
+check only reports a compatible candidate and never installs it. Background
+scheduling and update transactions remain open implementation work.
+
 ## Inventory and conflicts
 
 * `infrastructure/installer-v1`: Python standard library, shell, signed image

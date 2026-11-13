@@ -102,5 +102,10 @@
   "identitySetupPaused": "Account/Space setup is paused. Continue with --continue-setup on this installation; confirmed Core changes and local progress remain available.",
   "recoveryMaintenanceReview": "This host-console operation briefly stops Core and Web, leaving the database running. Core requests secrets privately. Open consumes the recovery code; complete changes the OWNER password and revokes sessions; rotate invalidates previous recovery codes. Keep newly displayed codes privately.",
   "haImportRoomReview": "Import this Home Assistant area as a Kyrion room now? Existing rooms with the same name are reused; no physical devices are paired or controlled. Room creation remains saved if you later cancel device selection.",
-  "haDisconnectReview": "Disconnect Home Assistant from this Space and remove its stored token and device selection? Home Assistant itself, physical pairings and other integrations remain unchanged."
+  "haDisconnectReview": "Disconnect Home Assistant from this Space and remove its stored token and device selection? Home Assistant itself, physical pairings and other integrations remain unchanged.",
+  "maintenanceErrorRuntime": "This installation lacks the verified backup runtime. Repair or extend it with a compatible signed runtime bundle before creating a backup. Existing data stays in place.",
+  "maintenanceErrorServices": "A service could not be restarted after backup capture. The installer retained its restart obligation. Resolve the Windows service error and run backup maintenance again; no successful backup is reported for this attempt.",
+  "updateErrorIndex": "The update index conflicts with the last verified index or uses an older trust epoch. Keep the installed version and obtain a corrected signed channel/trust configuration from the release maintainer.",
+  "updateErrorSchema": "The installed database schema could not be verified or does not match the requested compatibility check. Check the local PostgreSQL service and installation integrity before retrying.",
+  "updateErrorDevelopment": "This development installer cannot query a stable update channel as a released installer. Use isolated signed-channel tests until a supported installer is explicitly released."
 }

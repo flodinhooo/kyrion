@@ -197,6 +197,7 @@ def capture(installation, destination: Path, password: str) -> dict:
                 command(
                     "psql.exe",
                     [
+                        "-X",
                         "-Atc",
                         "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
                     ],
@@ -206,7 +207,7 @@ def capture(installation, destination: Path, password: str) -> dict:
             )
             if not schema.isdigit():
                 raise ValueError("E_BACKUP_SCHEMA")
-            counts = json.loads(command("psql.exe", ["-Atc", COUNTS_SQL]))
+            counts = json.loads(command("psql.exe", ["-X", "-Atc", COUNTS_SQL]))
             if (
                 not isinstance(counts, dict)
                 or set(counts) != {"users", "spaces", "audit"}

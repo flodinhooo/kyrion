@@ -13,7 +13,7 @@ import sys
 import uuid
 from pathlib import Path
 
-from bundle import unique_object
+from bundle import sha256, unique_object
 from crypto_support import certificate, private_tls_key
 from host import reject_links
 from native_bundle import authenticated_review, unpack
@@ -156,6 +156,69 @@ def pg_run(
     if result.returncode:
         raise ValueError("E_NATIVE_POSTGRES_OPERATION")
     return b""
+
+
+def installed_schema(installation: Installation) -> str:
+    """Read the real installed schema using only manifest-verified native tools."""
+    if os.name != "nt" or not ctypes.windll.shell32.IsUserAnAdmin():
+        raise ValueError("E_NATIVE_ELEVATION")
+    root = installation.target
+    permissions(root, "verify")
+    installation.verify_files()
+    config = read_configuration(root)
+    manifest_path = root / "native-manifest.json"
+    if manifest_path.stat().st_size > 8 * 1024**2:
+        raise ValueError("E_NATIVE_MANIFEST")
+    manifest = json.loads(manifest_path.read_bytes(), object_pairs_hook=unique_object)
+    executable = root / "payload/runtime/postgres/bin/psql.exe"
+    found = False
+    from native_bundle import safe_member
+
+    for item in manifest["files"]:
+        name = safe_member(item["path"])
+        if not name.startswith("runtime/postgres/"):
+            continue
+        path = root / "payload" / name
+        reject_links(path)
+        if (
+            not path.is_file()
+            or path.stat().st_size != item["bytes"]
+            or sha256(path) != item["sha256"]
+        ):
+            raise ValueError("E_NATIVE_INTEGRITY")
+        found = found or path == executable
+    if not found:
+        raise ValueError("E_NATIVE_INTEGRITY")
+    result = subprocess.run(
+        [
+            str(executable),
+            "-h",
+            "127.0.0.1",
+            "-p",
+            str(config["ports"]["postgres"]),
+            "-U",
+            "kyrion",
+            "-d",
+            "kyrion",
+            "--no-password",
+            "-X",
+            "-Atc",
+            "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'",
+        ],
+        cwd=root,
+        env=admin_environment(root),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        timeout=30,
+        check=False,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    if result.returncode or len(result.stdout) > 32:
+        raise ValueError("E_UPDATE_SCHEMA")
+    try:
+        return result.stdout.decode("ascii").strip()
+    except UnicodeDecodeError:
+        raise ValueError("E_UPDATE_SCHEMA") from None
 
 
 def configure(

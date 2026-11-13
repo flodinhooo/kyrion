@@ -230,3 +230,38 @@ The builder records sealed source hashes and verifies embedded version and
 actual frozen probe execution. It is unsigned/unpublished and is not platform
 installation acceptance. The portable GnuPG profile remains a separately
 assembled runtime-bundle dependency, not embedded in the standalone bootstrap.
+
+
+The matching isolated Debian 13 source run also passes 205 tests (16 platform
+skips). Linux AMD64 native development artifact `.2` is 14,161,461 bytes with
+SHA-256 `b3afeb60f58e30cf41341710f79f638a61777d34bec50ac8ff22e0a13290efe6`.
+Its frozen version/probe checks pass in Debian 13; this does not cover older
+libc distributions, ARM64/Pi or boot. Both `.2` artifacts precede the following
+update-check continuation and must not be described as containing that change.
+
+## Native signed update-check continuation
+
+Windows `--check-updates` now reads the actual schema through manifest-verified
+PostgreSQL tools and the existing protected local connection. It reuses the same
+signed release-index/compatibility policy as Linux; it does not install updates.
+Checks persist the verified index digest and trust epoch and refuse trust rollback
+or different signed content at the same index sequence. Five real Ed25519 tests
+with injected network/native SQL verify compatible selection, wrong signature,
+schema mismatch, sequence rollback/equivocation and trust-epoch rollback. The
+privileged service acceptance runner also compares its real native schema query
+with the captured backup schema; that runner is prepared but unexecuted.
+Installed scheduling, transactional update/migration/recovery and distributed
+barriers remain source work. No production feed/key is fabricated.
+
+
+Current update-check source verification: Windows 210 tests (one platform skip),
+isolated Debian 13 210 tests (16 platform skips); whole-installer Ruff lint and
+changed-file formatting pass. Later DE/EN maintenance/update guidance keys were
+also checked for complete translations. These are source/injected integration
+tests, not elevated native SQL/service or cold-boot acceptance. The requirement
+matrix remains open and has been updated for native capture and signed checks.
+The next maintenance work is full isolated application restore with explicit
+identity disposition, then installed update scheduling and transactional update/
+migration recovery. R23?R29/R35 distributed enrollment/Space selection and the
+remaining integration/runtime/voice/tutorial/UI scope also remain source work;
+none is delegated to user testing or silently removed.
