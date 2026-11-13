@@ -59,32 +59,49 @@ export function LinkedInstallations({
   useEffect(() => {
     if (!id) return;
     let active = true;
+    let inFlight: AbortController | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = 5000;
 
     async function load() {
-      if (document.visibilityState !== "visible") return;
+      if (!active || inFlight || document.visibilityState !== "visible") return;
+      clearTimeout(timer);
+      const controller = new AbortController();
+      inFlight = controller;
+      const timeout = setTimeout(() => controller.abort(), 15000);
       try {
         const response = await fetch("/api/account/installations", {
           cache: "no-store",
-          signal: AbortSignal.timeout(15000),
+          signal: controller.signal,
         });
         if (!response.ok) throw new Error();
         const result = readRows(await response.json());
         if (active) {
           setRows(result);
           setFailed(false);
+          retryDelay = 5000;
         }
       } catch {
-        if (active) setFailed(true);
+        if (active) {
+          setFailed(true);
+          retryDelay = Math.min(retryDelay * 2, 60000);
+        }
+      } finally {
+        clearTimeout(timeout);
+        inFlight = null;
+        if (active) timer = setTimeout(() => void load(), retryDelay);
       }
     }
 
     void load();
-    const timer = setInterval(() => void load(), 5000);
     window.addEventListener("focus", load);
+    document.addEventListener("visibilitychange", load);
     return () => {
       active = false;
-      clearInterval(timer);
+      clearTimeout(timer);
+      inFlight?.abort();
       window.removeEventListener("focus", load);
+      document.removeEventListener("visibilitychange", load);
     };
   }, [id]);
   const date = (v: string) =>

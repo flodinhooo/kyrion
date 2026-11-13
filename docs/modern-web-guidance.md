@@ -3,6 +3,9 @@
 Installed 2026-11-13 for `apps/web` and `apps/website`. Application code and
 behavior are unchanged by this integration. The initial task is an audit and
 proposal, not authorization to implement the proposed refactors.
+The owner later authorized MWG-01 through MWG-03; their bounded implementation
+and verification are recorded in the audit's implementation follow-up. MWG-04
+and broad modernization remain outside that authorization.
 
 ## Installation and precedence
 

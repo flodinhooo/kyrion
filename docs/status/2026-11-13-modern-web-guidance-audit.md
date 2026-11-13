@@ -128,3 +128,49 @@ were not changed. This audit includes source inspection, not a fresh multi-brows
 screen-reader, Lighthouse or physical-device acceptance run.
 
 Suggested order if authorized: MWG-01, MWG-02, MWG-03. Keep MWG-04 deferred.
+
+## Implementation follow-up: MWG-01 through MWG-03
+
+The owner subsequently authorized the first three fixes, retaining the account
+menu and Radix primitives. Those proposals are now implemented in source:
+
+- MWG-01 uses one explicit write attempt with a 15-second transport deadline,
+  guaranteed pending-state cleanup and an announced localized failure. A ref
+  prevents same-tick duplicate submissions. No automatic device-write retry or
+  Core authorization/confirmation change is introduced.
+- MWG-02 uses one outstanding read per mounted account view, completion-based
+  scheduling, 10–60-second exponential failure backoff (5 seconds after success),
+  cleanup aborts and visible/focus refresh. Hidden tabs start no new reads. Old
+  session results cannot update the unmounted account view. Authoritative session
+  validation remains independent and unchanged.
+- MWG-03 clears only an existing, now-resolved text-field error on input, using
+  the same payload builder and `validateContact` rules as submit. It clears
+  `aria-invalid` and the associated description together, without newly validating
+  untouched fields or changing server validation, consent, honeypot or mail behavior.
+
+Changed production files: local `device-control-dialog.tsx` plus its small
+`features/integrations/device-command.ts` transport-lifecycle helper; Website
+`contact-form.tsx` and `linked-installations.tsx`. No new dependencies, menu rewrite
+or Radix primitive replacement. Formatting expands the previously compressed
+device component but preserves its controls and existing routes.
+
+Guidance applied: `forms` says to "clear errors on `input` once resolved";
+`accessibility` says "Announce dynamic errors via live regions". The installed
+guides were consulted alongside the pinned CLI searches; rendering-specific
+content-visibility mechanisms were not added to network polling.
+
+Verification covers rejected network requests, HTTP failure, malformed JSON and
+schema responses, deadline cancellation, pending reset and a later explicit
+successful device attempt. Browser tests cover slow reads plus focus storms,
+hidden/resumed visibility, timeout/backoff recovery, session-change abort and
+old-user isolation, DE/EN field correction, unchanged untouched-field timing,
+revalidation on submit and correction of server-returned field errors without
+another POST. All transport/device/mail fixtures are synthetic; no household
+device command or real contact email is sent. Local Web's 282 tests, types, lint
+and isolated production build pass. Website production build, types, lint and
+formatting pass; its final suite passes 56 tests with the separate opt-in database
+test intentionally skipped. Existing `full-identity/flows.spec.ts` received only
+formatter output to resolve a pre-existing formatting-check failure. Broader physical-device,
+screen-reader and multi-browser acceptance is not claimed by these tests.
+
+MWG-04 remains deferred. No production deployment is part of this follow-up.

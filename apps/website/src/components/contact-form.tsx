@@ -91,12 +91,9 @@ export function ContactForm({ t, locale }: { t: Copy; locale: Locale }) {
     };
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (inFlight.current || sent) return;
-    const form = event.currentTarget;
+  function formPayload(form: HTMLFormElement) {
     const data = new FormData(form);
-    const result = validateContact({
+    return {
       name: data.get("name"),
       email: data.get("email"),
       company: data.get("company"),
@@ -108,7 +105,37 @@ export function ContactForm({ t, locale }: { t: Copy; locale: Locale }) {
       experience: data.get("experience") ?? "",
       ecosystems: selected,
       website: data.get("website") ?? "",
+    };
+  }
+
+  function clearResolvedError(event: FormEvent<HTMLFormElement>) {
+    const target = event.target;
+    if (!(
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
+    ))
+      return;
+    const field = (
+      ["name", "email", "subject", "message", "company", "country"] as const
+    ).find((name) => name === target.name);
+    if (!field || !errors[field]) return;
+    const result = validateContact(formPayload(event.currentTarget));
+    if (!result.ok && result.fieldErrors[field]) return;
+    setErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+      return next;
     });
+    if (Object.keys(errors).length === 1)
+      setFailure((current) => (current === "CONTACT_INVALID" ? null : current));
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (inFlight.current || sent) return;
+    const form = event.currentTarget;
+    const result = validateContact(formPayload(form));
     if (!result.ok) {
       setErrors(result.fieldErrors);
       setFailure(result.code);
@@ -180,6 +207,7 @@ export function ContactForm({ t, locale }: { t: Copy; locale: Locale }) {
       method="post"
       action="/api/contact"
       onSubmit={submit}
+      onInput={clearResolvedError}
       noValidate
       aria-label={t.formTitle}
       aria-busy={pending}

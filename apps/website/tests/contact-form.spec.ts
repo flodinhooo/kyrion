@@ -15,6 +15,34 @@ async function fillRequired(page: Page) {
   await page.getByRole("checkbox", { name: /I agree that/ }).check();
 }
 
+test("server field errors clear only after valid correction without another send", async ({
+  page,
+}) => {
+  let posts = 0;
+  await page.route("**/api/contact", async (route) => {
+    posts++;
+    await route.fulfill({
+      status: 400,
+      json: {
+        ok: false,
+        code: "CONTACT_INVALID",
+        fieldErrors: { email: "email" },
+      },
+    });
+  });
+  await page.goto("/en/contact");
+  await fillRequired(page);
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const email = page.locator("#contact-email");
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await email.fill("still-invalid");
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await email.fill("corrected@example.com");
+  await expect(email).toHaveAttribute("aria-invalid", "false");
+  await expect(page.locator("#contact-email-error")).toHaveCount(0);
+  expect(posts).toBe(1);
+});
+
 test("contact validates required fields and invalid email inline", async ({
   page,
 }) => {
