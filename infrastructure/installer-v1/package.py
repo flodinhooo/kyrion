@@ -16,6 +16,7 @@ FILES = (
     "crypto_support.py",
     "native_bundle.py",
     "native_runtime.py",
+    "native_backup.py",
     "native_staging.py",
     "native_roles.py",
     "native_recovery.py",

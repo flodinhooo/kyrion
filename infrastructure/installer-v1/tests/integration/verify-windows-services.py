@@ -144,6 +144,35 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
                 raise ValueError("E_TEST_SETUP_REOPENED")
         finally:
             client.close()
+        # Actual privileged backup capture is restricted to this fresh synthetic
+        # installation. It is not a full application restore/identity acceptance.
+        from native_backup import backup
+        from recovery import crypto, inspect_archive
+
+        encrypted = target / "service-backup.gpg"
+        clear = target / "service-backup-check.tar"
+        recovery_password = "Synthetic-service-backup-password-123456"
+        captured = backup(target, encrypted, recovery_password)
+        crypto(
+            encrypted,
+            clear,
+            recovery_password,
+            True,
+            executable=target / "payload/runtime/installer/gnupg/bin/gpg.exe",
+        )
+        archive = inspect_archive(clear)
+        if (
+            captured.get("restoreVerified") is not False
+            or archive["metadata"]["verificationCounts"]["users"] != 1
+            or archive["metadata"]["verificationCounts"]["spaces"] != 1
+            or "secrets/credential.key" not in archive["files"]
+            or any(name.startswith("payload/") for name in archive["files"])
+        ):
+            raise ValueError("E_TEST_NATIVE_BACKUP")
+        clear.unlink()
+        encrypted.unlink()
+        if load_installation(target).state.get("backupServiceRecovery") is not None:
+            raise ValueError("E_TEST_NATIVE_BACKUP_SERVICE_RECOVERY")
         return {
             "actualWindowsServices": True,
             "dedicatedVirtualAccounts": True,
@@ -154,6 +183,8 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "serviceRestartLogin": True,
             "autostartConfigurationVerified": True,
             "payloadOwnershipAndReadOnlyPolicyVerified": True,
+            "nativeConsistentEncryptedCaptureVerified": True,
+            "nativeFullRestoreVerified": False,
             "coldBootVerified": False,
             "networkIsolated": False,
             "runtimeManifestSha256": checked.manifest_sha256,

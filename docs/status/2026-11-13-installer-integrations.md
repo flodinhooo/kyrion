@@ -192,3 +192,41 @@ Windows payload ACL provisioning now explicitly sets protected BA ownership and
 service read access on every payload object and verifies it before starting
 services. PowerShell parsing and source tests pass; actual elevated ACL/SCM and
 cold-boot acceptance remain unperformed. No host services were registered.
+
+## Native capture implementation continuation
+
+`native_backup.py`, called by Windows `--backup`, now validates owned private
+installation state and manifest-hashed PostgreSQL/GnuPG files before execution.
+It validates all service identities before stopping anything, refuses transitional
+or inconsistent dependency states, keeps PostgreSQL running for a logical custom
+dump and pauses only initially running Core/Web/Caddy services. A durable journal
+records restart obligations before the first stop; an interrupted operation is
+reconciled on its next backup invocation. Failures attempt every required restart
+and retain an unresolved obligation rather than reporting success.
+
+The archive includes original keys, native/identity configuration, certificates,
+knowledge and available host recovery files. It excludes public runtime payloads
+and live database files. Plaintext dump/archive files are created with the
+protected journal's owner/DACL before writing. Services resume before encryption;
+publication uses a no-overwrite link. Restore remains explicitly unverified.
+
+Eight injected-SCM tests prove ordering, timeout/error recovery, interrupted
+journal reconciliation and real archive coverage with synthetic SQL/tool outputs.
+The actual GnuPG runtime test remains separate. The elevated Windows service
+acceptance runner now also performs capture/decrypt/inspection on its disposable
+installation; it has not been run here. The full Windows and isolated Debian
+source suites each passed 203 tests before two additional journal regressions;
+those regressions and the updated package test pass separately. The final
+Windows source suite passes 205 tests (one platform skip). No actual native
+service capture, full application restore or host reboot is claimed. Backup
+scheduling and full restore/identity disposition remain source work.
+
+
+A new standalone Windows development artifact includes this capture module:
+`build/native-installer/kyrion-installer-0.0.0-dev.20261113.2-windows-amd64.exe`,
+12,355,544 bytes, SHA-256
+`0293fe21f0b23b427070ed83a44000e77658becd44281e0c8d59ae2c2db3b617`.
+The builder records sealed source hashes and verifies embedded version and
+actual frozen probe execution. It is unsigned/unpublished and is not platform
+installation acceptance. The portable GnuPG profile remains a separately
+assembled runtime-bundle dependency, not embedded in the standalone bootstrap.

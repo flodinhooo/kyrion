@@ -20,7 +20,7 @@ from pathlib import Path, PurePosixPath
 
 from bundle import sha256, unique_object
 from host import reject_links, runtime_checks
-from runtime import Installation, atomic_json, execute, installation_lock
+from runtime import Installation, execute, installation_lock
 
 MAX_BACKUP = 128 * 1024**3
 MAX_FILES = 100_000
@@ -162,7 +162,13 @@ def file_record(path: Path) -> dict:
     return {"bytes": after.st_size, "sha256": digest, "mtimeNs": after.st_mtime_ns}
 
 
-def create_archive(sources: dict[str, Path], metadata: dict, output: Path) -> dict:
+def create_archive(
+    sources: dict[str, Path],
+    metadata: dict,
+    output: Path,
+    *,
+    security_source: Path | None = None,
+) -> dict:
     if output.exists() or len(sources) > MAX_FILES:
         raise ValueError("E_BACKUP_TARGET")
     records = {name: file_record(path) for name, path in sources.items()}
@@ -174,20 +180,31 @@ def create_archive(sources: dict[str, Path], metadata: dict, output: Path) -> di
         "metadata": metadata,
         "files": records,
     }
-    with tempfile.TemporaryDirectory(prefix="kyrion-manifest-") as directory:
-        manifest_path = Path(directory) / "backup.json"
-        atomic_json(manifest_path, manifest)
-        with (
-            output.open("xb") as stream,
-            tarfile.open(fileobj=stream, mode="w") as archive,
-        ):
-            archive.add(manifest_path, arcname="backup.json", recursive=False)
-            for name, path in sources.items():
-                if not allowed_member(name):
-                    raise ValueError("E_BACKUP_PATH")
-                archive.add(path, arcname=name, recursive=False)
-                if file_record(path) != records[name]:
-                    raise ValueError("E_BACKUP_SOURCE_CHANGED")
+    # The native maintenance process must set owner/DACL at creation, before
+    # any original keys are written. A private parent alone does not set owner.
+    if security_source is not None:
+        from windows_security import open_secured_file
+
+        descriptor = open_secured_file(output, security_source)
+    else:
+        descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with (
+        os.fdopen(descriptor, "wb") as stream,
+        tarfile.open(fileobj=stream, mode="w") as archive,
+    ):
+        import io
+
+        raw = json.dumps(manifest, sort_keys=True).encode("utf-8")
+        header = tarfile.TarInfo("backup.json")
+        header.size = len(raw)
+        header.mode = 0o600
+        archive.addfile(header, io.BytesIO(raw))
+        for name, path in sources.items():
+            if not allowed_member(name):
+                raise ValueError("E_BACKUP_PATH")
+            archive.add(path, arcname=name, recursive=False)
+            if file_record(path) != records[name]:
+                raise ValueError("E_BACKUP_SOURCE_CHANGED")
     return manifest
 
 
@@ -208,9 +225,19 @@ def allowed_member(name: str) -> bool:
                 "compose.yml",
                 ".env",
                 "data/Caddyfile",
+                "native-runtime.json",
+                "identity-provider.json",
+                "core-cert.pem",
+                "web-cert.pem",
             }
             or name.startswith(
-                ("secrets/", "data/tls/", "data/knowledge/", "recovery/")
+                (
+                    "secrets/",
+                    "data/tls/",
+                    "data/web-tls/",
+                    "data/knowledge/",
+                    "recovery/",
+                )
             )
         )
     )

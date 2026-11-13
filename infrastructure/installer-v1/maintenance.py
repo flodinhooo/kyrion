@@ -351,6 +351,14 @@ def run(args, messages: dict[str, str]) -> int:
                 raise ValueError("E_CONFIRMATION")
             print(json.dumps(uninstall_native(args.target, purge)))
         return 0
+    if os.name == "nt" and args.backup:
+        from native_backup import backup as native_backup
+
+        password = getpass.getpass(messages["backupPassword"] + ": ")
+        if password != getpass.getpass(messages["repeatPassword"] + ": "):
+            raise ValueError("E_PASSWORD_MISMATCH")
+        print(json.dumps(native_backup(args.target, args.backup, password)))
+        return 0
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM: supported Linux root maintenance required")
     if args.check_updates:
