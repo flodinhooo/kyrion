@@ -68,7 +68,7 @@ class OperationalRestoreDisposition(
     private val verifier: ActivityIntegrityVerifier,
     private val activity: ActivityService,
 ) {
-    fun apply(permit: OperationalTransferPermit) {
+    fun apply(permit: OperationalTransferPermit, recoveryDirectory: Path? = null) {
         transactions.executeWithoutResult {
             require(jdbc.sql("SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'").query(Int::class.java).single() == 49)
             val current = jdbc.sql("SELECT id FROM installation_identity WHERE singleton FOR UPDATE").query(UUID::class.java).single()
@@ -77,6 +77,7 @@ class OperationalRestoreDisposition(
             val scopes = jdbc.sql("SELECT chain_scope FROM activity_integrity_chain UNION SELECT DISTINCT chain_scope FROM activity_event WHERE chain_scope IS NOT NULL").query(String::class.java).list()
             require(scopes.all { it != null && verifier.verify(it).valid })
             if (current == permit.target) return@executeWithoutResult
+            transferRecoveryHostKey(permit, requireNotNull(current), requireNotNull(spaces.single()), recoveryDirectory)
             listOf(
                 "DELETE FROM auth_session",
                 "DELETE FROM space_recovery_session",
@@ -99,6 +100,22 @@ class OperationalRestoreDisposition(
             )
         }
     }
+
+    private fun transferRecoveryHostKey(permit: OperationalTransferPermit, originalIdentity: UUID, space: UUID, directory: Path?) {
+        val existing = jdbc.sql("SELECT host_key_hash FROM space_recovery_material WHERE space_id=:space FOR UPDATE")
+            .param("space", space).query(String::class.java).optional().orElse(null) ?: return
+        require(directory != null && Files.isDirectory(directory, NOFOLLOW_LINKS))
+        val host = ProtectedSecurityFile.read(directory.resolve("$space.host-key"))
+        // Keep exactly the established LocalOwnerRecovery token namespace.
+        val tokens = SessionTokenService()
+        // The restored Core identity may differ from the installer's source
+        // host UUID. Recovery tokens bind the locked database identity.
+        val sourceHash = tokens.hash("host:$originalIdentity:$space:$host")
+        require(MessageDigest.isEqual(existing.toByteArray(), sourceHash.toByteArray()))
+        jdbc.sql("UPDATE space_recovery_material SET host_key_hash=:hash WHERE space_id=:space")
+            .param("hash", tokens.hash("host:${permit.target}:$space:$host"))
+            .param("space", space).update()
+    }
 }
 
 /** Boot PropertiesLauncher entrypoint; does not create Spring HTTP/scheduler beans. */
@@ -106,7 +123,7 @@ object OperationalRestoreAdmin {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.contentEquals(arrayOf("--capability"))) {
-            println("{\"formatVersion\":1,\"coreSchema\":49,\"coreOwnedDisposition\":true}")
+            println("{\"formatVersion\":1,\"coreSchema\":49,\"coreOwnedDisposition\":true,\"recoveryKeyTransfer\":true}")
             return
         }
         try {
@@ -126,7 +143,9 @@ object OperationalRestoreAdmin {
             val transactions = TransactionTemplate(DataSourceTransactionManager(source))
             val integrity = ActivityIntegrity(auditPath, false)
             OperationalRestoreDisposition(jdbc, transactions, ActivityIntegrityVerifier(jdbc, integrity),
-                ActivityService(JdbcActivityEventRepository(jdbc, transactions, integrity))).apply(permit)
+                ActivityService(JdbcActivityEventRepository(jdbc, transactions, integrity))).apply(
+                    permit, System.getenv("KYRION_RESTORE_RECOVERY_DIR")?.let { Path.of(it) },
+                )
         } catch (_: Exception) {
             System.err.println("E_RESTORE_SECURITY")
             exitProcess(2)

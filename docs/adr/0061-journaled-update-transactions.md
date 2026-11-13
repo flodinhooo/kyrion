@@ -49,10 +49,17 @@ This first coordinator is single-host. Distributed authority/version barriers an
 automatic-window policy must be implemented separately before enabling unattended
 distributed updates; do not report a successful single-host update as that proof.
 
+Compose transactions also bind the root-owned Unix socket paths and Docker
+daemon ID before staging. Resume and recovery refuse a different daemon, even
+when another local context has a similarly named Compose project. A daemon
+restart may replace its socket inode; that inode is not the stable identity.
+
 ## References
 
 [Docker restart policy](https://docs.docker.com/engine/containers/start-containers-automatically/)
 documents persistence of manual stops with unless-stopped.
+[Docker system info](https://docs.docker.com/reference/cli/docker/system/info/)
+documents the daemon ID and machine-readable format.
 [PostgreSQL CREATE DATABASE](https://www.postgresql.org/docs/17/sql-createdatabase.html)
 and [ALTER DATABASE](https://www.postgresql.org/docs/17/sql-alterdatabase.html)
 define template cloning, connection exclusion and database renaming.

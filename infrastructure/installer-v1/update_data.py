@@ -11,7 +11,7 @@ import uuid
 from bundle import sha256
 from host import reject_links
 from recovery import allowed_member
-from restore_material import private_output
+from restore_material import data_owner, private_output
 
 
 def reconcile_pending(installation):
@@ -68,6 +68,7 @@ def restore(installation, archive, manifest):
                     raise ValueError("E_UPDATE_CHANGED")
                 reconcile_pending(installation)
             if actual == record["sha256"]:
+                data_owner(installation, name, target)
                 if value.get("pendingData", {}).get("name") == name:
                     value.pop("pendingData")
                     installation.save()
@@ -115,8 +116,7 @@ def restore(installation, archive, manifest):
                     os.fsync(output.fileno())
                 if sha256(temporary) != record["sha256"]:
                     raise ValueError("E_BACKUP_INTEGRITY")
-                if os.name == "posix" and name.startswith("data/knowledge/"):
-                    os.chown(temporary, 10001, 10001)
+                data_owner(installation, name, temporary)
                 os.replace(temporary, target)
                 if name in installation.state["files"]:
                     installation.state["files"][name] = record["sha256"]

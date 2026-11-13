@@ -14,6 +14,41 @@ from update_compose import Compose
 
 
 class ComposeUpdateImages(unittest.TestCase):
+    def test_resume_refuses_different_local_daemon_before_container_operations(self):
+        adapter = object.__new__(Compose)
+        adapter.installation = SimpleNamespace(
+            state={
+                "updateTransaction": {
+                    "original": {
+                        "daemon": {
+                            "id": "original-daemon-id",
+                            "sockets": ["/run/docker.sock"],
+                        }
+                    }
+                }
+            }
+        )
+        calls = []
+
+        def run(*args):
+            calls.append(args)
+            return b"different-daemon-id\n"
+
+        adapter.run = run
+        with self.assertRaisesRegex(ValueError, "E_UPDATE_DOCKER_CHANGED"):
+            adapter.bind_daemon(["/run/docker.sock"])
+        self.assertEqual(calls, [("info", "--format", "{{.ID}}")])
+
+    def test_same_daemon_accepts_socket_recreation_without_inode_binding(self):
+        adapter = object.__new__(Compose)
+        expected = {"id": "original-daemon-id", "sockets": ["/run/docker.sock"]}
+        adapter.installation = SimpleNamespace(
+            state={"updateTransaction": {"original": {"daemon": expected}}}
+        )
+        adapter.run = lambda *_: b"original-daemon-id\n"
+        adapter.bind_daemon(["/run/docker.sock"])
+        self.assertEqual(adapter.daemon, expected)
+
     def test_untagged_loading_preserves_layers_and_foreign_tag_inputs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

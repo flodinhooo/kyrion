@@ -190,6 +190,24 @@ class UpdateTransactions(unittest.TestCase):
             before["id"], load_installation(self.root).state["updateTransaction"]["id"]
         )
 
+    def test_unfinished_account_setup_is_rejected_before_writers_stop(self):
+        import hashlib
+
+        with (
+            patch.object(
+                self.adapter,
+                "identity",
+                return_value={
+                    "users": hashlib.sha256(b"").hexdigest(),
+                    "spaces": hashlib.sha256(b"").hexdigest(),
+                },
+            ),
+            self.assertRaisesRegex(ValueError, "E_UPDATE_SETUP_REQUIRED"),
+        ):
+            self.apply()
+        self.assertEqual(self.events, [])
+        self.assertNotIn("updateTransaction", load_installation(self.root).state)
+
     def test_failed_migration_keeps_fence_and_resumes_without_duplicate_backup(self):
         self.migration_failure = True
         with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):

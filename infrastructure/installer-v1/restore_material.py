@@ -49,6 +49,27 @@ def private_output(path: Path, security_source: Path):
     return os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb")
 
 
+def data_owner(installation, name: str, path: Path) -> None:
+    """Host recovery tooling runs as the same Linux UID as Core, not root."""
+    if os.name != "posix":
+        return
+    if name.startswith("data/knowledge/"):
+        os.chown(path, 10001, 10001)
+    elif name.startswith("recovery/") and name.endswith(".host-key"):
+        filename = name.removeprefix("recovery/")
+        try:
+            identifier = str(uuid.UUID(filename.removesuffix(".host-key")))
+        except ValueError:
+            raise ValueError("E_RESTORE_MATERIAL") from None
+        if filename != identifier + ".host-key":
+            raise ValueError("E_RESTORE_MATERIAL")
+        directory = installation.target / "recovery"
+        reject_links(directory)
+        reject_links(path)
+        os.chown(directory, 10001, 10001)
+        os.chown(path, 10001, 10001)
+
+
 def reconcile_managed(installation) -> None:
     for name, operation in installation.state.get("restoreFileOperations", {}).items():
         if (
@@ -150,8 +171,7 @@ def restore_keys_and_data(installation, archive: Path, manifest: dict) -> None:
             raise ValueError("E_RESTORE_REQUEST_CONFLICT")
         if temporary.exists():
             if not path.exists() and sha256(temporary) == pending["sha256"]:
-                if os.name == "posix" and pending["name"].startswith("data/knowledge/"):
-                    os.chown(temporary, 10001, 10001)
+                data_owner(installation, pending["name"], temporary)
                 os.replace(temporary, path)
             else:
                 # Only the exact journalled temporary path is removed. Never
@@ -169,6 +189,7 @@ def restore_keys_and_data(installation, archive: Path, manifest: dict) -> None:
             if path.exists():
                 if sha256(path) != record["sha256"]:
                     raise ValueError("E_RESTORE_TARGET_CHANGED")
+                data_owner(installation, name, path)
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
             reject_links(path.parent)
@@ -196,8 +217,7 @@ def restore_keys_and_data(installation, archive: Path, manifest: dict) -> None:
                     os.fsync(output.fileno())
                 if sha256(temporary) != record["sha256"]:
                     raise ValueError("E_BACKUP_INTEGRITY")
-                if os.name == "posix" and name.startswith("data/knowledge/"):
-                    os.chown(temporary, 10001, 10001)
+                data_owner(installation, name, temporary)
                 os.replace(temporary, path)
                 installation.state.pop("restoreDataPending")
                 installation.save()

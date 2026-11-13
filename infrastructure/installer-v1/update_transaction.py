@@ -129,6 +129,14 @@ def apply(target: Path, password: str, *, review, automatic=None) -> dict:
         original = platform.original()
         original["schema"] = schema
         original["identity"] = platform.identity()
+        empty_identity_set = hashlib.sha256(b"").hexdigest()
+        if any(
+            original["identity"].get(name) == empty_identity_set
+            for name in ("users", "spaces")
+        ):
+            # The Core audit transition needs an established account/Space.
+            # Refuse an unfinished bootstrap before stopping any application.
+            raise ValueError("E_UPDATE_SETUP_REQUIRED")
         knowledge_bytes = 0
         from host import reject_links
 

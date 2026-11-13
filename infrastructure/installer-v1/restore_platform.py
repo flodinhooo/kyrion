@@ -81,6 +81,32 @@ class Native:
                     not in archive.namelist()
                 ):
                     raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
+            result = subprocess.run(
+                [
+                    str(self.root / "payload/runtime/java/bin/java.exe"),
+                    "-Dloader.main=" + CORE_MAIN,
+                    "-cp",
+                    str(self.root / "payload/app/core/core-runtime.jar"),
+                    PROPERTIES_LAUNCHER,
+                    "--capability",
+                ],
+                cwd=self.root,
+                env=self.environment,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=30,
+                check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if result.returncode or len(result.stdout) > 4096:
+                raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
+            if json.loads(result.stdout, object_pairs_hook=unique_object) != {
+                "formatVersion": 1,
+                "coreSchema": 49,
+                "coreOwnedDisposition": True,
+                "recoveryKeyTransfer": True,
+            }:
+                raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
 
     def command(self, sql: str, *, stdin=None, database="kyrion") -> bytes:
         result = subprocess.run(
@@ -177,6 +203,10 @@ class Native:
         environment["KYRION_RESTORE_TARGET_ID"] = self.installation.state[
             "installationId"
         ]
+        recovery = self.root / "recovery"
+        reject_links(recovery)
+        if recovery.is_dir():
+            environment["KYRION_RESTORE_RECOVERY_DIR"] = str(recovery)
         with (self.root / "restore-admin.log").open("ab") as log:
             result = subprocess.run(
                 [
@@ -238,6 +268,7 @@ class Compose:
             "formatVersion": 1,
             "coreSchema": 49,
             "coreOwnedDisposition": True,
+            "recoveryKeyTransfer": True,
         }:
             raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
 
@@ -313,6 +344,18 @@ class Compose:
 
     def apply_disposition(self, receipt: Path) -> None:
         reject_links(receipt)
+        recovery = self.root / "recovery"
+        reject_links(recovery)
+        recovery_flags = (
+            [
+                "--volume",
+                str(recovery) + ":/run/kyrion-restore-recovery:ro",
+                "-e",
+                "KYRION_RESTORE_RECOVERY_DIR=/run/kyrion-restore-recovery",
+            ]
+            if recovery.is_dir()
+            else []
+        )
         if ":" in str(receipt) or not receipt.resolve().is_relative_to(
             self.root.resolve()
         ):
@@ -343,6 +386,7 @@ class Compose:
                 str(receipt) + ":/run/kyrion-restore-transfer.json:ro",
                 "-e",
                 "KYRION_RESTORE_TARGET_ID=" + self.installation.state["installationId"],
+                *recovery_flags,
                 "core",
                 "-Dloader.main=" + CORE_MAIN,
                 "-cp",

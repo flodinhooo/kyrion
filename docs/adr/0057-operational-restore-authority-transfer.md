@@ -68,4 +68,13 @@ Legacy dump-only archives retain isolated verification; they require a new
 portable capture before this activation path. This is a compatibility boundary,
 not a claim that legacy arbitrary SQL has been made safe by partial restoration.
 
+Configured local recovery material is installation-bound. During the same
+authenticated Core disposition transaction, verify the restored protected host
+key against its source-installation hash and rebind only its host hash to the new
+installation identity. Keep old recovery codes/sessions invalid. A configured
+recovery row without its matching protected key blocks activation; never silently
+replace it or weaken ordinary recovery authentication. The Linux helper gets only
+a read-only recovery-directory mount. Validate this with an actual interactive
+host-tool provision/restore/rotate test, not merely copied file bytes.
+
 Reference reviewed: [PostgreSQL 17 pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html).

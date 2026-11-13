@@ -54,6 +54,7 @@ class Compose:
         endpoints = [info[0]["Endpoints"]["docker"]["Host"]]
         if self.env.get("DOCKER_HOST"):
             endpoints.append(self.env["DOCKER_HOST"])
+        sockets = set()
         for endpoint in endpoints:
             parsed = urlsplit(endpoint)
             if (
@@ -63,12 +64,29 @@ class Compose:
             ):
                 raise ValueError("E_UPDATE_DOCKER_LOCAL_REQUIRED")
             socket = Path(parsed.path).resolve()
+            for parent in socket.parents:
+                if parent.stat().st_uid != 0 or parent.stat().st_mode & 0o022:
+                    raise ValueError("E_UPDATE_DOCKER_OWNER")
             if (
                 not stat.S_ISSOCK(socket.stat().st_mode)
                 or socket.stat().st_uid != 0
                 or socket.stat().st_mode & 0o002
             ):
                 raise ValueError("E_UPDATE_DOCKER_LOCAL_REQUIRED")
+            sockets.add(str(socket))
+        self.bind_daemon(sorted(sockets))
+
+    def bind_daemon(self, sockets: list[str]) -> None:
+        identifier = self.run("info", "--format", "{{.ID}}").decode().strip()
+        if not re.fullmatch(r"[A-Za-z0-9:._-]{8,128}", identifier):
+            raise ValueError("E_UPDATE_DOCKER_IDENTITY")
+        self.daemon = {"id": identifier, "sockets": sockets}
+        previous = self.installation.state.get("updateTransaction")
+        if (
+            previous is not None
+            and previous.get("original", {}).get("daemon") != self.daemon
+        ):
+            raise ValueError("E_UPDATE_DOCKER_CHANGED")
 
     def run(self, *arguments, output=None, timeout=180) -> bytes:
         result = subprocess.run(
@@ -160,6 +178,7 @@ class Compose:
                 raise ValueError("E_UPDATE_DATABASE_TARGET")
         return {
             "images": images,
+            "daemon": self.daemon,
             "postgresVersion": int(self.query("SHOW server_version_num")),
             "databaseBytes": int(self.query("SELECT pg_database_size('kyrion')")),
         }

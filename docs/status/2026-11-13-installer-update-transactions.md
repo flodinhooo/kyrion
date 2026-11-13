@@ -103,6 +103,35 @@ predate the new Core/update fence and must be rebuilt before native acceptance.
 
 ## Continue independently
 
+Subsequent hardening binds Compose resume/recovery to the same root-owned Unix
+socket paths and Docker daemon ID, and refuses updates before quiescence when
+account/Space bootstrap is unfinished. Four injected-Docker/real-archive tests
+and the journal preflight test pass. Linux restored recovery host keys now retain
+the UID/directory access expected by the existing host tool, including replay.
+Actual root file-owner tests pass; Windows retains its separate protected ACL.
+
+An added real Unix PTY test exposed a deeper restore issue: recovery host hashes
+also bind the *Core database installation identity*, which is not necessarily the
+installer's source-host UUID. Core now verifies the original protected key against
+the locked restored Core identity, rebinds its host hash transactionally to the
+new identity, and still invalidates old codes/sessions. Configured missing or
+wrong host keys block activation. Runtime capability checks require this feature;
+the Linux helper mounts the restored key directory read-only. The extended actual
+Core/PG/GPG restore now passes in the isolated Linux namespace: real interactive
+provision, backup, interrupted restore, wrong-host-hash refusal with unchanged
+identity, and real interactive code rotation on the target. Passwords/codes and
+child console output remain in memory and are never written to reports.
+
+New tested Core JAR SHA-256:
+`b117623a942a9c8aa95f5b6dc95ec343896ef273a3cb14882c8db18ff196693a`.
+Core compiles and seven targeted security tests pass. Latest Windows installer
+suite: 281 tests, three skips. Linux suite before the final capability extension:
+283 tests, 16 skips; the extended real Linux restore subsequently passed.
+The separately assembled `.10` full Windows runtime bundle predates this Core
+fix and is superseded; rebuild compatible installers, service host and full
+runtime together before native acceptance. No intermediate development artifact
+is a published or accepted release.
+
 Complete actual OS lifecycle/container acceptance and distributed update barriers.
 The full requirements matrix remains authoritative for all other open installer
 work. The `.7` installers contain the transaction, but full runtime bundles still

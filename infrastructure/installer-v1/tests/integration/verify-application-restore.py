@@ -180,6 +180,9 @@ class CoreProcess:
         environment["KYRION_RESTORE_TARGET_ID"] = self.installation.state[
             "installationId"
         ]
+        recovery = self.root / "recovery"
+        if recovery.is_dir():
+            environment["KYRION_RESTORE_RECOVERY_DIR"] = str(recovery)
         with (self.root / "restore-cli.log").open("ab") as log:
             result = subprocess.run(
                 [
@@ -235,6 +238,70 @@ def keys(installation):
     (installation.target / "data/knowledge").mkdir(parents=True)
 
 
+def recovery_console(core, operation, space, key, secret):
+    """Actual Unix PTY; never persist/print passwords, codes or child output."""
+    import pty
+    import select
+    import signal
+
+    command = [
+        str(core.java),
+        "-Dloader.main=dev.kyrion.core.security.LocalSecurityAdmin",
+        "-cp",
+        str(core.jar),
+        "org.springframework.boot.loader.launch.PropertiesLauncher",
+        operation,
+        space,
+        str(key),
+    ]
+    child, descriptor = pty.fork()
+    if child == 0:
+        os.execve(command[0], command, core.core_environment())
+    output = bytearray()
+    supplied = False
+    waited = False
+    deadline = time.monotonic() + 45
+    try:
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([descriptor], [], [], 0.1)
+            if ready:
+                try:
+                    chunk = os.read(descriptor, 4096)
+                except OSError:
+                    chunk = b""
+                output.extend(chunk)
+                if len(output) > 128 * 1024:
+                    raise ValueError("E_FIXTURE_RECOVERY_CONSOLE_OUTPUT")
+                if not supplied and b"Current OWNER password: " in output:
+                    os.write(descriptor, (secret + "\n").encode())
+                    supplied = True
+            finished, status = os.waitpid(child, os.WNOHANG)
+            if finished:
+                waited = True
+                if os.waitstatus_to_exitcode(status) != 0 or not supplied:
+                    raise ValueError("E_FIXTURE_RECOVERY_CONSOLE_FAILED")
+                # A real 43-character recovery code is only validated in memory.
+                lines = bytes(output).replace(b"\r", b"").splitlines()
+                if not any(
+                    len(line) == 43
+                    and all(
+                        byte
+                        in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+                        for byte in line
+                    )
+                    for line in lines
+                ):
+                    raise ValueError("E_FIXTURE_RECOVERY_CODE_MISSING")
+                return
+        raise ValueError("E_FIXTURE_RECOVERY_CONSOLE_TIMEOUT")
+    finally:
+        output.clear()
+        os.close(descriptor)
+        if not waited:
+            os.kill(child, signal.SIGKILL)
+            os.waitpid(child, 0)
+
+
 def exercise(postgres_bin, java, jar, expected_digest, work):
     if hashlib.sha256(jar.read_bytes()).hexdigest() != expected_digest:
         raise ValueError("E_FIXTURE_SOURCE_CHANGED")
@@ -269,6 +336,16 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         original_user = source_core.request("GET", "/v1/auth/me", token=token)
         original_space = source_core.request("GET", "/v1/space", token=token)
         source_core.stop_application()
+        recovery_name = "recovery/" + original_space["id"] + ".host-key"
+        if os.name == "posix":
+            (source.target / "recovery").mkdir(mode=0o700)
+            recovery_console(
+                source_core,
+                "provision",
+                original_space["id"],
+                source.target / recovery_name,
+                credentials["password"],
+            )
         maintenance_counts = """SELECT json_build_object(
             'users',(SELECT count(*) FROM user_account),
             'spaces',(SELECT count(*) FROM kyrion_space),
@@ -369,6 +446,8 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         }
         sources.update(row_files)
         sources["data/knowledge/synthetic.txt"] = knowledge
+        if os.name == "posix":
+            sources[recovery_name] = source.target / recovery_name
         metadata = {
             "installationId": source.state["installationId"],
             "configuration": source.configuration,
@@ -489,6 +568,35 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
                 != b"1"
             ):
                 raise ValueError("E_RESTORE_FIXTURE_DISPOSITION_NOT_ATOMIC")
+            if os.name == "posix":
+
+                def wrong_host_key(receipt):
+                    target_core.command(
+                        "UPDATE space_recovery_material SET host_key_hash='"
+                        + "b" * 64
+                        + "'"
+                    )
+                    real_disposition(receipt)
+
+                with patch.object(
+                    target_core, "apply_disposition", side_effect=wrong_host_key
+                ):
+                    try:
+                        resume_fixture(target, backup, password, receipt_path)
+                    except ValueError as error:
+                        if str(error) != "E_RESTORE_SECURITY":
+                            raise
+                    else:
+                        raise ValueError("E_FIXTURE_RECOVERY_HOST_MISMATCH_ACCEPTED")
+                if (
+                    target_core.command(
+                        "SELECT id::text FROM installation_identity WHERE singleton"
+                    )
+                    .strip()
+                    .decode()
+                    == target.state["installationId"]
+                ):
+                    raise ValueError("E_FIXTURE_RECOVERY_HOST_FAILURE_CHANGED_IDENTITY")
             result = resume_fixture(target, backup, password, receipt_path)
             if target_core.starts != 2:
                 raise ValueError("E_RESTORE_FIXTURE_MIGRATED_PARTIAL_DATA")
@@ -583,6 +691,20 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
                 != before_repeat
             ):
                 raise ValueError("E_RESTORE_FIXTURE_REPLAY_WIPED_LIVE_DATA")
+        if os.name == "posix":
+            target_core.stop_application()
+            if (
+                hashlib.sha256((target.target / recovery_name).read_bytes()).digest()
+                != hashlib.sha256((source.target / recovery_name).read_bytes()).digest()
+            ):
+                raise ValueError("E_FIXTURE_RECOVERY_KEY_CHANGED")
+            recovery_console(
+                target_core,
+                "rotate",
+                original_space["id"],
+                target.target / recovery_name,
+                credentials["password"],
+            )
         return {
             "coreJarSha256": expected_digest,
             "actualCoreAndPostgreSQL": True,
@@ -601,6 +723,8 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
             "oldSessionRevoked": True,
             "offlineLoginAfterProcessRestart": True,
             "knowledgeAndOriginalKeyPreserved": True,
+            "actualInteractiveHostRecoveryKeyRestoredAndRotated": os.name == "posix",
+            "wrongRestoredRecoveryHostHashBlocksActivation": os.name == "posix",
             "coreOwnedDisposition": True,
             "tamperedAuditBlocksActivation": True,
             "failedAuditAppendRollsBackDisposition": True,

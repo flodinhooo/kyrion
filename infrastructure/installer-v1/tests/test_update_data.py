@@ -12,11 +12,25 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from bundle import sha256
+from restore_material import data_owner
 from runtime import Installation
 from update_data import reconcile_pending, restore
 
 
 class UpdateDataRecovery(unittest.TestCase):
+    @unittest.skipUnless(
+        os.name == "posix" and os.geteuid() == 0,
+        "actual Linux UID policy needs root; Windows ACLs are separate",
+    )
+    def test_host_recovery_key_ownership_supports_existing_linux_host_tool(self):
+        name = "recovery/741245ef-e4bf-4f01-b8e8-4f996fb3cbe6.host-key"
+        self.installation.write(name, b"synthetic recovery key")
+        data_owner(self.installation, name, self.root / name)
+        self.assertEqual((self.root / name).stat().st_uid, 10001)
+        self.assertEqual((self.root / name).stat().st_gid, 10001)
+        self.assertEqual((self.root / name).stat().st_mode & 0o777, 0o600)
+        self.assertEqual((self.root / "recovery").stat().st_uid, 10001)
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
