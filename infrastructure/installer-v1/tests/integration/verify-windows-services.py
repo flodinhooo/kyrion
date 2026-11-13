@@ -20,7 +20,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from native_bundle import authenticated_review
-from native_runtime import plan_for, provision_native, repair_native, stop_services
+from native_runtime import (
+    permissions,
+    plan_for,
+    provision_native,
+    repair_native,
+    stop_services,
+)
 from onboarding import CoreClient
 from recovery import load_installation
 from windows_service import ROLES, ServiceManager
@@ -79,6 +85,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             client.request("GET", "/v1/devices")
         finally:
             client.close()
+        permissions(target, "verify-payload")
         # The actual service identities performed their own negative secret and
         # write-access checks before reporting RUNNING.
         for role in ("core", "web", "caddy"):
@@ -146,6 +153,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "keysPreserved": True,
             "serviceRestartLogin": True,
             "autostartConfigurationVerified": True,
+            "payloadOwnershipAndReadOnlyPolicyVerified": True,
             "coldBootVerified": False,
             "networkIsolated": False,
             "runtimeManifestSha256": checked.manifest_sha256,

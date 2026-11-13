@@ -54,7 +54,13 @@ jobs:
         run: |
           $coreJar = Get-Item services/core/build/libs/kyrion-core-*-SNAPSHOT.jar
           if (@($coreJar).Count -ne 1) { throw 'E_CI_CORE_ARTIFACT' }
-          python infrastructure/installer-v1/release/assemble-windows-profile.py --fetch --archives build/windows-vendors --core-jar $coreJar.FullName --parser-jar services/core/build/libs/knowledge-parser.jar --web-build apps/web --service-host build/native-service-host --output build/windows-ci-profile --version $env:KYRION_CI_VERSION
+          $gpgTool = Get-Item 'C:/Program Files/Git/usr/bin/gpg.exe'
+          $extractor = Get-Item 'C:/Program Files/7-Zip/7z.exe'
+          python infrastructure/installer-v1/release/prepare-windows-gpg.py --fetch --sources build/windows-gpg-sources --output build/windows-gpg-profile --gpg $gpgTool.FullName --extractor $extractor.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'E_CI_GPG_PROFILE' }
+          python infrastructure/installer-v1/tests/integration/verify-portable-gpg.py --runtime build/windows-gpg-profile --legacy-gpg $gpgTool.FullName --report build/windows-gpg-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'E_CI_GPG_RUNTIME' }
+          python infrastructure/installer-v1/release/assemble-windows-profile.py --fetch --archives build/windows-vendors --core-jar $coreJar.FullName --parser-jar services/core/build/libs/knowledge-parser.jar --web-build apps/web --service-host build/native-service-host --gnupg-profile build/windows-gpg-profile --output build/windows-ci-profile --version $env:KYRION_CI_VERSION
           python infrastructure/installer-v1/release/build-windows-bundle.py --profile build/windows-ci-profile --metadata build/windows-ci-profile-metadata.json --output build/windows-ci-bundle
           python infrastructure/installer-v1/release/sign-development-bundle.py build/windows-ci-bundle
       - name: Run actual service installation, permissions, repeat and restart

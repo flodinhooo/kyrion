@@ -16,8 +16,10 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_identity import read_build
 from bundle import VERSION, sha256, unique_object
+from gpg_profile import verify_profile as verify_gpg_profile
 from host import reject_links
 from native_bundle import MAXIMUM_EXPANDED, safe_member
 
@@ -43,7 +45,7 @@ def verify_service_identity(root: Path, version: str) -> None:
 
 def core_schema(core_jar: Path) -> int:
     reject_links(core_jar)
-    if not core_jar.is_file() or core_jar.stat().st_size > 512 * 1024 ** 2:
+    if not core_jar.is_file() or core_jar.stat().st_size > 512 * 1024**2:
         raise ValueError("E_NATIVE_CORE_SCHEMA")
     try:
         with zipfile.ZipFile(core_jar) as archive:
@@ -110,6 +112,7 @@ def assemble(
     output: Path,
     version: str,
     schema: int | None,
+    gnupg_profile: Path | None = None,
 ) -> dict:
     if (
         not VERSION.fullmatch(version)
@@ -124,6 +127,8 @@ def assemble(
         raise ValueError("E_NATIVE_PROFILE_SCHEMA")
     schema = actual_schema
     verify_service_identity(service_host, version)
+    if gnupg_profile is not None:
+        verify_gpg_profile(gnupg_profile)
     sources = vendor_archives(archives)
     output.mkdir()
     total = 0
@@ -219,6 +224,15 @@ def assemble(
         reject_links(path)
         if path.is_file():
             copy("runtime/installer/" + path.relative_to(service_host).as_posix(), path)
+    if gnupg_profile is not None:
+        for path in sorted(gnupg_profile.rglob("*")):
+            if path.is_file():
+                copy(
+                    "runtime/installer/gnupg/"
+                    + path.relative_to(gnupg_profile).as_posix(),
+                    path,
+                )
+        verify_gpg_profile(output / "runtime/installer/gnupg")
     notice = b"Kyrion has no selected repository LICENSE. All rights reserved; no redistribution grant is implied by this development build.\n"
     for component in ("core", "web", "installer"):
         legal[component] = notice
@@ -251,6 +265,7 @@ if __name__ == "__main__":
     parser.add_argument("--parser-jar", type=Path)
     parser.add_argument("--web-build", type=Path)
     parser.add_argument("--service-host", type=Path)
+    parser.add_argument("--gnupg-profile", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--version")
     parser.add_argument(
@@ -278,6 +293,7 @@ if __name__ == "__main__":
             args.output,
             args.version,
             args.schema,
+            args.gnupg_profile,
         )
         (args.output.parent / (args.output.name + "-metadata.json")).write_text(
             json.dumps(metadata, indent=2) + "\n"

@@ -18,7 +18,7 @@ import tempfile
 import uuid
 from pathlib import Path, PurePosixPath
 
-from bundle import sha256
+from bundle import sha256, unique_object
 from host import reject_links, runtime_checks
 from runtime import Installation, atomic_json, execute, installation_lock
 
@@ -52,7 +52,13 @@ def load_installation(target: Path, verify: bool = True) -> Installation:
 
 
 def crypto(
-    source: Path, destination: Path, password: str, decrypt: bool = False
+    source: Path,
+    destination: Path,
+    password: str,
+    decrypt: bool = False,
+    *,
+    executable: Path | None = None,
+    environment: dict[str, str] | None = None,
 ) -> None:
     if len(password) < 16 or any(ch in password for ch in "\r\n\x00"):
         raise ValueError("E_RECOVERY_PASSWORD")
@@ -60,19 +66,25 @@ def crypto(
     reject_links(destination)
     if destination.exists() or not destination.parent.is_dir():
         raise ValueError("E_EXISTING_STATE")
-    if not shutil.which("gpg"):
+    selected = str(executable) if executable is not None else shutil.which("gpg")
+    if not selected:
+        raise ValueError("E_GPG_REQUIRED")
+    gpg_binary = Path(selected).resolve()
+    gpgconf = gpg_binary.with_name("gpgconf.exe" if os.name == "nt" else "gpgconf")
+    reject_links(gpg_binary)
+    reject_links(gpgconf)
+    if not gpg_binary.is_file() or not gpgconf.is_file():
         raise ValueError("E_GPG_REQUIRED")
     with tempfile.TemporaryDirectory(prefix="kyrion-gpg-") as directory:
         home = Path(directory)
         os.chmod(home, 0o700)
         home_argument = str(home)
-        gpg_binary = Path(shutil.which("gpg"))
         # MSYS GnuPG (for example Git for Windows) needs a POSIX homedir for
         # its agent socket path. Native GnuPG keeps the normal Windows path.
         if os.name == "nt" and gpg_binary.with_name("msys-2.0.dll").is_file():
             home_argument = "/" + home.drive[0].lower() + home.as_posix()[2:]
         arguments = [
-            "gpg",
+            str(gpg_binary),
             "--no-options",
             "--homedir",
             home_argument,
@@ -104,6 +116,7 @@ def crypto(
                 capture_output=True,
                 timeout=1800,
                 check=False,
+                env=environment,
             )
             if result.returncode:
                 raise ValueError(
@@ -116,13 +129,18 @@ def crypto(
         except (OSError, subprocess.TimeoutExpired) as error:
             raise ValueError("E_BACKUP_CRYPTO") from error
         finally:
-            if shutil.which("gpgconf"):
-                subprocess.run(
-                    ["gpgconf", "--homedir", home_argument, "--kill", "gpg-agent"],
+            try:
+                cleanup = subprocess.run(
+                    [str(gpgconf), "--homedir", home_argument, "--kill", "gpg-agent"],
                     capture_output=True,
                     timeout=10,
                     check=False,
+                    env=environment,
                 )
+                if cleanup.returncode:
+                    raise ValueError("E_BACKUP_AGENT_CLEANUP")
+            except (OSError, subprocess.TimeoutExpired):
+                raise ValueError("E_BACKUP_AGENT_CLEANUP") from None
             # GPG can emit unauthenticated plaintext before reporting a bad MDC.
             # Callers keep this output only in protected scratch; no extraction
             # or promotion happens unless the command returns success.
@@ -232,10 +250,16 @@ def _inspect_archive(path: Path) -> dict:
         header = archive.getmember("backup.json")
         if header.size > 32 * 1024 * 1024:
             raise ValueError("E_BACKUP_MANIFEST")
-        manifest = json.load(archive.extractfile(header))
+        manifest = json.load(
+            archive.extractfile(header), object_pairs_hook=unique_object
+        )
         if (
-            manifest.get("formatVersion") != 1
+            not isinstance(manifest, dict)
+            or set(manifest) != {"formatVersion", "kind", "metadata", "files"}
+            or type(manifest.get("formatVersion")) is not int
+            or manifest.get("formatVersion") != 1
             or manifest.get("kind") != "kyrion-consistent-backup"
+            or not isinstance(manifest.get("metadata"), dict)
             or not isinstance(manifest.get("files"), dict)
             or set(manifest["files"]) != names - {"backup.json"}
         ):
@@ -244,7 +268,15 @@ def _inspect_archive(path: Path) -> dict:
             if member.name == "backup.json":
                 continue
             expected = manifest["files"][member.name]
-            if expected.get("bytes") != member.size:
+            if (
+                not isinstance(expected, dict)
+                or set(expected) != {"bytes", "sha256", "mtimeNs"}
+                or type(expected.get("bytes")) is not int
+                or expected["bytes"] != member.size
+                or type(expected.get("mtimeNs")) is not int
+                or not isinstance(expected.get("sha256"), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", expected["sha256"])
+            ):
                 raise ValueError("E_BACKUP_INTEGRITY")
             with archive.extractfile(member) as stream:
                 if hashlib.file_digest(stream, "sha256").hexdigest() != expected.get(

@@ -542,6 +542,7 @@ def provision_native(
                 permissions(target, "grant")
                 installation.state["nativeAccessConfigured"] = True
                 installation.save()
+            permissions(target, "verify-payload")
             start_services(installation)
             return installation.state
         except (OSError, ValueError, KeyError, TypeError) as error:

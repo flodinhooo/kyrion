@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][ValidateSet('plan-create','root-only','verify','grant','verify-recovery')][string]$Action)
+param([Parameter(Mandatory=$true)][ValidateSet('plan-create','root-only','verify','grant','verify-recovery','verify-payload')][string]$Action)
 $ErrorActionPreference='Stop'
 [Console]::InputEncoding=New-Object Text.UTF8Encoding($false)
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
@@ -152,7 +152,28 @@ try {
                 Set-Acl -LiteralPath $pendingPath -AclObject (New-DirectoryPolicy @() @($sids.postgres))
             }
             Set-Acl -LiteralPath $passwordPath -AclObject $passwordAcl
-
+            # File ownership is independent of inherited access rules. Apply
+            # the final code policy to each public runtime object, so a prior
+            # creator cannot regain write access by replacing its DACL.
+            $payloadPath=Join-Path $root 'payload'
+            foreach ($entry in @(Get-Item -LiteralPath $payloadPath -Force) + @(Get-ChildItem -LiteralPath $payloadPath -Recurse -Force)) {
+                if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'E_NATIVE_REPARSE' }
+                if ($entry.PSIsContainer) {
+                    $acl=New-DirectoryPolicy $all @()
+                } else {
+                    $acl=New-Object Security.AccessControl.FileSecurity
+                    $acl.SetOwner($administrators); $acl.SetAccessRuleProtection($true,$false)
+                    foreach ($sid in @($administrators,$system)) { $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,'FullControl','Allow'))) }
+                    foreach ($sid in $all) { $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid,'ReadAndExecute','Allow'))) }
+                }
+                Set-Acl -LiteralPath $entry.FullName -AclObject $acl
+            }
+        }
+        if ($Action -in @('grant','verify-payload')) {
+            $payloadPath=Join-Path $root 'payload'
+            foreach ($entry in @(Get-Item -LiteralPath $payloadPath -Force) + @(Get-ChildItem -LiteralPath $payloadPath -Recurse -Force)) {
+                Assert-Protected $entry.FullName $true
+            }
         }
     }
     @{action=$Action; protected=$true} | ConvertTo-Json -Compress

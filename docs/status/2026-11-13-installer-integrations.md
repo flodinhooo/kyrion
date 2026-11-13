@@ -155,3 +155,40 @@ This starts only disposable user processes and synthetic data. It registers no
 services/tasks, changes no global trust store and claims neither network
 isolation nor elevated Windows/host-boot acceptance. Development bundles and
 downloads remain unpublished and are not ready for overall user acceptance.
+
+## Portable operational-backup dependency and archive validation
+
+ADR0056 retains the existing GnuPG operational-backup format. The pinned
+Windows vendor executable and corresponding source archive are both verified
+against the official release primary key. The build extracts public AMD64
+runtime files as data without running the NSIS installer, retains corresponding
+source, detached signature, public release keys and original component COPYING
+notices, and creates an empty portable marker. Profile assembly verifies the
+exact public file receipt before copying into the signed installer namespace.
+The manually triggered Windows service workflow now builds and exercises this
+profile; that workflow has not been dispatched.
+
+The actual prepared development profile `build/windows-gpg-profile-dev2`
+contains 102 hashed files. Its native GnuPG 2.5.24 passes synthetic encryption,
+decryption, wrong-password rejection and legacy interoperability in both
+directions; payload hashes and directories remain unchanged. Evidence:
+`build/windows-gpg-source/portable-runtime-dev2-report.json`. No vendor system
+installer, service registration or production data is involved. The helper uses
+absolute GnuPG and matching gpgconf paths and checks temporary-agent cleanup.
+Archive inspection additionally rejects duplicate JSON keys, ambiguous numeric
+types and malformed file records before any restore extraction.
+
+The complete Windows source suite passed 196 tests (one platform skip) before
+the additional strict-manifest regression; that regression passes in the focused
+14-case recovery suite. The updated isolated Debian 13 suite passes 197 tests
+with 16 platform skips (`build/isolated-linux/test-report-current.txt`).
+Ruff lint passes across the installer. Whole-tree format
+check identifies nine pre-existing files; changed GnuPG producer/profile/tests
+pass formatting. Native capture, full application restore, identity fencing and
+backup scheduling are still missing source work. This dependency does not close
+R70/R72 or imply overall installer acceptance.
+
+Windows payload ACL provisioning now explicitly sets protected BA ownership and
+service read access on every payload object and verifies it before starting
+services. PowerShell parsing and source tests pass; actual elevated ACL/SCM and
+cold-boot acceptance remain unperformed. No host services were registered.

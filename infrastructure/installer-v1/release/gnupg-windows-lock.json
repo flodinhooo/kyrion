@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "reviewedAt": "2026-11-13",
+  "version": "2.5.24",
+  "primaryFingerprint": "6DAA6E64A76D2840571B4902528897B826403ADA",
+  "sources": {
+    "archive": {
+      "file": "gnupg-w32-2.5.24_20260923.exe",
+      "url": "https://www.gnupg.org/ftp/gcrypt/binary/gnupg-w32-2.5.24_20260923.exe",
+      "bytes": 5804864,
+      "sha256": "ea6f9dee2cccd83287432625b8b399173805add81d27067fcaf019c0c4da1ad8"
+    },
+    "signature": {
+      "file": "gnupg-w32-2.5.24_20260923.exe.sig",
+      "url": "https://www.gnupg.org/ftp/gcrypt/binary/gnupg-w32-2.5.24_20260923.exe.sig",
+      "bytes": 119,
+      "sha256": "e55418c45f6de866b90c969f1b9b702a53c2641920645f7988cb66ed01bbe54e"
+    },
+    "sourceArchive": {
+      "file": "gnupg-w32-2.5.24_20260923.tar.xz",
+      "url": "https://www.gnupg.org/ftp/gcrypt/gnupg/gnupg-w32-2.5.24_20260923.tar.xz",
+      "bytes": 15295680,
+      "sha256": "4d18ae79e3a787ceab011f27c1557f407f6ba45e467d483c01434f0dd5fa115a"
+    },
+    "sourceSignature": {
+      "file": "gnupg-w32-2.5.24_20260923.tar.xz.sig",
+      "url": "https://www.gnupg.org/ftp/gcrypt/gnupg/gnupg-w32-2.5.24_20260923.tar.xz.sig",
+      "bytes": 119,
+      "sha256": "55c4fd084f7b14ed3de07a062279b8ade9ee37c943ec7e32e87999afb1ce90da"
+    },
+    "keys": {
+      "file": "signature_key.asc",
+      "url": "https://gnupg.org/signature_key.asc",
+      "bytes": 6466,
+      "sha256": "6f57d0e17fefd2238bd037aebf03efa960641629dd61dd9d47f122a829f6e375"
+    }
+  }
+}

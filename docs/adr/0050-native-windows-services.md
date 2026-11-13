@@ -3,6 +3,15 @@
 Status: accepted for implementation, 2026-11-12. Supersedes the boot-task portion
 of ADR 0049 before any owner-host task registration or production release.
 
+The 2026-11-13 grant path explicitly assigns Administrators ownership and a
+protected read-only service DACL to every public payload file/directory, rather
+than relying on creator defaults or inheritance alone. It checks that policy
+before activation. The disposable service acceptance runner checks it separately
+from each service identity's negative-access tests. This source hardening still
+requires actual elevated Windows acceptance; syntax/unit checks are not that
+acceptance. [Microsoft's file-security API](https://learn.microsoft.com/en-us/dotnet/api/system.security.accesscontrol.filesystemsecurity)
+distinguishes owner and access-rule protection.
+
 The native backend remains part of the same downloaded installer, signed native
 payload, installation journal and Core authority. Core, Web and Caddy run through
 a native Service Control Manager (SCM) host implemented with the existing Python

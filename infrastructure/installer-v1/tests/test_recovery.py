@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,6 +21,52 @@ from runtime import Installation
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_explicit_crypto_uses_only_matching_absolute_tools_and_environment(self):
+        suffix = ".exe" if os.name == "nt" else ""
+        binary = self.root / ("gpg" + suffix)
+        companion = self.root / ("gpgconf" + suffix)
+        binary.write_bytes(b"fixture, never executed")
+        companion.write_bytes(b"fixture, never executed")
+        output = self.root / "encrypted"
+        environment = {"PATH": "fixture-system-only"}
+
+        def command(arguments, **options):
+            self.assertEqual(options["env"], environment)
+            if arguments[0] == str(binary.resolve()):
+                self.assertEqual(
+                    options["input"], b"Synthetic-recovery-password-123456\n"
+                )
+                output.write_bytes(b"synthetic ciphertext")
+            else:
+                self.assertEqual(arguments[0], str(companion.resolve()))
+                self.assertNotIn("input", options)
+            return SimpleNamespace(returncode=0)
+
+        with patch.object(recovery.subprocess, "run", side_effect=command) as execute:
+            recovery.crypto(
+                self.source,
+                output,
+                "Synthetic-recovery-password-123456",
+                executable=binary,
+                environment=environment,
+            )
+        self.assertEqual(execute.call_count, 2)
+
+    def test_missing_matching_crypto_companion_does_not_use_foreign_path_tool(self):
+        binary = self.root / ("gpg.exe" if os.name == "nt" else "gpg")
+        binary.write_bytes(b"fixture, never executed")
+        with (
+            patch.object(recovery.subprocess, "run") as execute,
+            self.assertRaisesRegex(ValueError, "E_GPG_REQUIRED"),
+        ):
+            recovery.crypto(
+                self.source,
+                self.root / "output",
+                "Synthetic-recovery-password-123456",
+                executable=binary,
+            )
+        execute.assert_not_called()
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -38,6 +86,27 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(
             manifest["files"]["database.dump"]["bytes"], self.source.stat().st_size
         )
+
+    def test_manifest_rejects_duplicate_keys_and_ambiguous_types(self):
+        original = recovery.inspect_archive(self.archive())
+        documents = ['{"kind":"first","kind":"second"}', "[]"]
+        for value in (True, 1.0):
+            changed = dict(original, formatVersion=value)
+            documents.append(json.dumps(changed))
+        for value in (True, "30", None, []):
+            changed = json.loads(json.dumps(original))
+            changed["files"]["database.dump"]["bytes"] = value
+            documents.append(json.dumps(changed))
+        for number, document in enumerate(documents):
+            path = self.root / f"malformed-{number}.tar"
+            with tarfile.open(path, "w") as archive:
+                raw = document.encode()
+                header = tarfile.TarInfo("backup.json")
+                header.size = len(raw)
+                archive.addfile(header, io.BytesIO(raw))
+                archive.add(self.source, arcname="database.dump", recursive=False)
+            with self.subTest(document=document), self.assertRaises(ValueError):
+                recovery.inspect_archive(path)
 
     def test_rejects_unsafe_archive_members(self):
         for name in (
