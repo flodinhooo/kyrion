@@ -472,6 +472,40 @@ class ServiceManager:
         ):
             raise OSError("E_SERVICE_START")
 
+    def disable(self, handle, plan):
+        self.assert_owned(handle, plan)
+        if not self.writable or not self.api.ChangeServiceConfigW(
+            handle,
+            0xFFFFFFFF,
+            4,
+            0xFFFFFFFF,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ):
+            raise OSError("E_SERVICE_DISABLE")
+
+    def demand(self, handle, plan):
+        self.assert_owned(handle, plan)
+        if not self.writable or not self.api.ChangeServiceConfigW(
+            handle,
+            0xFFFFFFFF,
+            3,
+            0xFFFFFFFF,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ):
+            raise OSError("E_SERVICE_DEMAND_START")
+
     def start(self, handle, plan, timeout=150):
         self.assert_owned(handle, plan)
         if (

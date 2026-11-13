@@ -1,7 +1,7 @@
 {
   "intro": "Kyrion local installer. Your setup stays on this target. No AI, microphone, cloud keys or extra hardware is required. This candidate has not passed clean-host release acceptance.",
   "unsupported": "E_PLATFORM: This target has no supported provisioning path yet. Windows inventory does not mean Windows installation support. Use an isolated Debian 13 x64/ARM64 or 64-bit Raspberry Pi OS 13 candidate for testing. No system changes were made.",
-  "modes": "Mode: fresh / resume / extend / repair / restore. Only fresh and matching-release resume are currently implemented.",
+  "modes": "Mode: fresh / resume / repair / restore. Expansion remains separately tracked work.",
   "maintenanceUnavailable": "E_MODE: This maintenance operation is not implemented. Existing data is preserved; see docs/guided-installer.md for recovery boundaries.",
   "existing": "E_EXISTING_STATE: The target exists. Choose resume for an installation owned by this installer. Existing installations are not adopted or overwritten.",
   "noResume": "E_RESUME: No installer journal exists at the target.",
@@ -107,5 +107,18 @@
   "maintenanceErrorServices": "A service could not be restarted after backup capture. The installer retained its restart obligation. Resolve the Windows service error and run backup maintenance again; no successful backup is reported for this attempt.",
   "updateErrorIndex": "The update index conflicts with the last verified index or uses an older trust epoch. Keep the installed version and obtain a corrected signed channel/trust configuration from the release maintainer.",
   "updateErrorSchema": "The installed database schema could not be verified or does not match the requested compatibility check. Check the local PostgreSQL service and installation integrity before retrying.",
-  "updateErrorDevelopment": "This development installer cannot query a stable update channel as a released installer. Use isolated signed-channel tests until a supported installer is explicitly released."
+  "updateErrorDevelopment": "This development installer cannot query a stable update channel as a released installer. Use isolated signed-channel tests until a supported installer is explicitly released.",
+  "restoreRetireReview": "This permanently retires this source installation for the displayed backup and target. Kyrion services are stopped and disabled/removed. Ordinary repair or startup will refuse this authority. Export the transfer receipt and keep the original backup; an offline source without a retirement receipt cannot enable a competing restored writer.",
+  "restoreReview": "Restore creates or resumes only the displayed prepared target using the verified runtime bundle. It requires a portable backup with matching release/schema and source retirement. Original account/Space data and application keys are restored; host configuration is newly generated. Old sessions/device credentials are revoked; queued actions and HA control are not replayed. It does not merge with existing data or perform schema downgrade.",
+  "restoreAwaitingRetirement": "Target prepared and inactive. Run --retire-for-restore on the source installer with this backup, the displayed --restore-target-id and --transfer-receipt OUTPUT. Then repeat --restore on this target with --transfer-receipt INPUT. No activation occurs without a valid matching receipt.",
+  "restoreReviewRequired": "Restore activation completed. Re-enrol gateway/voice devices, review Home Assistant control, re-enable calendar schedules consciously and rotate owner recovery codes. Use the existing local account password; old sessions are invalid.",
+  "restoreBackupPath": "Path to the encrypted portable backup",
+  "restoreReceiptPath": "Transfer receipt path; leave empty to prepare the inactive target first",
+  "restoreErrorCompatibility": "This restore path requires portable table data, PostgreSQL 17, Core schema 49 and a matching signed runtime bundle with the local Core restore tool. Migration checksums and schema must match. Legacy SQL-only dumps are not executed on the application target. Create a new capture from a compatible source if needed. The target remains inactive after an unsuccessful import.",
+  "restoreErrorAudit": "Core did not confirm the transfer proof, existing audit chain or security disposition. The target is not activated. Preserve the backup and diagnostic state and check original keys, receipt and compatible Core version; do not bypass security checks.",
+  "restoreErrorGuardUpgrade": "The source lacks the verified retirement guard. Upgrade its installer runtime through a supported signed path first. Do not edit journal flags manually. No transfer receipt was issued.",
+  "restoreErrorInactive": "This installation is retired or prepared as an inactive restore target. Ordinary repair/start must not activate it. Continue only the same displayed transfer with the same backup and target ID.",
+  "restoreErrorReceipt": "The transfer receipt is missing or does not match the source, target and backup. Generate it with --retire-for-restore on the supported source and transfer only the receipt file. An offline source that has not been safely retired cannot authorize target activation.",
+  "restoreErrorTarget": "The target contains existing/unexpectedly changed data or belongs to another restore request. Data is preserved. Inspect the saved operation and use only the originally reviewed backup; do not overwrite unexplained changes.",
+  "maintenancePaused": "Maintenance was interrupted. Checkpointed steps remain available; resume the same operation with unchanged verified inputs. A prepared restore target is not activated automatically."
 }

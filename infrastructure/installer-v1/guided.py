@@ -28,6 +28,27 @@ from runtime import (
 ROOT = Path(__file__).resolve().parent
 
 
+def maintenance_result(args, messages: dict[str, str]) -> int:
+    try:
+        return run_maintenance(args, messages)
+    except KeyboardInterrupt:
+        print(messages["maintenancePaused"], file=sys.stderr)
+        return 130
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+        code = str(error).split(":", 1)[0]
+        advice = guidance(code, messages)
+        if advice:
+            print(advice, file=sys.stderr)
+        if code in {"E_IDENTITY_CANCELLED", "E_SPACE_CANCELLED"}:
+            return 3
+        print(
+            code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_MAINTENANCE",
+            file=sys.stderr,
+        )
+        print(messages["failed"], file=sys.stderr)
+        return 2
+
+
 def main() -> int:
     if sys.version_info < (3, 12):
         print("E_PYTHON: Python 3.12 or newer is required", file=sys.stderr)
@@ -53,6 +74,12 @@ def main() -> int:
     actions.add_argument("--recommend-ai", action="store_true")
     actions.add_argument("--backup", type=Path)
     actions.add_argument("--verify-backup", type=Path)
+    actions.add_argument("--restore", type=Path)
+    actions.add_argument("--retire-for-restore", type=Path)
+    parser.add_argument("--restore-target-id")
+    parser.add_argument("--transfer-receipt", type=Path)
+    parser.add_argument("--restore-hostname")
+    parser.add_argument("--restore-address")
     actions.add_argument("--diagnostics", type=Path)
     actions.add_argument("--repair", action="store_true")
     actions.add_argument("--uninstall", action="store_true")
@@ -176,6 +203,8 @@ def main() -> int:
     if (
         args.backup
         or args.verify_backup
+        or args.restore
+        or args.retire_for_restore
         or args.diagnostics
         or args.repair
         or args.uninstall
@@ -186,21 +215,7 @@ def main() -> int:
         or args.owner_recovery
         or args.home_assistant
     ):
-        try:
-            return run_maintenance(args, messages)
-        except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
-            code = str(error).split(":", 1)[0]
-            advice = guidance(code, messages)
-            if advice:
-                print(advice, file=sys.stderr)
-            if code in {"E_IDENTITY_CANCELLED", "E_SPACE_CANCELLED"}:
-                return 3
-            print(
-                code if re.fullmatch(r"[A-Z][A-Z_]{0,79}", code) else "E_MAINTENANCE",
-                file=sys.stderr,
-            )
-            print(messages["failed"], file=sys.stderr)
-            return 2
+        return maintenance_result(args, messages)
     report = inventory(args.target)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     native_windows = report["system"] == "Windows" and report["architecture"] == "amd64"
@@ -209,6 +224,14 @@ def main() -> int:
         return 2
     print(messages["modes"])
     mode = input("> ").strip().lower()
+    if mode == "restore":
+        args.restore = Path(input(messages["restoreBackupPath"] + ": ").strip())
+        receipt = input(messages["restoreReceiptPath"] + ": ").strip()
+        args.transfer_receipt = Path(receipt) if receipt else None
+        return maintenance_result(args, messages)
+    if mode == "repair":
+        args.repair = True
+        return maintenance_result(args, messages)
     if mode not in {"fresh", "resume"}:
         print(messages["maintenanceUnavailable"])
         return 2

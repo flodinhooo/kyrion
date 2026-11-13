@@ -128,6 +128,7 @@ def admin_environment(root: Path) -> dict[str, str]:
     temporary.mkdir(exist_ok=True)
     result["TEMP"] = result["TMP"] = str(temporary)
     result["PGPASSFILE"] = str(root / "secrets/pgpass")
+    result["PGCLIENTENCODING"] = "UTF8"
     return result
 
 
@@ -224,6 +225,9 @@ def installed_schema(installation: Installation) -> str:
 def configure(
     installation: Installation, manifest: dict, digest: str, ports=None, identity=None
 ) -> None:
+    from authority import require_active
+
+    require_active(installation.state, preparing=True)
     from identity_settings import configure_identity
 
     configure_identity(installation, identity)
@@ -491,6 +495,9 @@ def register_services(
 
 
 def start_services(installation: Installation) -> None:
+    from authority import require_active
+
+    require_active(installation.state)
     root = installation.target
     with ServiceManager(writable=True) as scm:
         for role in ROLES:
@@ -543,6 +550,23 @@ def stop_services(installation: Installation, remove=False) -> None:
                 scm.wait_removed(plan["name"])
 
 
+def retire_services(installation: Installation) -> None:
+    permissions(installation.target, "verify")
+    with ServiceManager(writable=True) as scm:
+        # All definitions must be owned before the first mutation.
+        for role in ROLES:
+            plan = plan_for(installation, role)
+            with scm.opened(plan["name"], mutate=True) as handle:
+                if handle:
+                    scm.assert_owned(handle, plan)
+        for role in reversed(ROLES):
+            plan = plan_for(installation, role)
+            with scm.opened(plan["name"], mutate=True) as handle:
+                if handle:
+                    scm.stop(handle, plan)
+                    scm.disable(handle, plan)
+
+
 def provision_native(
     target: Path,
     bundle: Path,
@@ -553,6 +577,8 @@ def provision_native(
     worker: Path | None = None,
     ports: dict | None = None,
     identity: dict | None = None,
+    *,
+    restore_request: dict | None = None,
 ) -> dict:
     if os.name != "nt":
         raise ValueError("E_NATIVE_PLATFORM")
@@ -583,6 +609,10 @@ def provision_native(
         if installation.state.get("backend") not in {None, "windows-native"}:
             raise ValueError("E_NATIVE_BACKEND")
         installation.state["backend"] = "windows-native"
+        if restore_request is not None:
+            from authority import prepare_restore
+
+            prepare_restore(installation, restore_request)
         installation.save()
         try:
             installation.write("installer.exe", worker.read_bytes())
@@ -606,6 +636,10 @@ def provision_native(
                 installation.state["nativeAccessConfigured"] = True
                 installation.save()
             permissions(target, "verify-payload")
+            if restore_request is not None:
+                installation.state["restoreRuntimePrepared"] = True
+                installation.save()
+                return installation.state
             start_services(installation)
             return installation.state
         except (OSError, ValueError, KeyError, TypeError) as error:
@@ -625,6 +659,9 @@ def repair_native(target: Path) -> dict:
     with installation_lock(target):
         permissions(target, "verify")
         installation = load_installation(target)
+        from authority import require_active
+
+        require_active(installation.state)
         read_configuration(target)
         if installation.state.get("stage") == "uninstalled":
             raise ValueError("E_NATIVE_SIGNED_BUNDLE_REQUIRED")

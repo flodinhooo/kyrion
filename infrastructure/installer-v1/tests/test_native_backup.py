@@ -230,6 +230,7 @@ class NativeBackup(unittest.TestCase):
                 ),
                 patch.object(native_backup.subprocess, "run", side_effect=execute),
                 patch.object(native_backup, "crypto", side_effect=encrypt),
+                patch("portable_database.capture", return_value=({}, {})),
             ):
                 receipt = native_backup.capture(
                     installation, destination, "Synthetic-backup-password-123456"

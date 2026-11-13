@@ -285,7 +285,16 @@ def initialize_postgres(root: Path, stop, report) -> None:
 
 
 def run_role(root: Path, role: str, stop, report) -> None:
+    from authority import require_active
+
     config = read_configuration(root)
+    require_active(
+        json.loads(
+            (root / "install-state.json").read_bytes(), object_pairs_hook=unique_object
+        ),
+        preparing=role == "postgres-init",
+        migration=role == "core",
+    )
     manifest_path = root / "native-manifest.json"
     if manifest_path.stat().st_size > 8 * 1024**2:
         raise ValueError("E_NATIVE_MANIFEST")

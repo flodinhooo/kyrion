@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -215,14 +216,25 @@ def capture(installation, destination: Path, password: str) -> dict:
             ):
                 raise ValueError("E_BACKUP_COUNTS")
             dump = scratch / "database.dump"
-            with os.fdopen(
-                open_secured_file(dump, root / "install-state.json"), "wb"
-            ) as stream:
+            with os.fdopen(open_secured_file(dump, scratch), "wb") as stream:
                 command(
                     "pg_dump.exe", ["--format=custom", "--no-owner", "--no-acl"], stream
                 )
             if not dump.stat().st_size:
                 raise ValueError("E_BACKUP_DATABASE")
+            from portable_database import capture as capture_portable
+            from portable_database import file_copy_command
+
+            def export_rows(sql, path):
+                # Create the protected file before psql opens it in binary mode.
+                os.close(open_secured_file(path, scratch))
+                command("psql.exe", ["-X", "-Atc", file_copy_command(sql, path)])
+
+            portable, row_files = capture_portable(
+                lambda sql: command("psql.exe", ["-X", "-Atc", sql]),
+                export_rows,
+                scratch / "database-data",
+            )
             sources = {
                 name: root / name
                 for name in installation.state["files"]
@@ -231,6 +243,7 @@ def capture(installation, destination: Path, password: str) -> dict:
             sources.update(
                 {"install-state.json": installation.path, "database.dump": dump}
             )
+            sources.update(row_files)
             for tree in ("data/knowledge", "recovery"):
                 reject_links(root / tree)
                 for path in (root / tree).rglob("*"):
@@ -255,12 +268,14 @@ def capture(installation, destination: Path, password: str) -> dict:
                 raise ValueError("E_BACKUP_INCOMPLETE")
             metadata = {
                 "backend": "windows-native",
+                "capturedAt": int(time.time()),
                 "installationId": installation.state["installationId"],
                 "configuration": installation.configuration,
                 "schema": int(schema),
                 "postgresMajor": 17,
                 "verificationCounts": counts,
                 "restoreVerified": False,
+                "portableDatabase": portable,
                 "coverage": [
                     "database",
                     "managed-configuration",
@@ -278,9 +293,7 @@ def capture(installation, destination: Path, password: str) -> dict:
             if any(name.startswith("recovery/") for name in sources):
                 metadata["coverage"].append("host-recovery-material")
             archive = scratch / "backup.tar"
-            create_archive(
-                sources, metadata, archive, security_source=installation.path
-            )
+            create_archive(sources, metadata, archive, security_source=scratch)
             inspect_archive(archive)
         # Service downtime ends before encryption. Publish only complete output,
         # using a no-overwrite hardlink on the destination volume.

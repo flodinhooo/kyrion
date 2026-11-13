@@ -26,8 +26,15 @@ jobs:
           services/core/gradlew -p services/core bootJar --no-daemon --console=plain
           python -m venv build/acceptance-python
           build/acceptance-python/bin/python -m pip install -r infrastructure/installer-v1/release/native-build-requirements.txt
+          # Official PGDG repository, scoped key and reviewed key-file digest.
+          # https://www.postgresql.org/download/linux/ubuntu/
+          mkdir -p build
+          curl --fail --proto '=https' --tlsv1.2 https://www.postgresql.org/media/keys/ACCC4CF8.asc -o build/pgdg.asc
+          python -c "import hashlib; assert hashlib.sha256(open('build/pgdg.asc','rb').read()).hexdigest() == '0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76'"
+          sudo install -m 644 build/pgdg.asc /usr/share/keyrings/kyrion-pgdg.asc
+          printf '%s\n' 'deb [signed-by=/usr/share/keyrings/kyrion-pgdg.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/kyrion-pgdg.list >/dev/null
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends postgresql-16 iproute2
+          sudo apt-get install -y --no-install-recommends postgresql-17 iproute2 gnupg
       - name: Run synthetic accounts and HA only in an isolated network namespace
         shell: bash
         run: |
@@ -44,12 +51,33 @@ jobs:
               "$3/infrastructure/installer-v1/tests/integration/verify-linux-core.py" \
               --core-jar "$4" --core-sha256 "$5" \
               --java "$6" \
-              --postgres-bin /usr/lib/postgresql/16/bin \
+              --postgres-bin /usr/lib/postgresql/17/bin \
               --work-parent "$3/build/isolated-core-work" \
               --report "$3/build/isolated-core-report.json"
           ' kyrion-isolated "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java"
+      - name: Restore actual Core accounts and data with interruption in an isolated namespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/isolated-restore-work
+          jar="$PWD/services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar"
+          digest="$(sha256sum "$jar" | cut -d ' ' -f 1)"
+          sudo unshare --net /bin/bash -c '
+            set -euo pipefail
+            ip link set lo up
+            ip addr add 10.231.0.1/32 dev lo
+            exec setpriv --reuid "$1" --regid "$2" --init-groups \
+              "$3/build/acceptance-python/bin/python" \
+              "$3/infrastructure/installer-v1/tests/integration/verify-application-restore.py" \
+              --core-jar "$4" --core-sha256 "$5" --java "$6" \
+              --postgres-bin /usr/lib/postgresql/17/bin \
+              --work "$3/build/isolated-restore-work" \
+              --report "$3/build/isolated-restore-report.json"
+          ' kyrion-restore "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java"
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: isolated-linux-core-evidence
-          path: build/isolated-core-report.json
+          path: |
+            build/isolated-core-report.json
+            build/isolated-restore-report.json
           if-no-files-found: error

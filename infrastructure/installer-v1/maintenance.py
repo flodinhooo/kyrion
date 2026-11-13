@@ -139,6 +139,9 @@ def diagnostic(target: Path, output: Path) -> None:
 def repair(target: Path) -> dict:
     with installation_lock(target):
         installation = load_installation(target, verify=False)
+        from authority import require_active
+
+        require_active(installation.state)
         config = installation.configuration
         runtime_checks(config["address"], config["hostname"], fresh=False)
         candidates = {
@@ -220,6 +223,109 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "retire_for_restore", None):
+        from operational_restore import retire_source
+
+        if not args.restore_target_id or args.transfer_receipt is None:
+            raise ValueError("E_AUTHORITY_RECEIPT_ARGUMENTS")
+        print(
+            json.dumps(
+                {
+                    "source": str(args.target),
+                    "targetInstallationId": args.restore_target_id,
+                    "backupSha256": sha256(args.retire_for_restore),
+                }
+            )
+        )
+
+        def review_retirement(summary):
+            print(json.dumps(summary))
+            return (
+                input(messages["restoreRetireReview"] + " [RETIRE-SOURCE]: ").strip()
+                == "RETIRE-SOURCE"
+            )
+
+        password = getpass.getpass(messages["backupPassword"] + ": ")
+        print(
+            json.dumps(
+                retire_source(
+                    args.target,
+                    args.retire_for_restore,
+                    password,
+                    args.restore_target_id,
+                    args.transfer_receipt,
+                    review=review_retirement,
+                )
+            )
+        )
+        return 0
+    if getattr(args, "restore", None):
+        from operational_restore import restore
+
+        if args.public_key is None:
+            raise ValueError("E_SIGNATURE_TRUST_REQUIRED")
+        if os.name == "nt":
+            from native_bundle import authenticated_review
+        else:
+            from bundle import authenticated_review
+        reviewed = authenticated_review(args.bundle, args.public_key)
+        backup_digest = sha256(args.restore)
+        existing = (
+            load_installation(args.target, verify=False)
+            if args.target.exists()
+            else None
+        )
+        hostname = args.restore_hostname or (
+            existing.configuration["hostname"]
+            if existing
+            else input(messages["hostname"] + ": ").strip()
+        )
+        address = args.restore_address or (
+            existing.configuration["address"]
+            if existing
+            else input(messages["address"] + ": ").strip()
+        )
+        print(
+            json.dumps(
+                {
+                    "target": str(args.target),
+                    "release": reviewed.manifest["release"],
+                    "manifestSha256": reviewed.manifest_sha256,
+                    "backupBytes": args.restore.stat().st_size,
+                    "backupSha256": backup_digest,
+                    "runtimeArtifacts": reviewed.manifest.get(
+                        "artifacts", [reviewed.manifest.get("artifact")]
+                    ),
+                    "components": reviewed.manifest.get("components"),
+                    "hostname": hostname,
+                    "address": address,
+                }
+            )
+        )
+        if (
+            input(messages["restoreReview"] + " [RESTORE-TO-NEW-TARGET]: ").strip()
+            != "RESTORE-TO-NEW-TARGET"
+        ):
+            raise ValueError("E_CONFIRMATION")
+        password = getpass.getpass(messages["backupPassword"] + ": ")
+        result = restore(
+            args.target,
+            args.bundle,
+            args.public_key,
+            args.restore,
+            password,
+            hostname,
+            address,
+            args.transfer_receipt,
+            expected_manifest=reviewed.manifest_sha256,
+            expected_backup=backup_digest,
+        )
+        print(json.dumps(result))
+        if result.get("awaitingSourceRetirement"):
+            print(messages["restoreAwaitingRetirement"])
+        else:
+            print(messages["restoreReviewRequired"])
         return 0
     if args.diagnostics:
         diagnostic(args.target, args.diagnostics)

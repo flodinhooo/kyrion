@@ -1,6 +1,20 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_RESTORE_COMPATIBILITY": "restoreErrorCompatibility",
+    "E_RESTORE_PORTABLE_DATA_REQUIRED": "restoreErrorCompatibility",
+    "E_RESTORE_SCHEMA_MISMATCH": "restoreErrorCompatibility",
+    "E_RESTORE_CORE_UPGRADE_REQUIRED": "restoreErrorCompatibility",
+    "E_RESTORE_SECURITY": "restoreErrorAudit",
+    "E_AUTHORITY_UPGRADE_REQUIRED": "restoreErrorGuardUpgrade",
+    "E_AUTHORITY_INACTIVE": "restoreErrorInactive",
+    "E_AUTHORITY_TRANSFER_CONFLICT": "restoreErrorInactive",
+    "E_AUTHORITY_RECEIPT": "restoreErrorReceipt",
+    "E_AUTHORITY_RECEIPT_ARGUMENTS": "restoreErrorReceipt",
+    "E_AUTHORITY_BACKUP_MISMATCH": "restoreErrorReceipt",
+    "E_RESTORE_TARGET_NOT_EMPTY": "restoreErrorTarget",
+    "E_RESTORE_TARGET_CHANGED": "restoreErrorTarget",
+    "E_RESTORE_REQUEST_CONFLICT": "restoreErrorTarget",
     "E_BACKUP_RUNTIME_REQUIRED": "maintenanceErrorRuntime",
     "E_BACKUP_SERVICE_RECOVERY": "maintenanceErrorServices",
     "E_UPDATE_INDEX_EQUIVOCATION": "updateErrorIndex",

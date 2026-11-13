@@ -66,6 +66,18 @@ def exercise(runtime: Path, legacy: Path | None = None) -> dict:
         )
         if sha256(source) != sha256(clear):
             raise ValueError("E_GPG_FIXTURE_ROUNDTRIP")
+        protected_clear = root / "protected-clear"
+        crypto(
+            encrypted,
+            protected_clear,
+            password,
+            True,
+            executable=native,
+            environment=environment,
+            security_source=source,
+        )
+        if sha256(source) != sha256(protected_clear):
+            raise ValueError("E_GPG_FIXTURE_PROTECTED_OUTPUT")
         try:
             crypto(
                 encrypted,

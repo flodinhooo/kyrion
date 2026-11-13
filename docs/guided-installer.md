@@ -186,3 +186,23 @@ The manifest signs images, not the installer source/template distribution. The
 downloaded executable/package trust chain, minimum-installer/API/schema contracts,
 version selection, updates and signing-key rotation are still pending. Do not
 publish these candidates as a complete signed installer.
+
+## Operational restore continuation
+
+See [ADR 0057](adr/0057-operational-restore-authority-transfer.md) and the
+[restore evidence and boundaries](status/2026-11-13-installer-restore-updates.md).
+The maintenance menu now offers restore and repair. An encrypted backup can
+prepare a fresh target with `--restore BACKUP --bundle BUNDLE --public-key KEY
+--target ROOT --restore-hostname HOST --restore-address ADDRESS`. The guided
+review displays the authenticated runtime and backup digests before changes.
+No activation occurs without the source retirement receipt.
+
+On the source, `--retire-for-restore BACKUP --restore-target-id UUID
+--transfer-receipt OUTPUT --target SOURCE` reviews the capture before explicitly
+stopping and disabling owned services. Resume the target restore with
+`--transfer-receipt OUTPUT`. Passwords are entered at the local protected prompt,
+never supplied as command-line arguments. The receipt contains no passwords or
+backup key; it authorizes only the exact backup and target UUID. Do not retire a
+source before independently protecting the encrypted backup and recovery key.
+These commands describe developer tooling, not a claim of complete platform
+acceptance or availability of published installer artifacts.

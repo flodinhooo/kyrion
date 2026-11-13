@@ -45,6 +45,47 @@ def free_ports() -> dict:
     return values
 
 
+def cleanup_owned_target(target: Path, parent: Path) -> None:
+    if target.resolve().parent != parent.resolve() or not target.name.startswith(
+        "KyrionCI-"
+    ):
+        raise ValueError("E_TEST_CLEANUP_SCOPE")
+    uuid.UUID(target.name.removeprefix("KyrionCI-"))
+    journal = target / "install-state.json"
+    if journal.is_file() and all(
+        (target / name).is_file()
+        for name in ("installer.exe", "native-runtime.json", "native-manifest.json")
+    ):
+        installation = load_installation(target, verify=False)
+        # Explicitly clean the owned intermediate initializer as well after
+        # an interrupted/failed initialization, never an arbitrary service.
+        with ServiceManager(writable=True) as scm:
+            for role in reversed(ROLES):
+                plan = plan_for(installation, role)
+                with scm.opened(plan["name"], mutate=True) as handle:
+                    if handle:
+                        try:
+                            scm.assert_owned(handle, plan)
+                        except ValueError:
+                            if role != "postgres":
+                                raise
+                            plan = plan_for(installation, "postgres-init")
+                            scm.assert_owned(handle, plan)
+                        scm.remove(handle, plan)
+                scm.wait_removed(plan["name"])
+    if target.exists():
+        if target.parent != parent or not target.name.startswith("KyrionCI-"):
+            raise ValueError("E_TEST_CLEANUP_SCOPE")
+        for _ in range(30):
+            try:
+                shutil.rmtree(target)
+                break
+            except PermissionError:
+                time.sleep(1)
+        else:
+            raise ValueError("E_TEST_CLEANUP_INCOMPLETE")
+
+
 def main(bundle: Path, key: Path, worker: Path) -> dict:
     if (
         os.name != "nt"
@@ -60,6 +101,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
     checked = authenticated_review(bundle, key)
     ports = free_ports()
     password = secrets.token_urlsafe(24)
+    restored_target = None
     try:
         state = provision_native(
             target,
@@ -174,9 +216,71 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
         ):
             raise ValueError("E_TEST_NATIVE_BACKUP")
         clear.unlink()
-        encrypted.unlink()
         if load_installation(target).state.get("backupServiceRecovery") is not None:
             raise ValueError("E_TEST_NATIVE_BACKUP_SERVICE_RECOVERY")
+        from operational_restore import restore, retire_source
+
+        restored_target = parent / ("KyrionCI-" + str(uuid.uuid4()))
+        restored_ports = free_ports()
+        prepared = restore(
+            restored_target,
+            bundle,
+            key,
+            encrypted,
+            recovery_password,
+            "fixture.test",
+            "127.0.0.1",
+            worker=worker,
+            ports=restored_ports,
+        )
+        if prepared.get("applicationActivated") or not prepared.get(
+            "awaitingSourceRetirement"
+        ):
+            raise ValueError("E_TEST_RESTORE_PREMATURE_ACTIVATION")
+        receipt_path = target / "transfer-receipt.json"
+        retire_source(
+            target,
+            encrypted,
+            recovery_password,
+            prepared["targetInstallationId"],
+            receipt_path,
+        )
+        restored = restore(
+            restored_target,
+            bundle,
+            key,
+            encrypted,
+            recovery_password,
+            "fixture.test",
+            "127.0.0.1",
+            receipt_path,
+            worker,
+            restored_ports,
+        )
+        if not restored["applicationActivated"]:
+            raise ValueError("E_TEST_RESTORE_ACTIVATION")
+        restored_client = CoreClient(load_installation(restored_target))
+        try:
+            owner = restored_client.login_or_setup("fixture-owner", password)
+            if "OWNER" not in owner.get("roles", []):
+                raise ValueError("E_TEST_RESTORE_OFFLINE_LOGIN")
+        finally:
+            restored_client.close()
+        try:
+            repair_native(target)
+        except ValueError as error:
+            if str(error) != "E_AUTHORITY_INACTIVE":
+                raise
+        else:
+            raise ValueError("E_TEST_RETIRED_SOURCE_REPAIRED")
+        with ServiceManager() as scm:
+            old = load_installation(target)
+            for role in ROLES:
+                plan = plan_for(old, role)
+                with scm.opened(plan["name"]) as handle:
+                    status = scm.assert_owned(handle, plan)
+                    if status["start"] != 4 or status["state"] != 1:
+                        raise ValueError("E_TEST_RETIRED_SOURCE_NOT_DISABLED")
         return {
             "actualWindowsServices": True,
             "dedicatedVirtualAccounts": True,
@@ -188,46 +292,17 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "autostartConfigurationVerified": True,
             "payloadOwnershipAndReadOnlyPolicyVerified": True,
             "nativeConsistentEncryptedCaptureVerified": True,
-            "nativeFullRestoreVerified": False,
+            "nativeFullRestoreVerified": True,
+            "retiredSourceStoppedDisabledAndRepairDenied": True,
             "nativeInstalledSchemaQueryVerified": True,
             "coldBootVerified": False,
             "networkIsolated": False,
             "runtimeManifestSha256": checked.manifest_sha256,
         }
     finally:
-        journal = target / "install-state.json"
-        if journal.is_file() and all(
-            (target / name).is_file()
-            for name in ("installer.exe", "native-runtime.json", "native-manifest.json")
-        ):
-            installation = load_installation(target, verify=False)
-            # Explicitly clean the owned intermediate initializer as well after
-            # an interrupted/failed initialization, never an arbitrary service.
-            with ServiceManager(writable=True) as scm:
-                for role in reversed(ROLES):
-                    plan = plan_for(installation, role)
-                    with scm.opened(plan["name"], mutate=True) as handle:
-                        if handle:
-                            try:
-                                scm.assert_owned(handle, plan)
-                            except ValueError:
-                                if role != "postgres":
-                                    raise
-                                plan = plan_for(installation, "postgres-init")
-                                scm.assert_owned(handle, plan)
-                            scm.remove(handle, plan)
-                    scm.wait_removed(plan["name"])
-        if target.exists():
-            if target.parent != parent or not target.name.startswith("KyrionCI-"):
-                raise ValueError("E_TEST_CLEANUP_SCOPE")
-            for _ in range(30):
-                try:
-                    shutil.rmtree(target)
-                    break
-                except PermissionError:
-                    time.sleep(1)
-            else:
-                raise ValueError("E_TEST_CLEANUP_INCOMPLETE")
+        cleanup_owned_target(target, parent)
+        if restored_target is not None:
+            cleanup_owned_target(restored_target, parent)
 
 
 if __name__ == "__main__":

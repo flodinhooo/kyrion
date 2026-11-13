@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import time
 import uuid
 from pathlib import Path, PurePosixPath
 
@@ -59,6 +60,7 @@ def crypto(
     *,
     executable: Path | None = None,
     environment: dict[str, str] | None = None,
+    security_source: Path | None = None,
 ) -> None:
     if len(password) < 16 or any(ch in password for ch in "\r\n\x00"):
         raise ValueError("E_RECOVERY_PASSWORD")
@@ -95,7 +97,7 @@ def crypto(
             "--passphrase-fd",
             "0",
             "--output",
-            str(destination),
+            "-" if security_source is not None else str(destination),
         ]
         arguments += (
             ["--decrypt", str(source)]
@@ -110,14 +112,26 @@ def crypto(
             ]
         )
         try:
-            result = subprocess.run(
-                arguments,
-                input=(password + "\n").encode(),
-                capture_output=True,
-                timeout=1800,
-                check=False,
-                env=environment,
-            )
+            with contextlib.ExitStack() as files:
+                streams = {"capture_output": True}
+                if security_source is not None:
+                    from windows_security import open_secured_file
+
+                    output = files.enter_context(
+                        os.fdopen(open_secured_file(destination, security_source), "wb")
+                    )
+                    streams = {"stdout": output, "stderr": subprocess.PIPE}
+                result = subprocess.run(
+                    arguments,
+                    input=(password + "\n").encode(),
+                    **streams,
+                    timeout=1800,
+                    check=False,
+                    env=environment,
+                )
+                if security_source is not None:
+                    output.flush()
+                    os.fsync(output.fileno())
             if result.returncode:
                 raise ValueError(
                     "E_BACKUP_INTEGRITY" if decrypt else "E_BACKUP_ENCRYPTION"
@@ -237,6 +251,7 @@ def allowed_member(name: str) -> bool:
                     "data/web-tls/",
                     "data/knowledge/",
                     "recovery/",
+                    "database-data/",
                 )
             )
         )
@@ -391,6 +406,58 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
                 )
             if result.returncode or dump.stat().st_size == 0:
                 raise ValueError("E_BACKUP_DATABASE")
+            from portable_database import capture as capture_portable
+
+            def query_rows(sql):
+                return installation.compose(
+                    "exec",
+                    "-T",
+                    "postgres",
+                    "psql",
+                    "-X",
+                    "-U",
+                    "kyrion",
+                    "-d",
+                    "kyrion",
+                    "-Atc",
+                    sql,
+                ).encode("utf-8")
+
+            def export_rows(sql, path):
+                with path.open("xb") as stream:
+                    result = subprocess.run(
+                        [
+                            "docker",
+                            "compose",
+                            "--project-name",
+                            "kyrion-" + installation.state["installationId"],
+                            "--env-file",
+                            str(installation.target / ".env"),
+                            "-f",
+                            str(installation.target / "compose.yml"),
+                            "exec",
+                            "-T",
+                            "postgres",
+                            "psql",
+                            "-X",
+                            "-U",
+                            "kyrion",
+                            "-d",
+                            "kyrion",
+                            "-Atc",
+                            sql,
+                        ],
+                        stdout=stream,
+                        stderr=subprocess.PIPE,
+                        timeout=300,
+                        check=False,
+                    )
+                if result.returncode:
+                    raise ValueError("E_BACKUP_DATABASE")
+
+            portable, row_files = capture_portable(
+                query_rows, export_rows, scratch / "database-data"
+            )
             sources = {
                 relative: installation.target / relative
                 for relative in installation.state["files"]
@@ -398,6 +465,7 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
             sources.update(
                 {"install-state.json": installation.path, "database.dump": dump}
             )
+            sources.update(row_files)
             for relative in ("data/knowledge", "recovery"):
                 tree = installation.target / relative
                 if tree.exists():
@@ -410,10 +478,12 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
                             ] = path
             metadata = {
                 "installationId": installation.state["installationId"],
+                "capturedAt": int(time.time()),
                 "configuration": installation.configuration,
                 "schema": int(schema),
                 "postgresMajor": 17,
                 "restoreVerified": False,
+                "portableDatabase": portable,
                 "coverage": [
                     "database",
                     "managed-configuration",
@@ -486,14 +556,51 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
 
 
 @contextlib.contextmanager
-def verified_plaintext(source: Path, password: str):
-    with tempfile.TemporaryDirectory(prefix="kyrion-restore-") as directory:
+def verified_plaintext(
+    source: Path,
+    password: str,
+    *,
+    executable: Path | None = None,
+    environment: dict[str, str] | None = None,
+    private_parent: Path | None = None,
+    security_source: Path | None = None,
+):
+    with private_restore_directory(private_parent, security_source) as directory:
         scratch = Path(directory)
         os.chmod(scratch, 0o700)
         clear = scratch / "verified.tar"
-        crypto(source, clear, password, decrypt=True)
+        crypto(
+            source,
+            clear,
+            password,
+            decrypt=True,
+            executable=executable,
+            environment=environment,
+            security_source=scratch if security_source is not None else None,
+        )
         manifest = inspect_archive(clear)
         yield clear, manifest, scratch
+
+
+@contextlib.contextmanager
+def private_restore_directory(parent: Path | None, security_source: Path | None):
+    if security_source is None:
+        with tempfile.TemporaryDirectory(
+            prefix="kyrion-restore-", dir=parent
+        ) as directory:
+            yield Path(directory)
+        return
+    if parent is None:
+        raise ValueError("E_RESTORE_PRIVATE_PARENT")
+    from windows_security import create_private_directory
+
+    directory = parent / (".restore-" + uuid.uuid4().hex)
+    reject_links(directory)
+    create_private_directory(directory)
+    try:
+        yield directory
+    finally:
+        shutil.rmtree(directory)
 
 
 def verify_database(source: Path, password: str, image_id: str) -> dict:

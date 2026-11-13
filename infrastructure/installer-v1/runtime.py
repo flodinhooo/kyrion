@@ -249,6 +249,7 @@ class Installation:
         else:
             self.state = {
                 "formatVersion": 1,
+                "authorityFenceVersion": 1,
                 "installationId": str(uuid.uuid4()),
                 "rootPath": str(target.resolve()),
                 "configuration": self.configuration,
@@ -352,6 +353,9 @@ class Installation:
         self.save()
 
     def configure(self, identity: dict | None = None) -> None:
+        from authority import require_active
+
+        require_active(self.state, preparing=True)
         from identity_settings import configure_identity
 
         identity_environment = configure_identity(self, identity)
@@ -435,7 +439,27 @@ class Installation:
         self.state["stage"] = "configured"
         self.save()
 
-    def compose(self, *args: str, timeout: int = 120) -> str:
+    def compose(
+        self, *args: str, timeout: int = 120, restore_role: str | None = None
+    ) -> str:
+        if args and args[0] in {"up", "start", "restart", "run", "create"}:
+            from authority import require_active
+
+            if restore_role is None:
+                require_active(self.state)
+            elif (
+                restore_role not in {"postgres", "core"}
+                or self.state.get("preparedForRestore") is not True
+                or self.state.get("authority") is not None
+                or self.state.get("restore", {}).get("phase")
+                not in (
+                    {"migrating", "recovering"}
+                    if restore_role == "postgres"
+                    else {"migrating"}
+                )
+                or args != ("up", "-d", "--pull", "never", "--wait", restore_role)
+            ):
+                raise ValueError("E_RESTORE_RUNTIME_STATE")
         return execute(
             [
                 "docker",
@@ -452,6 +476,9 @@ class Installation:
         )
 
     def start(self) -> None:
+        from authority import require_active
+
+        require_active(self.state)
         self.verify_files()
         self.compose("config", "--quiet")
         self.state["stage"] = "starting"
@@ -517,6 +544,8 @@ def provision(
     address: str,
     expected_digest: str,
     identity: dict | None = None,
+    *,
+    restore_request: dict | None = None,
 ) -> dict:
     validate_inputs(target, hostname, address)
     observed = inventory(target)
@@ -549,6 +578,10 @@ def provision(
                     "E_EXISTING_STATE: existing Kyrion containers require explicit migration"
                 )
         installation = Installation(target, manifest, digest, hostname, address)
+        if restore_request is not None:
+            from authority import prepare_restore
+
+            prepare_restore(installation, restore_request)
         try:
             private_bundle = stage_image_inputs(
                 installation, bundle, manifest, observed["freeBytes"]
@@ -579,6 +612,10 @@ def provision(
                         "E_IMAGE: loaded image identity or architecture differs"
                     )
             installation.configure(identity=identity)
+            if restore_request is not None:
+                installation.state["restoreRuntimePrepared"] = True
+                installation.save()
+                return installation.state
             installation.start()
             return installation.state
         except (Exception, KeyboardInterrupt) as error:
