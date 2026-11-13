@@ -77,10 +77,12 @@ def read_configuration(root: Path) -> dict:
 
 
 def role_plan(
-    root: Path, role: str, config: dict
+    root: Path, role: str, config: dict, *, maintenance: bool = False
 ) -> tuple[Path, list[str], dict[str, str]]:
     if role not in {"core", "web", "caddy"}:
         raise ValueError("E_NATIVE_ROLE")
+    if type(maintenance) is not bool or (maintenance and role != "core"):
+        raise ValueError("E_UPDATE_IN_PROGRESS")
     payload = root / "payload"
     runtime = payload / "runtime"
     data = root / "data" / role
@@ -107,6 +109,7 @@ def role_plan(
             SERVER_SSL_CERTIFICATE_PRIVATE_KEY=(root / "secrets/core-tls.key").as_uri(),
             SPRING_CONFIG_IMPORT="",
             KYRION_CORE_ADDRESS="127.0.0.1",
+            KYRION_OPERATIONAL_MAINTENANCE=str(maintenance).lower(),
             KYRION_DATABASE_URL="jdbc:postgresql://127.0.0.1:"
             + str(ports["postgres"])
             + "/kyrion",
@@ -288,12 +291,17 @@ def run_role(root: Path, role: str, stop, report) -> None:
     from authority import require_active
 
     config = read_configuration(root)
+    state = json.loads(
+        (root / "install-state.json").read_bytes(), object_pairs_hook=unique_object
+    )
+    from update_gate import role_mode
+
+    maintenance = role_mode(state, role)
     require_active(
-        json.loads(
-            (root / "install-state.json").read_bytes(), object_pairs_hook=unique_object
-        ),
+        state,
         preparing=role == "postgres-init",
         migration=role == "core",
+        update=True,
     )
     manifest_path = root / "native-manifest.json"
     if manifest_path.stat().st_size > 8 * 1024**2:
@@ -328,7 +336,9 @@ def run_role(root: Path, role: str, stop, report) -> None:
     data = root / "data" / role
     for leaf in ("temp", "appdata", "localappdata"):
         (data / leaf).mkdir(exist_ok=True)
-    executable, arguments, environment = role_plan(root, role, config)
+    executable, arguments, environment = role_plan(
+        root, role, config, maintenance=maintenance
+    )
     from windows_security import check_access
 
     check_access(root, role, executable)

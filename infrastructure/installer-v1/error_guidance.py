@@ -1,6 +1,12 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_IN_PROGRESS": "updatesErrorTransaction",
+    "E_UPDATE_IDENTITY_CHANGED": "updatesErrorIdentity",
+    "E_UPDATE_SECURITY": "updatesErrorIdentity",
+    "E_UPDATE_RECOVERY_WRITES_ACK_REQUIRED": "updatesErrorRecoveryWrites",
+    "E_UPDATE_HOST_UPGRADE_REQUIRED": "updatesErrorHostUpgrade",
+    "E_UPDATE_CORE_UPGRADE_REQUIRED": "updatesErrorHostUpgrade",
     "E_DOWNLOAD_INTERRUPTED": "updatesErrorDownload",
     "E_DOWNLOAD_TIMEOUT": "updatesErrorDownload",
     "E_DOWNLOAD_RANGE": "updatesErrorDownload",

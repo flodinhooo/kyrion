@@ -328,10 +328,12 @@ def _inspect_archive(path: Path) -> dict:
         return manifest
 
 
-def capture(installation: Installation, destination: Path, password: str) -> dict:
+def capture(
+    installation: Installation, destination: Path, password: str, *, update=False
+) -> dict:
     from authority import require_active
 
-    require_active(installation.state)
+    require_active(installation.state, update=update)
     installation.verify_files()
     if not {
         "secrets/credential.key",
@@ -532,6 +534,10 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
             ):
                 raise ValueError("E_BACKUP_COUNTS")
             metadata["verificationCounts"] = counts
+            if update:
+                metadata["updateTransactionId"] = installation.state[
+                    "updateTransaction"
+                ]["id"]
             if any(name.startswith("recovery/") for name in sources):
                 metadata["coverage"].append("host-recovery-material")
             archive = scratch / "backup.tar"

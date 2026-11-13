@@ -262,7 +262,44 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "updates", None):
         from update_worker import configure, remove_schedule, rotate_policy
 
-        if args.updates == "download":
+        if args.updates in {"apply", "resume", "recover"}:
+            from update_transaction import apply, recover, resume
+
+            password = getpass.getpass(messages["backupPassword"] + ": ")
+            if args.updates == "apply":
+
+                def approve_update(summary):
+                    print(messages["updatesApplyReview"])
+                    print(json.dumps(summary))
+                    return input("[APPLY-UPDATE]: ").strip() == "APPLY-UPDATE"
+
+                outcome = apply(args.target, password, review=approve_update)
+            elif args.updates == "resume":
+                print(messages["updatesResumeReview"])
+                if input("[RESUME-UPDATE]: ").strip() != "RESUME-UPDATE":
+                    raise ValueError("E_CONFIRMATION")
+                outcome = resume(args.target, password)
+            else:
+                print(messages["updatesRecoveryReview"])
+                if input("[RECOVER-UPDATE]: ").strip() != "RECOVER-UPDATE":
+                    raise ValueError("E_CONFIRMATION")
+                with installation_lock(args.target):
+                    value = load_installation(args.target, verify=False).state.get(
+                        "updateTransaction", {}
+                    )
+                    after_activation = value.get("phase") in {"activating", "complete"}
+                acknowledge = False
+                if after_activation:
+                    print(messages["updatesRecoveryWrites"])
+                    acknowledge = (
+                        input("[DISCARD-POST-UPDATE-WRITES]: ").strip()
+                        == "DISCARD-POST-UPDATE-WRITES"
+                    )
+                    if not acknowledge:
+                        raise ValueError("E_CONFIRMATION")
+                outcome = recover(args.target, password, acknowledge_writes=acknowledge)
+            print(json.dumps(outcome))
+        elif args.updates == "download":
             from update_download import download
 
             def review_download(summary):
@@ -353,6 +390,12 @@ def run(args, messages: dict[str, str]) -> int:
                                 "updateCheck"
                             ),
                             "automaticInstallation": False,
+                            "transaction": installation.state.get(
+                                "updateTransaction", {}
+                            ).get("phase"),
+                            "transactionError": installation.state.get(
+                                "updateTransaction", {}
+                            ).get("lastError"),
                         }
                     )
                 )

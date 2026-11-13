@@ -102,8 +102,16 @@ class CoreProcess:
     def start_schema(self):
         self.activate(migration=True)
 
-    def activate(self, migration=False):
-        authority.require_active(self.installation.state, migration=migration)
+    def activate(self, migration=False, update=False):
+        authority.require_active(
+            self.installation.state, migration=migration, update=update
+        )
+        if update:
+            from update_gate import role_mode
+
+            self.environment["KYRION_OPERATIONAL_MAINTENANCE"] = str(
+                role_mode(self.installation.state, "core")
+            ).lower()
         if self.child is not None and self.child.poll() is None:
             return
         self.starts += 1

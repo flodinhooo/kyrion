@@ -19,7 +19,11 @@ DOMAIN = b"kyrion-operational-authority-transfer-v1\x00"
 
 
 def require_active(
-    state: dict, *, preparing: bool = False, migration: bool = False
+    state: dict,
+    *,
+    preparing: bool = False,
+    migration: bool = False,
+    update: bool = False,
 ) -> None:
     if state.get("authority") is not None or (
         state.get("preparedForRestore")
@@ -27,6 +31,10 @@ def require_active(
         and not (migration and state.get("restore", {}).get("phase") == "migrating")
     ):
         raise ValueError("E_AUTHORITY_INACTIVE")
+    from update_gate import fenced
+
+    if fenced(state) and not update:
+        raise ValueError("E_UPDATE_IN_PROGRESS")
 
 
 def prepare_restore(installation, request: dict) -> None:

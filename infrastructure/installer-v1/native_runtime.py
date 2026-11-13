@@ -494,10 +494,10 @@ def register_services(
             installation.save()
 
 
-def start_services(installation: Installation) -> None:
+def start_services(installation: Installation, *, update=False) -> None:
     from authority import require_active
 
-    require_active(installation.state)
+    require_active(installation.state, update=update)
     root = installation.target
     with ServiceManager(writable=True) as scm:
         for role in ROLES:

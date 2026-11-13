@@ -9,7 +9,7 @@ permissions:
 jobs:
   isolated-core:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -83,11 +83,31 @@ jobs:
               --work "$3/build/isolated-restore-work" \
               --report "$3/build/isolated-restore-report.json"
           ' kyrion-restore "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java"
+      - name: Exercise real Flyway update, interrupted activation and database recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/isolated-update-work
+          jar="$PWD/services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar"
+          digest="$(sha256sum "$jar" | cut -d ' ' -f 1)"
+          sudo unshare --net /bin/bash -c '
+            set -euo pipefail
+            ip link set lo up
+            ip addr add 10.231.0.1/32 dev lo
+            exec setpriv --reuid "$1" --regid "$2" --init-groups \
+              "$3/build/acceptance-python/bin/python" \
+              "$3/infrastructure/installer-v1/tests/integration/verify-update-transaction.py" \
+              --core-jar "$4" --core-sha256 "$5" --java "$6" \
+              --postgres-bin /usr/lib/postgresql/17/bin \
+              --work "$3/build/isolated-update-work" \
+              --report "$3/build/isolated-update-report.json"
+          ' kyrion-update "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java"
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: isolated-linux-core-evidence
           path: |
             build/isolated-core-report.json
             build/isolated-restore-report.json
+            build/isolated-update-report.json
             build/linux-update-unit-report.json
           if-no-files-found: error

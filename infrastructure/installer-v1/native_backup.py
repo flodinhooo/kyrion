@@ -115,10 +115,10 @@ def quiesce(installation):
                 installation.save()
 
 
-def capture(installation, destination: Path, password: str) -> dict:
+def capture(installation, destination: Path, password: str, *, update=False) -> dict:
     from authority import require_active
 
-    require_active(installation.state)
+    require_active(installation.state, update=update)
     root = installation.target
     config = read_configuration(root)
     preflight(
@@ -295,6 +295,10 @@ def capture(installation, destination: Path, password: str) -> dict:
             }
             if any(name.startswith("recovery/") for name in sources):
                 metadata["coverage"].append("host-recovery-material")
+            if update:
+                metadata["updateTransactionId"] = installation.state[
+                    "updateTransaction"
+                ]["id"]
             archive = scratch / "backup.tar"
             create_archive(sources, metadata, archive, security_source=scratch)
             inspect_archive(archive)

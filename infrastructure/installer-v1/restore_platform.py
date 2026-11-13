@@ -16,7 +16,10 @@ CORE_MAIN = "dev.kyrion.core.security.OperationalRestoreAdmin"
 PROPERTIES_LAUNCHER = "org.springframework.boot.loader.launch.PropertiesLauncher"
 
 
-def verify_native_tools(installation) -> None:
+def verify_native_tools(
+    installation,
+    prefixes=("runtime/postgres/", "runtime/installer/", "runtime/java/", "app/core/"),
+) -> None:
     from native_bundle import safe_member
     from native_roles import read_configuration
     from native_runtime import permissions
@@ -32,9 +35,7 @@ def verify_native_tools(installation) -> None:
     found = set()
     for row in records["files"]:
         name = safe_member(row["path"])
-        if not name.startswith(
-            ("runtime/postgres/", "runtime/installer/", "runtime/java/", "app/core/")
-        ):
+        if not name.startswith(prefixes):
             continue
         path = root / "payload" / name
         reject_links(path)
@@ -45,25 +46,26 @@ def verify_native_tools(installation) -> None:
         ):
             raise ValueError("E_NATIVE_INTEGRITY")
         found.add(name)
-    if (
-        not {
-            "runtime/postgres/bin/psql.exe",
-            "runtime/installer/gnupg/bin/gpg.exe",
-            "runtime/installer/gnupg/bin/gpgconf.exe",
-            "runtime/java/bin/java.exe",
-            "app/core/core-runtime.jar",
-        }
-        <= found
-    ):
+    required = {
+        "runtime/postgres/bin/psql.exe",
+        "runtime/installer/gnupg/bin/gpg.exe",
+        "runtime/installer/gnupg/bin/gpgconf.exe",
+        "runtime/java/bin/java.exe",
+        "app/core/core-runtime.jar",
+    }
+    if not {name for name in required if name.startswith(prefixes)} <= found:
         raise ValueError("E_BACKUP_RUNTIME_REQUIRED")
 
 
 class Native:
-    def __init__(self, installation, check_capability=True):
+    def __init__(self, installation, check_capability=True, tool_prefixes=None):
         from native_roles import read_configuration
         from native_runtime import admin_environment
 
-        verify_native_tools(installation)
+        if tool_prefixes is None:
+            verify_native_tools(installation)
+        else:
+            verify_native_tools(installation, tool_prefixes)
         self.installation = installation
         self.root = installation.target
         self.config = read_configuration(self.root)

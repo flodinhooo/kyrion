@@ -398,7 +398,12 @@ def download(target: Path, *, review, progress=None) -> dict:
 
 
 def revalidate(
-    installation, installer_version: str, schema: int, api: int = 1
+    installation,
+    installer_version: str,
+    schema: int,
+    api: int = 1,
+    *,
+    verification_time=None,
 ) -> ReviewedBundle:
     """Reauthorize staged inputs before a later transaction may use them."""
     from update_worker import require_worker
@@ -435,7 +440,12 @@ def revalidate(
     )
     if trust != policy["trust"]:
         raise ValueError("E_UPDATE_POLICY_CHANGED")
-    index = verify((root / state["indexProof"]).read_bytes(), trust, "release-index")
+    index = verify(
+        (root / state["indexProof"]).read_bytes(),
+        trust,
+        "release-index",
+        now=verification_time,
+    )
     candidate = compatible_release(
         index,
         installer_version,

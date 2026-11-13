@@ -65,6 +65,7 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--capabilities", action="store_true", help=argparse.SUPPRESS)
     actions.add_argument("--verify-bundle", action="store_true")
     actions.add_argument(
         "--windows-service",
@@ -86,7 +87,16 @@ def main() -> int:
     actions.add_argument("--check-updates", action="store_true")
     actions.add_argument(
         "--updates",
-        choices=("configure", "status", "disable", "rotate-trust", "download"),
+        choices=(
+            "configure",
+            "status",
+            "disable",
+            "rotate-trust",
+            "download",
+            "apply",
+            "resume",
+            "recover",
+        ),
     )
     parser.add_argument("--trust-rotation", type=Path)
     actions.add_argument(
@@ -133,6 +143,18 @@ def main() -> int:
     )
     args = parser.parse_args()
     args.installer_version = build["version"]
+    if args.capabilities:
+        print(
+            json.dumps(
+                {
+                    "formatVersion": 1,
+                    "updateProtocol": 1,
+                    "startupFence": True,
+                    "maintenanceCore": True,
+                }
+            )
+        )
+        return 0
     if args.background_update_check:
         from update_worker import run as background_check
 
