@@ -1,6 +1,15 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_DOWNLOAD_INTERRUPTED": "updatesErrorDownload",
+    "E_DOWNLOAD_TIMEOUT": "updatesErrorDownload",
+    "E_DOWNLOAD_RANGE": "updatesErrorDownload",
+    "E_DOWNLOAD_RESPONSE": "updatesErrorDownload",
+    "E_DOWNLOAD_DIGEST": "updatesErrorDigest",
+    "E_DOWNLOAD_MANIFEST_DIGEST": "updatesErrorDigest",
+    "E_DOWNLOAD_CHANGED": "updatesErrorChanged",
+    "E_DOWNLOAD_DISK": "updatesErrorDisk",
+    "E_UPDATE_COMPATIBILITY": "updatesErrorCompatibility",
     "E_UPDATE_FROZEN_REQUIRED": "updatesErrorWorker",
     "E_UPDATE_WORKER_CHANGED": "updatesErrorWorker",
     "E_UPDATE_POLICY_EXISTS": "updatesErrorPolicy",

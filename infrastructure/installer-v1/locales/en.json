@@ -1,4 +1,11 @@
 {
+  "updatesDownloadProgress": "Received bytes (integrity verification follows the complete transfer):",
+  "updatesErrorDownload": "The update download did not finish or the server returned an invalid response. Check the connection and retry the same download; a valid partial file can continue. Existing services have not been updated.",
+  "updatesErrorDigest": "The downloaded data does not match the authenticated release. It will not be used. Retry only from the configured trusted channel. A corrupted partial artifact is discarded so the next attempt starts cleanly.",
+  "updatesErrorChanged": "Existing staging data differs from the owned download. It has been preserved. Inspect the protected staging directory before retrying; do not replace installed data to work around this check.",
+  "updatesErrorDisk": "There is insufficient free space for the remaining download and the operating-system reserve. Free space outside Kyrion's protected data and retry.",
+  "updatesErrorCompatibility": "The signed candidate, runtime manifest or installed version is incompatible. The existing installation has not been changed. Use a compatible published release and installer.",
+  "updatesDownloadReview": "Download these authenticated runtime artifacts to private local staging. Sizes are shown below. Interrupted downloads can be retried. Existing services keep running; this action does not install or activate an update.",
   "updatesTrustReview": "Apply this trust rotation only if its signature is valid under the installed rotation authority and its epoch is exactly the next one. No release or model is installed by this action.",
   "updatesErrorWorker": "Use the independently verified self-contained downloaded installer. Its reviewed executable must remain unchanged while configuring the update worker; a source Python interpreter cannot be installed as that worker.",
   "updatesErrorPolicy": "The installed update policy differs. Inspect its status and explicitly disable its owned schedule before configuring another channel or worker. Signed anti-rollback checks remain in force.",

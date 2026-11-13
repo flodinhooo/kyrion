@@ -17,7 +17,14 @@ from recovery import backup, load_installation, verify_database
 from runtime import ROOT, installation_lock
 
 
-def check_updates(args, *, trusted_document=None, policy_revision=None) -> dict:
+def check_updates(
+    args,
+    *,
+    trusted_document=None,
+    policy_revision=None,
+    capture_proof=None,
+    require_enabled=True,
+) -> dict:
     from release_policy import (
         compatible_release,
         fetch_document,
@@ -44,7 +51,7 @@ def check_updates(args, *, trusted_document=None, policy_revision=None) -> dict:
             policy = installation.state.get("updatePolicy", {})
             if (
                 policy.get("revision") != policy_revision
-                or policy.get("enabled") is not True
+                or (require_enabled and policy.get("enabled") is not True)
                 or policy.get("feed") != args.feed
                 or policy.get("trust") != trusted_document
             ):
@@ -81,7 +88,8 @@ def check_updates(args, *, trusted_document=None, policy_revision=None) -> dict:
             if trusted_document is not None
             else parse(args.trust_store.read_bytes())
         )
-        index = verify(fetch_document(args.feed), trust, "release-index")
+        envelope = fetch_document(args.feed)
+        index = verify(envelope, trust, "release-index")
         previous = installation.state.get("updateCheck", {})
         index_digest = hashlib.sha256(
             json.dumps(index, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -115,6 +123,8 @@ def check_updates(args, *, trusted_document=None, policy_revision=None) -> dict:
         }
         installation.state["updateCheck"] = result
         installation.save()
+        if capture_proof is not None:
+            capture_proof(envelope)
         return result
 
 
@@ -251,7 +261,48 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "updates", None):
         from update_worker import configure, remove_schedule, rotate_policy
 
-        if args.updates == "configure":
+        if args.updates == "download":
+            from update_download import download
+
+            def review_download(summary):
+                print(messages["updatesDownloadReview"])
+                print(json.dumps(summary))
+                return input("[DOWNLOAD-UPDATE]: ").strip() == "DOWNLOAD-UPDATE"
+
+            import time
+
+            last_progress = (None, 0.0)
+
+            def show_progress(name, received, total):
+                nonlocal last_progress
+                now = time.monotonic()
+                if (
+                    last_progress[0] != name
+                    or now - last_progress[1] >= 1
+                    or received == total
+                ):
+                    print(
+                        messages["updatesDownloadProgress"]
+                        + " "
+                        + json.dumps(
+                            {
+                                "artifact": name,
+                                "receivedBytes": received,
+                                "artifactBytes": total,
+                            }
+                        ),
+                        flush=True,
+                    )
+                    last_progress = (name, now)
+
+            print(
+                json.dumps(
+                    download(
+                        args.target, review=review_download, progress=show_progress
+                    )
+                )
+            )
+        elif args.updates == "configure":
             if not args.feed or args.trust_store is None:
                 raise ValueError("E_UPDATE_CONFIG")
             print(messages["updatesScheduleReview"])

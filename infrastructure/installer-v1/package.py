@@ -46,6 +46,7 @@ FILES = (
     "maintenance.py",
     "update_worker.py",
     "update_schedule.py",
+    "update_download.py",
     "recovery.py",
     "release_policy.py",
     "models.py",

@@ -232,3 +232,11 @@ policy revision, preventing an in-flight check from committing under old keys.
 Protect production signing keys outside the checkout; development tests generate
 ephemeral isolated keys. Refer to ADR 0058 and the current status report for
 execution/boot acceptance boundaries and the still-open update coordinator.
+
+`--updates download --target ROOT` rechecks the signed channel and displays the
+authenticated artifact sizes before streaming into protected local staging.
+The command prints received bytes separately from final integrity verification.
+Retrying the same command may resume a partial transfer. Existing services keep
+running. A successful result means verified update inputs, not installed updates.
+Signed proofs expire and are revalidated before later use; channel/key changes
+require fresh authorization. See ADR 0059 for the download boundary.

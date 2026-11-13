@@ -88,7 +88,7 @@ has no running systemd manager; no Linux job execution or cold boot is claimed.
 
 Configuration currently requires a released embedded version and an explicit
 authenticated feed. Development builds cannot pretend that a public release
-exists. The `.4` native Windows/Linux test packages contain the current
+exists. The `.4` native Windows/Linux test packages contain the update-check milestone's
 allowlisted sources, verified against both embedded source hash maps. They
 remain unsigned, unpublished development artifacts. Local Web update
 notifications, transactional installation, maintenance windows, migrations,
@@ -96,7 +96,7 @@ interrupted update recovery and distributed coordination remain source work.
 Checking does not install an update. The complete requirements matrix remains
 authoritative for all other open work.
 
-Current source suites: 238 tests on Windows (one skip) and isolated Debian Linux
+Update-check milestone source suites: 238 tests on Windows (one skip) and isolated Debian Linux
 (16 platform skips). Ruff passed, DE/EN locale keys match, and both prepared CI
 workflow documents parse. No hosted workflow was dispatched.
 
@@ -115,3 +115,44 @@ SHA-256 `705afe1d15c07b5c273f7c557270ce721f9c59b3eaa9d0870266bc61951272e2`,
 The actual frozen `.4` installer accepted its ephemeral development signature
 and verified the full payload without activation. The private test signing key
 was never persisted. This is not Authenticode or productive release acceptance.
+
+## Authenticated update download continuation (ADR 0059)
+
+`--updates download --target ROOT` now rechecks the configured signed channel,
+authenticates the exact manifest digest and reviews artifact sizes before large
+transfers. It streams HTTPS artifacts into protected staging with actual byte
+progress. Interrupted transfers resume with validated Range responses; ignored
+Range responses restart the same owned partial. Invalid headers, redirects,
+untrusted TLS certificates and incorrect digests cannot publish a verified file.
+The existing native ZIP/PE/file validators and Linux image archive/tag validators
+are reused. Runtime services and installed release configuration are unchanged.
+
+Signed index proof and public trust snapshots accompany the staged manifest.
+Before a future transaction uses it, revalidation checks signature expiry, current
+policy revision, release sequence, platform and compatibility again. A changed
+policy or expired proof requires fresh authorization. Manual staging also works
+when periodic checks are disabled. No automatic activation or database mutation
+is claimed by successful download verification.
+
+Developer tests use real loopback HTTPS servers and certificate validation, real
+Ed25519 signatures, journal/files and archive validators. Payloads are synthetic
+and are never executed; installed-schema queries and host/scheduler guards are
+injected in staging tests. Current source verification and artifacts are recorded
+below as they complete. The update backup/migration/activation coordinator,
+maintenance windows and distributed update barriers remain open source work.
+The `.4` artifacts above predate this download continuation.
+
+Download milestone verification: 248 Windows tests (one skip), 248 isolated Linux
+tests (16 skips), Ruff and matching DE/EN locale keys passed. Ten download tests
+exercise actual loopback HTTPS, including certificate rejection, interrupted
+whole-staging resume and immutable runtime configuration. Synthetic Linux TAR
+image identities and native ZIP/PE contents are validated without execution.
+
+Both `.5` native packages passed actual frozen version/probe checks and their
+source maps match this download implementation. They remain unsigned and
+unpublished, with platform installation acceptance false:
+
+| Local artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `build/native-installer/kyrion-installer-0.0.0-dev.20261113.5-windows-amd64.exe` | 12430805 | `74362f2182f9fe5e04dd86e43af9b356d143dd15bdf29806289c2e07684ca824` |
+| `build/native-installer/kyrion-installer-0.0.0-dev.20261113.5-linux-amd64.tar.gz` | 14235897 | `ef20d5b88cb17f6f9c6d076954117869643833756e96c78684074ba2c6b27811` |

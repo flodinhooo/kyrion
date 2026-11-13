@@ -85,7 +85,8 @@ def main() -> int:
     actions.add_argument("--uninstall", action="store_true")
     actions.add_argument("--check-updates", action="store_true")
     actions.add_argument(
-        "--updates", choices=("configure", "status", "disable", "rotate-trust")
+        "--updates",
+        choices=("configure", "status", "disable", "rotate-trust", "download"),
     )
     parser.add_argument("--trust-rotation", type=Path)
     actions.add_argument(
