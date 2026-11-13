@@ -143,9 +143,7 @@ def verify(
     return document
 
 
-def rotate(trust_path: Path, envelope_bytes: bytes, now: int | None = None) -> dict:
-    reject_links(trust_path)
-    current = parse(trust_path.read_bytes())
+def rotated_trust(current: dict, envelope_bytes: bytes, now: int | None = None) -> dict:
     document = verify(envelope_bytes, current, "trust-rotation", now)
     replacement = document.get("replacement")
     if not isinstance(replacement, dict):
@@ -153,6 +151,12 @@ def rotate(trust_path: Path, envelope_bytes: bytes, now: int | None = None) -> d
     validate_trust(replacement)
     if replacement["epoch"] != current["epoch"] + 1:
         raise PolicyError("E_TRUST_ROLLBACK")
+    return replacement
+
+
+def rotate(trust_path: Path, envelope_bytes: bytes, now: int | None = None) -> dict:
+    reject_links(trust_path)
+    replacement = rotated_trust(parse(trust_path.read_bytes()), envelope_bytes, now)
     atomic_json(trust_path, replacement)
     return replacement
 

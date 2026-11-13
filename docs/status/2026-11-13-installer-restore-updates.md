@@ -61,8 +61,57 @@ disaster recovery, arbitrary schema transitions and distributed authority
 transfer remain implementation work. Native Windows SCM restore, actual
 container UID permissions and cold boot remain target-environment acceptance.
 
-Automatic installed update checks and transactional updates are the next work
-item. Signed compatible candidate selection already exists; it is not automatic
-installation. Old `.2` native installer artifacts predate this restore code and
-must not be presented as containing it. The complete installer requirements
-matrix remains authoritative for all other open work.
+## Installed update checks (ADR 0058)
+
+The native installer now offers `--updates configure|status|disable|rotate-trust`. Explicit
+configuration reviews the HTTPS feed, independently supplied public trust store
+and executable digest before copying an immutable maintenance worker. A Windows
+SYSTEM boot task repeats daily; Linux uses a root oneshot service with a boot
+and daily timer. No interactive login or user Python is required. The background
+entrypoint runs without prompts. It reuses the real signed release checker and
+persists a policy-bound attempt/result. Failures preserve the last verified
+result and store only an allowlisted error code. Retirement and uninstall remove
+only the owned schedule. Timer publication is atomic and registration resumable.
+Installed trust rotation reuses the signed rotation verifier, advances exactly
+one epoch and changes the policy revision without changing the OS task. Replay
+and a changed reviewed rotation document are rejected.
+
+Actual Windows COM definition validation and actual isolated Linux
+`systemd-analyze verify` passed, without registering or starting host jobs. Unit
+tests cover real signature selection, network failure, stale policy revisions,
+inactive targets, invalid URLs, interrupted publication and configuration resume;
+SQL, frozen-worker and scheduler boundaries are injected in these unit tests.
+The Windows hosted integration runner additionally prepares real SYSTEM task
+execution of its unreleased worker and verifies rejection before network access.
+That privileged scenario has not been executed in this session. Local Debian
+has no running systemd manager; no Linux job execution or cold boot is claimed.
+
+Configuration currently requires a released embedded version and an explicit
+authenticated feed. Development builds cannot pretend that a public release
+exists. The `.4` native Windows/Linux test packages contain the current
+allowlisted sources, verified against both embedded source hash maps. They
+remain unsigned, unpublished development artifacts. Local Web update
+notifications, transactional installation, maintenance windows, migrations,
+interrupted update recovery and distributed coordination remain source work.
+Checking does not install an update. The complete requirements matrix remains
+authoritative for all other open work.
+
+Current source suites: 238 tests on Windows (one skip) and isolated Debian Linux
+(16 platform skips). Ruff passed, DE/EN locale keys match, and both prepared CI
+workflow documents parse. No hosted workflow was dispatched.
+
+| Local artifact | Bytes | SHA-256 | Verification |
+| --- | ---: | --- | --- |
+| `build/native-installer/kyrion-installer-0.0.0-dev.20261113.4-windows-amd64.exe` | 12417292 | `2a1a31964bffb30967e71a77b0fc80bb9abf2b1d7c4ca22017d3dca1d87d7bc7` | Actual frozen version/probe, current source map; no service/cold boot acceptance |
+| `build/native-installer/kyrion-installer-0.0.0-dev.20261113.4-linux-amd64.tar.gz` | 14222644 | `6ed5bcc0c7c4cfc1a9869a7b38361e6694342ee6b8cf3c54906d2f86471b5901` | Actual frozen version/probe on isolated Debian; no ARM/old-glibc/boot acceptance |
+
+These ignored build outputs are not public download links or published releases.
+
+The updated local Windows runtime bundle is
+`build/windows-native-bundle-dev8/kyrion-windows-amd64.zip`: 247559859 bytes,
+SHA-256 `705afe1d15c07b5c273f7c557270ce721f9c59b3eaa9d0870266bc61951272e2`,
+6114 public files. Its manifest digest is
+`61ad722570fcfa139939849991acea5bea279e86b27fcca9e8611f577ed8cc38`.
+The actual frozen `.4` installer accepted its ephemeral development signature
+and verified the full payload without activation. The private test signing key
+was never persisted. This is not Authenticode or productive release acceptance.

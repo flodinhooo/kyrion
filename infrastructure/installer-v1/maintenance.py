@@ -17,7 +17,7 @@ from recovery import backup, load_installation, verify_database
 from runtime import ROOT, installation_lock
 
 
-def check_updates(args) -> dict:
+def check_updates(args, *, trusted_document=None, policy_revision=None) -> dict:
     from release_policy import (
         compatible_release,
         fetch_document,
@@ -31,11 +31,24 @@ def check_updates(args) -> dict:
     except ValueError:
         raise ValueError("E_INSTALLER_UNRELEASED") from None
 
-    if not args.feed or args.trust_store is None:
+    if not args.feed or (args.trust_store is None and trusted_document is None):
         raise ValueError("E_UPDATE_CONFIG")
-    reject_links(args.trust_store)
+    if args.trust_store is not None:
+        reject_links(args.trust_store)
     with installation_lock(args.target):
         installation = load_installation(args.target)
+        from authority import require_active
+
+        require_active(installation.state)
+        if policy_revision is not None:
+            policy = installation.state.get("updatePolicy", {})
+            if (
+                policy.get("revision") != policy_revision
+                or policy.get("enabled") is not True
+                or policy.get("feed") != args.feed
+                or policy.get("trust") != trusted_document
+            ):
+                raise ValueError("E_UPDATE_POLICY_CHANGED")
         if installation.state.get("backend") == "windows-native":
             from native_runtime import installed_schema
 
@@ -63,7 +76,11 @@ def check_updates(args) -> dict:
             and int(schema_text) != args.installed_schema
         ):
             raise ValueError("E_UPDATE_SCHEMA")
-        trust = parse(args.trust_store.read_bytes())
+        trust = (
+            trusted_document
+            if trusted_document is not None
+            else parse(args.trust_store.read_bytes())
+        )
         index = verify(fetch_document(args.feed), trust, "release-index")
         previous = installation.state.get("updateCheck", {})
         index_digest = hashlib.sha256(
@@ -94,6 +111,7 @@ def check_updates(args) -> dict:
             "installedAutomatically": False,
             "indexSha256": index_digest,
             "trustEpoch": trust["epoch"],
+            "feed": args.feed,
         }
         installation.state["updateCheck"] = result
         installation.save()
@@ -121,7 +139,10 @@ def diagnostic(target: Path, output: Path) -> None:
         else None,
         "ownerSetup": state.get("ownerSetup") == "authenticated",
         "backupConfigured": state.get("backup") == "encrypted-consistent-capture",
-        "updatesConfigured": False,
+        "updatesConfigured": (
+            state.get("updatePolicy", {}).get("enabled") is True
+            and state.get("updateSchedule", {}).get("state") == "registered"
+        ),
         "managedFilesIntact": False,
     }
     try:
@@ -201,6 +222,9 @@ def repair(target: Path) -> dict:
 def uninstall(target: Path, purge: bool = False) -> dict:
     with installation_lock(target):
         installation = load_installation(target)
+        from update_worker import remove_schedule
+
+        remove_schedule(installation)
         config = installation.configuration
         runtime_checks(config["address"], config["hostname"], fresh=False)
         # Compose project identity is installation-scoped. No image removal,
@@ -223,6 +247,63 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "updates", None):
+        from update_worker import configure, remove_schedule, rotate_policy
+
+        if args.updates == "configure":
+            if not args.feed or args.trust_store is None:
+                raise ValueError("E_UPDATE_CONFIG")
+            print(messages["updatesScheduleReview"])
+            import sys
+
+            worker_digest = sha256(Path(sys.executable))
+            print(
+                json.dumps(
+                    {
+                        "feed": args.feed,
+                        "trustStore": str(args.trust_store),
+                        "workerSha256": worker_digest,
+                    }
+                )
+            )
+            if input("[ENABLE-CHECKS]: ").strip() != "ENABLE-CHECKS":
+                raise ValueError("E_CONFIRMATION")
+            print(
+                json.dumps(
+                    configure(args.target, args.feed, args.trust_store, worker_digest)
+                )
+            )
+        elif args.updates == "rotate-trust":
+            if args.trust_rotation is None:
+                raise ValueError("E_UPDATE_CONFIG")
+            digest = sha256(args.trust_rotation)
+            print(messages["updatesTrustReview"])
+            print(json.dumps({"rotationSha256": digest}))
+            if input("[ROTATE-TRUST]: ").strip() != "ROTATE-TRUST":
+                raise ValueError("E_CONFIRMATION")
+            print(json.dumps(rotate_policy(args.target, args.trust_rotation, digest)))
+        else:
+            with installation_lock(args.target):
+                installation = load_installation(args.target)
+                if args.updates == "disable":
+                    from operational_restore import require_admin
+
+                    require_admin()
+                    remove_schedule(installation)
+                print(messages["updatesStatus"])
+                print(
+                    json.dumps(
+                        {
+                            "schedule": installation.state.get("updateSchedule"),
+                            "lastAttempt": installation.state.get("updateAttempt"),
+                            "lastSuccessfulCheck": installation.state.get(
+                                "updateCheck"
+                            ),
+                            "automaticInstallation": False,
+                        }
+                    )
+                )
         return 0
     if getattr(args, "retire_for_restore", None):
         from operational_restore import retire_source

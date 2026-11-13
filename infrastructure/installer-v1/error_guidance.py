@@ -1,6 +1,11 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_FROZEN_REQUIRED": "updatesErrorWorker",
+    "E_UPDATE_WORKER_CHANGED": "updatesErrorWorker",
+    "E_UPDATE_POLICY_EXISTS": "updatesErrorPolicy",
+    "E_UPDATE_POLICY_CHANGED": "updatesErrorPolicy",
+    "E_UPDATE_SYSTEMD_REQUIRED": "updatesErrorSystemd",
     "E_RESTORE_COMPATIBILITY": "restoreErrorCompatibility",
     "E_RESTORE_PORTABLE_DATA_REQUIRED": "restoreErrorCompatibility",
     "E_RESTORE_SCHEMA_MISMATCH": "restoreErrorCompatibility",

@@ -84,6 +84,13 @@ def main() -> int:
     actions.add_argument("--repair", action="store_true")
     actions.add_argument("--uninstall", action="store_true")
     actions.add_argument("--check-updates", action="store_true")
+    actions.add_argument(
+        "--updates", choices=("configure", "status", "disable", "rotate-trust")
+    )
+    parser.add_argument("--trust-rotation", type=Path)
+    actions.add_argument(
+        "--background-update-check", action="store_true", help=argparse.SUPPRESS
+    )
     actions.add_argument("--refresh-model-catalog", action="store_true")
     actions.add_argument("--continue-setup", action="store_true")
     actions.add_argument("--extend-bootstrap", action="store_true")
@@ -125,6 +132,14 @@ def main() -> int:
     )
     args = parser.parse_args()
     args.installer_version = build["version"]
+    if args.background_update_check:
+        from update_worker import run as background_check
+
+        try:
+            return background_check(args.target)
+        except (OSError, ValueError, TypeError, KeyError):
+            print("E_UPDATE_CHECK", file=sys.stderr)
+            return 2
     if args.verify_bundle:
         if args.public_key is None:
             print("E_SIGNATURE_TRUST_REQUIRED", file=sys.stderr)
@@ -209,6 +224,7 @@ def main() -> int:
         or args.repair
         or args.uninstall
         or args.check_updates
+        or args.updates
         or args.refresh_model_catalog
         or args.continue_setup
         or args.extend_bootstrap

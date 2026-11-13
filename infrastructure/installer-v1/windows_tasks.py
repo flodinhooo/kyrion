@@ -98,11 +98,20 @@ def task_plan(installation_id: str, target: str, role: str) -> dict[str, str]:
 
 def operate(plan: dict[str, str], action: str = "validate") -> dict:
     match = re.fullmatch(
-        r"Kyrion-([a-f0-9-]{36})-(core|web|caddy)", plan.get("name", "")
+        r"Kyrion-([a-f0-9-]{36})-(core|web|caddy|updates)", plan.get("name", "")
     )
-    if match is None or plan != task_plan(
-        match[1], plan.get("directory", ""), match[2]
-    ):
+    if match is None:
+        raise ValueError("E_WINDOWS_TASK_PLAN")
+    expected = (
+        update_check_plan(
+            match[1],
+            plan.get("directory", ""),
+            PureWindowsPath(plan.get("command", "")).name,
+        )
+        if match[2] == "updates"
+        else task_plan(match[1], plan.get("directory", ""), match[2])
+    )
+    if plan != expected:
         raise ValueError("E_WINDOWS_TASK_PLAN")
     if os.name != "nt" or action not in {
         "validate",
@@ -159,3 +168,40 @@ def operate(plan: dict[str, str], action: str = "validate") -> dict:
     ):
         raise ValueError("E_WINDOWS_TASK_RESPONSE")
     return value
+
+
+def update_check_plan(installation_id: str, target: str, worker: str) -> dict[str, str]:
+    if not re.fullmatch(r"maintenance-[a-f0-9]{32}\.exe", worker):
+        raise ValueError("E_UPDATE_WORKER")
+    plan = task_plan(installation_id, target, "core")
+    task = ET.fromstring(plan["xml"])
+
+    def item(path):
+        found = task.find(path, {"t": NAMESPACE})
+        if found is None:
+            raise ValueError("E_WINDOWS_TASK_PLAN")
+        return found
+
+    identifier = str(uuid.UUID(installation_id))
+    plan["name"] = "Kyrion-" + identifier + "-updates"
+    plan["description"] = (
+        "Managed by Kyrion installation " + identifier + "; role updates"
+    )
+    plan["command"] = str(PureWindowsPath(target) / worker)
+    plan["arguments"] = subprocess.list2cmdline(
+        ["--background-update-check", "--target", target]
+    )
+    item("t:RegistrationInfo/t:Description").text = plan["description"]
+    item("t:Principals/t:Principal/t:UserId").text = "S-1-5-18"
+    principal = item("t:Principals/t:Principal")
+    principal.remove(item("t:Principals/t:Principal/t:ProcessTokenSidType"))
+    item("t:Settings/t:ExecutionTimeLimit").text = "PT10M"
+    item("t:Triggers/t:BootTrigger/t:Delay").text = "PT2M"
+    repetition = ET.Element("{" + NAMESPACE + "}Repetition")
+    ET.SubElement(repetition, "{" + NAMESPACE + "}Interval").text = "PT24H"
+    ET.SubElement(repetition, "{" + NAMESPACE + "}StopAtDurationEnd").text = "false"
+    item("t:Triggers/t:BootTrigger").insert(0, repetition)
+    item("t:Actions/t:Exec/t:Command").text = plan["command"]
+    item("t:Actions/t:Exec/t:Arguments").text = plan["arguments"]
+    plan["xml"] = ET.tostring(task, encoding="unicode")
+    return plan

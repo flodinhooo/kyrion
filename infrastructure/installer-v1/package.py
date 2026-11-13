@@ -44,6 +44,8 @@ FILES = (
     "linked_onboarding.py",
     "verify.py",
     "maintenance.py",
+    "update_worker.py",
+    "update_schedule.py",
     "recovery.py",
     "release_policy.py",
     "models.py",

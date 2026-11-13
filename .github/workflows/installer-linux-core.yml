@@ -35,6 +35,15 @@ jobs:
           printf '%s\n' 'deb [signed-by=/usr/share/keyrings/kyrion-pgdg.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/kyrion-pgdg.list >/dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-17 iproute2 gnupg
+      - name: Build finite native worker and validate actual systemd definitions without registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="0.0.0-ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          build/acceptance-python/bin/python infrastructure/installer-v1/release/build-native.py --version "$version" --output build/native-linux-worker > build/native-linux-worker-build.log 2>&1
+          mkdir build/native-linux-worker-unpacked
+          tar -xzf "build/native-linux-worker/kyrion-installer-${version}-linux-amd64.tar.gz" -C build/native-linux-worker-unpacked kyrion-installer
+          build/acceptance-python/bin/python infrastructure/installer-v1/tests/integration/verify-update-units.py --worker "$PWD/build/native-linux-worker-unpacked/kyrion-installer" --work "$PWD/build" --report build/linux-update-unit-report.json
       - name: Run synthetic accounts and HA only in an isolated network namespace
         shell: bash
         run: |
@@ -80,4 +89,5 @@ jobs:
           path: |
             build/isolated-core-report.json
             build/isolated-restore-report.json
+            build/linux-update-unit-report.json
           if-no-files-found: error

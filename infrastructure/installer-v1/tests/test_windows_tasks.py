@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from windows_tasks import NAMESPACE, operate, task_plan
+from windows_tasks import NAMESPACE, operate, task_plan, update_check_plan
 
 
 class TaskPlanTests(unittest.TestCase):
@@ -57,6 +57,31 @@ class TaskPlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "E_WINDOWS_TASK_PLAN"):
             operate({**self.plan, "command": r"C:\Windows\System32\cmd.exe"})
 
+    def test_update_plan_is_finite_machine_start_and_repeats_without_login(self):
+        plan = update_check_plan(
+            self.identifier,
+            r"C:\ProgramData\Kyrion Test",
+            "maintenance-" + "a" * 32 + ".exe",
+        )
+        root = ET.fromstring(plan["xml"])
+        ns = {"t": NAMESPACE}
+        self.assertEqual(
+            root.findtext("t:Principals/t:Principal/t:UserId", namespaces=ns),
+            "S-1-5-18",
+        )
+        self.assertEqual(
+            root.findtext(
+                "t:Triggers/t:BootTrigger/t:Repetition/t:Interval", namespaces=ns
+            ),
+            "PT24H",
+        )
+        self.assertEqual(
+            root.findtext("t:Settings/t:ExecutionTimeLimit", namespaces=ns), "PT10M"
+        )
+        self.assertNotIn("LogonTrigger", plan["xml"])
+        with self.assertRaises(ValueError):
+            update_check_plan(self.identifier, r"C:\ProgramData\Kyrion Test", "cmd.exe")
+
     @unittest.skipUnless(os.name == "nt", "Actual Windows security-descriptor parser")
     def test_native_task_security_rejects_shared_or_mutable_descriptors(self):
         script = Path(__file__).parent / "integration/verify-task-security.ps1"
@@ -98,4 +123,13 @@ class TaskPlanTests(unittest.TestCase):
                 self.assertFalse(result["registered"])
                 self.assertFalse(result["coldBootVerified"])
         result = operate(self.plan, "inspect")
+        self.assertFalse(result["registered"])
+        result = operate(
+            update_check_plan(
+                self.identifier,
+                r"C:\ProgramData\Kyrion Test",
+                "maintenance-" + "a" * 32 + ".exe",
+            )
+        )
+        self.assertTrue(result["definitionValidated"])
         self.assertFalse(result["registered"])

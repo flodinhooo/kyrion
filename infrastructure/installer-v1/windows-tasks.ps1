@@ -8,7 +8,20 @@ try {
     $raw = [Console]::In.ReadToEnd()
     if ($raw.Length -gt 32768) { throw 'E_TASK_INPUT' }
     $plan = $raw | ConvertFrom-Json
-    if ($plan.name -notmatch '^Kyrion-[a-f0-9-]{36}-(core|web|caddy)$') { throw 'E_TASK_NAME' }
+    if ($plan.name -notmatch '^Kyrion-[a-f0-9-]{36}-(core|web|caddy|updates)$') { throw 'E_TASK_NAME' }
+    $isUpdate = $plan.name.EndsWith('-updates')
+    $principalSid = 'S-1-5-19'
+    $bootDelay = 'PT30S'
+    $executionLimit = 'PT0S'
+    $workerFile = 'installer.exe'
+    if ($isUpdate) {
+        $principalSid = 'S-1-5-18'
+        $bootDelay = 'PT2M'
+        $executionLimit = 'PT10M'
+        $workerFile = [IO.Path]::GetFileName([string]$plan.command)
+        if ($workerFile -cnotmatch '^maintenance-[a-f0-9]{32}\.exe$' -or
+            [IO.Path]::Combine([string]$plan.directory, $workerFile) -cne $plan.command) { throw 'E_TASK_EXECUTABLE' }
+    }
     $scheduler = New-Object -ComObject 'Schedule.Service'
     $scheduler.Connect()
     $definition = $scheduler.NewTask(0)
@@ -17,17 +30,25 @@ try {
 
     function Assert-Definition($candidate) {
         [xml]$candidateXml = $candidate.XmlText
-        if ($candidateXml.Task.Principals.Principal.ProcessTokenSidType -ne 'Unrestricted') { throw 'E_TASK_TOKEN' }
+        if ($isUpdate) {
+            if ($candidateXml.Task.Principals.Principal.ProcessTokenSidType -and
+                $candidateXml.Task.Principals.Principal.ProcessTokenSidType -ne 'Default') { throw 'E_TASK_TOKEN' }
+        } elseif ($candidateXml.Task.Principals.Principal.ProcessTokenSidType -ne 'Unrestricted') { throw 'E_TASK_TOKEN' }
+        if ($isUpdate) {
+            if ($candidate.Triggers.Item(1).Repetition.Interval -ne 'PT24H' -or
+                $candidate.Triggers.Item(1).Repetition.Duration -or
+                $candidate.Triggers.Item(1).Repetition.StopAtDurationEnd) { throw 'E_TASK_INTERVAL' }
+        } elseif ($candidate.Triggers.Item(1).Repetition.Interval) { throw 'E_TASK_INTERVAL' }
         if ($candidate.Actions.Count -ne 1 -or $candidate.Actions.Item(1).Type -ne 0 -or
             $candidate.Actions.Item(1).Path -cne $plan.command -or
             $candidate.Actions.Item(1).Arguments -cne $plan.arguments -or
             $candidate.Actions.Item(1).WorkingDirectory -cne $plan.directory -or
             $candidate.RegistrationInfo.Description -cne $plan.description -or
             $candidate.Triggers.Count -ne 1 -or $candidate.Triggers.Item(1).Type -ne 8 -or
-            $candidate.Triggers.Item(1).Delay -ne 'PT30S' -or -not $candidate.Triggers.Item(1).Enabled -or
+            $candidate.Triggers.Item(1).Delay -ne $bootDelay -or -not $candidate.Triggers.Item(1).Enabled -or
             $candidate.Principal.LogonType -ne 5 -or $candidate.Principal.RunLevel -ne 0 -or
             $candidate.Settings.MultipleInstances -ne 2 -or $candidate.Settings.RestartCount -ne 3 -or
-            $candidate.Settings.RestartInterval -ne 'PT1M' -or $candidate.Settings.ExecutionTimeLimit -ne 'PT0S' -or
+            $candidate.Settings.RestartInterval -ne 'PT1M' -or $candidate.Settings.ExecutionTimeLimit -ne $executionLimit -or
             -not $candidate.Settings.Enabled -or -not $candidate.Settings.StartWhenAvailable -or
             -not $candidate.Settings.Hidden -or -not $candidate.Settings.AllowHardTerminate -or
             -not $candidate.Settings.AllowDemandStart -or $candidate.Settings.RunOnlyIfIdle -or
@@ -36,7 +57,7 @@ try {
         $principalId = [string]$candidate.Principal.UserId
         if ($principalId -like 'S-1-*') { $sid = New-Object System.Security.Principal.SecurityIdentifier($principalId) }
         else { $account = New-Object System.Security.Principal.NTAccount($principalId); $sid = $account.Translate([System.Security.Principal.SecurityIdentifier]) }
-        if ($sid.Value -ne 'S-1-5-19') { throw 'E_TASK_PRINCIPAL' }
+        if ($sid.Value -ne $principalSid) { throw 'E_TASK_PRINCIPAL' }
     }
     Assert-Definition $definition
     if ($Action -in @('register','start','stop','remove')) {
@@ -59,7 +80,9 @@ try {
         if ($journal.formatVersion -ne 1 -or $journal.backend -ne 'windows-native' -or
             $plan.name -cne ('Kyrion-' + $journal.installationId + '-' + ($plan.name -split '-')[-1]) -or
             [IO.Path]::GetFullPath($journal.rootPath) -ine $directory.FullName -or
-            $journal.files.'installer.exe' -notmatch '^[a-f0-9]{64}$') { throw 'E_TASK_JOURNAL' }
+            $journal.files.$workerFile -notmatch '^[a-f0-9]{64}$') { throw 'E_TASK_JOURNAL' }
+        if ($isUpdate -and ($journal.updatePolicy.workerFile -cne $workerFile -or
+            ('maintenance-' + $journal.files.$workerFile.Substring(0,32) + '.exe') -cne $workerFile)) { throw 'E_TASK_JOURNAL' }
         foreach ($ownedPath in @($directory.FullName, $journalPath, $plan.command)) {
             $item = Get-Item -LiteralPath $ownedPath -Force
             if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'E_TASK_TARGET' }
@@ -73,7 +96,7 @@ try {
                 if ($sid -notmatch '^S-1-5-(80|87)-[0-9-]+$' -or ([int64]$rule.FileSystemRights -band 0xD0156)) { throw 'E_TASK_ACL' }
             }
         }
-        if ((Get-FileHash -LiteralPath $plan.command -Algorithm SHA256).Hash.ToLowerInvariant() -cne $journal.files.'installer.exe') { throw 'E_TASK_INTEGRITY' }
+        if ((Get-FileHash -LiteralPath $plan.command -Algorithm SHA256).Hash.ToLowerInvariant() -cne $journal.files.$workerFile) { throw 'E_TASK_INTEGRITY' }
     }
     $exists = $false
     $task = $null
@@ -93,7 +116,7 @@ try {
             if (-not (Test-Path -LiteralPath $plan.command -PathType Leaf)) { throw 'E_TASK_EXECUTABLE' }
             # TASK_CREATE | TASK_DONT_ADD_PRINCIPAL_ACE: no overwrite, no shared
             # Local Service ACE that could alter the validated task definition.
-            $task = $folder.RegisterTaskDefinition([string]$plan.name, $definition, 18, 'S-1-5-19', $null, 5, $KyrionTaskSecurityDescriptor)
+            $task = $folder.RegisterTaskDefinition([string]$plan.name, $definition, 18, $principalSid, $null, 5, $KyrionTaskSecurityDescriptor)
             Assert-Definition $task.Definition
             Assert-KyrionTaskSecurityDescriptor ($task.GetSecurityDescriptor(7))
             $exists = $true

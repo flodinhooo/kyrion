@@ -101,6 +101,9 @@ def retire_source(
                     raise ValueError("E_CONFIRMATION")
 
             def stop_owned(installation):
+                from update_worker import remove_schedule
+
+                remove_schedule(installation)
                 if installation.state.get("backend") == "windows-native":
                     from native_runtime import retire_services
 

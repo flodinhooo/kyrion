@@ -1,4 +1,10 @@
 {
+  "updatesTrustReview": "Apply this trust rotation only if its signature is valid under the installed rotation authority and its epoch is exactly the next one. No release or model is installed by this action.",
+  "updatesErrorWorker": "Use the independently verified self-contained downloaded installer. Its reviewed executable must remain unchanged while configuring the update worker; a source Python interpreter cannot be installed as that worker.",
+  "updatesErrorPolicy": "The installed update policy differs. Inspect its status and explicitly disable its owned schedule before configuring another channel or worker. Signed anti-rollback checks remain in force.",
+  "updatesErrorSystemd": "Automatic Linux checks require a running systemd system manager. This environment cannot install that timer. Manual signed checks remain available; no startup verification is claimed.",
+  "updatesScheduleReview": "Enable a machine-start and daily signed update check. This copies the self-contained maintenance worker and registers a protected system schedule. Outgoing HTTPS is used. Existing installations keep running when offline. Updates are not installed automatically.",
+  "updatesStatus": "Update schedule, last attempt and last verified release check (an older successful check is not evidence that the current channel is reachable):",
   "intro": "Kyrion local installer. Your setup stays on this target. No AI, microphone, cloud keys or extra hardware is required. This candidate has not passed clean-host release acceptance.",
   "unsupported": "E_PLATFORM: This target has no supported provisioning path yet. Windows inventory does not mean Windows installation support. Use an isolated Debian 13 x64/ARM64 or 64-bit Raspberry Pi OS 13 candidate for testing. No system changes were made.",
   "modes": "Mode: fresh / resume / repair / restore. Expansion remains separately tracked work.",

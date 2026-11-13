@@ -700,6 +700,9 @@ def uninstall_native(target: Path, purge: bool = False) -> dict:
                 with scm.opened(plan["name"]) as handle:
                     if handle:
                         scm.assert_owned(handle, plan)
+        from update_worker import remove_schedule
+
+        remove_schedule(installation)
         stop_services(installation, remove=True)
         installation.state["stage"] = "uninstalled"
         installation.save()

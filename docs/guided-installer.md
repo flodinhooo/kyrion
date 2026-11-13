@@ -206,3 +206,29 @@ backup key; it authorizes only the exact backup and target UUID. Do not retire a
 source before independently protecting the encrypted backup and recovery key.
 These commands describe developer tooling, not a claim of complete platform
 acceptance or availability of published installer artifacts.
+
+## Installed periodic release checks
+
+A self-contained released installer can configure a protected machine schedule:
+`--updates configure --target ROOT --feed HTTPS_INDEX --trust-store TRUST_JSON`.
+The local prompt reviews the channel, public trust document and worker digest.
+No passwords are placed in arguments. Configuration copies a hash-addressed
+worker, registers a daily/startup Windows SYSTEM task or Linux systemd timer,
+and records actual registration separately from intent. Source Python and
+unreleased development versions cannot masquerade as released workers.
+
+`--updates status --target ROOT` reports the last attempt and the last verified
+candidate separately. A previous successful check remains visible when offline
+and is not evidence of current channel reachability. `--updates disable` removes
+the verified owned schedule; changing the channel or worker requires explicitly
+disabling the previous schedule first. There is no implicit update installation.
+
+`--updates rotate-trust --trust-rotation SIGNED_ENVELOPE --target ROOT` verifies
+the reviewed envelope with the installed rotation authority and advances exactly
+one trust epoch. Its payload uses `kind: trust-rotation`, an unexpired `expiresAt`
+and a validated `replacement` trust document. The envelope's key ID, base64
+payload and Ed25519 signature follow `release_policy.py`. Rotation changes the
+policy revision, preventing an in-flight check from committing under old keys.
+Protect production signing keys outside the checkout; development tests generate
+ephemeral isolated keys. Refer to ADR 0058 and the current status report for
+execution/boot acceptance boundaries and the still-open update coordinator.

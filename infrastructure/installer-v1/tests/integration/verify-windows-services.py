@@ -8,6 +8,7 @@ publishes a release or controls a household device. Host cold boot is separate.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import secrets
@@ -57,6 +58,9 @@ def cleanup_owned_target(target: Path, parent: Path) -> None:
         for name in ("installer.exe", "native-runtime.json", "native-manifest.json")
     ):
         installation = load_installation(target, verify=False)
+        from update_worker import remove_schedule
+
+        remove_schedule(installation)
         # Explicitly clean the owned intermediate initializer as well after
         # an interrupted/failed initialization, never an arbitrary service.
         with ServiceManager(writable=True) as scm:
@@ -84,6 +88,77 @@ def cleanup_owned_target(target: Path, parent: Path) -> None:
                 time.sleep(1)
         else:
             raise ValueError("E_TEST_CLEANUP_INCOMPLETE")
+
+
+def verify_update_task(target: Path, worker: Path) -> None:
+    """Actual SYSTEM execution of a dev worker; intentionally no release fetch."""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from update_schedule import operate
+    from update_worker import remove_schedule
+    from windows_tasks import operate as task_operation
+    from windows_tasks import update_check_plan
+
+    installation = load_installation(target)
+    public_key = (
+        Ed25519PrivateKey.generate()
+        .public_key()
+        .public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        .decode()
+    )
+    raw = worker.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    name = "maintenance-" + digest[:32] + ".exe"
+    installation.write(name, raw)
+    installation.state["updatePolicy"] = {
+        "formatVersion": 1,
+        "revision": str(uuid.uuid4()),
+        "enabled": True,
+        "feed": "https://updates.invalid.example.test/index.json",
+        "trust": {
+            "formatVersion": 1,
+            "epoch": 1,
+            "keys": [
+                {
+                    "id": "fixture",
+                    "pem": public_key,
+                    "notBefore": int(time.time()) - 60,
+                    "notAfter": int(time.time()) + 3600,
+                    "usages": ["release-index", "trust-rotation"],
+                }
+            ],
+        },
+        "workerFile": name,
+    }
+    installation.save()
+    try:
+        actual = operate(installation, "register")
+        if actual["state"] != "registered" or actual["coldBootVerified"]:
+            raise ValueError("E_TEST_UPDATE_SCHEDULE")
+        installation.state["updateSchedule"] = actual
+        installation.save()
+        operate(installation, "register")
+        plan = update_check_plan(
+            installation.state["installationId"], str(target), name
+        )
+        task_operation(plan, "start")
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            installation = load_installation(target)
+            attempt = installation.state.get("updateAttempt")
+            if attempt is not None:
+                if attempt.get(
+                    "error"
+                ) != "E_INSTALLER_UNRELEASED" or installation.state.get("updateCheck"):
+                    raise ValueError("E_TEST_UNRELEASED_WORKER_FETCH")
+                break
+            time.sleep(1)
+        else:
+            raise ValueError("E_TEST_UPDATE_WORKER_TIMEOUT")
+    finally:
+        remove_schedule(load_installation(target))
 
 
 def main(bundle: Path, key: Path, worker: Path) -> dict:
@@ -186,6 +261,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
                 raise ValueError("E_TEST_SETUP_REOPENED")
         finally:
             client.close()
+        verify_update_task(target, worker)
         # Actual privileged backup capture is restricted to this fresh synthetic
         # installation. It is not a full application restore/identity acceptance.
         from native_backup import backup
@@ -295,6 +371,8 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "nativeFullRestoreVerified": True,
             "retiredSourceStoppedDisabledAndRepairDenied": True,
             "nativeInstalledSchemaQueryVerified": True,
+            "actualSystemUpdateTaskExecution": True,
+            "updateWorkerRefusesUnreleasedBuildBeforeNetwork": True,
             "coldBootVerified": False,
             "networkIsolated": False,
             "runtimeManifestSha256": checked.manifest_sha256,
