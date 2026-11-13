@@ -1,10 +1,17 @@
-# Current website acceptance — 2026-11-12
+# Historical website acceptance - 2026-11-12
+
+The [2026-11-13 published-state acceptance](2026-11-13-website-acceptance.md)
+supersedes current-status statements below, including earlier publication,
+contact-Origin and personal pending-link blockers. The dated evidence below is
+retained as history.
+
+## Original checkpoint
 
 Latest customer-account scope: browser self-registration and remembered website sessions supersede the earlier invitation-only/short-session checkpoints. See the customer-account redesign section at the end and [ADR 0051](../adr/0051-customer-website-accounts.md). Local Core link/session rules are unchanged.
 
-Latest result: **KY-020 completed; publication verified. KY-021 remains blocked by deployed contact-origin configuration.** The original audit below describes pre-publication observations; the post-deployment section supersedes its deployment-open and old-public-copy statements. KY-022?KY-024 remain open.
+Historical result: **KY-020 completed; publication verified. KY-021 remains blocked by deployed contact-origin configuration.** The original audit below describes pre-publication observations; the post-deployment section supersedes its deployment-open and old-public-copy statements. KY-022?KY-024 remain open.
 
-This is the current website acceptance record. The [active backlog](TODO.md)
+This was the original website acceptance record. The [active backlog](TODO.md)
 remains the single work order; KY-020–KY-024 identify the open website gates.
 The [detailed website audit](../../apps/website/STATUS.md) records source,
 verification, cleanup and the limits of production access.

@@ -173,4 +173,8 @@ test intentionally skipped. Existing `full-identity/flows.spec.ts` received only
 formatter output to resolve a pre-existing formatting-check failure. Broader physical-device,
 screen-reader and multi-browser acceptance is not claimed by these tests.
 
-MWG-04 remains deferred. No production deployment is part of this follow-up.
+MWG-04 remains deferred. Initial implementation did not deploy production.
+The owner subsequently authorized publication: fix `b899f1e` was included in
+`eb07775`, successfully deployed through Vercel. Live DE/EN contact-field
+correction and non-delivering API smoke passed. See
+[the published-state acceptance](2026-11-13-website-acceptance.md).

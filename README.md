@@ -19,8 +19,8 @@ The Web interface and public website support German and English.
 
 > **LLM proposes. Core decides. Adapter executes. Result confirms.**
 
-**Website/documentation reviewed 2026-11-12:** website source is integrated on
-`master`; [current website acceptance](docs/status/2026-11-12-website-acceptance.md)
+**Website/documentation reviewed 2026-11-13:** website source is integrated on
+`master`; [current website acceptance](docs/status/2026-11-13-website-acceptance.md)
 separates passing local verification from outstanding production acceptance.
 Parallel installer work and older platform evidence retain their own scope.
 The account overview now includes linked installations; the dedicated `/connect`
@@ -33,7 +33,8 @@ is the current work order, with stable IDs and completion criteria.
 
 Both web surfaces use shared [Modern Web Guidance](docs/modern-web-guidance.md)
 as development guidance. The [initial audit](docs/status/2026-11-13-modern-web-guidance-audit.md)
-records proposals only; no automatic UI refactor was performed.
+records the initial proposals and the owner-authorized first three fixes. They
+are tested and published; account-menu modernization remains deferred.
 
 > **Licence:** no repository `LICENSE` has been selected. Kyrion is intended for
 > open-source publication, but the current source remains all rights reserved;
@@ -51,17 +52,18 @@ records proposals only; no automatic UI refactor was performed.
   unlinking](docs/unified-identity.md) preserve local accounts, roles and independent
   local password login. Website login grants no local membership. Real isolated
   identity acceptance exists. Public HTTPS discovery and the enabled website
-  account endpoint were rechecked on 2026-11-12; real registration, login,
-  verification/reset mail and local linking acceptance remain separate. Cloud
+  account endpoint have production evidence. The owner confirmed website login,
+  local linking and directory display; new-customer registration, recovery and
+  remembered-session renewal still need production acceptance. Cloud
   invitations are not established by website login.
-- **Public website:** customer browser registration, remembered account sessions,
-  a shared header account menu, and bilingual informational, Contact, Privacy,
-  Download and Hardware pages are integrated. The audited source passes 50
-  isolated tests, lint, formatting, TypeScript and production build. Seven old
-  generated builds were removed. Canonical-host and factual privacy corrections
-  were published and verified on 2026-11-12 (commit `48d064a`); actual contact delivery,
-  account journeys, deployed abuse controls and installer downloads remain open.
-  See [website status](apps/website/STATUS.md) and KY-020–KY-024 in the backlog.
+- **Public website:** browser registration, remembered sessions, account menu,
+  linked-installation overview and bilingual Contact/Privacy/Download pages are
+  integrated. Commit `eb07775` is published through Vercel; the DE/EN live browser
+  and API smoke passed. The recorded frontend checks passed 56 Website tests
+  (one opt-in database test skipped), 282 local-Web tests, types, lint, formatting
+  and both production builds. Contact receipt/Reply-To, remaining account lifecycle,
+  operational abuse/privacy controls and installer downloads remain open.
+  See [website status](apps/website/STATUS.md) and KY-021 through KY-024 in the backlog.
 - **HOME calendar:** local events and jointly editable native household events,
   explicit participants, revision conflicts, creator-only deletion, voluntary
   private/availability/details disclosure and manual selected-recipient Google

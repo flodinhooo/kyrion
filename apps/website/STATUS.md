@@ -1,20 +1,27 @@
 # Website integration and readiness audit
 
+**Current publication, 2026-11-13:** `eb07775` is deployed successfully. Live DE/EN
+field correction, mobile layout, runtime-error and API-boundary checks passed.
+The owner confirmed personal login/local linking and installation display. Contact
+Origin is resolved. [Current acceptance](../../docs/status/2026-11-13-website-acceptance.md)
+lists remaining receipt, lifecycle, operational and release gates. Earlier sections
+below retain their dated scope; their old blockers are superseded.
+
 **Linked-installation follow-up, 2026-11-12:** account overview lists confirmed
 installation/Space labels and local usernames; `/connect` is the dedicated code
 entry. Local Profile displays verified central email/name. The real isolated
 registration/link/directory/offline-unlink acceptance passes (2 tests), alongside
 Core profile/receipt isolation. See the latest section of the current acceptance
-for rollout evidence and the remaining personal-link confirmation.
+for rollout evidence. Personal-link confirmation was subsequently supplied.
 
 Customer account redesign: browser registration, a responsive header account menu and remembered sessions replace the earlier invitation/expiry-screen UX. See [ADR 0051](../../docs/adr/0051-customer-website-accounts.md) and the latest customer-account section of the [current acceptance](../../docs/status/2026-11-12-website-acceptance.md). Earlier audit checkpoints below remain dated evidence.
 
-**Publication update, 2026-11-12:** commit `48d064a` deployed successfully through Vercel; corrected public metadata, DE/EN privacy and contact privacy links verified. KY-020 is completed. KY-021 is blocked: final www contact Origin is rejected while the old apex Origin reaches validation. Production `CONTACT_FORM_ORIGIN` must change and be redeployed. See [post-deployment evidence and owner inputs](../../docs/status/2026-11-12-website-acceptance.md#post-deployment-verification). The audit below preserves pre-publication findings.
+**Historical publication checkpoint, 2026-11-12:** commit `48d064a` deployed successfully through Vercel; corrected public metadata, DE/EN privacy and contact privacy links verified. KY-020 is completed. KY-021 is blocked: final www contact Origin is rejected while the old apex Origin reaches validation. Production `CONTACT_FORM_ORIGIN` must change and be redeployed. See [post-deployment evidence and owner inputs](../../docs/status/2026-11-12-website-acceptance.md#post-deployment-verification). The audit below preserves pre-publication findings.
 
-Reviewed **2026-11-12**. This is the current website status; older review and
+Historical audit reviewed **2026-11-12**. The 2026-11-13 summary above is current; older review and
 handover documents describe their respective dates, not present production health.
 The current platform entry point is the
-[website acceptance](../../docs/status/2026-11-12-website-acceptance.md); open
+[website acceptance](../../docs/status/2026-11-13-website-acceptance.md); open
 outcomes are KY-020–KY-024 in the [active backlog](../../docs/status/TODO.md#website-acceptance).
 
 ## Result
