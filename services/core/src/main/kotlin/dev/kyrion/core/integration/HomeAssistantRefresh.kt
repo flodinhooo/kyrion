@@ -1,15 +1,9 @@
 package dev.kyrion.core.integration
 
-import org.springframework.context.annotation.Configuration
-import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.jdbc.core.simple.JdbcClient
 import java.util.UUID
-
-@Configuration
-@EnableScheduling
-class HomeAssistantScheduling
 
 /** Reuse the bounded, serialized importer; a failed owner must not stop others. */
 @Component

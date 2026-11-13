@@ -156,3 +156,41 @@ unpublished, with platform installation acceptance false:
 | --- | ---: | --- |
 | `build/native-installer/kyrion-installer-0.0.0-dev.20261113.5-windows-amd64.exe` | 12430805 | `74362f2182f9fe5e04dd86e43af9b356d143dd15bdf29806289c2e07684ca824` |
 | `build/native-installer/kyrion-installer-0.0.0-dev.20261113.5-linux-amd64.tar.gz` | 14235897 | `ef20d5b88cb17f6f9c6d076954117869643833756e96c78684074ba2c6b27811` |
+
+## Core maintenance start continuation (ADR 0060)
+
+Core now supports a host-controlled `KYRION_OPERATIONAL_MAINTENANCE=true` process
+start. Only exact GET/HEAD health routes pass its earliest servlet filter;
+application requests return 503 `OPERATIONAL_MAINTENANCE`. Global application
+scheduling is disabled for this start. Normal mode retains existing scheduling
+and authentication. Flyway and startup invariants still run; Core's sealed
+`core.started` audit event is deliberately preserved.
+
+Seven Core unit tests passed (three maintenance tests plus the four existing
+permit/protected-file tests). The updated actual Core/PostgreSQL/GPG process
+integration passed on Windows and isolated Linux. It verifies healthy maintenance
+startup, blocked login/Space routes, unchanged accounts/Spaces/sessions and other
+audit records, exactly one expected startup audit event, normal access after
+restart, then all existing interruption/audit/identity/offline restore checks.
+The tested Core JAR digest is
+`03f1ab64000868510b4cbf09851b5dba85b8ffba4a9b14a2f6947cc5428c4697`.
+Reports use the same ignored report paths listed above. These remain actual
+process tests with an injected lifecycle adapter, not SCM/Docker/boot acceptance.
+
+This property is currently available for direct Core process starts; it is not
+yet selected by an installed transactional updater. The `.5` installer artifacts
+do not contain Core. The earlier `dev8` runtime bundle contains the earlier Core
+digest, so it does not provide this maintenance mode. Runtime repackaging must
+follow coordinator integration; no packaged support is claimed prematurely.
+
+| Environment | Actual evidence | Remaining acceptance |
+| --- | --- | --- |
+| Windows 11 x64, build 26300 | Frozen installer probe/version, native PG17/Java21/Core/GPG processes, TLS, restore and maintenance start | Fresh OS prerequisites, SCM/task execution, system reboot; hosted scenario prepared but not run |
+| Isolated Debian 13 x64 WSL guest | Frozen installer probe/version; PG17/Java21/Core/GPG process tests, no-egress network namespace, systemd definition parser | No running systemd manager, container UID acceptance, cold boot or old-glibc compatibility |
+| Ubuntu 24.04 x64 hosted CI | PostgreSQL17 namespace/process and native packaging scenarios prepared | Workflow not executed in this session |
+| Linux ARM64 / suitable Raspberry Pi | Architecture paths and release selection source | No actual native artifact, hardware or boot acceptance in this session |
+
+No row constitutes a production support release. Transactional update execution,
+consistent pre-update quiescence, protected automatic-backup key custody,
+post-migration activation, interrupted-update recovery and distributed barriers
+remain source work, independently of unavailable host acceptance environments.

@@ -240,3 +240,11 @@ Retrying the same command may resume a partial transfer. Existing services keep
 running. A successful result means verified update inputs, not installed updates.
 Signed proofs expire and are revalidated before later use; channel/key changes
 require fresh authorization. See ADR 0059 for the download boundary.
+
+For isolated direct Core process health/migration checks,
+`KYRION_OPERATIONAL_MAINTENANCE=true` blocks application routes and application
+scheduling while preserving health and Core startup audit. It is a host-only
+startup property, not an HTTP preference. Restart with false/default to restore
+normal operation. This is not yet wired into an installed update transaction;
+refer to ADR 0060 and the status report for actual process evidence and bundle
+version boundaries.

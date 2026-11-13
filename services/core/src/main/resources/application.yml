@@ -35,6 +35,8 @@ management:
         include: health
 
 kyrion:
+  operational:
+    maintenance: ${KYRION_OPERATIONAL_MAINTENANCE:false}
   knowledge:
     root: ${KYRION_KNOWLEDGE_ROOT:./data/knowledge}
     max-bytes: ${KYRION_KNOWLEDGE_MAX_BYTES:10485760}

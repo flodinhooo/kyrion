@@ -260,6 +260,53 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         token = response["sessionToken"]
         original_user = source_core.request("GET", "/v1/auth/me", token=token)
         original_space = source_core.request("GET", "/v1/space", token=token)
+        source_core.stop_application()
+        maintenance_counts = """SELECT json_build_object(
+            'users',(SELECT count(*) FROM user_account),
+            'spaces',(SELECT count(*) FROM kyrion_space),
+            'sessions',(SELECT count(*) FROM auth_session),
+            'startup',(SELECT count(*) FROM activity_event WHERE event_type='core.started'),
+            'otherAudit',(SELECT count(*) FROM activity_event WHERE event_type<>'core.started'))"""
+        before_maintenance = json.loads(source_core.command(maintenance_counts))
+        source_core.environment["KYRION_OPERATIONAL_MAINTENANCE"] = "true"
+        source_core.activate()
+        for method, route, body in (
+            ("GET", "/v1/auth/me", None),
+            ("GET", "/v1/space", None),
+            ("POST", "/v1/auth/login", credentials),
+        ):
+            try:
+                source_core.request(method, route, body, token=token)
+            except HTTPError as error:
+                if (
+                    error.code != 503
+                    or json.loads(error.read(4096)).get("code")
+                    != "OPERATIONAL_MAINTENANCE"
+                ):
+                    raise ValueError("E_FIXTURE_MAINTENANCE_RESPONSE") from None
+            else:
+                raise ValueError("E_FIXTURE_MAINTENANCE_APPLICATION_ACCESS")
+        # CoreStartupActivity intentionally appends its sealed process-start
+        # event. Maintenance must not suppress audit to appear read-only.
+        expected_maintenance = {
+            **before_maintenance,
+            "startup": before_maintenance["startup"] + 1,
+        }
+        for _ in range(50):
+            after_maintenance = json.loads(source_core.command(maintenance_counts))
+            if after_maintenance == expected_maintenance:
+                break
+            time.sleep(0.1)
+        else:
+            raise ValueError("E_FIXTURE_MAINTENANCE_MUTATION")
+        source_core.stop_application()
+        source_core.environment.pop("KYRION_OPERATIONAL_MAINTENANCE")
+        source_core.activate()
+        if (
+            source_core.request("GET", "/v1/auth/me", token=token)["id"]
+            != original_user["id"]
+        ):
+            raise ValueError("E_FIXTURE_MAINTENANCE_IDENTITY_CHANGED")
         knowledge = source.target / "data/knowledge/synthetic.txt"
         knowledge.write_text("Synthetic personal knowledge, no provider or device.\n")
         source_core.stop_application()
@@ -531,6 +578,9 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         return {
             "coreJarSha256": expected_digest,
             "actualCoreAndPostgreSQL": True,
+            "maintenanceHealthOnlyStart": True,
+            "maintenancePreservesAccountsSessionsAndStartupAudit": True,
+            "normalAccessRestoredWithoutIdentityChange": True,
             "actualEncryptedBackup": True,
             "newTargetHostIdentity": True,
             "sourceRetirementRequired": True,
