@@ -11,6 +11,7 @@ from pathlib import Path
 FILES = (
     "guided.py",
     "build_identity.py",
+    "release_channel.py",
     "host.py",
     "bundle.py",
     "crypto_support.py",

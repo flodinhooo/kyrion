@@ -209,6 +209,31 @@ acceptance or availability of published installer artifacts.
 
 ## Installed periodic release checks
 
+Native release builders accept `--channel PUBLIC_CHANNEL_JSON`. Stable versions
+require it. The versioned public document contains exactly `formatVersion: 1`,
+`feed` (the actual HTTPS release-index URL, without credentials/query/fragment),
+and `trust` in the existing `release_policy.py` format. Supply real Ed25519 public
+authorities with scoped release-index and trust-rotation usages. Never put private
+keys into this document. The builders validate keys, embed the exact bytes, bind
+their SHA-256 into `installer-build.json`, and execute `--channel-info` on the
+built executable to verify the resource. Both native installer and service-host
+builders support the same option.
+
+The release workflow reads the public repository variable
+`KYRION_INSTALLER_CHANNEL_JSON`; stable native builds fail if it is missing.
+Unconfigured development builds report that condition without inventing a feed.
+Production public trust, an actually published signed index and release approval
+remain operator prerequisites. This configuration does not publish anything.
+
+After setup, setup continuation or successful restore, a configured installer
+offers notification-only scheduling through the existing machine worker. It runs
+outside the setup lock, retains explicit skip/consent, and preserves existing
+disabled or rotated policies. Failed registration retains a concrete safe error
+and can be continued; a saved policy is not displayed as successful registration.
+Use `--channel-info` to inspect the embedded feed, trust epoch and binding hash
+without installing or contacting the network. Automatic installation still needs
+the separate window/download/key-custody consent below.
+
 A self-contained released installer can configure a protected machine schedule:
 `--updates configure --target ROOT --feed HTTPS_INDEX --trust-store TRUST_JSON`.
 The local prompt reviews the channel, public trust document and worker digest.

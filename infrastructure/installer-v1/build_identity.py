@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -32,12 +33,21 @@ def read_build(root: Path | None = None, frozen: bool | None = None) -> dict:
         raise ValueError("E_INSTALLER_BUILD") from None
     if (
         not isinstance(result, dict)
-        or set(result) != {"formatVersion", "version"}
+        or set(result)
+        not in (
+            {"formatVersion", "version"},
+            {"formatVersion", "version", "releaseChannelSha256"},
+        )
         or type(result["formatVersion"]) is not int
         or result["formatVersion"] != 1
         or not isinstance(result["version"], str)
         or not VERSION.fullmatch(result["version"])
         or "latest" in result["version"].lower()
+    ):
+        raise ValueError("E_INSTALLER_BUILD")
+    if "releaseChannelSha256" in result and (
+        not isinstance(result["releaseChannelSha256"], str)
+        or not re.fullmatch(r"[a-f0-9]{64}", result["releaseChannelSha256"])
     ):
         raise ValueError("E_INSTALLER_BUILD")
     return result

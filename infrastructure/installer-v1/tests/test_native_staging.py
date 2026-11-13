@@ -4,6 +4,7 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -15,10 +16,41 @@ from runtime import Installation
 
 class Staging(unittest.TestCase):
     # Reuse the synthetic signing fixture without inheriting/re-running its tests.
-    setUp = fixture.NativeBundleTests.setUp
+    def setUp(self):
+        fixture.NativeBundleTests.setUp(self)
+        # Synthetic ZIP correctness must not depend on the developer temp drive
+        # having the production 12-GiB reserve. Refusal has a separate case.
+        self.enterContext(
+            patch(
+                "native_staging.shutil.disk_usage",
+                return_value=SimpleNamespace(free=64 * 1024**3),
+            )
+        )
+
     bundle = fixture.NativeBundleTests.bundle
     signed_bundle = fixture.NativeBundleTests.signed_bundle
     write_manifest = fixture.NativeBundleTests.write_manifest
+
+    def test_insufficient_space_refuses_before_copying_archive(self):
+        _, key = self.signed_bundle()
+        review = authenticated_review(self.root, key)
+        installation = Installation(
+            self.root / "installation",
+            review.manifest,
+            review.manifest_sha256,
+            "fixture.test",
+            "127.0.0.1",
+        )
+        with (
+            patch(
+                "native_staging.shutil.disk_usage", return_value=SimpleNamespace(free=1)
+            ),
+            patch("native_staging.copy_image_input") as copy,
+            self.assertRaisesRegex(ValueError, "E_NATIVE_DISK"),
+        ):
+            stage_bundle(installation, self.root, key, review)
+        copy.assert_not_called()
+        self.assertTrue((self.root / review.manifest["artifact"]["name"]).is_file())
 
     def test_private_archive_survives_source_changes_and_repeats(self):
         if importlib.util.find_spec("cryptography") is None:

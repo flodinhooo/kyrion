@@ -552,6 +552,10 @@ def run(args, messages: dict[str, str]) -> int:
             print(messages["restoreAwaitingRetirement"])
         else:
             print(messages["restoreReviewRequired"])
+            if result.get("applicationActivated") is True:
+                from release_channel import offer as offer_release_channel
+
+                offer_release_channel(args.target, messages)
         return 0
     if args.diagnostics:
         diagnostic(args.target, args.diagnostics)
@@ -649,6 +653,9 @@ def run(args, messages: dict[str, str]) -> int:
                     }
                 )
             )
+        from release_channel import offer as offer_release_channel
+
+        offer_release_channel(args.target, messages)
         return 0
     if getattr(args, "extend_bootstrap", False):
         from bootstrap_maintenance import extend_bootstrap

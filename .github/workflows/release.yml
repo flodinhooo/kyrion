@@ -109,7 +109,20 @@ jobs:
       - name: Build native artifact and execute smoke check
         env:
           INSTALLER_VERSION: ${{ needs.build.outputs.version }}
-        run: python -c "import os,runpy,sys; sys.argv=['build-native.py','--version',os.environ['INSTALLER_VERSION'],'--output','build/native-installer']; runpy.run_path('infrastructure/installer-v1/release/build-native.py',run_name='__main__')"
+          INSTALLER_CHANNEL_JSON: ${{ vars.KYRION_INSTALLER_CHANNEL_JSON }}
+        run: >-
+          python -c "import json,os,pathlib,runpy,sys;
+          sys.path.insert(0,'infrastructure/installer-v1');
+          from release_channel import validate;
+          from bundle import unique_object;
+          raw=os.environ.get('INSTALLER_CHANNEL_JSON','').strip();
+          channel=json.loads(raw,object_pairs_hook=unique_object) if raw else None;
+          validate(channel) if channel is not None else None;
+          path=pathlib.Path('build/public-installer-channel.json');
+          path.parent.mkdir(parents=True,exist_ok=True);
+          path.write_text(raw,encoding='utf-8') if channel is not None else None;
+          sys.argv=['build-native.py','--version',os.environ['INSTALLER_VERSION'],'--output','build/native-installer']+(['--channel',str(path)] if channel is not None else []);
+          runpy.run_path('infrastructure/installer-v1/release/build-native.py',run_name='__main__')"
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: native-${{ runner.os }}-${{ runner.arch }}

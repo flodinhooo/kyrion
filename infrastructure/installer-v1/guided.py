@@ -66,6 +66,7 @@ def main() -> int:
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--capabilities", action="store_true", help=argparse.SUPPRESS)
+    actions.add_argument("--channel-info", action="store_true")
     actions.add_argument("--verify-bundle", action="store_true")
     actions.add_argument(
         "--windows-service",
@@ -145,6 +146,15 @@ def main() -> int:
     )
     args = parser.parse_args()
     args.installer_version = build["version"]
+    if args.channel_info:
+        from release_channel import summary as channel_summary
+
+        try:
+            print(json.dumps(channel_summary()))
+            return 0
+        except (OSError, ValueError, TypeError):
+            print("E_INSTALLER_CHANNEL", file=sys.stderr)
+            return 2
     if args.capabilities:
         print(
             json.dumps(
@@ -368,6 +378,13 @@ def main() -> int:
             )
             guided_setup(installation, messages)
             state = installation.state
+        from release_channel import offer as offer_release_channel
+
+        offer_release_channel(args.target, messages)
+        with installation_lock(args.target):
+            from recovery import load_installation
+
+            state = load_installation(args.target).state
         print(messages["pending"])
         print(
             json.dumps(

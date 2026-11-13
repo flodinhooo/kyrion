@@ -16,10 +16,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(output: Path, version: str) -> Path:
+def build(output: Path, version: str, channel: Path | None = None) -> Path:
     sys.path.insert(0, str(ROOT))
     from bundle import VERSION
     from package import FILES
+    from release_channel import stamp
     from source_snapshot import stage_sources
 
     if not VERSION.fullmatch(version) or "latest" in version.lower():
@@ -42,9 +43,7 @@ def build(output: Path, version: str) -> Path:
         temporary = Path(directory)
         source = temporary / "source"
         source_snapshot = stage_sources(ROOT, source, (*FILES, "package.py"))
-        build_identity = {"formatVersion": 1, "version": version}
-        build_resource = source / "installer-build.json"
-        build_resource.write_text(json.dumps(build_identity) + "\n", encoding="utf-8")
+        build_identity = stamp(source, version, channel)
         arguments = [
             sys.executable,
             "-m",
@@ -80,6 +79,8 @@ def build(output: Path, version: str) -> Path:
                 "--add-data",
                 str(source / relative) + ":" + str(Path(relative).parent),
             ]
+        if channel is not None:
+            arguments += ["--add-data", str(source / "installer-channel.json") + ":."]
         arguments += [str(source / "guided.py")]
         subprocess.run(
             arguments,
@@ -111,6 +112,20 @@ def build(output: Path, version: str) -> Path:
         )
         if built_version.stdout.strip() != version:
             raise ValueError("E_NATIVE_BUILD_VERSION")
+        channel_probe = subprocess.run(
+            [str(binary), "--channel-info"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        observed_channel = json.loads(channel_probe.stdout)
+        if observed_channel.get("configured") is not (
+            channel is not None
+        ) or observed_channel.get("sha256") != build_identity.get(
+            "releaseChannelSha256"
+        ):
+            raise ValueError("E_NATIVE_BUILD_CHANNEL")
         if source_snapshot != {
             name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
             for name in source_snapshot
@@ -139,6 +154,8 @@ def build(output: Path, version: str) -> Path:
         "signed": False,
         "sources": source_snapshot,
         "embeddedVersionVerified": True,
+        "releaseChannelSha256": build_identity.get("releaseChannelSha256"),
+        "embeddedChannelVerified": True,
     }
     artifact.with_suffix(artifact.suffix + ".json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
@@ -151,5 +168,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--channel", type=Path)
     arguments = parser.parse_args()
-    build(arguments.output, arguments.version)
+    build(arguments.output, arguments.version, arguments.channel)

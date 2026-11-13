@@ -24,9 +24,9 @@ class IdentityCombinedMigrationTest {
     @Test fun `fresh database has unique ordered canonical migrations and repeated startup is a no-op`() {
         val schema = "fresh_" + UUID.randomUUID().toString().replace("-", "")
         val flyway = migrate(schema)
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(46)
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(49)
         flyway.validate()
-        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..46).map(Int::toString))
+        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..49).map(Int::toString))
         assertThat(flyway.migrate().migrationsExecuted).isZero()
     }
 
@@ -72,11 +72,13 @@ class IdentityCombinedMigrationTest {
                 fun snapshot(table: String): String = sql.executeQuery("SELECT COALESCE(jsonb_agg(row ORDER BY row::text),'[]'::jsonb)::text FROM (SELECT to_jsonb(t) AS row FROM $table t) rows").use { it.next(); it.getString(1) }
                 tables.forEach { before[it] = snapshot(it) }
                 val checksums = migrate(schema).info().applied().filter { it.version != null }.associate { it.version.version to it.checksum }
-                assertThat(migrate(schema).migrate().migrationsExecuted).isEqualTo(1)
-                migrate(schema).validate()
-                assertThat(migrate(schema).migrate().migrationsExecuted).isZero()
+                // This historical acceptance isolates V46; later canonical
+                // migrations have their own schema/data transformation tests.
+                assertThat(migrate(schema, "46").migrate().migrationsExecuted).isEqualTo(1)
+                migrate(schema, "46").validate()
+                assertThat(migrate(schema, "46").migrate().migrationsExecuted).isZero()
                 tables.forEach { assertThat(snapshot(it)).describedAs("preserved %s", it).isEqualTo(before[it]) }
-                assertThat(migrate(schema).info().applied().filter { it.version != null && it.version.version != "46" }.associate { it.version.version to it.checksum }).isEqualTo(checksums)
+                assertThat(migrate(schema, "46").info().applied().filter { it.version != null && it.version.version != "46" }.associate { it.version.version to it.checksum }).isEqualTo(checksums)
                 sql.executeQuery("SELECT count(*) FROM central_identity_link").use { it.next(); assertThat(it.getInt(1)).isZero() }
             }
         }

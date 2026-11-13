@@ -145,6 +145,11 @@ def configure(
         require_worker(installation, candidate)
         actual = operate(installation, "register")
         installation.state["updateSchedule"] = actual
+        if actual.get("state") != "registered":
+            installation.save()
+            raise ValueError("E_UPDATE_SCHEDULE")
+        installation.state["updates"] = "checks-configured"
+        installation.state.pop("updateSetupError", None)
         installation.save()
         return actual
 

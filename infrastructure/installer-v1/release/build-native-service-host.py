@@ -19,7 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(output: Path, version: str | None = None) -> dict:
+def build(
+    output: Path, version: str | None = None, channel: Path | None = None
+) -> dict:
     if platform.system() != "Windows" or platform.machine().lower() not in {
         "amd64",
         "x86_64",
@@ -31,6 +33,7 @@ def build(output: Path, version: str | None = None) -> dict:
     from build_identity import DEVELOPMENT_VERSION
     from bundle import VERSION, sha256
     from package import FILES
+    from release_channel import stamp
     from source_snapshot import stage_sources
 
     version = version if version is not None else DEVELOPMENT_VERSION
@@ -41,10 +44,7 @@ def build(output: Path, version: str | None = None) -> dict:
         temporary = Path(directory)
         source_root = temporary / "source"
         source_snapshot = stage_sources(ROOT, source_root, (*FILES, "package.py"))
-        (source_root / "installer-build.json").write_text(
-            json.dumps({"formatVersion": 1, "version": version}) + "\n",
-            encoding="utf-8",
-        )
+        build_identity = stamp(source_root, version, channel)
         arguments = [
             sys.executable,
             "-m",
@@ -78,6 +78,11 @@ def build(output: Path, version: str | None = None) -> dict:
             arguments += [
                 "--add-data",
                 str(source_root / relative) + ":" + str(Path(relative).parent),
+            ]
+        if channel is not None:
+            arguments += [
+                "--add-data",
+                str(source_root / "installer-channel.json") + ":.",
             ]
         # Include exact installed runtime-package legal material. No user files.
         for package in ("cryptography", "cffi", "pycparser", "pyinstaller"):
@@ -119,6 +124,20 @@ def build(output: Path, version: str | None = None) -> dict:
         )
         if version_probe.stdout.strip() != version:
             raise ValueError("E_SERVICE_HOST_BUILD_VERSION")
+        channel_probe = subprocess.run(
+            [str(profile / "kyrion-service.exe"), "--channel-info"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        observed_channel = json.loads(channel_probe.stdout)
+        if observed_channel.get("configured") is not (
+            channel is not None
+        ) or observed_channel.get("sha256") != build_identity.get(
+            "releaseChannelSha256"
+        ):
+            raise ValueError("E_SERVICE_HOST_BUILD_CHANNEL")
         if any(path.is_symlink() for path in profile.rglob("*")):
             raise ValueError("E_SERVICE_HOST_LINK")
         if source_snapshot != {name: sha256(ROOT / name) for name in source_snapshot}:
@@ -134,6 +153,8 @@ def build(output: Path, version: str | None = None) -> dict:
             "sources": source_snapshot,
             "embeddedVersion": version,
             "embeddedVersionVerified": True,
+            "releaseChannelSha256": build_identity.get("releaseChannelSha256"),
+            "embeddedChannelVerified": True,
             "serviceRegistrationAccepted": False,
             "coldBootVerified": False,
         }
@@ -152,5 +173,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--version")
+    parser.add_argument("--channel", type=Path)
     args = parser.parse_args()
-    print(json.dumps(build(args.output, args.version)))
+    print(json.dumps(build(args.output, args.version, args.channel)))

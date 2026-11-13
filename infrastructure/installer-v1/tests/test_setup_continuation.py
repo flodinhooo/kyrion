@@ -85,6 +85,7 @@ class Continuation(unittest.TestCase):
                 ),
                 patch.object(native_runtime, "permissions") as permissions,
                 patch.object(onboarding, "guided_setup") as setup,
+                patch("release_channel.offer") as channel,
                 patch("builtins.input", return_value="MAINTAIN"),
                 contextlib.redirect_stdout(output),
             ):
@@ -93,6 +94,9 @@ class Continuation(unittest.TestCase):
                 )
             permissions.assert_called_once_with(args.target, "verify")
             setup.assert_called_once_with(installation, {"maintenanceReview": "Review"})
+            channel.assert_called_once_with(
+                args.target, {"maintenanceReview": "Review"}
+            )
             self.assertEqual(json.loads(output.getvalue())["centralIdentity"], "linked")
 
     def test_unowned_installation_cannot_reach_setup(self):

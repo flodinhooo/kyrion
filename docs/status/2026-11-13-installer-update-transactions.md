@@ -103,6 +103,34 @@ predate the new Core/update fence and must be rebuilt before native acceptance.
 
 ## Continue independently
 
+The subsequent ADR 0063 implementation closes embedded release-channel bootstrap:
+stable native builds require a validated public channel/trust document and bind
+its exact bytes to build identity; both builders execute an embedded channel
+probe. Setup, continuation and successful restore offer notification-only
+scheduling without overwriting existing policies or presenting failed
+registration as success. The release workflow accepts the public channel through
+`KYRION_INSTALLER_CHANNEL_JSON`. No productive trust or feed is fabricated.
+
+Actual configured-channel native builds passed on Windows and Debian 13/Linux
+amd64 using isolated public test keys, with no private key persisted and no feed
+connection. Test version: `0.0.0-test.channel.20261113.1`; channel binding SHA-256
+`17649cbd4b5d0f99e13e93373354e5d44395f924c2f7df7380a62e16102f1bd4`.
+Latest installer suites: 289 Windows tests (three skips), 291 isolated Linux tests
+(16 skips), Ruff passed. The native staging unit fixture now injects disk capacity
+for synthetic archives and separately tests the unchanged production low-space
+refusal; it is not storage acceptance. Setup-continuation tests explicitly inject
+the new optional scheduling boundary.
+
+Expanded Core security verification initially found eight missing mandatory
+rehearsal-artifact inputs and two stale migration expectations. The suite now runs
+with the actual immutable built JAR and correct test driver. Fresh canonical
+migration expects schema 49; the historical identity V46 test explicitly targets
+46 and retains its data/checksum comparisons. No production migration was changed.
+Result: 194 security tests, zero failures/errors, one existing skip. Docker became
+reachable in the normal developer execution context, so actual Compose transaction
+acceptance should now be pursued using a new scoped synthetic project. Earlier
+sandbox access failure is not an enduring absence of the runtime.
+
 Subsequent hardening binds Compose resume/recovery to the same root-owned Unix
 socket paths and Docker daemon ID, and refuses updates before quiescence when
 account/Space bootstrap is unfinished. Four injected-Docker/real-archive tests
