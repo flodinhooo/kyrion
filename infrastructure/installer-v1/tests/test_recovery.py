@@ -209,6 +209,136 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(commands[-1], ("start", "core"))
         self.assertFalse((self.root / "output.gpg").exists())
 
+    def test_capture_excludes_installed_update_workers_and_download_proofs(self):
+        # Real archive selection/integrity, injected Docker, snapshot and crypto.
+        # This is not a fresh container installation or an encryption proof.
+        installation = self.installation()
+        worker = "maintenance-" + "a" * 32
+        installation.write(worker, b"synthetic public executable, never executed")
+        installation.write("update-input/proof.json", b"synthetic public proof")
+        captured = []
+
+        def compose(*args):
+            if args[0] == "ps":
+                return '{"Service":"core","State":"running"}'
+            if args[-1] == recovery.COUNTS_SQL:
+                return '{"users":1,"spaces":1,"audit":2}'
+            if args[0] == "exec":
+                return "49"
+            return ""
+
+        def dump(_arguments, **options):
+            options["stdout"].write(b"synthetic custom dump")
+            return subprocess.CompletedProcess([], 0)
+
+        def encrypt(source, destination, _password):
+            captured.append(recovery.inspect_archive(source))
+            destination.write_bytes(b"synthetic ciphertext; crypto boundary injected")
+
+        with (
+            patch.object(installation, "compose", side_effect=compose),
+            patch("recovery.subprocess.run", side_effect=dump),
+            patch("portable_database.capture", return_value=({}, {})),
+            patch("recovery.crypto", side_effect=encrypt),
+        ):
+            recovery.capture(
+                installation,
+                self.root / "output.gpg",
+                "Synthetic-password-for-test-only",
+            )
+        self.assertEqual(len(captured), 1)
+        self.assertIn("secrets/credential.key", captured[0]["files"])
+        self.assertIn("database.dump", captured[0]["files"])
+        self.assertNotIn(worker, captured[0]["files"])
+        self.assertNotIn("update-input/proof.json", captured[0]["files"])
+        installation.verify_files()
+
+    def test_stop_timeout_still_recovers_original_core_and_clears_obligation(self):
+        installation = self.installation()
+        commands = []
+
+        def compose(*args):
+            commands.append(args)
+            if args[0] == "ps":
+                return '{"Service":"core","State":"running"}'
+            if args[0] == "stop":
+                raise ValueError("E_RUNTIME_TIMEOUT")
+            return ""
+
+        with (
+            patch.object(installation, "compose", side_effect=compose),
+            self.assertRaisesRegex(ValueError, "E_RUNTIME_TIMEOUT"),
+        ):
+            recovery.capture(
+                installation,
+                self.root / "output.gpg",
+                "Synthetic-password-for-test-only",
+            )
+        self.assertEqual(commands[-1], ("start", "core"))
+        self.assertNotIn("backupServiceRecovery", installation.state)
+
+    def test_pending_restart_survives_failure_and_is_recovered_on_retry(self):
+        installation = self.installation()
+        installation.state["backupServiceRecovery"] = ["core"]
+        installation.save()
+
+        def compose(*args):
+            if args[0] == "ps":
+                return ""
+            if args[0] == "start":
+                raise ValueError("E_RUNTIME_START")
+            if args[0] == "exec":
+                raise ValueError("E_FIXTURE_DUMP_FAILURE")
+            return ""
+
+        with (
+            patch.object(installation, "compose", side_effect=compose),
+            self.assertRaisesRegex(ValueError, "E_BACKUP_SERVICE_RECOVERY"),
+        ):
+            recovery.capture(
+                installation,
+                self.root / "output.gpg",
+                "Synthetic-password-for-test-only",
+            )
+        resumed = recovery.load_installation(installation.target)
+        self.assertEqual(resumed.state["backupServiceRecovery"], ["core"])
+        calls = []
+
+        def retry(*args):
+            calls.append(args)
+            if args[0] == "ps":
+                return ""
+            if args[0] == "exec":
+                raise ValueError("E_FIXTURE_DUMP_FAILURE")
+            return ""
+
+        with (
+            patch.object(resumed, "compose", side_effect=retry),
+            self.assertRaisesRegex(ValueError, "E_FIXTURE_DUMP_FAILURE"),
+        ):
+            recovery.capture(
+                resumed, self.root / "output.gpg", "Synthetic-password-for-test-only"
+            )
+        self.assertIn(("start", "core"), calls)
+        self.assertNotIn(
+            "backupServiceRecovery",
+            recovery.load_installation(installation.target).state,
+        )
+
+    def test_inactive_installation_cannot_reactivate_core_through_backup(self):
+        installation = self.installation()
+        installation.state["authority"] = {"status": "retired"}
+        with (
+            patch.object(installation, "compose") as execute,
+            self.assertRaisesRegex(ValueError, "E_AUTHORITY_INACTIVE"),
+        ):
+            recovery.capture(
+                installation,
+                self.root / "output.gpg",
+                "Synthetic-password-for-test-only",
+            )
+        execute.assert_not_called()
+
     def test_diagnostic_export_cannot_include_credentials_or_logs(self):
         installation = self.installation()
         installation.state["sessionToken"] = "private-session"

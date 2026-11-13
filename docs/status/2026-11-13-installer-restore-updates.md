@@ -194,3 +194,46 @@ No row constitutes a production support release. Transactional update execution,
 consistent pre-update quiescence, protected automatic-backup key custody,
 post-migration activation, interrupted-update recovery and distributed barriers
 remain source work, independently of unavailable host acceptance environments.
+
+## Backup/update integration correction
+
+Linux operational capture now selects only the existing allowed backup members,
+matching the native backend. Public installed maintenance executables and staged
+download proofs remain intact on disk but do not enter operational data archives.
+This fixes backups after configuring the new update worker or staging a release.
+
+Linux capture now persists the originally running Core's restart obligation before
+stopping it. A timeout after a successful stop still attempts recovery. A failed
+restart retains the obligation, and a subsequent backup invocation recovers it
+even when Core is currently stopped. Diagnostic export exposes only a recovery
+required boolean. Inactive/retired installations are rejected before capture can
+restart any service on either backend. Ordinary backup still restarts Core before
+encryption; the uninterrupted pre-update quiescence transaction is not implemented
+by this correction.
+
+Current full installer suites: 253 Windows tests (one skip), 253 isolated Linux
+tests (16 skips), Ruff passed. New archive-selection and interrupted-service tests
+use real files/journals with injected Docker/SCM/crypto boundaries; they are not
+fresh container/service acceptance. The actual isolated Core/OIDC/Home Assistant
+scenario also passed again against the new Core JAR: linked BUSINESS owner,
+TLS-verified synthetic identity issuer, selected entity/room import, one deliberate
+synthetic action, actual scheduled state refresh observed after 58.1 seconds,
+removed-entity handling, disconnect and offline identity after process restart.
+Its report is `build/isolated-linux/core-ha-report.json`; no household devices or
+outgoing provider connections were used. The `.5` native artifacts predate this
+backup correction and the separately built Core maintenance feature.
+
+## Concrete continuation
+
+Continue with the actual update transaction, using the authenticated staged
+inputs and Core maintenance start already implemented. Persist and enforce an
+update startup fence before quiescence; capture a consistent encrypted backup
+without reopening application writes; stage/switch owned runtime payloads;
+execute verified migrations under maintenance mode; check actual schema/health;
+then cross an explicit activation point. Interrupted phases must resume or offer
+validated backup recovery, without promising schema downgrade. Configure protected
+automatic-backup key custody and an owner-approved maintenance window before
+enabling automatic installation. None of these missing source tasks is blocked
+by production signing-key availability. Distributed update barriers and the other
+open requirements remain in the full requirements matrix. Do not request user
+testing or describe this checkpoint as ready for overall acceptance.

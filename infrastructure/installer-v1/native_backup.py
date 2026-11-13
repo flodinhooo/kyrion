@@ -116,6 +116,9 @@ def quiesce(installation):
 
 
 def capture(installation, destination: Path, password: str) -> dict:
+    from authority import require_active
+
+    require_active(installation.state)
     root = installation.target
     config = read_configuration(root)
     preflight(

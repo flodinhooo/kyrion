@@ -19,6 +19,24 @@ class NativeBackup(unittest.TestCase):
     def setUp(self):
         self.installation = SimpleNamespace(state={}, save=MagicMock())
 
+    def test_inactive_native_backup_cannot_reactivate_services(self):
+        for state in (
+            {"authority": {"status": "retired"}},
+            {"preparedForRestore": True},
+        ):
+            self.installation.state = state
+            with (
+                self.subTest(state=state),
+                patch.object(native_backup, "ServiceManager") as scm,
+                self.assertRaisesRegex(ValueError, "E_AUTHORITY_INACTIVE"),
+            ):
+                native_backup.capture(
+                    self.installation,
+                    Path("unused"),
+                    "Synthetic-password-for-test-only",
+                )
+            scm.assert_not_called()
+
     def fixture(self, states=None, foreign=None, stop_failure=None, start_failure=None):
         events = []
         manager = MagicMock(

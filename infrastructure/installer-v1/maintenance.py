@@ -149,6 +149,7 @@ def diagnostic(target: Path, output: Path) -> None:
         else None,
         "ownerSetup": state.get("ownerSetup") == "authenticated",
         "backupConfigured": state.get("backup") == "encrypted-consistent-capture",
+        "backupServiceRecoveryRequired": state.get("backupServiceRecovery") is not None,
         "updatesConfigured": (
             state.get("updatePolicy", {}).get("enabled") is True
             and state.get("updateSchedule", {}).get("state") == "registered"

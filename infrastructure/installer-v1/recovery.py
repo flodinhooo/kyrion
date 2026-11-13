@@ -329,6 +329,9 @@ def _inspect_archive(path: Path) -> dict:
 
 
 def capture(installation: Installation, destination: Path, password: str) -> dict:
+    from authority import require_active
+
+    require_active(installation.state)
     installation.verify_files()
     if not {
         "secrets/credential.key",
@@ -357,9 +360,18 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
             row.get("Service") == "core" and row.get("State") == "running"
             for row in services
         )
-        if core_running:
-            installation.compose("stop", "--timeout", "30", "core")
+        pending = installation.state.get("backupServiceRecovery")
+        if pending is not None and pending != ["core"]:
+            raise ValueError("E_BACKUP_SERVICE_JOURNAL")
+        restore_core = core_running or pending is not None
+        if restore_core:
+            # The native backend uses the same durable obligation. A killed
+            # installer must not erase that Core was running before capture.
+            installation.state["backupServiceRecovery"] = ["core"]
+            installation.save()
         try:
+            if restore_core:
+                installation.compose("stop", "--timeout", "30", "core")
             schema = installation.compose(
                 "exec",
                 "-T",
@@ -461,6 +473,7 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
             sources = {
                 relative: installation.target / relative
                 for relative in installation.state["files"]
+                if allowed_member(relative)
             }
             sources.update(
                 {"install-state.json": installation.path, "database.dump": dump}
@@ -525,8 +538,13 @@ def capture(installation: Installation, destination: Path, password: str) -> dic
             create_archive(sources, metadata, archive)
             inspect_archive(archive)
         finally:
-            if core_running:
-                installation.compose("start", "core")
+            if restore_core:
+                try:
+                    installation.compose("start", "core")
+                except (OSError, ValueError):
+                    raise ValueError("E_BACKUP_SERVICE_RECOVERY") from None
+                installation.state.pop("backupServiceRecovery")
+                installation.save()
         # Keep the outage bounded to consistent capture, not encryption duration.
         temporary = destination.with_name(
             "." + destination.name + "." + uuid.uuid4().hex
