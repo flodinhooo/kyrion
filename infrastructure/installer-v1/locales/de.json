@@ -1,4 +1,7 @@
 {
+  "linuxServicesReview": "Kyrion installiert einen eigenen Systemd-Startdienst und eine geschützte Installer-Kopie. Der Dienst startet das lokale Compose-Projekt nach Docker ohne interaktive Anmeldung, begrenzt Wiederholungen und setzt den normalen Start bei unvollständigen Updates oder inaktiven Wiederherstellungen aus. Die Registrierung wird jetzt geprüft; die Abnahme nach einem tatsächlichen Neustart ist eine eigene Prüfung.",
+  "startupError": "Der eigene Startdienst konnte nicht geprüft werden. Installationsjournal erhalten, Systemd, Rechneridentität, Docker und Besitzrechte der Installer-Kopie prüfen und die Startkonfiguration wiederholen. Besitzrechte und Update-Sperren nicht zur Umgehung dieser Prüfung verändern.",
+  "identityErrorChanged": "Diese Installation verwendet bereits einen anderen Konto-Issuer oder öffentlichen Client. Setze ohne Überschreiben der gespeicherten Einstellungen fort. Bestehende Identitätskonfiguration und Daten bleiben erhalten.",
   "updatesPhaseWorking": "Der gespeicherte Wartungsvorgang läuft.",
   "updatesPhaseStaging": "Die bestätigten Programmdateien werden geprüft und vorbereitet.",
   "updatesPhasePreparing": "Der Vorgang wird vorbereitet und die Anwendungsdienste werden angehalten.",

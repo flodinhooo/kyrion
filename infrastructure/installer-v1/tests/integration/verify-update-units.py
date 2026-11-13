@@ -12,8 +12,10 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from linux_startup import definition, unit_name
 from update_schedule import linux_plan
 
 
@@ -30,6 +32,10 @@ def verify(worker: Path, work: Path) -> dict:
         os.chmod(root / name, 0o700)
         units = linux_plan(str(uuid.uuid4()), str(root), name)
         units.update(linux_plan(str(uuid.uuid4()), str(root), name, automatic=True))
+        installation = SimpleNamespace(
+            target=root, state={"installationId": str(uuid.uuid4())}
+        )
+        units[unit_name(installation)] = definition(installation, name)
         for filename, text in units.items():
             (root / filename).write_text(text, encoding="utf-8")
         result = subprocess.run(
@@ -49,6 +55,7 @@ def verify(worker: Path, work: Path) -> dict:
     return {
         "actualSystemdDefinitionValidation": True,
         "automaticHourlyDefinitionValidated": True,
+        "platformStartupDefinitionValidated": True,
         "workerSha256": digest,
         "unitsRegistered": False,
         "coldBootVerified": False,

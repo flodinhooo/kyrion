@@ -27,6 +27,12 @@ HOSTNAME = re.compile(
 )
 
 
+def startup_overrides(installation) -> list[str]:
+    if "compose-startup.yml" in installation.state["files"]:
+        return ["-f", str(installation.target / "compose-startup.yml")]
+    return []
+
+
 def execute(args: list[str], timeout: int = 120) -> str:
     try:
         result = subprocess.run(
@@ -494,6 +500,10 @@ class Installation:
 
             if restore_role is None:
                 require_active(self.state)
+                if self.state.get("startupPolicy") is not None:
+                    from linux_startup import validate_runtime
+
+                    validate_runtime(self)
             elif (
                 restore_role not in {"postgres", "core"}
                 or self.state.get("preparedForRestore") is not True
@@ -517,6 +527,7 @@ class Installation:
                 str(self.target / ".env"),
                 "-f",
                 str(self.target / "compose.yml"),
+                *startup_overrides(self),
                 *args,
             ],
             timeout,

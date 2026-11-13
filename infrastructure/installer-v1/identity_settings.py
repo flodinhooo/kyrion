@@ -5,6 +5,33 @@ import json
 import re
 from urllib.parse import urlsplit
 
+DEFAULT_ISSUER = "https://auth.kyrion.ch/realms/kyrion"
+DEFAULT_CLIENT_ID = "kyrion-local"
+
+
+def select_identity(
+    issuer: str | None,
+    client_id: str | None,
+    *,
+    saved: dict | None = None,
+) -> dict:
+    previous = validate_identity(saved) if saved is not None else None
+    baseline = previous or {
+        "issuer": DEFAULT_ISSUER,
+        "clientId": DEFAULT_CLIENT_ID,
+        "allowLoopbackHttp": False,
+    }
+    selected = validate_identity(
+        {
+            "issuer": issuer if issuer is not None else baseline["issuer"],
+            "clientId": client_id if client_id is not None else baseline["clientId"],
+            "allowLoopbackHttp": baseline["allowLoopbackHttp"],
+        }
+    )
+    if previous is not None and selected != previous:
+        raise ValueError("E_IDENTITY_CONFIG_CHANGED")
+    return selected
+
 
 def validate_identity(value: dict) -> dict:
     if not isinstance(value, dict) or set(value) != {
@@ -46,11 +73,11 @@ def validate_identity(value: dict) -> dict:
         or any(part in {".", ".."} for part in url.path.split("/"))
         or type(value["allowLoopbackHttp"]) is not bool
         or not (
-        url.scheme == "https"
-        or url.scheme == "http"
-        and loopback
-        and value["allowLoopbackHttp"]
-    )
+            url.scheme == "https"
+            or url.scheme == "http"
+            and loopback
+            and value["allowLoopbackHttp"]
+        )
         or not isinstance(value["clientId"], str)
         or not re.fullmatch(r"[A-Za-z0-9._-]{1,120}", value["clientId"])
     ):

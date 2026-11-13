@@ -66,6 +66,14 @@ def main() -> int:
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--capabilities", action="store_true", help=argparse.SUPPRESS)
+    actions.add_argument(
+        "--background-platform-start", action="store_true", help=argparse.SUPPRESS
+    )
+    actions.add_argument(
+        "--autostart",
+        choices=("enable", "disable", "status"),
+        help="Linux supervised platform startup",
+    )
     actions.add_argument("--channel-info", action="store_true")
     actions.add_argument("--verify-bundle", action="store_true")
     actions.add_argument(
@@ -116,10 +124,8 @@ def main() -> int:
     )
     parser.add_argument("--recovery-space", help="Existing local Space UUID")
     parser.add_argument("--feed")
-    parser.add_argument(
-        "--identity-issuer", default="https://auth.kyrion.ch/realms/kyrion"
-    )
-    parser.add_argument("--identity-client-id", default="kyrion-local")
+    parser.add_argument("--identity-issuer")
+    parser.add_argument("--identity-client-id")
     parser.add_argument("--trust-store", type=Path)
     parser.add_argument(
         "--model-catalog",
@@ -163,10 +169,20 @@ def main() -> int:
                     "updateProtocol": 1,
                     "startupFence": True,
                     "maintenanceCore": True,
+                    "linuxComposeStart": os.name == "posix",
                 }
             )
         )
         return 0
+    if args.background_platform_start:
+        from linux_startup import background_start
+
+        try:
+            print(json.dumps(background_start(args.target)))
+            return 0
+        except (OSError, ValueError, TypeError, KeyError):
+            print("E_PLATFORM_STARTUP", file=sys.stderr)
+            return 2
     if args.background_update_check:
         from update_worker import run as background_check
 
@@ -265,6 +281,7 @@ def main() -> int:
         or args.extend_bootstrap
         or args.owner_recovery
         or args.home_assistant
+        or args.autostart
     ):
         return maintenance_result(args, messages)
     report = inventory(args.target)
@@ -298,15 +315,6 @@ def main() -> int:
     hostname = input(messages["hostname"] + ": ").strip()
     address = input(messages["address"] + ": ").strip()
     try:
-        from identity_settings import validate_identity
-
-        identity = validate_identity(
-            {
-                "issuer": args.identity_issuer,
-                "clientId": args.identity_client_id,
-                "allowLoopbackHttp": False,
-            }
-        )
         if native_windows:
             from native_bundle import authenticated_review as native_review
             from native_runtime import preflight, provision_native
@@ -327,9 +335,24 @@ def main() -> int:
             != ("windows/" if native_windows else "linux/") + report["architecture"]
         ):
             raise ValueError("E_ARCH: release does not match this target")
+        from identity_settings import select_identity
+
+        saved_identity = None
+        if mode == "resume":
+            from recovery import load_installation
+
+            with installation_lock(args.target):
+                saved_identity = load_installation(args.target).state.get(
+                    "identityProvider"
+                )
+        identity = select_identity(
+            args.identity_issuer, args.identity_client_id, saved=saved_identity
+        )
         artifacts = [manifest["artifact"]] if native_windows else manifest["artifacts"]
         if native_windows:
             print(messages["windowsServicesReview"])
+        else:
+            print(messages["linuxServicesReview"])
         print(messages["review"])
         print(
             json.dumps(
@@ -365,6 +388,10 @@ def main() -> int:
             digest,
             identity=identity,
         )
+        if not native_windows and getattr(sys, "frozen", False):
+            from linux_startup import configure as configure_startup
+
+            configure_startup(args.target)
         print(messages["servicesHealthy"])
         print("https://" + hostname)
         print(messages["certificate"] + ": " + str(args.target / "data/tls/cert.pem"))

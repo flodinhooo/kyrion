@@ -1,6 +1,22 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_STARTUP_POLICY",
+            "E_STARTUP_HOST_ID",
+            "E_STARTUP_HOST_CHANGED",
+            "E_STARTUP_DOCKER_CHANGED",
+            "E_STARTUP_UNIT_OWNERSHIP",
+            "E_STARTUP_WORKER",
+            "E_STARTUP_FROZEN_REQUIRED",
+            "E_STARTUP_UPGRADE_REQUIRED",
+            "E_STARTUP_REGISTRATION",
+            "E_PLATFORM_STARTUP",
+        ),
+        "startupError",
+    ),
+    "E_IDENTITY_CONFIG_CHANGED": "identityErrorChanged",
     "E_UPDATE_AUTOMATIC_ATTEMPTS": "updatesErrorAutomaticAttempts",
     "E_WEB": "healthErrorWeb",
     "E_WEB_TLS": "healthErrorTls",

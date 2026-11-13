@@ -349,3 +349,28 @@ checkpoint. Public staging precedes the critical transaction and can be repeated
 No percentages or completion times are invented. A broken output stream does not
 suppress validation errors or create success; Ctrl-C remains interruptible at a
 saved checkpoint. An interrupt after committed completion preserves that result.
+
+### Linux platform startup
+
+The native Linux installer registers an installation-owned systemd startup unit
+and protected copy of itself; installed systems do not need Python. It enables
+the unit without launching a competing installer while holding the installation
+lock. The existing checked start applies the tracked bounded container-restart
+overlay. On subsequent service starts the worker validates host/daemon ownership,
+its own hash and the same update/restore authority fences before starting roles.
+Migration-specific Compose overrides remain higher priority. Failed starts have
+at most three systemd attempts, including the initial attempt.
+
+Use `--autostart status|enable|disable --target /absolute/installation` for local
+maintenance. Enabling requires explicit terminal confirmation; disabling stops
+future boot startup without stopping running applications. Native repair and
+completed restore also configure startup after their displayed review. Source
+provisioning remains a developer path and does not establish OS startup support.
+An active older update worker lacking startup-overlay capability must first be
+explicitly disabled and reconfigured with the current reviewed native installer.
+No feed or trust policy is silently replaced.
+
+Actual owned systemd worker/fence/integrity/retry tests are distinct from a
+complete application boot or physical reboot. See
+[current Linux evidence](status/2026-11-14-installer-linux-startup.md) and
+[ADR 0067](adr/0067-linux-supervised-platform-startup.md).

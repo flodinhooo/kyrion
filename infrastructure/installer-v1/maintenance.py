@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import uuid
 from pathlib import Path
 
@@ -218,6 +219,10 @@ def repair(target: Path) -> dict:
                 )
             ).encode(),
         }
+        from linux_startup import OVERLAY, OVERLAY_TEXT
+
+        if OVERLAY in installation.state["files"]:
+            candidates[OVERLAY] = OVERLAY_TEXT.encode()
         damaged = []
         # Inspect every file before any repair write. Missing/changed keys and
         # unknown configuration are never replaced by generated material.
@@ -257,6 +262,9 @@ def uninstall(target: Path, purge: bool = False) -> dict:
         from update_worker import remove_schedule
 
         remove_schedule(installation)
+        from linux_startup import disable_owned
+
+        disable_owned(installation, remove=True)
         config = installation.configuration
         runtime_checks(config["address"], config["hostname"], fresh=False)
         # Compose project identity is installation-scoped. No image removal,
@@ -279,6 +287,27 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "autostart", None):
+        from linux_startup import configure as configure_startup
+        from linux_startup import disable as disable_startup
+        from linux_startup import status as startup_status
+
+        if os.name != "posix":
+            raise ValueError("E_PLATFORM")
+        if args.autostart == "status":
+            print(json.dumps(startup_status(args.target)))
+        else:
+            print(messages["linuxServicesReview"])
+            if input("[CONFIGURE-STARTUP/CANCEL]: ").strip() != "CONFIGURE-STARTUP":
+                raise ValueError("E_CONFIRMATION")
+            print(
+                json.dumps(
+                    configure_startup(args.target, enabled=True)
+                    if args.autostart == "enable"
+                    else disable_startup(args.target)
+                )
+            )
         return 0
     if getattr(args, "updates", None):
         from update_worker import configure, remove_schedule, rotate_policy
@@ -421,8 +450,6 @@ def run(args, messages: dict[str, str]) -> int:
             if not args.feed or args.trust_store is None:
                 raise ValueError("E_UPDATE_CONFIG")
             print(messages["updatesScheduleReview"])
-            import sys
-
             worker_digest = sha256(Path(sys.executable))
             print(
                 json.dumps(
@@ -564,6 +591,8 @@ def run(args, messages: dict[str, str]) -> int:
                 }
             )
         )
+        if os.name == "posix" and getattr(sys, "frozen", False):
+            print(messages["linuxServicesReview"])
         if (
             input(messages["restoreReview"] + " [RESTORE-TO-NEW-TARGET]: ").strip()
             != "RESTORE-TO-NEW-TARGET"
@@ -588,6 +617,10 @@ def run(args, messages: dict[str, str]) -> int:
         else:
             print(messages["restoreReviewRequired"])
             if result.get("applicationActivated") is True:
+                if os.name == "posix" and getattr(sys, "frozen", False):
+                    from linux_startup import configure as configure_startup
+
+                    print(json.dumps(configure_startup(args.target)))
                 from release_channel import offer as offer_release_channel
 
                 offer_release_channel(args.target, messages)
@@ -769,7 +802,18 @@ def run(args, messages: dict[str, str]) -> int:
             )
         )
     elif args.repair:
+        if getattr(sys, "frozen", False):
+            print(messages["linuxServicesReview"])
+            if (
+                input("[REPAIR-AND-CONFIGURE-STARTUP/CANCEL]: ").strip()
+                != "REPAIR-AND-CONFIGURE-STARTUP"
+            ):
+                raise ValueError("E_CONFIRMATION")
         print(json.dumps(repair(args.target)))
+        if getattr(sys, "frozen", False):
+            from linux_startup import configure as configure_startup
+
+            print(json.dumps(configure_startup(args.target)))
     elif args.uninstall:
         purge = (
             args.delete_data

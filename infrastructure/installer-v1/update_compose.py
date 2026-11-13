@@ -15,7 +15,7 @@ from bundle import sha256
 from host import reject_links
 from portable_database import capture as capture_rows
 from recovery import private_restore_directory
-from runtime import image_identity, image_plan
+from runtime import image_identity, image_plan, startup_overrides
 from update_native import LAUNCHER, MAIN
 from update_state import path, transaction
 
@@ -25,6 +25,10 @@ class Compose:
     environment = None
 
     def __init__(self, installation):
+        if installation.state.get("startupPolicy") is not None:
+            from linux_startup import require_bound
+
+            require_bound(installation)
         self.installation = installation
         self.root = installation.target
         self.backup_manifest = None
@@ -73,6 +77,11 @@ class Compose:
                 raise ValueError("E_UPDATE_DOCKER_LOCAL_REQUIRED")
             sockets.add(str(socket))
         self.bind_daemon(sorted(sockets))
+        if (
+            installation.state.get("startupPolicy") is not None
+            and installation.state["startupPolicy"]["daemon"] != self.daemon
+        ):
+            raise ValueError("E_STARTUP_DOCKER_CHANGED")
 
     def bind_daemon(self, sockets: list[str]) -> None:
         identifier = self.run("info", "--format", "{{.ID}}").decode().strip()
@@ -110,6 +119,7 @@ class Compose:
             str(self.root / ".env"),
             "-f",
             str(self.root / "compose.yml"),
+            *startup_overrides(self.installation),
         ]
         if maintenance:
             flags += ["-f", str(path(self.installation, "maintenance.yml"))]
@@ -351,6 +361,7 @@ class Compose:
             str(self.root / ".env"),
             "-f",
             str(self.root / "compose.yml"),
+            *startup_overrides(self.installation),
             "-f",
             str(helper),
         ]

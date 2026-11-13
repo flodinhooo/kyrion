@@ -38,6 +38,7 @@ FILES = (
     "windows-task-security.ps1",
     "windows-tasks.ps1",
     "runtime.py",
+    "linux_startup.py",
     "docker_images.py",
     "onboarding.py",
     "identity_settings.py",

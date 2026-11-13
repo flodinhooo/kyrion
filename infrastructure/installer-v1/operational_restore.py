@@ -109,6 +109,9 @@ def retire_source(
 
                     retire_services(installation)
                 else:
+                    from linux_startup import disable_owned
+
+                    disable_owned(installation)
                     installation.compose("down", "--timeout", "30")
 
             receipt = retire(installation, target_id, digest, stop_owned)
