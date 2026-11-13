@@ -98,22 +98,24 @@ are unsigned, unpublished, and do not claim platform installation acceptance.
 The Linux executable was built/probed on Debian 13 AMD64; this does not prove
 older glibc distributions, ARM64/Pi, Docker provisioning or system boot.
 
-## Software-removal interruption follow-up
+## Software-removal regression and SCM deletion ordering
 
-Native Windows software-only removal now resumes after a partial payload
-deletion. Only a protected journal already in `uninstalled` state can tolerate
-missing payload files; remaining payload bytes, keys and non-payload metadata
-retain strict integrity checks. Ordinary loading/writing/repair does not acquire
-this exception. Repair after removal asks for a reviewed bundle before touching
-services. Service removal closes each SCM handle and waits for actual deletion
-before program-file cleanup.
+Source reinspection corrected an overly broad missing-payload exception added
+during this continuation. Actual provisioning stores public payload digests in
+the separate signed native manifest, not the configuration-file journal. The
+earlier fixture incorrectly used `Installation.write` for those payload files.
+The exception has been removed; ordinary journal integrity remains unchanged.
+The corrected fixture uses the actual separate-manifest layout and confirms
+that software-only removal can already resume partial payload deletion without
+weakening key/configuration checks. Service removal now closes each SCM handle
+and waits for actual deletion before program-file cleanup.
 
 Five tests use real private temporary files plus mocked SCM/elevation. They prove
-interruption/reload/repeat, data preservation, rejection of changed payload or
-missing retained keys, and handle-close/wait ordering. They do not establish
+interruption/reload/repeat, data preservation, rejection of changed or missing
+retained keys before service access, and handle-close/wait ordering. They do not establish
 real elevated uninstall acceptance. Fully resumable deletion of the complete
 installation including its final journal is still source work; the software-only
-fix does not close that requirement.
+regression coverage and SCM fix do not close that requirement.
 The complete updated Windows source suite passes 190 tests (one platform skip)
 and whole-installer Ruff; the five cleanup tests also pass independently in the
 normal developer context. The restricted sandbox cannot apply test-file owner/

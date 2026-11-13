@@ -1,6 +1,7 @@
 """Real file interruption/resume; SCM and elevation are orchestration fixtures."""
 
 import contextlib
+import hashlib
 import json
 import sys
 import tempfile
@@ -61,12 +62,33 @@ class Cleanup(unittest.TestCase):
             "127.0.0.1",
         )
         self.installation.state["backend"] = "windows-native"
-        for name, data in {
-            "payload/a.bin": b"public a",
-            "payload/b.bin": b"public b",
-            "secrets/credential.key": b"private synthetic material",
-        }.items():
-            self.installation.write(name, data)
+        self.installation.write("secrets/credential.key", b"private synthetic material")
+        self.installation.write("installer.exe", b"synthetic worker; never executed")
+        self.installation.write(
+            "native-runtime.json",
+            json.dumps(
+                {
+                    "formatVersion": 1,
+                    "hostname": "fixture.test",
+                    "address": "127.0.0.1",
+                    "ports": native_runtime.DEFAULT_PORTS,
+                }
+            ),
+        )
+        # Match actual provisioning: payload belongs to the separate signed
+        # native manifest, not Installation.write's configuration journal.
+        (self.root / "payload").mkdir()
+        rows = []
+        for name, data in {"a.bin": b"public a", "b.bin": b"public b"}.items():
+            (self.root / "payload" / name).write_bytes(data)
+            rows.append(
+                {
+                    "path": name,
+                    "bytes": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                }
+            )
+        self.installation.write("native-manifest.json", json.dumps({"files": rows}))
         self.installation.state["stage"] = "services-healthy"
         self.installation.save()
 
@@ -74,27 +96,26 @@ class Cleanup(unittest.TestCase):
         self.installation.state["stage"] = "uninstalled"
         self.installation.save()
 
-    def test_missing_payload_requires_recorded_removal_and_does_not_weaken_default(
-        self,
-    ):
-        (self.root / "payload/a.bin").unlink()
-        with self.assertRaisesRegex(ValueError, "E_STATE"):
-            self.installation.verify_files(removing_payload=True)
-        self.mark_removed()
-        self.installation.verify_files(removing_payload=True)
-        with self.assertRaisesRegex(ValueError, "E_CHANGED"):
-            self.installation.verify_files()
-
-    def test_retained_keys_and_changed_remaining_payload_are_still_verified(self):
-        self.mark_removed()
-        (self.root / "payload/a.bin").unlink()
-        (self.root / "payload/b.bin").write_bytes(b"tampered")
-        with self.assertRaisesRegex(ValueError, "E_CHANGED"):
-            self.installation.verify_files(removing_payload=True)
-        (self.root / "payload/b.bin").write_bytes(b"public b")
+    def test_missing_retained_key_refused_before_service_mutation(self):
         (self.root / "secrets/credential.key").unlink()
-        with self.assertRaisesRegex(ValueError, "E_CHANGED"):
-            self.installation.verify_files(removing_payload=True)
+        with (
+            patch.object(native_runtime, "permissions"),
+            patch.object(native_runtime, "ServiceManager") as scm,
+            self.assertRaisesRegex(ValueError, "E_CHANGED"),
+        ):
+            native_runtime.uninstall_native(self.root)
+        scm.assert_not_called()
+
+    def test_changed_retained_key_is_not_adopted_during_resumed_removal(self):
+        self.mark_removed()
+        (self.root / "secrets/credential.key").write_bytes(b"changed key")
+        with (
+            patch.object(native_runtime, "permissions"),
+            patch.object(native_runtime, "ServiceManager") as scm,
+            self.assertRaisesRegex(ValueError, "E_CHANGED"),
+        ):
+            native_runtime.uninstall_native(self.root)
+        scm.assert_not_called()
 
     def test_interrupted_software_removal_resumes_and_preserves_data(self):
         manager = MagicMock()
