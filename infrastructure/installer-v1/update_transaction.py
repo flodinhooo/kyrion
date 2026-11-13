@@ -18,7 +18,16 @@ from recovery import load_installation, verified_plaintext
 from release_policy import verify
 from runtime import installation_lock
 from update_gate import FINAL
-from update_state import path, phase, reconcile, select_configuration, transaction
+from update_state import (
+    ProgressObserver,
+    emit,
+    observe,
+    path,
+    phase,
+    reconcile,
+    select_configuration,
+    transaction,
+)
 
 
 def backend(installation):
@@ -103,7 +112,14 @@ def _backup(installation, platform, password: str, name="backup.gpg") -> dict:
         return copy.deepcopy(metadata)
 
 
-def apply(target: Path, password: str, *, review, automatic=None) -> dict:
+def apply(
+    target: Path,
+    password: str,
+    *,
+    review,
+    automatic=None,
+    progress: ProgressObserver | None = None,
+) -> dict:
     from build_identity import read_build
     from operational_restore import require_admin
     from update_download import revalidate
@@ -184,6 +200,7 @@ def apply(target: Path, password: str, *, review, automatic=None) -> dict:
         identifier = str(uuid.uuid4())
         directory = target / installation.state["updateDownload"]["directory"]
         # Stage/verify all public code before application writers are stopped.
+        emit(progress, {"transactionId": identifier, "phase": "staging"})
         configs = platform.stage(reviewed, directory, identifier, original)
         if automatic is not None:
             # Staging/download may have consumed the approved start window.
@@ -250,11 +267,23 @@ def apply(target: Path, password: str, *, review, automatic=None) -> dict:
             "trust": installation.state["updatePolicy"]["trust"],
             "lastError": None,
         }
+        if automatic is not None:
+            installation.state["updateTransaction"]["automaticAttempts"] = 0
         installation.save()
-        return _guarded(installation, platform, password)
+        if automatic is not None:
+            from update_automatic import reserve_attempt
+
+            reserve_attempt(installation, automatic)
+        return _guarded(installation, platform, password, progress=progress)
 
 
-def resume(target: Path, password: str, *, automatic=None) -> dict:
+def resume(
+    target: Path,
+    password: str,
+    *,
+    automatic=None,
+    progress: ProgressObserver | None = None,
+) -> dict:
     from operational_restore import require_admin
     from update_worker import validate_host
 
@@ -277,13 +306,26 @@ def resume(target: Path, password: str, *, automatic=None) -> dict:
                 raise ValueError("E_UPDATE_AUTOMATIC_MANUAL")
         reconcile(installation)
         _inputs(installation)
-        return _guarded(installation, backend(installation), password)
+        platform = backend(installation)
+        if automatic is not None and transaction(installation)["phase"] not in FINAL:
+            from update_automatic import reserve_attempt
+
+            reserve_attempt(installation, automatic)
+        return _guarded(installation, platform, password, progress=progress)
 
 
 def _guarded(
-    installation, platform, password, *, recovery=False, acknowledge_writes=False
+    installation,
+    platform,
+    password,
+    *,
+    recovery=False,
+    acknowledge_writes=False,
+    progress: ProgressObserver | None = None,
 ):
     try:
+        installation.progress = progress
+        observe(installation)
         return (
             _recover(installation, platform, password, acknowledge_writes)
             if recovery
@@ -292,6 +334,10 @@ def _guarded(
     except (Exception, KeyboardInterrupt) as error:
         code = str(error).split(":", 1)[0]
         value = transaction(installation)
+        if value["phase"] in FINAL:
+            # A late console interrupt or an unapproved recovery request cannot
+            # turn an already committed successful transaction into a failure.
+            raise
         value["lastError"] = (
             code if re.fullmatch(r"E_[A-Z_]{1,80}", code) else "E_UPDATE_INTERRUPTED"
         )
@@ -349,7 +395,13 @@ def _continue(installation, platform, password):
     return result(installation)
 
 
-def recover(target: Path, password: str, *, acknowledge_writes=False) -> dict:
+def recover(
+    target: Path,
+    password: str,
+    *,
+    acknowledge_writes=False,
+    progress: ProgressObserver | None = None,
+) -> dict:
     from operational_restore import require_admin
     from update_worker import validate_host
 
@@ -366,6 +418,7 @@ def recover(target: Path, password: str, *, acknowledge_writes=False) -> dict:
             password,
             recovery=True,
             acknowledge_writes=acknowledge_writes,
+            progress=progress,
         )
 
 

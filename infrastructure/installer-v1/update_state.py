@@ -7,7 +7,9 @@ import hashlib
 import os
 import re
 import uuid
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypedDict
 
 from bundle import sha256
 from host import reject_links
@@ -31,6 +33,32 @@ PHASES = frozenset(
         "recovered",
     }
 )
+
+
+class UpdateProgress(TypedDict):
+    transactionId: str
+    phase: str
+
+
+ProgressObserver = Callable[[UpdateProgress], None]
+
+
+def emit(observer: ProgressObserver | None, event: UpdateProgress) -> None:
+    if observer is not None:
+        try:
+            observer(event)
+        except OSError:
+            # Presentation does not authorize work or establish health. A
+            # broken output stream must not bypass checks or fail a valid
+            # transaction. KeyboardInterrupt remains interruptible.
+            return
+
+
+def observe(installation) -> None:
+    observer = getattr(installation, "progress", None)
+    if observer is not None:
+        value = transaction(installation)
+        emit(observer, {"transactionId": value["id"], "phase": value["phase"]})
 
 
 def transaction(installation) -> dict:
@@ -184,3 +212,4 @@ def phase(installation, value: str) -> None:
         raise ValueError("E_UPDATE_TRANSACTION")
     transaction(installation)["phase"] = value
     installation.save()
+    observe(installation)

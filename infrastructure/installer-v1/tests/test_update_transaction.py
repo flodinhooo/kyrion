@@ -440,3 +440,234 @@ class UpdateTransactions(unittest.TestCase):
         installation.state["runtimeImageIds"] = target
         reconcile(installation)
         self.assertEqual(load_installation(self.root).state["runtimeImageIds"], source)
+
+    def test_progress_announces_only_committed_transaction_checkpoints(self):
+        observed = []
+
+        def progress(event):
+            if event["phase"] == "staging":
+                observed.append((event["phase"], event["phase"], True))
+            else:
+                current = load_installation(self.root, verify=False).state[
+                    "updateTransaction"
+                ]
+                observed.append(
+                    (
+                        event["phase"],
+                        current["phase"],
+                        current["id"] == event["transactionId"],
+                    )
+                )
+
+        updater.apply(
+            self.root,
+            "Synthetic-password-for-tests-only",
+            review=lambda _: True,
+            progress=progress,
+        )
+        phases = [
+            "staging",
+            "preparing",
+            "backing-up",
+            "snapshotting",
+            "switching",
+            "migrating",
+            "checking",
+            "activating",
+            "complete",
+        ]
+        self.assertEqual(observed, [(phase, phase, True) for phase in phases])
+
+    def test_presentation_errors_do_not_hide_failed_validation_or_persist_details(self):
+        def broken(_event):
+            raise BrokenPipeError("private presentation fixture detail")
+
+        self.migration_failure = True
+        with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                progress=broken,
+            )
+        self.assertNotIn("activate", self.events)
+        self.assertEqual(
+            load_installation(self.root).state["updateTransaction"]["lastError"],
+            "E_FIXTURE_MIGRATION",
+        )
+        self.migration_failure = False
+        self.assertTrue(
+            updater.resume(
+                self.root, "Synthetic-password-for-tests-only", progress=broken
+            )["complete"]
+        )
+        self.assertNotIn(
+            "private presentation", (self.root / "install-state.json").read_text()
+        )
+
+    def test_keyboard_interrupt_at_announced_checkpoint_remains_resumable(self):
+        def interrupt(event):
+            if event["phase"] == "backing-up":
+                raise KeyboardInterrupt
+
+        with self.assertRaises(KeyboardInterrupt):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                progress=interrupt,
+            )
+        self.assertEqual(
+            load_installation(self.root).state["updateTransaction"]["phase"],
+            "backing-up",
+        )
+        self.assertNotIn("snapshot", self.events)
+        self.assertTrue(
+            updater.resume(self.root, "Synthetic-password-for-tests-only")["complete"]
+        )
+        self.assertEqual(self.events.count("backup-backup.gpg"), 1)
+
+    def automatic_policy(self):
+        from test_update_automatic import policy
+
+        value = policy()
+        installation = load_installation(self.root)
+        installation.state["updatePolicy"].update(
+            revision=value["policyRevision"], enabled=True
+        )
+        installation.state["automaticUpdatePolicy"] = value
+        installation.save()
+        self.enterContext(patch("update_automatic.in_window", return_value=True))
+        return value
+
+    def test_late_console_interrupt_preserves_committed_success(self):
+        def interrupt(event):
+            if event["phase"] == "complete":
+                raise KeyboardInterrupt
+
+        with self.assertRaises(KeyboardInterrupt):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                progress=interrupt,
+            )
+        value = load_installation(self.root).state["updateTransaction"]
+        self.assertEqual(value["phase"], "complete")
+        self.assertIsNone(value["lastError"])
+        self.assertNotIn("failedAt", value)
+        before = list(self.events)
+        self.assertTrue(
+            updater.resume(self.root, "Synthetic-password-for-tests-only")["complete"]
+        )
+        self.assertEqual(self.events, before)
+
+    def test_automatic_budget_survives_failures_and_requires_explicit_continuation(
+        self,
+    ):
+        value = self.automatic_policy()
+        self.migration_failure = True
+        with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                automatic=value,
+            )
+        for count in (2, 3):
+            with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
+                updater.resume(
+                    self.root, "Synthetic-password-for-tests-only", automatic=value
+                )
+            self.assertEqual(
+                load_installation(self.root).state["updateTransaction"][
+                    "automaticAttempts"
+                ],
+                count,
+            )
+        before = list(self.events)
+        with self.assertRaisesRegex(ValueError, "E_UPDATE_AUTOMATIC_ATTEMPTS"):
+            updater.resume(
+                self.root, "Synthetic-password-for-tests-only", automatic=value
+            )
+        self.assertEqual(self.events, before)
+        self.migration_failure = False
+        self.assertTrue(
+            updater.resume(self.root, "Synthetic-password-for-tests-only")["complete"]
+        )
+        self.assertEqual(
+            load_installation(self.root).state["updateTransaction"][
+                "automaticAttempts"
+            ],
+            3,
+        )
+
+    def test_legacy_automatic_journal_does_not_reset_execution_count(self):
+        value = self.automatic_policy()
+        self.migration_failure = True
+        with self.assertRaises(ValueError):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                automatic=value,
+            )
+        installation = load_installation(self.root)
+        installation.state["updateTransaction"].pop("automaticAttempts")
+        installation.save()
+        with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
+            updater.resume(
+                self.root, "Synthetic-password-for-tests-only", automatic=value
+            )
+        self.assertEqual(
+            load_installation(self.root).state["updateTransaction"][
+                "automaticAttempts"
+            ],
+            2,
+        )
+
+    def test_invalid_automatic_counter_never_starts_runtime_operations(self):
+        value = self.automatic_policy()
+        self.migration_failure = True
+        with self.assertRaises(ValueError):
+            updater.apply(
+                self.root,
+                "Synthetic-password-for-tests-only",
+                review=lambda _: True,
+                automatic=value,
+            )
+        before = list(self.events)
+        for count in (False, -1, "1", 4, 0, None):
+            installation = load_installation(self.root)
+            installation.state["updateTransaction"]["automaticAttempts"] = count
+            installation.save()
+            with (
+                self.subTest(counter=count),
+                self.assertRaisesRegex(ValueError, "E_UPDATE_AUTOMATIC_ATTEMPTS"),
+            ):
+                updater.resume(
+                    self.root, "Synthetic-password-for-tests-only", automatic=value
+                )
+            self.assertEqual(self.events, before)
+
+    def test_completed_automatic_transaction_does_not_consume_another_attempt(self):
+        value = self.automatic_policy()
+        updater.apply(
+            self.root,
+            "Synthetic-password-for-tests-only",
+            review=lambda _: True,
+            automatic=value,
+        )
+        before = list(self.events)
+        self.assertTrue(
+            updater.resume(
+                self.root, "Synthetic-password-for-tests-only", automatic=value
+            )["complete"]
+        )
+        self.assertEqual(self.events, before)
+        self.assertEqual(
+            load_installation(self.root).state["updateTransaction"][
+                "automaticAttempts"
+            ],
+            1,
+        )

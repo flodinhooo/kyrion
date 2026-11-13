@@ -662,6 +662,13 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
             if complete["phase"] != "complete" or adapter.schema() != 50:
                 raise ValueError("E_FIXTURE_UPDATE_NOT_COMPLETE")
             if (
+                load_installation(installation.target)
+                .state["updateTransaction"]
+                .get("automaticAttempts")
+                != 3
+            ):
+                raise ValueError("E_FIXTURE_AUTOMATIC_ATTEMPT_RECORD")
+            if (
                 adapter.core.request("GET", "/v1/auth/me", token=token)["id"]
                 != original_user["id"]
             ):
@@ -742,6 +749,7 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
             "completedRecoveryDoesNotReplay": True,
             "interruptedPayloadAndActivationResume": not failing,
             "automaticApprovalAndOutsideWindowResume": not failing,
+            "threeAutomaticReservationsPersisted": not failing,
             "interruptedDatabaseRenameResume": failing,
             "postActivationLossRequiresAcknowledgment": not failing,
             "wrongBackupPasswordDoesNotReplaceDatabase": failing,

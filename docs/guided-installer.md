@@ -1,6 +1,7 @@
 # Guided installer implementation and acceptance
 
-Reviewed 2026-11-11. This is the work record for the downloaded installer;
+Initial baseline 2026-11-11; maintenance sections updated 2026-11-13.
+This is the work record for the downloaded installer;
 kyrion.ch is a download/documentation surface, never an installation authority.
 
 The detailed [binding requirement matrix](installer-requirements.md) supersedes
@@ -10,7 +11,10 @@ full product scope remains open; no user acceptance is requested for this state.
 The later [linked account evidence](status/2026-11-12-installer-identity.md) and
 [integration/build evidence](status/2026-11-13-installer-integrations.md) supersede
 older planned-only descriptions of those implemented slices. They do not close
-distributed enrollment, complete runtime/model/voice setup or installed updates.
+distributed enrollment, complete runtime/model/voice setup, local Web maintenance
+administration or OS boot acceptance. Later single-host implementation and
+[actual transaction evidence](status/2026-11-13-installer-update-transactions.md)
+supersede the baseline inventory and stage table below.
 
 Native release builds embed their requested version. Inspect with `--version`;
 there is no caller-supplied `--installer-version` override. Build the standalone
@@ -32,7 +36,8 @@ requests maintenance confirmation and a repeated backup passphrase. The runtime
 bundle must include the prepared, manifest-hashed portable GnuPG dependency;
 older development bundles without it fail before services are paused. Original
 keys/configuration are encrypted, and the passphrase is never a command argument.
-This is capture, not full restore or an automatic backup schedule.
+This command performs capture. Source-fenced prepared-target restore has its
+separate reviewed path below; automatic backup scheduling remains open.
 
 `--check-updates --target TARGET --feed FEED --trust-store TRUST_FILE` now
 supports both Linux and native Windows. FEED must be the actual signed release
@@ -41,9 +46,11 @@ channel is invented here. Native Windows reads its actual database schema with
 verified PostgreSQL tools. Stable-channel checks require an actually released
 installer build identity; current development artifacts are refused. The default
 check only reports a compatible candidate and never installs it. Background
-scheduling and update transactions remain open implementation work.
+scheduling and single-host transactions are implemented in the maintenance
+sections below. Actual scheduled execution/boot and local Web administration
+retain separate acceptance/source-work boundaries.
 
-## Inventory and conflicts
+## Original inventory and conflicts (2026-11-11 baseline)
 
 * `infrastructure/installer-v1`: Python standard library, shell, signed image
   archives and Compose. The old entrypoint wrote directories before preflight,
@@ -72,7 +79,7 @@ plan, but does not make missing Windows, multi-device, multi-Space or HA control
 implementations available. These boundaries must change in their existing owners,
 not by inventing parallel installer account/device/integration databases.
 
-## Checkable stages
+## Historical coarse stages (current status is the binding matrix)
 
 | ID | Outcome | Status / acceptance |
 | --- | --- | --- |
@@ -89,6 +96,10 @@ not by inventing parallel installer account/device/integration databases.
 | G11 | Website downloads/help/advice backed by accepted published artifacts | Open; no fake executable download or unpublished release link |
 
 ## Support and evidence
+
+The following table preserves the original observations. Current platform and
+container evidence is recorded in the binding matrix and linked status reports;
+it must not be inferred from this baseline table.
 
 | Target | Implemented path | Verification / release status |
 | --- | --- | --- |
@@ -320,3 +331,21 @@ disable it and configure the current reviewed frozen installer before enabling
 automatic installation. Status includes the last automatic attempt and transaction
 error without child-process output or secrets. Actual scheduled execution and
 cold-boot acceptance remain separate from tested definition/process behavior.
+
+Each automatic transaction has at most three execution reservations, including
+its initial execution. Reservations are saved before critical work, so process
+death does not reset the counter. After exhaustion or an invalid counter, the
+worker records `E_UPDATE_AUTOMATIC_ATTEMPTS`, preserves its fence and backups,
+and requires explicit administrator continuation/recovery. Manual continuation
+does not erase history; a later new transaction has its own budget. An older
+compatible pending journal without a counter conservatively counts one prior
+execution. No unattended database rewind is introduced. This behavior requires
+the updated frozen worker; repository edits do not change installed binaries.
+See [ADR 0065](adr/0065-bounded-automatic-update-continuation.md).
+
+Manual apply/resume/recover prints German/English phase descriptions. From
+`preparing` onward each notification follows the corresponding durable journal
+checkpoint. Public staging precedes the critical transaction and can be repeated.
+No percentages or completion times are invented. A broken output stream does not
+suppress validation errors or create success; Ctrl-C remains interruptible at a
+saved checkpoint. An interrupt after committed completion preserves that result.

@@ -16,6 +16,24 @@ from host import reject_links, runtime_checks
 from recovery import backup, load_installation, verify_database
 from runtime import ROOT, installation_lock
 
+UPDATE_PROGRESS_MESSAGES = {
+    "staging": "updatesPhaseStaging",
+    "preparing": "updatesPhasePreparing",
+    "backing-up": "updatesPhaseBackup",
+    "snapshotting": "updatesPhaseSnapshot",
+    "switching": "updatesPhaseSwitching",
+    "migrating": "updatesPhaseMigrating",
+    "checking": "updatesPhaseChecking",
+    "activating": "updatesPhaseActivating",
+    "complete": "updatesPhaseComplete",
+    "recovery-preparing": "updatesPhaseRecoveryPreparing",
+    "recovering-runtime": "updatesPhaseRecoveryRuntime",
+    "recovering-db": "updatesPhaseRecoveryDatabase",
+    "recovery-checking": "updatesPhaseRecoveryChecking",
+    "reactivating": "updatesPhaseReactivating",
+    "recovered": "updatesPhaseRecovered",
+}
+
 
 def check_updates(
     args,
@@ -308,7 +326,14 @@ def run(args, messages: dict[str, str]) -> int:
 
             print(json.dumps(disable_automatic(args.target)))
         elif args.updates in {"apply", "resume", "recover"}:
+            from update_state import UpdateProgress
             from update_transaction import apply, recover, resume
+
+            def show_progress(event: UpdateProgress) -> None:
+                key = UPDATE_PROGRESS_MESSAGES.get(
+                    event["phase"], "updatesPhaseWorking"
+                )
+                print(messages[key], flush=True)
 
             password = getpass.getpass(messages["backupPassword"] + ": ")
             if args.updates == "apply":
@@ -318,12 +343,14 @@ def run(args, messages: dict[str, str]) -> int:
                     print(json.dumps(summary))
                     return input("[APPLY-UPDATE]: ").strip() == "APPLY-UPDATE"
 
-                outcome = apply(args.target, password, review=approve_update)
+                outcome = apply(
+                    args.target, password, review=approve_update, progress=show_progress
+                )
             elif args.updates == "resume":
                 print(messages["updatesResumeReview"])
                 if input("[RESUME-UPDATE]: ").strip() != "RESUME-UPDATE":
                     raise ValueError("E_CONFIRMATION")
-                outcome = resume(args.target, password)
+                outcome = resume(args.target, password, progress=show_progress)
             else:
                 print(messages["updatesRecoveryReview"])
                 if input("[RECOVER-UPDATE]: ").strip() != "RECOVER-UPDATE":
@@ -342,7 +369,12 @@ def run(args, messages: dict[str, str]) -> int:
                     )
                     if not acknowledge:
                         raise ValueError("E_CONFIRMATION")
-                outcome = recover(args.target, password, acknowledge_writes=acknowledge)
+                outcome = recover(
+                    args.target,
+                    password,
+                    acknowledge_writes=acknowledge,
+                    progress=show_progress,
+                )
             print(json.dumps(outcome))
         elif args.updates == "download":
             from update_download import download

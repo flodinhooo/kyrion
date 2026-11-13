@@ -19,6 +19,28 @@ from restore_material import private_output
 from runtime import installation_lock
 
 KEY = ".maintenance-secrets/backup.key"
+EXECUTION_ATTEMPTS = 3
+
+
+def reserve_attempt(installation, expected: dict) -> None:
+    from update_state import transaction
+
+    approved(installation, expected, starting=False)
+    value = transaction(installation)
+    if value.get("actor") != "AUTOMATIC" or value.get("automaticApproval") != expected:
+        raise ValueError("E_UPDATE_AUTOMATIC_CONSENT")
+    # Older compatible journals already executed at least once. Never reset
+    # their budget merely because the previous worker did not record a counter.
+    count = value.get("automaticAttempts", 1)
+    if (
+        type(count) is not int
+        or not 0 <= count < EXECUTION_ATTEMPTS
+        or (count == 0 and value["phase"] != "preparing")
+    ):
+        raise ValueError("E_UPDATE_AUTOMATIC_ATTEMPTS")
+    value["automaticAttempts"] = count + 1
+    value["lastAutomaticAttemptAt"] = int(dt.datetime.now(dt.timezone.utc).timestamp())
+    installation.save()
 
 
 def validate(value: dict) -> None:

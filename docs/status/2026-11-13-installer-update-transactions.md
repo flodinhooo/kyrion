@@ -231,3 +231,33 @@ container. `build/docker-image-retention-before.json` is a passing observation,
 not a reproduced bug. Manual-only hosted Compose CI is prepared and YAML-checked;
 it has not been dispatched. Developer commands and isolation boundaries:
 [Compose transaction test](../testing/installer-compose-transactions.md).
+
+## Bounded automatic continuation and visible phases
+
+ADR 0065 adds a durable three-attempt execution budget, including the initial
+automatic execution. Invalid/exhausted counters require explicit administrator
+continuation; history, retained runtime, backup and startup fence remain. Manual
+continuation remains possible. Four new journal-policy regressions pass, and the
+actual isolated Core/PG17/GPG process integration confirms three saved automatic
+reservations across payload interruption, activation interruption and completion
+outside the start window. Its separate failed-Flyway/database-rename/wrong-password
+recovery case still passes. This is process evidence, not OS scheduled execution.
+
+Manual terminal update/recovery now receives typed, bilingual progress events
+from committed checkpoints. Output I/O failure does not hide migration failure;
+Ctrl-C resumes safely, including preserving an already committed final result.
+The expanded full suites pass: **312 Windows tests (three skips)** and
+**314 isolated Linux tests (16 skips, 382.868 seconds)**; Ruff passes. Native
+artifacts for these latest source additions still require a fresh build.
+The earlier `.12` native builds and complete Windows test package bind to source
+`e750ed7` and therefore predate ADR 0065/progress. They are regression artifacts,
+not the final delivery: Windows executable SHA-256
+`685f6a8f0621d16c283557039c610635f4dece821bca3e847c3cd79cb4871a01`;
+Windows runtime ZIP SHA-256
+`de1c854226369f5da4e3a3bbb12e0b396faaa69c8ea1224417a13b7907707152`.
+The actual frozen executable verifies the ephemeral development manifest signature
+and all 6,114 files (manifest SHA-256
+`025de68c03e4cc59cfaa0388a413650b6269e11ba497270de9463b305846f571`),
+with `runtimeActivated:false`. No production key is used or persisted. The JAR
+and service-host/recovery capabilities are included in that full package; actual
+Windows SCM and cold-boot acceptance remain outstanding.

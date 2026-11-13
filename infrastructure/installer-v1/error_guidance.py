@@ -1,6 +1,7 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_AUTOMATIC_ATTEMPTS": "updatesErrorAutomaticAttempts",
     "E_WEB": "healthErrorWeb",
     "E_WEB_TLS": "healthErrorTls",
     "E_UPDATE_SETUP_REQUIRED": "updatesErrorSetupRequired",
