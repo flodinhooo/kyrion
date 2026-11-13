@@ -73,6 +73,17 @@ def transaction(installation) -> dict:
         {"native-manifest.json"},
     ):
         raise ValueError("E_UPDATE_TRANSACTION")
+    aliases = value.get("sourceAliases", {})
+    if (
+        not isinstance(aliases, dict)
+        or set(aliases) not in (set(), {"compose.yml"})
+        or not set(aliases) <= set(value["files"])
+        or any(
+            not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)
+            for digest in aliases.values()
+        )
+    ):
+        raise ValueError("E_UPDATE_TRANSACTION")
     return value
 
 
@@ -83,6 +94,7 @@ def path(installation, name: str) -> Path:
         "source-config",
         "target-config",
         "source-compose",
+        "original-compose",
         "target-compose",
         "maintenance.yml",
     }:
@@ -100,9 +112,13 @@ def reconcile(installation) -> None:
             raise ValueError("E_UPDATE_TRANSACTION")
         actual = sha256(installation.target / name)
         matching = [kind for kind in ("source", "target") if versions[kind] == actual]
+        if value.get("sourceAliases", {}).get(name) == actual:
+            matching.append("source")
         if not matching:
             raise ValueError("E_UPDATE_CHANGED")
         installation.state["files"][name] = actual
+        if name == "compose.yml":
+            remember_images(installation, matching[0])
         if name in {".env", "native-manifest.json"}:
             kind = matching[0]
             installation.configuration = copy.deepcopy(value[kind])
@@ -127,7 +143,11 @@ def select_configuration(installation, kind: str) -> None:
             raise ValueError("E_UPDATE_CHANGED")
         current = installation.target / name
         reject_links(current)
-        if sha256(current) not in value["files"][name].values():
+        allowed = {
+            *value["files"][name].values(),
+            value.get("sourceAliases", {}).get(name),
+        }
+        if sha256(current) not in allowed:
             raise ValueError("E_UPDATE_CHANGED")
         temporary = current.with_name(".update-config-" + uuid.uuid4().hex[:12])
         try:
@@ -139,9 +159,24 @@ def select_configuration(installation, kind: str) -> None:
         finally:
             temporary.unlink(missing_ok=True)
         installation.state["files"][name] = expected
+        if name == "compose.yml":
+            remember_images(installation, kind)
     installation.configuration = copy.deepcopy(value[kind])
     installation.state["configuration"] = installation.configuration
     installation.save()
+
+
+def remember_images(installation, kind: str) -> None:
+    value = transaction(installation)
+    if value.get("targetImages") is None:
+        return
+    from docker_images import image_set
+
+    images = (
+        value["targetImages"] if kind == "target" else value["original"].get("images")
+    )
+    image_set(images)
+    installation.state["runtimeImageIds"] = images.copy()
 
 
 def phase(installation, value: str) -> None:

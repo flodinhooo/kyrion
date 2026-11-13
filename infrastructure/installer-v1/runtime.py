@@ -352,7 +352,9 @@ class Installation:
         del self.state["pendingWrite"]
         self.save()
 
-    def configure(self, identity: dict | None = None) -> None:
+    def configure(
+        self, identity: dict | None = None, *, images: dict | None = None
+    ) -> None:
         from authority import require_active
 
         require_active(self.state, preparing=True)
@@ -371,9 +373,20 @@ class Installation:
                 else secrets.token_urlsafe(32) + "\n"
             )
             self.write("secrets/" + name, value, uid=10001)
-        self.write(
-            "compose.yml", (ROOT / "templates/compose.yml").read_text(encoding="utf-8")
-        )
+        compose = (ROOT / "templates/compose.yml").read_text(encoding="utf-8")
+        if images is not None:
+            from docker_images import pin_compose
+
+            compose = pin_compose(compose, images)
+            if (
+                "compose.yml" in self.state["files"]
+                and (self.target / "compose.yml").read_bytes() != compose.encode()
+            ):
+                raise ValueError("E_IMAGE_CONFIGURATION_UPGRADE_REQUIRED")
+        self.write("compose.yml", compose)
+        if images is not None:
+            self.state["runtimeImageIds"] = images.copy()
+            self.save()
         config = self.configuration
         self.write(
             ".env",
@@ -591,27 +604,37 @@ def provision(
                 name: image_identity(private_bundle / name, tag)
                 for name, tag in plan.items()
             }
-            for name, tag in plan.items():
+            from docker_images import load_untagged
+
+            def import_image(*arguments, timeout=180):
+                return execute(["docker", *arguments], timeout=timeout)
+
+            for name in plan:
                 # Recheck just before loading; never glob or silently ignore failure.
                 item = next(
                     item for item in manifest["artifacts"] if item["name"] == name
                 )
                 if sha256(private_bundle / name) != item["sha256"]:
                     raise ValueError("E_DIGEST: artifact changed after review")
-                execute(
-                    ["docker", "load", "--input", str(private_bundle / name)],
-                    timeout=600,
+                identities[name] = load_untagged(
+                    installation.target,
+                    private_bundle / name,
+                    identities[name],
+                    observed["architecture"],
+                    import_image,
                 )
-                loaded = json.loads(execute(["docker", "image", "inspect", tag]))[0]
-                if (
-                    loaded.get("Id") != identities[name]
-                    or loaded.get("Os") != "linux"
-                    or loaded.get("Architecture") != observed["architecture"]
-                ):
-                    raise ValueError(
-                        "E_IMAGE: loaded image identity or architecture differs"
-                    )
-            installation.configure(identity=identity)
+            architecture = observed["architecture"]
+            service_images = {
+                role: identities[
+                    ("kyrion-" if role in {"core", "web"} else "")
+                    + role
+                    + "-"
+                    + architecture
+                    + ".tar"
+                ]
+                for role in ("core", "web", "postgres", "caddy")
+            }
+            installation.configure(identity=identity, images=service_images)
             if restore_request is not None:
                 installation.state["restoreRuntimePrepared"] = True
                 installation.save()

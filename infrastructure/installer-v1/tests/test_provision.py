@@ -1,8 +1,11 @@
 """Injected Compose orchestration; never touches Docker or existing host data."""
 
 import contextlib
+import hashlib
+import io
 import json
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,7 +37,31 @@ class ProvisionTests(unittest.TestCase):
             "caddy-arm64.tar",
         ):
             path = self.release / name
-            path.write_bytes(b"synthetic image fixture")
+            role = name.removesuffix("-arm64.tar").removeprefix("kyrion-")
+            tag = {
+                "core": "kyrion/core:1.2.3",
+                "web": "kyrion/web:1.2.3",
+                "postgres": "postgres:17.6-alpine",
+                "caddy": "caddy:2.10.2-alpine",
+            }[role]
+            config = json.dumps(
+                {
+                    "os": "linux",
+                    "architecture": "arm64",
+                    "config": {"Labels": {"role": role}},
+                }
+            ).encode()
+            config_name = hashlib.sha256(config).hexdigest() + ".json"
+            with tarfile.open(path, "w") as package:
+                for member_name, raw in {
+                    config_name: config,
+                    "manifest.json": json.dumps(
+                        [{"Config": config_name, "RepoTags": [tag], "Layers": []}]
+                    ).encode(),
+                }.items():
+                    member = tarfile.TarInfo(member_name)
+                    member.size = len(raw)
+                    package.addfile(member, io.BytesIO(raw))
             self.manifest["artifacts"].append(
                 {
                     "name": name,
@@ -56,13 +83,19 @@ class ProvisionTests(unittest.TestCase):
         self.commands.append(args)
         if args[:3] == ["docker", "image", "inspect"]:
             return json.dumps(
-                [{"Id": "sha256:fixture", "Os": "linux", "Architecture": "arm64"}]
+                [{"Id": args[-1], "Os": "linux", "Architecture": "arm64"}]
             )
+        if args[:2] == ["docker", "load"]:
+            with tarfile.open(args[3]) as package:
+                self.assertEqual(
+                    json.load(package.extractfile("manifest.json"))[0]["RepoTags"], []
+                )
         return ""
 
     @staticmethod
-    def configure(installation, identity=None):
+    def configure(installation, identity=None, *, images=None):
         installation.write("secrets/test.key", b"first fixture credential")
+        installation.state["fixtureImagePins"] = images
         installation.state["stage"] = "configured"
         installation.save()
 
@@ -87,7 +120,7 @@ class ProvisionTests(unittest.TestCase):
             patch("runtime.runtime_checks"),
             patch(
                 "runtime.image_identity",
-                side_effect=identity or (lambda *_args: "sha256:fixture"),
+                side_effect=identity or runtime.image_identity,
             ),
             patch("runtime.execute", side_effect=self.command),
             patch.object(runtime.Installation, "configure", self.configure),
@@ -110,19 +143,21 @@ class ProvisionTests(unittest.TestCase):
         loads = [args for args in self.commands if args[:2] == ["docker", "load"]]
         self.assertEqual(len(loads), 4)
         self.assertTrue(
-            all(
-                Path(command[3]).is_relative_to(self.target / "release-input")
-                for command in loads
-            )
+            all(Path(command[3]).is_relative_to(self.target) for command in loads)
         )
         self.assertEqual(sentinel.read_bytes(), b"preserve")
         self.assertEqual(state["ownerSetup"], "not-verified")
+        self.assertEqual(
+            set(state["fixtureImagePins"]), {"core", "web", "postgres", "caddy"}
+        )
 
     def test_original_download_changes_cannot_reach_docker_load(self):
+        validate_identity = runtime.image_identity
+
         def identity(_path, _tag):
             for item in self.manifest["artifacts"]:
                 (self.release / item["name"]).write_bytes(b"mutated external download")
-            return "sha256:fixture"
+            return validate_identity(_path, _tag)
 
         self.provision(identity=identity)
         for item in self.manifest["artifacts"]:
@@ -132,7 +167,7 @@ class ProvisionTests(unittest.TestCase):
             )
         self.assertTrue(
             all(
-                str(self.target / "release-input") in command[3]
+                Path(command[3]).is_relative_to(self.target)
                 for command in self.commands
                 if command[:2] == ["docker", "load"]
             )

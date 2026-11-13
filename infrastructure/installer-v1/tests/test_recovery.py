@@ -393,6 +393,37 @@ class RecoveryTests(unittest.TestCase):
             maintenance.repair(installation.target)
         self.assertEqual(path.read_bytes(), b"changed original key")
 
+    def test_repair_restores_reviewed_immutable_image_pins(self):
+        from docker_images import pin_compose
+
+        installation = self.installation()
+        images = {
+            role: "sha256:" + digit * 64
+            for role, digit in zip(
+                ("core", "web", "postgres", "caddy"), "abcd", strict=True
+            )
+        }
+        path = installation.target / "compose.yml"
+        original = pin_compose(
+            (maintenance.ROOT / "templates/compose.yml").read_text(encoding="utf-8"),
+            images,
+        ).encode()
+        path.write_bytes(original)
+        installation.state["files"]["compose.yml"] = recovery.sha256(path)
+        installation.state["runtimeImageIds"] = images
+        installation.save()
+        path.write_bytes(b"synthetic broken configuration")
+        with (
+            patch(
+                "maintenance.installation_lock", return_value=contextlib.nullcontext()
+            ),
+            patch("maintenance.runtime_checks"),
+            patch.object(Installation, "start"),
+        ):
+            result = maintenance.repair(installation.target)
+        self.assertEqual(result["repairedFiles"], ["compose.yml"])
+        self.assertEqual(path.read_bytes(), original)
+
     def test_uninstall_data_choice_preserves_foreign_resources(self):
         installation = self.installation()
         sibling = self.root / "foreign-ollama-model"

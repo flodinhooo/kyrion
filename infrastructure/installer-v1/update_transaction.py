@@ -190,11 +190,18 @@ def apply(target: Path, password: str, *, review, automatic=None) -> dict:
             approved(installation, automatic, starting=True)
         relative = "transaction/" + uuid.UUID(identifier).hex[:16]
         changes = {}
+        aliases = {}
         for name, raw in configs.items():
             if name not in {"native-manifest.json", ".env", "compose.yml"}:
                 raise ValueError("E_UPDATE_TRANSACTION")
             suffix = "compose" if name == "compose.yml" else "config"
-            source = (target / name).read_bytes()
+            original_source = (target / name).read_bytes()
+            source = getattr(platform, "source_configs", {}).get(name, original_source)
+            if source != original_source:
+                if name != "compose.yml":
+                    raise ValueError("E_UPDATE_TRANSACTION")
+                aliases[name] = hashlib.sha256(original_source).hexdigest()
+                installation.write(relative + "/original-compose", original_source)
             changes[name] = {
                 "source": hashlib.sha256(source).hexdigest(),
                 "target": hashlib.sha256(raw).hexdigest(),
@@ -238,6 +245,7 @@ def apply(target: Path, password: str, *, review, automatic=None) -> dict:
             },
             "targetImages": getattr(platform, "target_images", None),
             "files": changes,
+            "sourceAliases": aliases,
             "downloadDirectory": installation.state["updateDownload"]["directory"],
             "trust": installation.state["updatePolicy"]["trust"],
             "lastError": None,
@@ -301,6 +309,8 @@ def _continue(installation, platform, password):
     if value["phase"] in FINAL:
         return result(installation)
     if value["phase"] == "preparing":
+        if value.get("sourceAliases"):
+            select_configuration(installation, "source")
         platform.quiesce()
         if hasattr(platform, "retain"):
             platform.retain()

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import io
 import json
 import os
 import re
 import shutil
 import stat
 import subprocess
-import tarfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -184,40 +182,15 @@ class Compose:
         }
 
     def load_untagged(self, archive: Path, expected: str):
-        # Preserve public/global tags, including images used by foreign installs.
-        with private_restore_directory(self.root, None) as scratch:
-            rewritten = scratch / "image.tar"
-            with (
-                tarfile.open(archive, "r|") as source,
-                tarfile.open(rewritten, "w") as target,
-            ):
-                for count, member in enumerate(source, start=1):
-                    if count > 4096:
-                        raise ValueError("E_IMAGE")
-                    if member.name == "manifest.json":
-                        if not member.isfile() or member.size > 1024**2:
-                            raise ValueError("E_IMAGE")
-                        manifest = json.load(source.extractfile(member))
-                        if not isinstance(manifest, list) or len(manifest) != 1:
-                            raise ValueError("E_IMAGE")
-                        manifest[0]["RepoTags"] = []
-                        raw = json.dumps(manifest).encode()
-                        member.size = len(raw)
-                        target.addfile(member, io.BytesIO(raw))
-                    else:
-                        target.addfile(
-                            member,
-                            source.extractfile(member) if member.isfile() else None,
-                        )
-            self.run("load", "--input", str(rewritten), timeout=600)
-        loaded = json.loads(self.run("image", "inspect", expected))[0]
-        if (
-            loaded.get("Id") != expected
-            or loaded.get("Os") != "linux"
-            or loaded.get("Architecture")
-            != self.installation.configuration["architecture"].split("/")[1]
-        ):
-            raise ValueError("E_IMAGE")
+        from docker_images import load_untagged
+
+        return load_untagged(
+            self.root,
+            archive,
+            expected,
+            self.installation.configuration["architecture"].split("/")[1],
+            self.run,
+        )
 
     def stage(self, reviewed, directory, identifier, original):
         images = {}
@@ -228,8 +201,7 @@ class Compose:
                 if filename.startswith(("kyrion-" + role + "-", role + "-"))
             )
             identity = image_identity(directory / filename, tag)
-            self.load_untagged(directory / filename, identity)
-            images[role] = identity
+            images[role] = self.load_untagged(directory / filename, identity)
         self.target_images = images
         version = self.run(
             "run",
@@ -250,23 +222,15 @@ class Compose:
         ):
             raise ValueError("E_UPDATE_POSTGRES_VERSION")
         self.admin("capability", images=images, schema=original["schema"])
+        from docker_images import pin_compose
+
         compose = (self.root / "compose.yml").read_text(encoding="utf-8")
-        for role, source_line in {
-            "postgres": "    image: postgres:17.6-alpine",
-            "core": '    image: "kyrion/core:${KYRION_RELEASE:?KYRION_RELEASE is required}"',
-            "web": '    image: "kyrion/web:${KYRION_RELEASE:?KYRION_RELEASE is required}"',
-            "caddy": "    image: caddy:2.10.2-alpine",
-        }.items():
-            old = (
-                source_line
-                if source_line in compose.splitlines()
-                else "    image: " + original["images"][role]
-            )
-            if compose.splitlines().count(old) != 1:
-                raise ValueError("E_UPDATE_COMPOSE_LAYOUT")
-            compose = compose.replace(
-                old + "\n", "    image: " + images[role] + "\n", 1
-            )
+        self.source_configs = {
+            "compose.yml": pin_compose(
+                compose, original["images"], original["images"]
+            ).encode()
+        }
+        compose = pin_compose(compose, images, original["images"])
         environment = (self.root / ".env").read_text(encoding="utf-8")
         old = "KYRION_RELEASE=" + self.installation.configuration["release"]
         if environment.splitlines().count(old) != 1:

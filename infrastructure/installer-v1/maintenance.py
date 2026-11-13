@@ -176,10 +176,13 @@ def repair(target: Path) -> dict:
         require_active(installation.state)
         config = installation.configuration
         runtime_checks(config["address"], config["hostname"], fresh=False)
+        compose = (ROOT / "templates/compose.yml").read_text(encoding="utf-8")
+        if installation.state.get("runtimeImageIds") is not None:
+            from docker_images import pin_compose
+
+            compose = pin_compose(compose, installation.state["runtimeImageIds"])
         candidates = {
-            "compose.yml": (ROOT / "templates/compose.yml")
-            .read_text(encoding="utf-8")
-            .encode("utf-8"),
+            "compose.yml": compose.encode("utf-8"),
             "data/Caddyfile": (ROOT / "templates/Caddyfile")
             .read_text(encoding="utf-8")
             .replace("__KYRION_HOSTNAME__", config["hostname"])

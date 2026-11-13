@@ -208,6 +208,66 @@ class UpdateTransactions(unittest.TestCase):
         self.assertEqual(self.events, [])
         self.assertNotIn("updateTransaction", load_installation(self.root).state)
 
+    def test_tagged_source_configuration_is_retained_but_recovery_uses_source_pins(
+        self,
+    ):
+        original = (self.root / "compose.yml").read_bytes()
+        self.adapter.source_configs = {"compose.yml": b"canonical immutable source\n"}
+        with (
+            patch.object(updater, "_guarded", side_effect=KeyboardInterrupt),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.apply()
+        value = load_installation(self.root).state["updateTransaction"]
+        self.assertEqual(
+            (self.root / value["directory"] / "original-compose").read_bytes(), original
+        )
+        updater.recover(
+            self.root, "Synthetic-password-for-tests-only", acknowledge_writes=True
+        )
+        self.assertEqual(
+            (self.root / "compose.yml").read_bytes(), b"canonical immutable source\n"
+        )
+
+    def test_interruption_before_source_pin_accepts_only_known_original_alias(self):
+        self.adapter.source_configs = {"compose.yml": b"canonical immutable source\n"}
+        with (
+            patch.object(updater, "_guarded", side_effect=KeyboardInterrupt),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.apply()
+        self.assertEqual(
+            (self.root / "compose.yml").read_bytes(), b"source configuration\n"
+        )
+        result = updater.resume(self.root, "Synthetic-password-for-tests-only")
+        self.assertTrue(result["complete"])
+
+    def test_source_pin_publication_lost_checkpoint_is_resumable(self):
+        import os
+
+        self.adapter.source_configs = {"compose.yml": b"canonical immutable source\n"}
+        replace = os.replace
+        interrupted = False
+
+        def cut(source, target):
+            nonlocal interrupted
+            replace(source, target)
+            if Path(target) == self.root / "compose.yml" and not interrupted:
+                interrupted = True
+                raise KeyboardInterrupt
+
+        with (
+            patch("update_state.os.replace", side_effect=cut),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.apply()
+        self.assertEqual(
+            (self.root / "compose.yml").read_bytes(), b"canonical immutable source\n"
+        )
+        self.assertTrue(
+            updater.resume(self.root, "Synthetic-password-for-tests-only")["complete"]
+        )
+
     def test_failed_migration_keeps_fence_and_resumes_without_duplicate_backup(self):
         self.migration_failure = True
         with self.assertRaisesRegex(ValueError, "E_FIXTURE_MIGRATION"):
@@ -354,3 +414,29 @@ class UpdateTransactions(unittest.TestCase):
             before["updateTransaction"]["id"],
             load_installation(self.root, verify=False).state["updateTransaction"]["id"],
         )
+
+    def test_image_pin_metadata_follows_configuration_switch_and_reconciliation(self):
+        from update_state import reconcile, select_configuration
+
+        source = {
+            role: "sha256:" + "a" * 64 for role in ("core", "web", "postgres", "caddy")
+        }
+        target = {role: "sha256:" + "b" * 64 for role in source}
+        self.adapter.target_images = target
+        self.migration_failure = True
+        with (
+            patch.object(
+                self.adapter,
+                "original",
+                return_value={"databaseBytes": 1, "images": source},
+            ),
+            self.assertRaises(ValueError),
+        ):
+            self.apply()
+        installation = load_installation(self.root)
+        self.assertEqual(installation.state["runtimeImageIds"], target)
+        select_configuration(installation, "source")
+        self.assertEqual(installation.state["runtimeImageIds"], source)
+        installation.state["runtimeImageIds"] = target
+        reconcile(installation)
+        self.assertEqual(load_installation(self.root).state["runtimeImageIds"], source)
