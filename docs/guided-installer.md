@@ -374,3 +374,9 @@ Actual owned systemd worker/fence/integrity/retry tests are distinct from a
 complete application boot or physical reboot. See
 [current Linux evidence](status/2026-11-14-installer-linux-startup.md) and
 [ADR 0067](adr/0067-linux-supervised-platform-startup.md).
+
+The explicitly requested diagnostic export includes an allowlisted update
+checkpoint: known phase, startup-fence status, stable error code and a bounded
+automatic-attempt count. It excludes transaction paths, backup locations, keys,
+provider output and arbitrary journal fields. Unknown or malformed values are
+reported as unknown; exporting does not send anything or execute recovery.

@@ -344,6 +344,12 @@ class RecoveryTests(unittest.TestCase):
         installation.state["sessionToken"] = "private-session"
         installation.state["lastError"] = "credential=private-token"
         installation.state["configuration"]["password"] = "private-password"
+        installation.state["updateTransaction"] = {
+            "phase": "private-path",
+            "lastError": "token=private-token",
+            "automaticAttempts": "private-password",
+            "backup": "private-backup-path",
+        }
         # Configuration is compared by the loader; extra unowned fields fail
         # closed rather than copying them. Inject the authority only for this
         # redaction fixture to verify the exporter itself is allowlisted.
@@ -354,6 +360,40 @@ class RecoveryTests(unittest.TestCase):
         self.assertNotIn("private-", text)
         self.assertNotIn("sessionToken", text)
         self.assertIsNone(json.loads(text)["lastError"])
+        self.assertEqual(
+            json.loads(text)["updateTransaction"],
+            {
+                "present": True,
+                "startupFenced": True,
+                "phase": None,
+                "lastError": None,
+                "automaticAttempts": None,
+            },
+        )
+
+    def test_diagnostic_exposes_only_safe_update_recovery_checkpoint(self):
+        installation = self.installation()
+        installation.state["updateTransaction"] = {
+            "phase": "recovering-db",
+            "lastError": "E_UPDATE_INTERRUPTED",
+            "automaticAttempts": 3,
+            "password": "private-password",
+        }
+        output = self.root / "update-report.json"
+        with patch("maintenance.load_installation", return_value=installation):
+            maintenance.diagnostic(installation.target, output)
+        report = json.loads(output.read_text())
+        self.assertEqual(
+            report["updateTransaction"],
+            {
+                "present": True,
+                "startupFenced": True,
+                "phase": "recovering-db",
+                "lastError": "E_UPDATE_INTERRUPTED",
+                "automaticAttempts": 3,
+            },
+        )
+        self.assertNotIn("private-password", output.read_text())
 
     def test_repair_restores_only_original_known_template(self):
         installation = self.installation()

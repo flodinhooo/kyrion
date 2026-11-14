@@ -44,6 +44,19 @@ jobs:
           mkdir build/native-linux-worker-unpacked
           tar -xzf "build/native-linux-worker/kyrion-installer-${version}-linux-amd64.tar.gz" -C build/native-linux-worker-unpacked kyrion-installer
           build/acceptance-python/bin/python infrastructure/installer-v1/tests/integration/verify-update-units.py --worker "$PWD/build/native-linux-worker-unpacked/kyrion-installer" --work "$PWD/build" --report build/linux-update-unit-report.json
+      - name: Execute the frozen startup fence under real systemd on the disposable runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(ps -p 1 -o comm= | xargs)" = systemd
+          sudo systemctl is-active docker.service
+          test ! -e /work/kyrion-systemd-fixture.json
+          sudo install -d -m 700 /work
+          printf '%s\n' '{"scope":"installer-systemd-development-fixture","name":"disposable-hosted-ci"}' | sudo tee /work/kyrion-systemd-fixture.json >/dev/null
+          sudo chmod 600 /work/kyrion-systemd-fixture.json
+          sudo "$PWD/build/acceptance-python/bin/python" infrastructure/installer-v1/tests/integration/verify-linux-startup.py \
+            --worker "$PWD/build/native-linux-worker-unpacked/kyrion-installer" \
+            --report "$PWD/build/linux-startup-service-report.json"
       - name: Run synthetic accounts and HA only in an isolated network namespace
         shell: bash
         run: |
@@ -110,4 +123,5 @@ jobs:
             build/isolated-restore-report.json
             build/isolated-update-report.json
             build/linux-update-unit-report.json
+            build/linux-startup-service-report.json
           if-no-files-found: error

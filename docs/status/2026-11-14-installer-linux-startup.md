@@ -63,6 +63,29 @@ separate outstanding acceptance boundaries.
 
 ## Continuing work
 
+Subsequent diagnostic coverage passes **330 Windows tests (three skips)** and
+**332 isolated Linux tests (16 skips)**. The explicit redacted export now reports
+only known update phases, startup fencing, stable errors and bounded attempt
+counts. Secret/path injection regressions pass. The manual-only Linux Core CI
+also prepares real frozen-worker systemd fence/integrity/retry execution on its
+disposable runner. YAML is parsed locally; that workflow has not been dispatched.
+
+New unsigned native development artifacts `.0.0.0-dev.20261114.2` build and pass
+embedded version/channel smoke checks on Windows x64 and Linux x64. They include
+the startup/capability/restore/repair work from `2ac20a7`, preceding the diagnostic
+addition. Windows executable SHA-256:
+`856719eb0a03d5c93e8f359824cf111029eeb480716ddbf7e0f6196c000b0bec`;
+Linux archive SHA-256:
+`248009dd8e0342765211f0831e552568080b9e3d814281a4a92bc3d039b56df2`.
+Both are local development artifacts with `platformInstallationAccepted:false`,
+not public releases or full-platform acceptance.
+
+The new complete stack/systemd fixture remains under development: actual fresh
+provisioning reaches an OCI runtime entrypoint error in the privately namespaced
+test Docker. No application-boot/update result is claimed from this failed run.
+Only the owned test guest/runtime is being diagnosed. The earlier successful
+full Docker Desktop Compose transaction remains separate valid evidence.
+
 The full current regression suites pass: **329 Windows tests (three skips)** and
 **331 isolated Linux tests (16 skips)**; Ruff and Git whitespace checks pass.
 The restricted Windows run could not exercise real protected ACL mutations;

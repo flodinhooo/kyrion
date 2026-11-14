@@ -175,6 +175,25 @@ def diagnostic(target: Path, output: Path) -> None:
         ),
         "managedFilesIntact": False,
     }
+    from update_gate import fenced
+    from update_state import PHASES
+
+    transaction = state.get("updateTransaction")
+    transaction = transaction if isinstance(transaction, dict) else {}
+    phase = transaction.get("phase")
+    code = transaction.get("lastError")
+    attempts = transaction.get("automaticAttempts")
+    report["updateTransaction"] = {
+        "present": state.get("updateTransaction") is not None,
+        "startupFenced": fenced(state),
+        "phase": phase if isinstance(phase, str) and phase in PHASES else None,
+        "lastError": code
+        if isinstance(code, str) and re.fullmatch(r"E_[A-Z_]{1,80}", code)
+        else None,
+        "automaticAttempts": attempts
+        if type(attempts) is int and 0 <= attempts <= 3
+        else None,
+    }
     try:
         installation.verify_files()
         report["managedFilesIntact"] = True
