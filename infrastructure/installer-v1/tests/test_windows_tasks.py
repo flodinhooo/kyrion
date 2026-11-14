@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from windows_tasks import NAMESPACE, operate, task_plan, update_check_plan
+from windows_tasks import NAMESPACE, backup_plan, operate, task_plan, update_check_plan
 
 
 class TaskPlanTests(unittest.TestCase):
@@ -82,6 +82,34 @@ class TaskPlanTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             update_check_plan(self.identifier, r"C:\ProgramData\Kyrion Test", "cmd.exe")
 
+    def test_backup_plan_is_system_only_without_login_and_rejects_modified_actions(
+        self,
+    ):
+        plan = backup_plan(
+            self.identifier,
+            r"C:\ProgramData\Kyrion Test",
+            "maintenance-" + "b" * 32 + ".exe",
+        )
+        root = ET.fromstring(plan["xml"])
+        ns = {"t": NAMESPACE}
+        self.assertEqual(
+            root.findtext("t:Principals/t:Principal/t:UserId", namespaces=ns),
+            "S-1-5-18",
+        )
+        self.assertEqual(
+            root.findtext(
+                "t:Triggers/t:BootTrigger/t:Repetition/t:Interval", namespaces=ns
+            ),
+            "PT15M",
+        )
+        self.assertEqual(
+            root.findtext("t:Settings/t:ExecutionTimeLimit", namespaces=ns), "PT2H"
+        )
+        self.assertNotIn("LogonTrigger", plan["xml"])
+        self.assertIn("--background-backup", plan["arguments"])
+        with self.assertRaisesRegex(ValueError, "E_WINDOWS_TASK_PLAN"):
+            operate({**plan, "arguments": "--uninstall"})
+
     @unittest.skipUnless(os.name == "nt", "Actual Windows security-descriptor parser")
     def test_native_task_security_rejects_shared_or_mutable_descriptors(self):
         script = Path(__file__).parent / "integration/verify-task-security.ps1"
@@ -113,6 +141,15 @@ class TaskPlanTests(unittest.TestCase):
         os.name == "nt", "Actual Windows Task Scheduler COM validation"
     )
     def test_actual_scheduler_validates_without_registering_or_running(self):
+        result = operate(
+            backup_plan(
+                self.identifier,
+                r"C:\ProgramData\Kyrion Test",
+                "maintenance-" + "b" * 32 + ".exe",
+            )
+        )
+        self.assertTrue(result["definitionValidated"])
+        self.assertFalse(result["registered"])
         for role in ("core", "web", "caddy"):
             with self.subTest(role=role):
                 result = operate(

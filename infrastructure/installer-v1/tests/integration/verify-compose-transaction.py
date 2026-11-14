@@ -32,6 +32,7 @@ from bundle import authenticated_review, sha256
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from docker_images import scrub_names
+from linux_startup import OVERLAY, OVERLAY_TEXT
 from onboarding import CoreClient
 from recovery import load_installation
 from release_channel import stamp
@@ -254,6 +255,22 @@ def exercise(root, specification):
             raise ValueError("E_FIXTURE_REPEAT_IDENTITY")
     print("fixture: actual fresh and repeated installation healthy", flush=True)
     installation = load_installation(target_root)
+    installation.write(OVERLAY, OVERLAY_TEXT)
+    installation.start()
+
+    def verify_restart_overlay(installation):
+        for role in ("postgres", "core", "web", "caddy"):
+            identifier = installation.compose("ps", "-q", role).strip()
+            if not identifier:
+                raise ValueError("E_FIXTURE_ROLE_MISSING")
+            actual = json.loads(docker("inspect", identifier))[0]
+            if actual["HostConfig"]["RestartPolicy"] != {
+                "Name": "on-failure",
+                "MaximumRetryCount": 5,
+            }:
+                raise ValueError("E_FIXTURE_RESTART_POLICY")
+
+    verify_restart_overlay(installation)
     client = CoreClient(installation)
     credentials = {"username": "compose-owner", "password": secrets.token_urlsafe(32)}
     owner = client.request(
@@ -313,6 +330,7 @@ def exercise(root, specification):
         flush=True,
     )
     installed = load_installation(target_root)
+    verify_restart_overlay(installed)
     transaction = installed.state["updateTransaction"]
     if (
         transaction["sourceAliases"].get("compose.yml")
@@ -337,6 +355,7 @@ def exercise(root, specification):
     result = update_transaction.recover(target_root, password, acknowledge_writes=True)
     print("fixture: acknowledged recovery completed", flush=True)
     restored = load_installation(target_root)
+    verify_restart_overlay(restored)
     adapter = Compose(restored)
     if (
         adapter.schema() != 49
@@ -358,6 +377,7 @@ def exercise(root, specification):
         raise ValueError("E_FIXTURE_FOREIGN_CONTAINER_MISSING")
     return {
         "actualDockerCompose": True,
+        "actualBoundedRestartOverlayBeforeAfterUpdateAndRecovery": True,
         "freshAndRepeatedInstallation": True,
         "actualCoreAndWebTlsHealth": True,
         "encryptedBackupAndPostActivationBackup": True,

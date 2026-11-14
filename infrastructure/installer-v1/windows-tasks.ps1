@@ -8,8 +8,9 @@ try {
     $raw = [Console]::In.ReadToEnd()
     if ($raw.Length -gt 32768) { throw 'E_TASK_INPUT' }
     $plan = $raw | ConvertFrom-Json
-    if ($plan.name -notmatch '^Kyrion-[a-f0-9-]{36}-(core|web|caddy|updates)$') { throw 'E_TASK_NAME' }
-    $isUpdate = $plan.name.EndsWith('-updates')
+    if ($plan.name -notmatch '^Kyrion-[a-f0-9-]{36}-(core|web|caddy|updates|backups)$') { throw 'E_TASK_NAME' }
+    $isBackup = $plan.name.EndsWith('-backups')
+    $isUpdate = $plan.name.EndsWith('-updates') -or $isBackup
     $principalSid = 'S-1-5-19'
     $bootDelay = 'PT30S'
     $executionLimit = 'PT0S'
@@ -24,6 +25,7 @@ try {
             $executionLimit = 'PT2H'
             $updateInterval = 'PT1H'
         }
+        if ($isBackup) { $executionLimit = 'PT2H'; $updateInterval = 'PT15M' }
         $workerFile = [IO.Path]::GetFileName([string]$plan.command)
         if ($workerFile -cnotmatch '^maintenance-[a-f0-9]{32}\.exe$' -or
             [IO.Path]::Combine([string]$plan.directory, $workerFile) -cne $plan.command) { throw 'E_TASK_EXECUTABLE' }
@@ -87,7 +89,9 @@ try {
             $plan.name -cne ('Kyrion-' + $journal.installationId + '-' + ($plan.name -split '-')[-1]) -or
             [IO.Path]::GetFullPath($journal.rootPath) -ine $directory.FullName -or
             $journal.files.$workerFile -notmatch '^[a-f0-9]{64}$') { throw 'E_TASK_JOURNAL' }
-        if ($isUpdate -and ($journal.updatePolicy.workerFile -cne $workerFile -or
+        $maintenancePolicy = $journal.updatePolicy
+        if ($isBackup) { $maintenancePolicy = $journal.backupPolicy }
+        if ($isUpdate -and ($maintenancePolicy.workerFile -cne $workerFile -or
             ('maintenance-' + $journal.files.$workerFile.Substring(0,32) + '.exe') -cne $workerFile)) { throw 'E_TASK_JOURNAL' }
         foreach ($ownedPath in @($directory.FullName, $journalPath, $plan.command)) {
             $item = Get-Item -LiteralPath $ownedPath -Force

@@ -15,7 +15,10 @@ from host import reject_links
 
 def publish_unit(directory: Path, name: str, text: str) -> None:
     """Publish a complete unit without replacing a pre-existing directory entry."""
-    if not re.fullmatch(r"kyrion-[a-f0-9-]{36}-(?:updates\.(?:service|timer)|platform\.service)", name):
+    if not re.fullmatch(
+        r"kyrion-[a-f0-9-]{36}-(?:(?:updates|backups)\.(?:service|timer)|platform\.service)",
+        name,
+    ):
         raise ValueError("E_UPDATE_UNIT_OWNERSHIP")
     temporary = None
     try:

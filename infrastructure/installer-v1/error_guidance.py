@@ -1,6 +1,32 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_GPG_REQUIRED": "backupScheduleCryptoRequired",
+    **dict.fromkeys(
+        (
+            "E_BACKUP_SCHEDULE",
+            "E_BACKUP_SCHEDULE_OWNER",
+            "E_BACKUP_WORKER",
+            "E_BACKUP_FROZEN_REQUIRED",
+            "E_BACKUP_POLICY",
+            "E_BACKUP_TIME",
+            "E_BACKUP_STORE",
+            "E_BACKUP_STORE_OWNERSHIP",
+            "E_BACKUP_STORE_OWNER",
+            "E_BACKUP_STORE_NOT_EMPTY",
+            "E_BACKUP_SCHEDULE_KEY",
+            "E_BACKUP_KEY_EXPORT",
+            "E_BACKUP_PUBLICATION",
+            "E_BACKUP_RETENTION_CHANGED",
+            "E_BACKUP_CAPTURE_MISMATCH",
+            "E_BACKUP_HISTORY",
+            "E_BACKUP_RUN",
+            "E_BACKUP_SOURCE_CHANGED",
+        ),
+        "backupScheduleError",
+    ),
+    "E_BACKUP_SCHEDULE_PENDING": "backupSchedulePendingError",
+    "E_BACKUP_SCHEDULE_ATTEMPTS": "backupSchedulePendingError",
     "E_UPDATE_RESULT_CHANGED": "updatesErrorResultChanged",
     **dict.fromkeys(
         (

@@ -328,12 +328,57 @@ def _inspect_archive(path: Path) -> dict:
         return manifest
 
 
+def scheduled_capture_id(installation, identifier: str | None) -> str | None:
+    if identifier is None:
+        return None
+    try:
+        if str(uuid.UUID(identifier)) != identifier:
+            raise ValueError()
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("E_BACKUP_RUN") from None
+    value = installation.state.get("backupRun")
+    if (
+        not isinstance(value, dict)
+        or value.get("id") != identifier
+        or value.get("phase") != "capturing"
+        or value.get("configuration") != installation.configuration
+    ):
+        raise ValueError("E_BACKUP_RUN")
+    return identifier
+
+
+def recover_service_state(installation):
+    """Restore only the journalled Core pause, without needing the backup disk."""
+    from authority import require_active
+    from update_compose import Compose
+
+    require_active(installation.state)
+    installation.verify_files()
+    pending = installation.state.get("backupServiceRecovery")
+    if pending is None:
+        return
+    if pending != ["core"]:
+        raise ValueError("E_BACKUP_SERVICE_JOURNAL")
+    # Validate the local owned daemon/socket and use its protected environment.
+    adapter = Compose(installation)
+    adapter.compose("start", "core")
+    installation.state.pop("backupServiceRecovery")
+    installation.state.pop("backupServiceRecoveryAttempts", None)
+    installation.save()
+
+
 def capture(
-    installation: Installation, destination: Path, password: str, *, update=False
+    installation: Installation,
+    destination: Path,
+    password: str,
+    *,
+    update=False,
+    scheduled_run: str | None = None,
 ) -> dict:
     from authority import require_active
 
     require_active(installation.state, update=update)
+    scheduled_run = scheduled_capture_id(installation, scheduled_run)
     installation.verify_files()
     if not {
         "secrets/credential.key",
@@ -534,6 +579,8 @@ def capture(
             ):
                 raise ValueError("E_BACKUP_COUNTS")
             metadata["verificationCounts"] = counts
+            if scheduled_run is not None:
+                metadata["scheduledBackupRunId"] = scheduled_run
             if update:
                 metadata["updateTransactionId"] = installation.state[
                     "updateTransaction"
@@ -550,6 +597,7 @@ def capture(
                 except (OSError, ValueError):
                     raise ValueError("E_BACKUP_SERVICE_RECOVERY") from None
                 installation.state.pop("backupServiceRecovery")
+                installation.state.pop("backupServiceRecoveryAttempts", None)
                 installation.save()
         # Keep the outage bounded to consistent capture, not encryption duration.
         temporary = destination.with_name(

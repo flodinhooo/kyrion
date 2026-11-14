@@ -26,6 +26,57 @@ from windows_security import create_private_directory, open_secured_file
 from windows_service import DEPENDENCIES, ROLES, ServiceManager
 
 
+def _restore_pending(installation, scm, plans, running):
+    pending = installation.state.get("backupServiceRecovery")
+    if pending is not None:
+        if (
+            not isinstance(pending, list)
+            or not pending
+            or any(role not in ROLES[1:] for role in pending)
+            or pending != [role for role in ROLES if role in pending]
+            or any(
+                not set(DEPENDENCIES[role]) <= running | set(pending)
+                for role in pending
+            )
+        ):
+            raise ValueError("E_BACKUP_SERVICE_JOURNAL")
+        for role in pending:
+            plan = plans[role]
+            with scm.opened(plan["name"], mutate=True) as handle:
+                if not handle:
+                    raise ValueError("E_NATIVE_SERVICE_MISSING")
+                scm.start(handle, plan)
+            running.add(role)
+        installation.state.pop("backupServiceRecovery")
+        installation.state.pop("backupServiceRecoveryAttempts", None)
+        installation.save()
+
+
+def recover_service_state(installation):
+    """Validate all owned services before restoring only an interrupted pause."""
+    from authority import require_active
+
+    require_active(installation.state)
+    permissions(installation.target, "verify")
+    installation.verify_files()
+    with ServiceManager(writable=True) as scm:
+        plans = {role: plan_for(installation, role) for role in ROLES}
+        running = set()
+        for role in ROLES:
+            plan = plans[role]
+            with scm.opened(plan["name"], mutate=True) as handle:
+                if not handle:
+                    raise ValueError("E_NATIVE_SERVICE_MISSING")
+                status = scm.assert_owned(handle, plan)
+                if status["state"] not in {1, 4}:
+                    raise ValueError("E_BACKUP_SERVICE_TRANSITION")
+                if status["state"] == 4:
+                    running.add(role)
+        if "postgres" not in running:
+            raise ValueError("E_BACKUP_DATABASE_STOPPED")
+        _restore_pending(installation, scm, plans, running)
+
+
 @contextmanager
 def quiesce(installation):
     """Keep PostgreSQL running; restore exactly the initially running frontends.
@@ -49,28 +100,7 @@ def quiesce(installation):
                     running.add(role)
         if "postgres" not in running:
             raise ValueError("E_BACKUP_DATABASE_STOPPED")
-        pending = installation.state.get("backupServiceRecovery")
-        if pending is not None:
-            if (
-                not isinstance(pending, list)
-                or not pending
-                or any(role not in ROLES[1:] for role in pending)
-                or pending != [role for role in ROLES if role in pending]
-                or any(
-                    not set(DEPENDENCIES[role]) <= running | set(pending)
-                    for role in pending
-                )
-            ):
-                raise ValueError("E_BACKUP_SERVICE_JOURNAL")
-            for role in pending:
-                plan = plans[role]
-                with scm.opened(plan["name"], mutate=True) as handle:
-                    if not handle:
-                        raise ValueError("E_NATIVE_SERVICE_MISSING")
-                    scm.start(handle, plan)
-                running.add(role)
-            installation.state.pop("backupServiceRecovery")
-            installation.save()
+        _restore_pending(installation, scm, plans, running)
         if any(not set(DEPENDENCIES[role]) <= running for role in running):
             raise ValueError("E_BACKUP_SERVICE_DEPENDENCY")
         original = [role for role in ROLES[1:] if role in running]
@@ -112,13 +142,23 @@ def quiesce(installation):
                 raise ValueError("E_BACKUP_SERVICE_RECOVERY") from None
             if original:
                 installation.state.pop("backupServiceRecovery")
+                installation.state.pop("backupServiceRecoveryAttempts", None)
                 installation.save()
 
 
-def capture(installation, destination: Path, password: str, *, update=False) -> dict:
+def capture(
+    installation,
+    destination: Path,
+    password: str,
+    *,
+    update=False,
+    scheduled_run: str | None = None,
+) -> dict:
     from authority import require_active
+    from recovery import scheduled_capture_id
 
     require_active(installation.state, update=update)
+    scheduled_run = scheduled_capture_id(installation, scheduled_run)
     root = installation.target
     config = read_configuration(root)
     preflight(
@@ -299,6 +339,8 @@ def capture(installation, destination: Path, password: str, *, update=False) -> 
                 metadata["updateTransactionId"] = installation.state[
                     "updateTransaction"
                 ]["id"]
+            if scheduled_run is not None:
+                metadata["scheduledBackupRunId"] = scheduled_run
             archive = scratch / "backup.tar"
             create_archive(sources, metadata, archive, security_source=scratch)
             inspect_archive(archive)

@@ -703,6 +703,9 @@ def uninstall_native(target: Path, purge: bool = False) -> dict:
         from update_worker import remove_schedule
 
         remove_schedule(installation)
+        from backup_worker import remove_schedule as remove_backup_schedule
+
+        remove_backup_schedule(installation)
         stop_services(installation, remove=True)
         installation.state["stage"] = "uninstalled"
         installation.save()

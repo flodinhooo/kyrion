@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -18,6 +19,23 @@ import native_backup
 class NativeBackup(unittest.TestCase):
     def setUp(self):
         self.installation = SimpleNamespace(state={}, save=MagicMock())
+
+    def test_scheduled_capture_rejects_a_foreign_run_before_runtime_or_service_access(
+        self,
+    ):
+        with (
+            patch.object(native_backup, "read_configuration") as configuration,
+            patch.object(native_backup, "ServiceManager") as scm,
+            self.assertRaisesRegex(ValueError, "E_BACKUP_RUN"),
+        ):
+            native_backup.capture(
+                self.installation,
+                Path("unused"),
+                "Synthetic-password-for-test-only",
+                scheduled_run=str(uuid.uuid4()),
+            )
+        configuration.assert_not_called()
+        scm.assert_not_called()
 
     def test_inactive_native_backup_cannot_reactivate_services(self):
         for state in (
@@ -282,3 +300,33 @@ class NativeBackup(unittest.TestCase):
         self.assertEqual(
             self.installation.state["backupServiceRecovery"], ["core", "web", "caddy"]
         )
+
+    def test_standalone_recovery_starts_only_original_services(self):
+        self.installation.target = Path("unused")
+        self.installation.verify_files = MagicMock()
+        self.installation.state.update(
+            backupServiceRecovery=["core", "web"], backupServiceRecoveryAttempts=2
+        )
+        events = self.fixture(states={"core": 1, "web": 1, "caddy": 1})
+        with patch.object(native_backup, "permissions"):
+            native_backup.recover_service_state(self.installation)
+        self.assertEqual(
+            events,
+            [("check", role) for role in native_backup.ROLES]
+            + [("start", "core"), ("start", "web")],
+        )
+        self.assertNotIn("backupServiceRecovery", self.installation.state)
+        self.assertNotIn("backupServiceRecoveryAttempts", self.installation.state)
+
+    def test_standalone_recovery_checks_foreign_service_before_any_start(self):
+        self.installation.target = Path("unused")
+        self.installation.verify_files = MagicMock()
+        self.installation.state["backupServiceRecovery"] = ["core"]
+        events = self.fixture(states={"core": 1}, foreign="caddy")
+        with (
+            patch.object(native_backup, "permissions"),
+            self.assertRaisesRegex(ValueError, "E_SERVICE_FOREIGN"),
+        ):
+            native_backup.recover_service_state(self.installation)
+        self.assertFalse(any(event[0] == "start" for event in events))
+        self.assertEqual(self.installation.state["backupServiceRecovery"], ["core"])

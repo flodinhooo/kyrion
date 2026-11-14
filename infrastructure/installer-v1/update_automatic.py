@@ -15,7 +15,6 @@ from authority import require_active
 from bundle import sha256
 from host import reject_links
 from recovery import load_installation
-from restore_material import private_output
 from runtime import installation_lock
 
 KEY = ".maintenance-secrets/backup.key"
@@ -180,10 +179,12 @@ def configure(
             "keySha256": "0" * 64,
         }
         validate(value)
-        export = export.absolute()
-        reject_links(export)
-        if export.is_relative_to(target.resolve()):
-            raise ValueError("E_UPDATE_AUTOMATIC_EXPORT")
+        from backup_store import export_path
+
+        try:
+            export = export_path(installation, export)
+        except ValueError:
+            raise ValueError("E_UPDATE_AUTOMATIC_EXPORT") from None
         if not review(
             {
                 **value,
@@ -205,13 +206,16 @@ def configure(
                 directory.mkdir(mode=0o700)
         selected = target / KEY
         reject_links(selected)
+        from backup_store import publish, require_known_key
+
         if not selected.exists():
             raw = (secrets.token_hex(32) + "\n").encode()
-            with private_output(selected, directory) as stream:
-                stream.write(raw)
-                stream.flush()
-                os.fsync(stream.fileno())
+            publish(selected, raw, directory)
         value["keySha256"] = sha256(selected)
+        try:
+            require_known_key(installation, value["keySha256"])
+        except ValueError:
+            raise ValueError("E_UPDATE_AUTOMATIC_KEY") from None
         # Verify ownership before exporting or enabling; no password is journaled.
         raw = (password(installation, value) + "\n").encode()
         if export.exists():
@@ -224,10 +228,7 @@ def configure(
             ):
                 raise ValueError("E_UPDATE_AUTOMATIC_EXPORT")
         else:
-            with private_output(export, directory) as stream:
-                stream.write(raw)
-                stream.flush()
-                os.fsync(stream.fileno())
+            publish(export, raw, directory)
         old = installation.state.get("automaticUpdatePolicy")
         if old is not None:
             validate(old)

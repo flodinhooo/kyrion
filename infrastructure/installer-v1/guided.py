@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -113,6 +114,13 @@ def main() -> int:
     actions.add_argument(
         "--background-update-check", action="store_true", help=argparse.SUPPRESS
     )
+    actions.add_argument(
+        "--background-backup", action="store_true", help=argparse.SUPPRESS
+    )
+    actions.add_argument(
+        "--backup-schedule",
+        choices=("configure", "status", "disable", "run-now", "reset-incomplete"),
+    )
     actions.add_argument("--refresh-model-catalog", action="store_true")
     actions.add_argument("--continue-setup", action="store_true")
     actions.add_argument("--extend-bootstrap", action="store_true")
@@ -170,6 +178,7 @@ def main() -> int:
                     "startupFence": True,
                     "maintenanceCore": True,
                     "linuxComposeStart": os.name == "posix",
+                    "backupProtocol": 1,
                 }
             )
         )
@@ -182,6 +191,23 @@ def main() -> int:
             return 0
         except (OSError, ValueError, TypeError, KeyError):
             print("E_PLATFORM_STARTUP", file=sys.stderr)
+            return 2
+    if args.background_backup:
+        from backup_worker import run as background_backup
+
+        try:
+            print(json.dumps(background_backup(args.target)))
+            return 0
+        except (
+            OSError,
+            ValueError,
+            TypeError,
+            KeyError,
+            subprocess.SubprocessError,
+        ) as error:
+            from backup_worker import safe_error
+
+            print(safe_error(error), file=sys.stderr)
             return 2
     if args.background_update_check:
         from update_worker import run as background_check
@@ -282,6 +308,7 @@ def main() -> int:
         or args.owner_recovery
         or args.home_assistant
         or args.autostart
+        or args.backup_schedule
     ):
         return maintenance_result(args, messages)
     report = inventory(args.target)
@@ -408,6 +435,9 @@ def main() -> int:
         from release_channel import offer as offer_release_channel
 
         offer_release_channel(args.target, messages)
+        from backup_worker import offer as offer_backup_schedule
+
+        offer_backup_schedule(args.target, messages)
         with installation_lock(args.target):
             from recovery import load_installation
 
@@ -420,6 +450,7 @@ def main() -> int:
                     "stage": state["stage"],
                     "ownerSetup": state["ownerSetup"],
                     "backup": state["backup"],
+                    "backupSchedule": state.get("backupSchedule"),
                     "updates": state["updates"],
                     "centralIdentity": state.get("centralIdentity", "not-verified"),
                     "hardwareSelection": state.get("hardwareSelection", []),

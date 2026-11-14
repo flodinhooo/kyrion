@@ -104,6 +104,9 @@ def retire_source(
                 from update_worker import remove_schedule
 
                 remove_schedule(installation)
+                from backup_worker import remove_schedule as remove_backup_schedule
+
+                remove_backup_schedule(installation)
                 if installation.state.get("backend") == "windows-native":
                     from native_runtime import retire_services
 

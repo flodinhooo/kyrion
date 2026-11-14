@@ -221,6 +221,78 @@ def verify_update_task(target: Path, worker: Path) -> None:
         remove_schedule(load_installation(target))
 
 
+def verify_backup_task(target: Path, worker: Path) -> None:
+    """Real SYSTEM execution/capture on this fresh hosted fixture, not cold boot."""
+    import backup_store
+    from backup_schedule import operate
+    from backup_worker import remove_schedule
+    from windows_tasks import backup_plan
+    from windows_tasks import operate as task_operation
+
+    installation = load_installation(target)
+    raw = worker.read_bytes()
+    name = "maintenance-" + hashlib.sha256(raw).hexdigest()[:32] + ".exe"
+    installation.write(name, raw)
+    identifier = uuid.uuid4().hex
+    destination = target.parent / ("KyrionCIBackup-" + identifier)
+    export_directory = target.parent / ("KyrionCIRecovery-" + identifier)
+    permissions(export_directory, "create")
+    binding = backup_store.prepare(installation, destination)
+    digest = backup_store.prepare_key(
+        installation, export_directory / "recovery.key", destination
+    )
+    installation.state["backupPolicy"] = {
+        "formatVersion": 1,
+        "revision": str(uuid.uuid4()),
+        "enabled": True,
+        "workerFile": name,
+        "utcDays": [1, 2, 3, 4, 5, 6, 7],
+        "startMinute": 0,
+        "durationMinutes": 1440,
+        "keep": 2,
+        "store": binding,
+        "keySha256": digest,
+    }
+    installation.save()
+    try:
+        actual = operate(installation, "register")
+        installation.state["backupSchedule"] = actual
+        installation.save()
+        if operate(installation, "inspect")["state"] != "registered":
+            raise ValueError("E_TEST_BACKUP_TASK")
+        # Do not equate a manually triggered task with physical boot acceptance.
+        task_operation(
+            backup_plan(installation.state["installationId"], str(target), name),
+            "start",
+        )
+        deadline = time.monotonic() + 300
+        while time.monotonic() < deadline:
+            saved = load_installation(target)
+            attempt = saved.state.get("backupAttempt")
+            if attempt is not None:
+                if (
+                    attempt.get("error") is not None
+                    or attempt.get("completed") is not True
+                ):
+                    raise ValueError("E_TEST_BACKUP_TASK_EXECUTION")
+                run = saved.state.get("backupRun", {})
+                receipts = saved.state.get("backupHistory", [])
+                if (
+                    run.get("phase") != "complete"
+                    or len(receipts) != 1
+                    or receipts[0]["runId"] != run["id"]
+                ):
+                    raise ValueError("E_TEST_BACKUP_TASK_RECEIPT")
+                backup_store.verify(saved, binding)
+                return
+            time.sleep(1)
+        raise ValueError("E_TEST_BACKUP_TASK_TIMEOUT")
+    finally:
+        remove_schedule(load_installation(target))
+        # External synthetic encrypted backups and recovery exports remain.
+        # Installer cleanup must not remove those directories or their contents.
+
+
 def main(bundle: Path, key: Path, worker: Path) -> dict:
     if (
         os.name != "nt"
@@ -322,6 +394,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
         finally:
             client.close()
         verify_update_task(target, worker)
+        verify_backup_task(target, worker)
         verify_native_update(target, bundle)
         # Actual privileged backup capture is restricted to this fresh synthetic
         # installation. It is not a full application restore/identity acceptance.
@@ -433,6 +506,8 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "retiredSourceStoppedDisabledAndRepairDenied": True,
             "nativeInstalledSchemaQueryVerified": True,
             "actualSystemUpdateTaskExecution": True,
+            "actualSystemBackupTaskCaptureAndVerification": True,
+            "backupTaskManuallyTriggeredNotBootAcceptance": True,
             "nativeSingleHostUpdateAndSnapshotRecovery": True,
             "syntheticReleaseLabelUnchangedPublicBinaries": True,
             "updateWorkerRefusesUnreleasedBuildBeforeNetwork": True,

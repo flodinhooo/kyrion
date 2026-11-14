@@ -15,6 +15,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from backup_schedule import linux_backup_plan
 from linux_startup import definition, unit_name
 from update_schedule import linux_plan
 
@@ -32,6 +33,7 @@ def verify(worker: Path, work: Path) -> dict:
         os.chmod(root / name, 0o700)
         units = linux_plan(str(uuid.uuid4()), str(root), name)
         units.update(linux_plan(str(uuid.uuid4()), str(root), name, automatic=True))
+        units.update(linux_backup_plan(str(uuid.uuid4()), str(root), name))
         installation = SimpleNamespace(
             target=root, state={"installationId": str(uuid.uuid4())}
         )
@@ -56,6 +58,7 @@ def verify(worker: Path, work: Path) -> dict:
         "actualSystemdDefinitionValidation": True,
         "automaticHourlyDefinitionValidated": True,
         "platformStartupDefinitionValidated": True,
+        "backupDefinitionValidated": True,
         "workerSha256": digest,
         "unitsRegistered": False,
         "coldBootVerified": False,

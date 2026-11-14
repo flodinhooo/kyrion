@@ -1,6 +1,7 @@
 """Fixed machine-start tasks for the native Windows runtime backend.
 
-The task principal is Local Service, never an interactive user. This module does
+Application tasks use Local Service; maintenance tasks use SYSTEM. Neither uses
+an interactive user. This module does
 not claim cold-boot acceptance, install runtimes or execute arbitrary commands.
 """
 
@@ -98,19 +99,26 @@ def task_plan(installation_id: str, target: str, role: str) -> dict[str, str]:
 
 def operate(plan: dict[str, str], action: str = "validate") -> dict:
     match = re.fullmatch(
-        r"Kyrion-([a-f0-9-]{36})-(core|web|caddy|updates)", plan.get("name", "")
+        r"Kyrion-([a-f0-9-]{36})-(core|web|caddy|updates|backups)", plan.get("name", "")
     )
     if match is None:
         raise ValueError("E_WINDOWS_TASK_PLAN")
-    expected = (
-        update_check_plan(
+    if match[2] == "backups":
+        expected = backup_plan(
             match[1],
             plan.get("directory", ""),
             PureWindowsPath(plan.get("command", "")).name,
         )
-        if match[2] == "updates"
-        else task_plan(match[1], plan.get("directory", ""), match[2])
-    )
+    else:
+        expected = (
+            update_check_plan(
+                match[1],
+                plan.get("directory", ""),
+                PureWindowsPath(plan.get("command", "")).name,
+            )
+            if match[2] == "updates"
+            else task_plan(match[1], plan.get("directory", ""), match[2])
+        )
     if plan != expected and match[2] == "updates":
         expected = update_check_plan(
             match[1],
@@ -216,5 +224,30 @@ def update_check_plan(
     item("t:Triggers/t:BootTrigger").insert(0, repetition)
     item("t:Actions/t:Exec/t:Command").text = plan["command"]
     item("t:Actions/t:Exec/t:Arguments").text = plan["arguments"]
+    plan["xml"] = ET.tostring(task, encoding="unicode")
+    return plan
+
+
+def backup_plan(installation_id: str, target: str, worker: str) -> dict[str, str]:
+    plan = update_check_plan(installation_id, target, worker, automatic=True)
+    task = ET.fromstring(plan["xml"])
+    plan["name"] = "Kyrion-" + str(uuid.UUID(installation_id)) + "-backups"
+    plan["description"] = (
+        "Managed by Kyrion installation "
+        + str(uuid.UUID(installation_id))
+        + "; role backups"
+    )
+    plan["arguments"] = subprocess.list2cmdline(
+        ["--background-backup", "--target", target]
+    )
+    for path, text in (
+        ("t:RegistrationInfo/t:Description", plan["description"]),
+        ("t:Actions/t:Exec/t:Arguments", plan["arguments"]),
+        ("t:Triggers/t:BootTrigger/t:Repetition/t:Interval", "PT15M"),
+    ):
+        item = task.find(path, {"t": NAMESPACE})
+        if item is None:
+            raise ValueError("E_WINDOWS_TASK_PLAN")
+        item.text = text
     plan["xml"] = ET.tostring(task, encoding="unicode")
     return plan

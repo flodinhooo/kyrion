@@ -1,6 +1,6 @@
 # Guided installer implementation and acceptance
 
-Initial baseline 2026-11-11; maintenance sections updated 2026-11-13.
+Initial baseline 2026-11-11; maintenance sections updated 2026-11-14.
 This is the work record for the downloaded installer;
 kyrion.ch is a download/documentation surface, never an installation authority.
 
@@ -37,7 +37,8 @@ bundle must include the prepared, manifest-hashed portable GnuPG dependency;
 older development bundles without it fail before services are paused. Original
 keys/configuration are encrypted, and the passphrase is never a command argument.
 This command performs capture. Source-fenced prepared-target restore has its
-separate reviewed path below; automatic backup scheduling remains open.
+separate reviewed path below; installed automatic backups now have the explicit
+configuration and evidence described below.
 
 `--check-updates --target TARGET --feed FEED --trust-store TRUST_FILE` now
 supports both Linux and native Windows. FEED must be the actual signed release
@@ -380,3 +381,53 @@ checkpoint: known phase, startup-fence status, stable error code and a bounded
 automatic-attempt count. It excludes transaction paths, backup locations, keys,
 provider output and arbitrary journal fields. Unknown or malformed values are
 reported as unknown; exporting does not send anything or execute recovery.
+
+### Installed automatic backups
+
+The native installer offers optional backup scheduling after setup and completed
+restore. Use `--backup-schedule configure --target TARGET` to configure it later.
+The administrator chooses a protected dedicated folder outside the installation,
+a separate protected existing key-export parent, weekdays, a UTC window of at
+least thirty minutes, and retention of one to ninety verified backups. Paths and
+service pauses are reviewed before changes. Linux requires OS-installed GnuPG
+and gpgconf; Windows uses the verified portable support runtime. No release feed,
+internet connection, cloud key or additional hardware is required.
+
+The same native worker runs through an owned SYSTEM task or systemd timer,
+checking every fifteen minutes and after boot. There is no login trigger.
+Registration means `backupCreated:false`; it is not an actual backup or restore
+result. `--backup-schedule status` inspects the actual owned task/timer, current
+store marker and key availability, separately from historical run state.
+`run-now` starts/resumes a capture after explicit confirmation. `disable` removes
+only the schedule and keeps external backups and keys.
+
+Use a filesystem providing protected ownership/ACLs and atomic hard links.
+Windows network/UNC volumes are not supported for automatic stores. A store is
+installation-bound; unknown nonempty folders are not adopted. Missing markers
+are not recreated on registered stores. A path is not proof of a separate disk
+or an off-host copy. Keep the recovery key separately and make an independent
+copy of encrypted backups. Current metadata limits are thirty-two known stores
+and one thousand backup receipts per installation.
+
+The shared maintenance key is published atomically, protected from Core, reused
+without replacement and exported outside the installation and every known backup
+store. It is excluded from ordinary backup contents. Existing known key changes
+fail verification. Interrupted publication can continue without replacing prior
+files or exporting a new key over an old one.
+
+Capture uses the existing consistent Core/DB/configuration/original-key/knowledge
+path. Authentication, decryption, archive hashes, installation/configuration and
+the exact scheduled-run UUID must match before a durable successful receipt.
+An older valid archive cannot count as a fresh run. Already approved work can
+continue outside its window, with at most three persisted attempts. There is no
+automatic restore. `reset-incomplete` explicitly abandons only the attempt's
+metadata, preserves files and keeps any service-recovery obligation visible.
+
+Retention removes only recorded matching files from the selected authenticated
+store after a verified backup. Modified/foreign files and other stores are kept;
+blocked retention stops unlimited new capture. Retirement and uninstall remove
+the owned schedule while preserving external stores and key exports. Restore
+does not automatically activate the old host's schedule.
+
+See [ADR 0069](adr/0069-installed-consistent-backup-schedule.md) and
+[backup execution evidence](status/2026-11-14-installer-backup-scheduling.md).

@@ -281,6 +281,9 @@ def uninstall(target: Path, purge: bool = False) -> dict:
         from update_worker import remove_schedule
 
         remove_schedule(installation)
+        from backup_worker import remove_schedule as remove_backup_schedule
+
+        remove_backup_schedule(installation)
         from linux_startup import disable_owned
 
         disable_owned(installation, remove=True)
@@ -306,6 +309,46 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "backup_schedule", None):
+        from backup_worker import (
+            configure_interactive,
+            disable,
+            reset_incomplete,
+            status,
+        )
+        from backup_worker import (
+            run as backup_now,
+        )
+
+        if args.backup_schedule == "configure":
+            result = configure_interactive(args.target, messages)
+        elif args.backup_schedule == "status":
+            result = status(args.target)
+        elif args.backup_schedule == "disable":
+            result = disable(args.target)
+        elif args.backup_schedule == "reset-incomplete":
+
+            def review_reset(summary):
+                print(messages["backupScheduleResetReview"])
+                print(json.dumps(summary))
+                return (
+                    input("[RESET-INCOMPLETE-BACKUP/CANCEL]: ").strip()
+                    == "RESET-INCOMPLETE-BACKUP"
+                )
+
+            result = reset_incomplete(args.target, review=review_reset)
+        else:
+            print(json.dumps(status(args.target)))
+            if (
+                input(
+                    messages["backupScheduleRunReview"] + " [BACKUP-NOW/CANCEL]: "
+                ).strip()
+                != "BACKUP-NOW"
+            ):
+                raise ValueError("E_CONFIRMATION")
+            result = backup_now(args.target, manual=True)
+        print(json.dumps(result))
         return 0
     if getattr(args, "autostart", None):
         from linux_startup import configure as configure_startup
@@ -643,6 +686,9 @@ def run(args, messages: dict[str, str]) -> int:
                 from release_channel import offer as offer_release_channel
 
                 offer_release_channel(args.target, messages)
+                from backup_worker import offer as offer_backup_schedule
+
+                offer_backup_schedule(args.target, messages)
         return 0
     if args.diagnostics:
         diagnostic(args.target, args.diagnostics)

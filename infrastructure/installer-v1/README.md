@@ -19,7 +19,7 @@ terminal executable on Windows x64, Linux x64 or Linux ARM64 using the pinned
 build-only `release/native-build-requirements.txt`. PyInstaller includes Python;
 it is not an end-user prerequisite. Build on the matching target architecture.
 Windows `.exe` and Linux `.tar.gz` developer outputs have been built and executed
-locally (Linux x64 inside an isolated Debian 13 container). ARM64 CI jobs are
+locally (Linux x64 inside the isolated Debian 13 development guest). ARM64 CI jobs are
 prepared. None of these results is native Windows provisioning or system boot
 acceptance. Native artifacts remain unsigned development outputs.
 
@@ -29,6 +29,10 @@ The same local entrypoint now supports explicitly reviewed maintenance flags:
   dump plus original configuration/keys/TLS/Knowledge/recovery-material capture;
   restarts Core in a finally path and encrypts using GnuPG in isolated scratch.
   A passphrase is requested privately and must be kept separately. Requires GnuPG.
+* `--backup-schedule configure|status|run-now|disable|reset-incomplete`: explicitly
+  configures and manages installed encrypted backups, protected external stores,
+  separate key export, UTC windows, bounded continuation and verified retention.
+  Native worker/task registration is distinct from backup/restore acceptance.
 * `--verify-backup FILE.gpg --postgres-image sha256:VERIFIED_IMAGE_ID`: validates
   decryption, archive paths and digests, then restores into a **new**, marked,
   network-none, temporary PostgreSQL target. Schema and recorded account/Space/
@@ -46,10 +50,12 @@ The same local entrypoint now supports explicitly reviewed maintenance flags:
 * `--check-updates --feed HTTPS_URL --trust-store TRUST.json`: authenticates a
   scoped signed release index, reads the actual database schema, rejects channel
   rollback and selects a newer platform/API/schema/installer-compatible release.
-  It does **not** install the release. A scheduled installed updater and durable
-  migration/update transaction remain open requirements.
+  The check does **not** install the release. `--updates download|apply|resume|recover`
+  uses the implemented signed single-host transaction; optional approved automatic
+  windows and installed checks have separate settings and acceptance evidence.
 
-Maintenance mutations currently require a supported local Linux/root terminal.
+Maintenance mutations require local administrator/root authority on a supported
+native Windows or candidate Linux target. See the binding matrix for OS tests.
 An installation journal is bound to its original root path; copying a directory
 does not authorize a second active installation. Legacy journals without this
 binding require an explicit migration/review path and are not silently adopted.
@@ -69,13 +75,15 @@ publishes a release. Device/Space/integration setup is absent from the website.
 
 ## Run
 
-Python 3.12+ is required. Inspect the actual target without modifying it:
+The following source/test commands require Python 3.12+. Native downloaded
+executables include Python. Inspect the actual target without modifying it:
 
 ```sh
 python guided.py --probe
 ```
 
-Windows also has `install.ps1 -Probe`. Windows provisioning is unavailable;
+Windows also has `install.ps1 -Probe`. The native portable-runtime/SCM path is
+implemented; actual elevated service/physical boot acceptance remains separate.
 Docker Desktop startup after sign-in is not system boot support.
 
 On an isolated candidate Debian 13 x64/ARM64 or 64-bit Raspberry Pi OS 13 host
@@ -97,12 +105,11 @@ and bootstrap credentials, a local leaf certificate and runtime-only Compose.
 Only HTTPS on the explicitly chosen private LAN IPv4 address is published.
 Core and local HTTPS readiness are checked separately with TLS verification enabled.
 
-You may continue owner/HOME or BUSINESS Space setup directly in the installer through the
-existing Core API, or sign into the same account on resume. Passwords and bearer
-tokens travel through child-process stdin, never command arguments or journals.
-Optional central linking uses Core's existing RFC8628 browser authorization and
-requires an already configured HTTPS provider. Its public productive availability
-is not established by this source change. No website password is collected.
+Regular setup uses the existing linked-identity browser operation, local offline
+credential and authorized HOME/BUSINESS Space selection through Core. It resumes
+with the same identity; no website password is collected or journaled. Credentials
+remain in the protected local transport/memory boundary, not command arguments.
+Production provider/browser acceptance remains distinct from isolated SSO tests.
 
 Hardware choices are recorded without claiming a controller or microphone.
 Optional Home Assistant connection previews a real provider inventory before
@@ -141,9 +148,10 @@ The existing local Kyrion UI retains profile, Space, integrations and diagnostic
 Installer completion means service readiness plus separately reported setup facts;
 it does not attest offline reboot login, recovery, backup or updates.
 
-Extend, repair, restore, uninstall, distributed task transfer, native Windows
-installation, model/voice installation, backup scheduling and updating remain
-explicit pending stages. Do not use the old migration scripts as a general updater.
+Distributed task transfer, complete model/voice installation, local Web maintenance
+administration, remaining disaster-restore paths and complete OS/hardware acceptance
+remain open. The implemented maintenance paths above are not product completion.
+Do not use the old migration scripts as a general updater.
 
 ## Verification and releases
 
