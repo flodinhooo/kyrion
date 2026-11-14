@@ -163,11 +163,19 @@ def main() -> int:
     parser.add_argument(
         "--target",
         type=Path,
-        default=Path("/var/lib/kyrion-install")
-        if os.name != "nt"
-        else Path(os.environ.get("ProgramData", "C:/ProgramData")) / "Kyrion",
     )
     args = parser.parse_args()
+    if args.target is None:
+        if os.name == "nt":
+            from windows_system import program_files_directory
+
+            try:
+                args.target = program_files_directory() / "Kyrion"
+            except (OSError, ValueError):
+                print("E_NATIVE_DATA_DIRECTORY", file=sys.stderr)
+                return 2
+        else:
+            args.target = Path("/var/lib/kyrion-install")
     args.installer_version = build["version"]
     if args.channel_info:
         from release_channel import summary as channel_summary

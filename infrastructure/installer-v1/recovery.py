@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -22,6 +23,7 @@ from pathlib import Path, PurePosixPath
 from bundle import sha256, unique_object
 from host import reject_links, runtime_checks
 from runtime import Installation, execute, installation_lock
+from system_tools import run as run_system_command
 
 MAX_BACKUP = 128 * 1024**3
 MAX_FILES = 100_000
@@ -68,7 +70,28 @@ def crypto(
     reject_links(destination)
     if destination.exists() or not destination.parent.is_dir():
         raise ValueError("E_EXISTING_STATE")
-    selected = str(executable) if executable is not None else shutil.which("gpg")
+    if os.name == "posix":
+        from system_tools import environment as system_environment
+        from system_tools import executable as system_executable
+
+        approved = system_executable("gpg")
+        if approved is None or (
+            executable is not None and Path(executable).resolve() != approved
+        ):
+            raise ValueError("E_GPG_REQUIRED")
+        for name in ("gpgconf", "gpg-agent"):
+            if system_executable(name) is None:
+                raise ValueError("E_GPG_REQUIRED")
+        if approved.with_name("gpgconf").resolve() != system_executable("gpgconf"):
+            raise ValueError("E_GPG_REQUIRED")
+        selected = str(approved)
+        environment = system_environment()
+    else:
+        import sys
+
+        if executable is None and getattr(sys, "frozen", False):
+            raise ValueError("E_GPG_REQUIRED")
+        selected = str(executable) if executable is not None else shutil.which("gpg")
     if not selected:
         raise ValueError("E_GPG_REQUIRED")
     gpg_binary = Path(selected).resolve()
@@ -77,8 +100,20 @@ def crypto(
     reject_links(gpgconf)
     if not gpg_binary.is_file() or not gpgconf.is_file():
         raise ValueError("E_GPG_REQUIRED")
-    with tempfile.TemporaryDirectory(prefix="kyrion-gpg-") as directory:
-        home = Path(directory)
+    home_parent = destination.parent if decrypt else source.parent
+    if os.name == "posix":
+        # Preserve the protected plaintext boundary, but keep agent UNIX socket
+        # paths short even when the installation/update root is deeply nested.
+        validate_restore_parent(home_parent)
+        home_parent = None
+    if os.name == "nt" and security_source is None:
+        # Unfrozen MSYS developer fixtures retain their short socket path.
+        home_parent = None
+    elif os.name == "nt":
+        home_parent = native_crypto_parent()
+    with private_restore_directory(
+        home_parent, security_source, short_agent=True
+    ) as home:
         os.chmod(home, 0o700)
         home_argument = str(home)
         # MSYS GnuPG (for example Git for Windows) needs a POSIX homedir for
@@ -379,9 +414,9 @@ def capture(
 
     require_active(installation.state, update=update)
     scheduled_run = scheduled_capture_id(installation, scheduled_run)
-    from linux_crypto import require_complete
+    from linux_crypto import require_available
 
-    require_complete(installation.state)
+    require_available(installation)
     installation.verify_files()
     if not {
         "secrets/credential.key",
@@ -439,7 +474,7 @@ def capture(
             dump = scratch / "database.dump"
             # Do not decode a PostgreSQL custom dump or hold it all in memory.
             with dump.open("xb") as stream:
-                result = subprocess.run(
+                result = run_system_command(
                     [
                         "docker",
                         "compose",
@@ -487,7 +522,7 @@ def capture(
 
             def export_rows(sql, path):
                 with path.open("xb") as stream:
-                    result = subprocess.run(
+                    result = run_system_command(
                         [
                             "docker",
                             "compose",
@@ -657,9 +692,60 @@ def verified_plaintext(
         yield clear, manifest, scratch
 
 
+def validate_restore_parent(parent: Path | None) -> Path:
+    if parent is None:
+        parent = Path("/tmp")
+        reject_links(parent)
+        observed = parent.stat()
+        if (
+            not stat.S_ISDIR(observed.st_mode)
+            or observed.st_uid != 0
+            or (observed.st_mode & 0o022 and not observed.st_mode & stat.S_ISVTX)
+        ):
+            raise ValueError("E_RESTORE_PRIVATE_PARENT")
+    else:
+        reject_links(parent)
+        observed = parent.stat()
+        if (
+            not stat.S_ISDIR(observed.st_mode)
+            or observed.st_uid != os.geteuid()
+            or observed.st_mode & 0o077
+        ):
+            raise ValueError("E_RESTORE_PRIVATE_PARENT")
+    for ancestor in parent.parents:
+        observed = ancestor.stat()
+        if observed.st_uid not in {0, os.geteuid()} or (
+            observed.st_mode & 0o022
+            and not (observed.st_uid == 0 and observed.st_mode & stat.S_ISVTX)
+        ):
+            raise ValueError("E_RESTORE_PRIVATE_PARENT")
+    return parent
+
+
+def validate_agent_directory(directory: Path) -> None:
+    from native_runtime import permissions
+
+    reject_links(directory)
+    if len(str(directory).encode("utf-8")) > 80:
+        raise ValueError("E_GPG_SOCKET_PARENT")
+    permissions(directory, "plan-create")
+
+
+def native_crypto_parent() -> Path:
+    from windows_system import program_files_directory
+
+    parent = program_files_directory()
+    validate_agent_directory(parent / (".restore-" + uuid.uuid4().hex))
+    return parent
+
+
 @contextlib.contextmanager
-def private_restore_directory(parent: Path | None, security_source: Path | None):
+def private_restore_directory(
+    parent: Path | None, security_source: Path | None, *, short_agent: bool = False
+):
     if security_source is None:
+        if os.name == "posix":
+            parent = validate_restore_parent(parent)
         with tempfile.TemporaryDirectory(
             prefix="kyrion-restore-", dir=parent
         ) as directory:
@@ -671,10 +757,15 @@ def private_restore_directory(parent: Path | None, security_source: Path | None)
 
     directory = parent / (".restore-" + uuid.uuid4().hex)
     reject_links(directory)
+    if short_agent:
+        validate_agent_directory(directory)
     create_private_directory(directory)
     try:
         yield directory
     finally:
+        reject_links(directory)
+        if not directory.resolve().is_relative_to(parent.resolve()):
+            raise ValueError("E_RESTORE_PRIVATE_PARENT")
         shutil.rmtree(directory)
 
 
@@ -727,7 +818,7 @@ def verify_database(source: Path, password: str, image_id: str) -> dict:
             import time
 
             for _ in range(30):
-                ready = subprocess.run(
+                ready = run_system_command(
                     ["docker", "exec", container, "pg_isready", "-U", "kyrion"],
                     capture_output=True,
                     timeout=5,
@@ -746,7 +837,7 @@ def verify_database(source: Path, password: str, image_id: str) -> dict:
             ):
                 shutil.copyfileobj(stream, output)
             with dump.open("rb") as stream:
-                result = subprocess.run(
+                result = run_system_command(
                     [
                         "docker",
                         "exec",

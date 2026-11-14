@@ -1,6 +1,9 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_SYSTEM_TOOL": "systemToolsError",
+    "E_GPG_SOCKET_PARENT": "nativeCryptoScratchError",
+    "E_NATIVE_DATA_DIRECTORY": "nativeCryptoScratchError",
     **dict.fromkeys(
         (
             "E_OLLAMA_BINDING",

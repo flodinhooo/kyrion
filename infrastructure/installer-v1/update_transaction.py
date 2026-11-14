@@ -130,9 +130,9 @@ def apply(
     with installation_lock(target):
         installation = load_installation(target)
         require_active(installation.state)
-        from linux_crypto import require_complete
+        from linux_crypto import require_available
 
-        require_complete(installation.state)
+        require_available(installation)
         if automatic is not None:
             from update_automatic import approved
 

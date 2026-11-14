@@ -18,6 +18,7 @@ __all__ = [
     "interactive",
     "needs_configuration",
     "plan_rows",
+    "require_available",
     "require_complete",
     "run",
     "supported",
@@ -34,6 +35,12 @@ def available(installation) -> bool:
         "GnuPG" in run(installation, name, "--version")
         for name in ("gpg", "gpgconf", "gpg-agent")
     )
+
+
+def require_available(installation) -> None:
+    require_complete(installation.state)
+    if os.name == "posix" and not available(installation):
+        raise ValueError("E_GPG_REQUIRED")
 
 
 def needs_configuration(target: Path) -> bool:

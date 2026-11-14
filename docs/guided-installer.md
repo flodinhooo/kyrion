@@ -30,7 +30,7 @@ development artifacts until the separate release and acceptance gates pass.
 ## Native maintenance continuation
 
 For an owned native Windows installation, elevated terminal maintenance now
-supports `--target C:\ProgramData\Kyrion --backup E:\Backups\kyrion.gpg`.
+supports `--target "C:\Program Files\Kyrion" --backup E:\Backups\kyrion.gpg`.
 Choose an existing destination directory and a new output filename. The installer
 requests maintenance confirmation and a repeated backup passphrase. The runtime
 bundle must include the prepared, manifest-hashed portable GnuPG dependency;

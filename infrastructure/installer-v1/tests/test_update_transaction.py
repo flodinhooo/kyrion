@@ -5,6 +5,7 @@ These tests do not stand in for the real Core/PostgreSQL integration runner.
 
 import contextlib
 import copy
+import os
 import sys
 import tempfile
 import unittest
@@ -217,6 +218,16 @@ class UpdateTransactions(unittest.TestCase):
         }
         installation.save()
         with self.assertRaisesRegex(ValueError, "E_CRYPTO_PACKAGE_REPAIR"):
+            self.apply()
+        self.assertEqual(self.events, [])
+        self.assertNotIn("updateTransaction", load_installation(self.root).state)
+
+    @unittest.skipUnless(os.name == "posix", "Linux GnuPG precondition")
+    def test_missing_crypto_tools_are_rejected_before_transaction_fence(self):
+        with (
+            patch("linux_crypto.available", return_value=False),
+            self.assertRaisesRegex(ValueError, "E_GPG_REQUIRED"),
+        ):
             self.apply()
         self.assertEqual(self.events, [])
         self.assertNotIn("updateTransaction", load_installation(self.root).state)

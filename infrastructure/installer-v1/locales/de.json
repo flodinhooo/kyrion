@@ -1,4 +1,6 @@
 {
+  "systemToolsError": "Ein erforderliches geschütztes Systemprogramm fehlt oder konnte nicht geprüft werden. Prüfe die Laufzeit-Voraussetzungen.",
+  "nativeCryptoScratchError": "Im geschützten System-Programmverzeichnis konnte kein kurzer GnuPG-Arbeitsordner vorbereitet werden. Prüfe den Pfad und die Administratorrechte. Bis zur erfolgreichen Prüfung wird kein Backup-Passwort an einen Prozess übergeben.",
   "ollamaSelectionReview": "Diese vorhandene, ausschliesslich lokal gebundene Ollama-Instanz weiterverwenden? Prüfe Version und Modelle. Kyrion behält ihre Konfiguration und Dienste bei. Diese Auswahl aktiviert keine Inferenz oder Cloud-Verarbeitung.",
   "ollamaSelectionResult": "Lokale Laufzeit ausgewählt. Ihre Konfiguration bleibt in deiner Verwaltung. Kyrion-KI-Verbindung: noch nicht verbunden.",
   "ollamaRuntimeError": "Die lokale Ollama-Laufzeit konnte nicht sicher geprüft werden. Prüfe, ob sie läuft und ausschliesslich an Loopback-Adressen gebunden ist. Status oder Auswahl aktivieren keine Kyrion-KI-Verbindung. Du kannst ohne KI fortfahren.",

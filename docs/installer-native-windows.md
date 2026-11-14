@@ -8,6 +8,16 @@ not completed consumer Windows support: actual privileged service/ACL and boot
 acceptance remain outstanding, and the full product journey has open source work
 in the [requirements ledger](installer-requirements.md).
 
+## Protected installation location
+
+The new-install default is the OS-resolved ProgramFiles/Kyrion directory
+(ADR 0078), not an environment-derived ProgramData path. Actual ProgramData
+Users write/create rights conflict with the existing ancestor policy; that policy
+is preserved. Explicit existing targets retain their ownership checks and are
+never automatically moved. GnuPG agent homes use exclusive private short-lived
+directories beneath the protected system application folder, checked before
+password handoff. Whole-host elevation, service and reboot acceptance remain open.
+
 ## Build and trust
 
 `release/build-windows-bundle.py --profile <clean-profile> --metadata <json>

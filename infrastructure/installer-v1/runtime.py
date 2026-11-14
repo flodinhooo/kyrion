@@ -38,8 +38,10 @@ def startup_overrides(installation) -> list[str]:
 
 
 def execute(args: list[str], timeout: int = 120) -> str:
+    from system_tools import run as run_system_command
+
     try:
-        result = subprocess.run(
+        result = run_system_command(
             args, capture_output=True, text=True, timeout=timeout, check=False
         )
     except (OSError, subprocess.TimeoutExpired) as error:

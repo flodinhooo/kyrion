@@ -301,7 +301,9 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
         or not os.environ.get("GITHUB_RUN_ID", "").isdigit()
     ):
         raise ValueError("E_DISPOSABLE_WINDOWS_RUNNER_REQUIRED")
-    parent = Path(os.environ["ProgramData"]).resolve()
+    from windows_system import program_files_directory
+
+    parent = program_files_directory()
     target = parent / ("KyrionCI-" + uuid.uuid4().hex)
     if target.exists():
         raise ValueError("E_TEST_TARGET_EXISTS")

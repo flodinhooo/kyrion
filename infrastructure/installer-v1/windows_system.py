@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import uuid
 from pathlib import Path
 
 
@@ -25,6 +26,49 @@ def _directory(function: str) -> Path:
 
 def system_directory() -> Path:
     return _directory("GetSystemDirectoryW")
+
+
+def program_files_directory() -> Path:
+    """Read the OS known folder, never a caller ProgramFiles environment alias."""
+    if os.name != "nt":
+        raise ValueError("E_NATIVE_PLATFORM")
+    from ctypes import wintypes as w
+
+    shell = ctypes.WinDLL(str(system_directory() / "shell32.dll"), use_last_error=True)
+    allocator = ctypes.WinDLL(
+        str(system_directory() / "ole32.dll"), use_last_error=True
+    )
+    lookup = shell.SHGetKnownFolderPath
+    lookup.argtypes = [
+        ctypes.c_void_p,
+        w.DWORD,
+        w.HANDLE,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    lookup.restype = ctypes.c_int32
+    allocator.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    allocator.CoTaskMemFree.restype = None
+    identifier = (ctypes.c_ubyte * 16).from_buffer_copy(
+        uuid.UUID("905e63b6-c1bf-494e-b29c-65b732d3d21a").bytes_le
+    )
+    result = ctypes.c_void_p()
+    try:
+        if (
+            lookup(ctypes.byref(identifier), 0, None, ctypes.byref(result)) != 0
+            or not result.value
+        ):
+            raise ValueError("E_NATIVE_DATA_DIRECTORY")
+        directory = Path(ctypes.wstring_at(result))
+        if (
+            not directory.is_absolute()
+            or len(directory.drive) != 2
+            or directory.drive[1] != ":"
+        ):
+            raise ValueError("E_NATIVE_DATA_DIRECTORY")
+        return directory
+    finally:
+        if result.value:
+            allocator.CoTaskMemFree(result)
 
 
 def base_environment() -> dict[str, str]:

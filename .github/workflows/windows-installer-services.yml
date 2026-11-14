@@ -63,6 +63,11 @@ jobs:
           python infrastructure/installer-v1/release/assemble-windows-profile.py --fetch --archives build/windows-vendors --core-jar $coreJar.FullName --parser-jar services/core/build/libs/knowledge-parser.jar --web-build apps/web --service-host build/native-service-host --gnupg-profile build/windows-gpg-profile --output build/windows-ci-profile --version $env:KYRION_CI_VERSION
           python infrastructure/installer-v1/release/build-windows-bundle.py --profile build/windows-ci-profile --metadata build/windows-ci-profile-metadata.json --output build/windows-ci-bundle
           python infrastructure/installer-v1/release/sign-development-bundle.py build/windows-ci-bundle
+      - name: Verify portable GnuPG deep paths and actual protected system agent directories
+        shell: pwsh
+        run: |
+          python infrastructure/installer-v1/tests/integration/verify-windows-gpg-paths.py --bundle build/windows-ci-bundle --key build/windows-ci-bundle/test-public.pem --payload build/windows-ci-profile --work "$PWD/build" > build/windows-gpg-paths-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'E_CI_GPG_PATHS' }
       - name: Run actual service installation, permissions, repeat and restart
         shell: pwsh
         run: |
@@ -77,5 +82,6 @@ jobs:
           name: windows-services-evidence
           path: |
             build/windows-services-report.json
+            build/windows-gpg-paths-report.json
             build/native-service-installer/*.json
           if-no-files-found: warn

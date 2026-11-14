@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import stat
 import subprocess
 from pathlib import Path
@@ -16,6 +15,7 @@ from host import reject_links
 from portable_database import capture as capture_rows
 from recovery import private_restore_directory
 from runtime import image_identity, image_plan, startup_overrides
+from system_tools import required as required_system_tool
 from update_native import LAUNCHER, MAIN
 from update_state import path, transaction
 
@@ -32,10 +32,7 @@ class Compose:
         self.installation = installation
         self.root = installation.target
         self.backup_manifest = None
-        executable = shutil.which("docker")
-        if executable is None:
-            raise ValueError("E_RUNTIME")
-        self.docker = Path(executable).resolve()
+        self.docker = required_system_tool("docker")
         for item in (self.docker, *self.docker.parents):
             if item.stat().st_uid != 0 or item.stat().st_mode & 0o022:
                 raise ValueError("E_UPDATE_DOCKER_OWNER")

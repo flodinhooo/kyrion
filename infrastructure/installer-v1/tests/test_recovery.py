@@ -21,6 +21,41 @@ from runtime import Installation
 
 
 class RecoveryTests(unittest.TestCase):
+    @unittest.skipUnless(
+        os.name == "posix" and shutil.which("gpg"),
+        "Actual Linux GnuPG deep-path acceptance",
+    )
+    def test_actual_crypto_uses_short_private_agent_home_for_deep_plaintext_paths(self):
+        root = self.root
+        for _ in range(3):
+            root = root / ("deep-private-" + "a" * 40)
+            root.mkdir(mode=0o700)
+        source, encrypted, restored = (
+            root / "source",
+            root / "encrypted.gpg",
+            root / "restored",
+        )
+        source.write_bytes(b"Synthetic deep-path recovery data")
+        password = "Synthetic-deep-path-passphrase-123456"
+        original_run = subprocess.run
+        with patch.object(recovery.subprocess, "run", wraps=original_run) as commands:
+            recovery.crypto(source, encrypted, password)
+            recovery.crypto(encrypted, restored, password, decrypt=True)
+        self.assertEqual(restored.read_bytes(), source.read_bytes())
+        homes = [
+            call.args[0][call.args[0].index("--homedir") + 1]
+            for call in commands.call_args_list
+            if "--homedir" in call.args[0]
+        ]
+        self.assertTrue(homes)
+        self.assertTrue(
+            all(
+                home.startswith("/tmp/kyrion-restore-") and len(home) < 70
+                for home in homes
+            )
+        )
+        self.assertTrue(all(not Path(home).exists() for home in homes))
+
     def test_explicit_crypto_uses_only_matching_absolute_tools_and_environment(self):
         suffix = ".exe" if os.name == "nt" else ""
         binary = self.root / ("gpg" + suffix)
@@ -29,9 +64,14 @@ class RecoveryTests(unittest.TestCase):
         companion.write_bytes(b"fixture, never executed")
         output = self.root / "encrypted"
         environment = {"PATH": "fixture-system-only"}
+        expected_environment = environment
+        if os.name == "posix":
+            from system_tools import environment as system_environment
+
+            expected_environment = system_environment()
 
         def command(arguments, **options):
-            self.assertEqual(options["env"], environment)
+            self.assertEqual(options["env"], expected_environment)
             if arguments[0] == str(binary.resolve()):
                 self.assertEqual(
                     options["input"], b"Synthetic-recovery-password-123456\n"
@@ -42,7 +82,17 @@ class RecoveryTests(unittest.TestCase):
                 self.assertNotIn("input", options)
             return SimpleNamespace(returncode=0)
 
-        with patch.object(recovery.subprocess, "run", side_effect=command) as execute:
+        with (
+            patch.object(recovery.subprocess, "run", side_effect=command) as execute,
+            patch(
+                "system_tools.executable",
+                side_effect=lambda name: {
+                    "gpg": binary.resolve(),
+                    "gpgconf": companion.resolve(),
+                    "gpg-agent": self.root / "gpg-agent",
+                }[name],
+            ),
+        ):
             recovery.crypto(
                 self.source,
                 output,
@@ -197,7 +247,7 @@ class RecoveryTests(unittest.TestCase):
         with (
             patch.object(installation, "compose", side_effect=compose),
             patch(
-                "recovery.subprocess.run",
+                "recovery.run_system_command",
                 return_value=subprocess.CompletedProcess([], 1),
             ),
             self.assertRaisesRegex(ValueError, "E_BACKUP_DATABASE"),
@@ -237,7 +287,7 @@ class RecoveryTests(unittest.TestCase):
 
         with (
             patch.object(installation, "compose", side_effect=compose),
-            patch("recovery.subprocess.run", side_effect=dump),
+            patch("recovery.run_system_command", side_effect=dump),
             patch("portable_database.capture", return_value=({}, {})),
             patch("recovery.crypto", side_effect=encrypt),
         ):

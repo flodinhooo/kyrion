@@ -295,6 +295,16 @@ class JournalTests(unittest.TestCase):
         shutil.which("openssl"), "OpenSSL required for actual TLS generation"
     )
     def test_configuration_generates_real_tls_and_raw_keys_without_rotation(self):
+        if os.name == "nt":
+            # Linux file/TLS behavior with actual developer OpenSSL; this is not
+            # the Windows product's separate verified native provisioning path.
+            def fixture_openssl(name):
+                self.assertEqual(name, "openssl")
+                return Path(shutil.which("openssl")).resolve()
+
+            self.enterContext(
+                patch("system_tools.required", side_effect=fixture_openssl)
+            )
         installation = self.create()
         with patch("runtime.os.chown", create=True):
             installation.configure()
@@ -443,12 +453,16 @@ sys.exit(0)
         self.assertNotEqual(installation.state["stage"], "services-healthy")
 
     def test_child_output_is_not_exposed(self):
-        with patch(
-            "runtime.subprocess.run",
-            return_value=subprocess.CompletedProcess([], 1, "TOKEN", "PASSWORD"),
+        with (
+            patch("system_tools.required", return_value=Path("/fixture/docker")),
+            patch(
+                "runtime.subprocess.run",
+                return_value=subprocess.CompletedProcess([], 1, "TOKEN", "PASSWORD"),
+            ) as execute,
         ):
             with self.assertRaises(ValueError) as error:
                 runtime.execute(["docker", "compose"])
+            execute.assert_called_once()
             self.assertNotIn("TOKEN", str(error.exception))
             self.assertNotIn("PASSWORD", str(error.exception))
 

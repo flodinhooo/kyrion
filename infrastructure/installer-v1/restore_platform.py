@@ -11,6 +11,7 @@ from pathlib import Path
 
 from bundle import sha256, unique_object
 from host import reject_links
+from system_tools import run as run_system_command
 
 CORE_MAIN = "dev.kyrion.core.security.OperationalRestoreAdmin"
 PROPERTIES_LAUNCHER = "org.springframework.boot.loader.launch.PropertiesLauncher"
@@ -72,6 +73,9 @@ class Native:
         self.environment = admin_environment(self.root)
         self.environment["PGCLIENTENCODING"] = "UTF8"
         self.gpg = self.root / "payload/runtime/installer/gnupg/bin/gpg.exe"
+        from recovery import native_crypto_parent
+
+        native_crypto_parent()  # Read-only scratch prerequisite before writer pauses.
         if check_capability:
             with zipfile.ZipFile(
                 self.root / "payload/app/core/core-runtime.jar"
@@ -238,7 +242,7 @@ class Compose:
         self.environment = None
         if not check_capability:
             return
-        result = subprocess.run(
+        result = run_system_command(
             [
                 "docker",
                 "run",
@@ -273,7 +277,7 @@ class Compose:
             raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
 
     def command(self, sql: str, *, stdin=None) -> bytes:
-        result = subprocess.run(
+        result = run_system_command(
             [
                 "docker",
                 "compose",
@@ -364,7 +368,7 @@ class Compose:
         # the container gets only a read-only bind; no extra Linux capability or
         # root container user is required to read original Core-owned secrets.
         receipt.chmod(0o444)
-        result = subprocess.run(
+        result = run_system_command(
             [
                 "docker",
                 "compose",
