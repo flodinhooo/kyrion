@@ -43,6 +43,17 @@ expiry, retries require explicit authorized enrollment recovery rather than
 silently weakening the expiry. No token refresh or indefinite pairing window is
 introduced.
 
+The prepared Linux agent writes its pending credential and original request
+before contacting Core, under an exclusive process lock and private owner-only
+files. It publishes the final existing agent configuration durably before
+removing that pending state. A separate process can resume after a lost response;
+an existing final identity is not overwritten. Prepared requests and subsequent
+configured calls use verified local TLS, pinned private CA bytes when selected,
+no redirects/proxies, one checked DNS resolution and a checked numeric LAN or
+loopback socket. Legacy explicit HTTP configuration remains unchanged. Windows
+prepared credential storage and installer/service deployment are not implied by
+this Linux implementation.
+
 This is a compatible extension of existing enrollment, not completed installer
 multi-device setup. Role distribution, revocation, least-privilege agent runtime,
 TLS transport exposure, offline coordination and writer-safe moves remain

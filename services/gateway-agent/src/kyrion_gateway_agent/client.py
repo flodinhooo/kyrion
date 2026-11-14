@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import ssl
+import uuid
 from dataclasses import dataclass
+from email.message import Message
+from functools import lru_cache
+from http.client import HTTPResponse
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, ProxyHandler, Request, build_opener
 
 from kyrion_gateway_agent import __version__
 from kyrion_gateway_agent.config import AgentConfig
+from kyrion_gateway_agent.lan_transport import LocalHTTPSHandler
 
 
 class CoreRequestError(RuntimeError):
@@ -20,20 +30,67 @@ class EnrollmentResult:
     gateway_token: str
 
 
-def enroll(core_url: str, enrollment_token: str, identity: dict[str, str]) -> EnrollmentResult:
+def enroll(
+    core_url: str,
+    enrollment_token: str,
+    identity: dict[str, str],
+    *,
+    node_credential: str | None = None,
+    ca_certificate: str | None = None,
+    ca_sha256: str | None = None,
+    agent_version: str | None = None,
+) -> EnrollmentResult:
+    context = None
+    if node_credential is not None or ca_certificate is not None:
+        if urlsplit(core_url).scheme != "https":
+            raise CoreRequestError("E_AGENT_TLS_REQUIRED")
+        context = trusted_context(ca_certificate, ca_sha256)
+    if node_credential is not None:
+        capability = _request(
+            f"{core_url.rstrip('/')}/v1/gateway-agent/enrollment-capabilities",
+            "GET",
+            {},
+            tls=context,
+            local_only=True,
+        )
+        if (
+            not isinstance(capability, dict)
+            or type(capability.get("formatVersion")) is not int
+            or capability["formatVersion"] != 1
+            or type(capability.get("enrollmentProtocol")) is not int
+            or capability["enrollmentProtocol"] != 2
+            or capability.get("clientCredential") is not True
+            or capability.get("acknowledgementWithinOriginalExpiry") is not True
+        ):
+            raise CoreRequestError("E_AGENT_ENROLLMENT_UPGRADE_REQUIRED")
     value = _request(
         f"{core_url.rstrip('/')}/v1/gateway-agent/enroll",
         "POST",
         {
-            "enrollmentToken": enrollment_token,
-            "agentVersion": __version__,
             **identity,
+            "enrollmentToken": enrollment_token,
+            "agentVersion": agent_version or __version__,
+            **({"nodeCredential": node_credential} if node_credential is not None else {}),
         },
+        tls=context,
+        local_only=node_credential is not None,
     )
     node_id = value.get("nodeId") if isinstance(value, dict) else None
     gateway_token = value.get("gatewayToken") if isinstance(value, dict) else None
     if not isinstance(node_id, str) or not isinstance(gateway_token, str):
         raise CoreRequestError("Core returned an invalid enrollment response")
+    if node_credential is not None:
+        try:
+            valid_id = str(uuid.UUID(node_id)) == node_id
+        except ValueError:
+            valid_id = False
+        if (
+            not valid_id
+            or not gateway_token.isascii()
+            or not node_credential.isascii()
+            or not hmac.compare_digest(gateway_token, node_credential)
+        ):
+            raise CoreRequestError("E_AGENT_ENROLLMENT_RESPONSE")
     return EnrollmentResult(node_id, gateway_token)
 
 
@@ -47,6 +104,7 @@ def heartbeat(config: AgentConfig, health: dict[str, Any]) -> None:
             "X-Kyrion-Node-Id": config.node_id,
         },
         expect_json=False,
+        config=config,
     )
 
 
@@ -57,6 +115,7 @@ def button_event(config: AgentConfig, device_id: str, action: str) -> None:
         {"deviceId": device_id, "action": action},
         _auth(config),
         expect_json=False,
+        config=config,
     )
 
 
@@ -67,12 +126,17 @@ def motion_event(config: AgentConfig, device_id: str, detected: bool) -> None:
         {"deviceId": device_id, "detected": detected},
         _auth(config),
         expect_json=False,
+        config=config,
     )
 
 
 def next_command(config: AgentConfig) -> dict[str, Any] | None:
     value = _request(
-        f"{config.core_url}/v1/gateway-agent/commands/next", "POST", {}, _auth(config)
+        f"{config.core_url}/v1/gateway-agent/commands/next",
+        "POST",
+        {},
+        _auth(config),
+        config=config,
     )
     return value if isinstance(value, dict) and isinstance(value.get("id"), str) else None
 
@@ -82,7 +146,11 @@ def complete_command(
 ) -> None:
     _request(
         f"{config.core_url}/v1/gateway-agent/commands/{command_id}/result",
-        "POST", {"succeeded": succeeded, "error": error}, _auth(config), expect_json=False,
+        "POST",
+        {"succeeded": succeeded, "error": error},
+        _auth(config),
+        expect_json=False,
+        config=config,
     )
 
 
@@ -97,21 +165,88 @@ def _request(
     headers: dict[str, str] | None = None,
     *,
     expect_json: bool = True,
+    config: AgentConfig | None = None,
+    tls: ssl.SSLContext | None = None,
+    local_only: bool = False,
 ) -> Any:
+    origin = urlsplit(url)
+    if (
+        origin.scheme not in {"http", "https"}
+        or not origin.hostname
+        or origin.username is not None
+        or origin.password is not None
+        or origin.fragment
+        or origin.query
+    ):
+        raise CoreRequestError("E_AGENT_URL")
+    if config is not None and config.ca_certificate is not None:
+        if origin.scheme != "https":
+            raise CoreRequestError("E_AGENT_TLS_REQUIRED")
+        tls = trusted_context(config.ca_certificate, config.ca_sha256)
+    local_only = local_only or (config is not None and config.local_only)
+    if local_only and origin.scheme != "https":
+        raise CoreRequestError("E_AGENT_TLS_REQUIRED")
     request_headers = {"Content-Type": "application/json", **(headers or {})}
     request = Request(
         url,
-        data=json.dumps(payload).encode("utf-8"),
+        data=None if method == "GET" else json.dumps(payload).encode("utf-8"),
         headers=request_headers,
         method=method,
     )
     try:
-        with urlopen(request, timeout=10) as response:
+        handler = (
+            LocalHTTPSHandler(tls or context_from_bytes(None))
+            if local_only
+            else HTTPSHandler(context=tls)
+        )
+        opener = build_opener(ProxyHandler({}), NoRedirect(), handler)
+        with opener.open(request, timeout=10) as response:
             if not expect_json:
                 return None
-            body = response.read().decode("utf-8")
+            raw = response.read(1024**2 + 1)
+            if len(raw) > 1024**2:
+                raise CoreRequestError("E_AGENT_RESPONSE_LIMIT")
+            body = raw.decode("utf-8")
             return json.loads(body) if body else None
     except HTTPError as error:
         raise CoreRequestError(f"Core rejected the request with HTTP {error.code}") from error
-    except (URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as error:
+    except (URLError, TimeoutError, ConnectionError, json.JSONDecodeError, UnicodeError) as error:
         raise CoreRequestError("Core is unavailable or returned invalid data") from error
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: HTTPResponse,
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> None:
+        return None
+
+
+@lru_cache(maxsize=8)
+def context_from_bytes(certificate: bytes | None) -> ssl.SSLContext:
+    return ssl.create_default_context(
+        cadata=certificate.decode("ascii") if certificate is not None else None,
+    )
+
+
+def trusted_context(certificate: str | None, digest: str | None) -> ssl.SSLContext:
+    if certificate is None:
+        if digest is not None:
+            raise CoreRequestError("E_AGENT_TLS_CONFIGURATION")
+        return context_from_bytes(None)
+    path = Path(certificate)
+    if not path.is_absolute() or path.is_symlink() or not path.is_file():
+        raise CoreRequestError("E_AGENT_TLS_CONFIGURATION")
+    with path.open("rb") as stream:
+        raw = stream.read(64 * 1024 + 1)
+    if len(raw) > 64 * 1024 or hashlib.sha256(raw).hexdigest() != digest:
+        raise CoreRequestError("E_AGENT_TLS_CONFIGURATION")
+    try:
+        return context_from_bytes(raw)
+    except (ssl.SSLError, UnicodeError, ValueError) as error:
+        raise CoreRequestError("E_AGENT_TLS_CONFIGURATION") from error

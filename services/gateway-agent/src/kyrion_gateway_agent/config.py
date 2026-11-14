@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass
+import re
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 
@@ -10,7 +11,10 @@ from pathlib import Path
 class AgentConfig:
     core_url: str
     node_id: str
-    gateway_token: str
+    gateway_token: str = field(repr=False)
+    ca_certificate: str | None = None
+    ca_sha256: str | None = None
+    local_only: bool = False
 
     @classmethod
     def load(cls, path: Path) -> AgentConfig:
@@ -24,7 +28,19 @@ class AgentConfig:
             raise ValueError("Agent configuration is incomplete")
         if not core_url.startswith(("http://", "https://")):
             raise ValueError("Core URL must use HTTP or HTTPS")
-        return cls(core_url.rstrip("/"), node_id, gateway_token)
+        certificate, digest = value.get("ca_certificate"), value.get("ca_sha256")
+        local_only = value.get("local_only", False)
+        if type(local_only) is not bool or (local_only and not core_url.startswith("https://")):
+            raise ValueError("E_AGENT_TLS_CONFIGURATION")
+        if (certificate is not None or digest is not None) and (
+            not isinstance(certificate, str)
+            or not Path(certificate).is_absolute()
+            or not isinstance(digest, str)
+            or not re.fullmatch(r"[a-f0-9]{64}", digest)
+            or not core_url.startswith("https://")
+        ):
+            raise ValueError("E_AGENT_TLS_CONFIGURATION")
+        return cls(core_url.rstrip("/"), node_id, gateway_token, certificate, digest, local_only)
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)

@@ -26,6 +26,9 @@ The [Core enrollment follow-up](status/2026-11-14-installer-enrollment-core.md)
 adds retry acknowledgement to existing node identities and records schema50
 backup/restore/update tests. Complete installer pairing and node runtime work
 remain open.
+The [prepared-agent continuation](status/2026-11-14-installer-prepared-agent.md)
+adds protected Linux agent restart/resumption and verified local TLS on existing
+node identities. Complete downloaded-installer node/service wiring remains open.
 The [model-operation continuation](status/2026-11-14-installer-ollama-models.md)
 adds reviewed download/resumption and single-model removal on the selected local
 Ollama runtime. It does not install the runtime or activate Kyrion AI. Maintenance

@@ -40,12 +40,31 @@ def main() -> None:
     enrollment = subparsers.add_parser("enroll")
     enrollment.add_argument("--core-url", required=True)
     enrollment.add_argument("--token", required=True)
+    prepared = subparsers.add_parser("enroll-prepared")
+    prepared.add_argument("--core-url")
+    prepared.add_argument("--token-file", type=Path)
+    prepared.add_argument("--ca-certificate", type=Path)
     subparsers.add_parser("once")
     runner = subparsers.add_parser("run")
     runner.add_argument("--interval", type=int, default=15)
     runner.add_argument("--command-interval", type=float, default=0.25)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    if args.command == "enroll-prepared":
+        from kyrion_gateway_agent.enrollment import enroll_prepared
+
+        if os.name != "posix":
+            raise ValueError("E_AGENT_PLATFORM")
+        config = enroll_prepared(
+            args.config,
+            url=args.core_url,
+            token_file=args.token_file,
+            certificate=args.ca_certificate,
+            identity=platform_identity(),
+        )
+        print(json.dumps({"nodeId": config.node_id, "paired": True}))
+        return
 
     if args.command == "enroll":
         result = enroll(args.core_url, args.token, platform_identity())
@@ -95,7 +114,9 @@ def _forward_button_events(config: AgentConfig) -> None:
         try:
             process = subprocess.Popen(
                 ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/+", "-v"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
             )
             if process.stdout is None:
                 raise RuntimeError("mqtt subscription unavailable")
@@ -111,9 +132,7 @@ def _forward_button_events(config: AgentConfig) -> None:
                     continue
                 action = payload.get("action")
                 occupancy = payload.get("occupancy")
-                if action not in {"single", "double", "long"} and not isinstance(
-                    occupancy, bool
-                ):
+                if action not in {"single", "double", "long"} and not isinstance(occupancy, bool):
                     continue
                 friendly_name = topic.removeprefix("zigbee2mqtt/")
                 device_id = _resolve_zigbee_device_id(friendly_name)
@@ -126,9 +145,7 @@ def _forward_button_events(config: AgentConfig) -> None:
                 try:
                     if action in {"single", "double", "long"}:
                         button_event(config, device_id, action)
-                        LOGGER.info(
-                            "Forwarded Zigbee button event %s for %s", action, device_id
-                        )
+                        LOGGER.info("Forwarded Zigbee button event %s for %s", action, device_id)
                     if isinstance(occupancy, bool):
                         motion_event(config, device_id, occupancy)
                         LOGGER.info(
@@ -193,7 +210,9 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
             topic = "zigbee2mqtt/bridge/request/device/remove"
             body = {"id": device, "force": True}
         elif kind in {
-            "zigbee.power", "zigbee.brightness", "zigbee.color",
+            "zigbee.power",
+            "zigbee.brightness",
+            "zigbee.color",
             "zigbee.hue_power_on_recover",
         }:
             device = str(payload["deviceId"])
@@ -220,18 +239,27 @@ def _execute_command(config: AgentConfig, command: dict[str, object]) -> None:
         else:
             result = subprocess.run(
                 ["mosquitto_pub", "-h", "127.0.0.1", "-t", topic, "-m", json.dumps(body)],
-                capture_output=True, check=False, timeout=5,
+                capture_output=True,
+                check=False,
+                timeout=5,
             )
             if result.returncode != 0:
                 raise RuntimeError("mqtt publish failed")
         complete_command(config, command_id, True)
     except (
-        KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError, RuntimeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        OSError,
+        subprocess.SubprocessError,
+        RuntimeError,
         BluetoothLightError,
     ) as error:
         LOGGER.warning(
             "Gateway command %s failed locally: %s %s",
-            command_id, type(error).__name__, str(error)[:80],
+            command_id,
+            type(error).__name__,
+            str(error)[:80],
         )
         complete_command(config, command_id, False, "EXECUTION_FAILED")
 
@@ -262,16 +290,28 @@ def _publish_and_confirm_power(
 ) -> None:
     subscriber = subprocess.Popen(
         [
-            "mosquitto_sub", "-h", "127.0.0.1", "-t", f"zigbee2mqtt/{device}",
-            "-R", "-C", "1", "-W", "7",
+            "mosquitto_sub",
+            "-h",
+            "127.0.0.1",
+            "-t",
+            f"zigbee2mqtt/{device}",
+            "-R",
+            "-C",
+            "1",
+            "-W",
+            "7",
         ],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
     try:
         time.sleep(0.05)
         result = subprocess.run(
             ["mosquitto_pub", "-h", "127.0.0.1", "-t", topic, "-m", json.dumps(body)],
-            capture_output=True, check=False, timeout=5,
+            capture_output=True,
+            check=False,
+            timeout=5,
         )
         if result.returncode != 0:
             raise RuntimeError("mqtt publish failed")

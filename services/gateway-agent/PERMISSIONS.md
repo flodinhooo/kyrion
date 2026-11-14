@@ -13,9 +13,14 @@ The gateway agent runs under a dedicated system identity with:
 - outbound network access only for authenticated communication with Kyrion
   Core and explicitly configured local adapters.
 
-Creating the service identity is deferred until the first executable agent and
-its systemd unit exist, so ownership and filesystem permissions can be verified
-together rather than leaving an unused privileged identity behind.
+The executable and reference systemd unit now exist. Host provisioning must create
+and verify the dedicated identity and exact filesystem permissions together.
+The original deferred-slice wording was historical; it did not describe the
+existing reference runtime. General downloaded-installer node deployment remains
+unfinished. Prepared enrollment runs as the agent identity, owns only its private
+configuration/pending credentials, uses checked local TLS and receives no Docker
+or general administrative authority. A source change does not provision accounts
+or alter existing deployed units.
 
 ## Capability-specific additions
 
