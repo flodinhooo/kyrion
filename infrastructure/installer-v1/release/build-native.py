@@ -72,6 +72,9 @@ def build(output: Path, version: str, channel: Path | None = None) -> Path:
             "locales/en.json",
             "locales/de.json",
             "model-catalog.json",
+            "public-ca/cacert.pem",
+            "public-ca/metadata.json",
+            "public-ca/LICENSE",
             "templates/compose.yml",
             "templates/Caddyfile",
         ):
@@ -120,6 +123,22 @@ def build(output: Path, version: str, channel: Path | None = None) -> Path:
             timeout=30,
         )
         observed_channel = json.loads(channel_probe.stdout)
+        capabilities_probe = subprocess.run(
+            [str(binary), "--capabilities"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        trust = json.loads(capabilities_probe.stdout).get("publicHttpsTrust", {})
+        if (
+            trust.get("bundleVerified") is not True
+            or trust.get("certificateVerificationRequired") is not True
+            or trust.get("hostnameVerificationRequired") is not True
+            or trust.get("connectionTested") is not False
+            or "error" in trust
+        ):
+            raise ValueError("E_NATIVE_PUBLIC_CA")
         if observed_channel.get("configured") is not (
             channel is not None
         ) or observed_channel.get("sha256") != build_identity.get(
@@ -156,6 +175,7 @@ def build(output: Path, version: str, channel: Path | None = None) -> Path:
         "embeddedVersionVerified": True,
         "releaseChannelSha256": build_identity.get("releaseChannelSha256"),
         "embeddedChannelVerified": True,
+        "embeddedPublicCaVerified": True,
     }
     artifact.with_suffix(artifact.suffix + ".json").write_text(
         json.dumps(metadata, indent=2) + "\n", encoding="utf-8"

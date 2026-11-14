@@ -1,4 +1,5 @@
 {
+  "publicHttpsTrustError": "Der Zertifikats-Vertrauensspeicher für öffentliche Downloads konnte nicht geprüft werden. Repariere den System-Vertrauensspeicher oder verwende einen unveränderten signierten Installer. Ausdrückliche Zertifikatseinstellungen bleiben massgeblich; die TLS-Prüfung darf nicht deaktiviert werden.",
   "backupScheduleCryptoRequired": "GnuPG und das passende gpgconf sind vor der Backup-Aktivierung erforderlich. Auf unterstützten Linux-Zielen muss das GnuPG-Paket des Betriebssystems installiert sein; das native Windows-Paket enthält die signierte Hilfslaufzeit. Diese fehlgeschlagene Prüfung hat keinen Backup-Auftrag aktiviert.",
   "backupScheduleOffer": "Optionale automatische verschlüsselte Backups jetzt einrichten? Überspringen und später mit --backup-schedule configure fortsetzen ist möglich.",
   "backupScheduleDestination": "Absoluter Pfad zu einem eigenen geschützten Backup-Ordner ausserhalb der Installation (vorhandener übergeordneter Ordner erforderlich)",

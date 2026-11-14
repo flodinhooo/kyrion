@@ -43,11 +43,17 @@ def public_url(value: str) -> str:
 
 
 def open_download(url: str, offset: int = 0):
+    from public_https import context
+
     headers = {"Accept-Encoding": "identity"}
     if offset:
         headers["Range"] = "bytes=" + str(offset) + "-"
     request = urllib.request.Request(public_url(url), headers=headers)
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        NoRedirect(),
+        urllib.request.HTTPSHandler(context=context()),
+    )
     return opener.open(request, timeout=20)
 
 

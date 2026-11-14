@@ -171,6 +171,8 @@ def main() -> int:
             print("E_INSTALLER_CHANNEL", file=sys.stderr)
             return 2
     if args.capabilities:
+        from public_https import status as public_trust_status
+
         print(
             json.dumps(
                 {
@@ -180,6 +182,7 @@ def main() -> int:
                     "maintenanceCore": True,
                     "linuxComposeStart": os.name == "posix",
                     "backupProtocol": 1,
+                    "publicHttpsTrust": public_trust_status(),
                 }
             )
         )

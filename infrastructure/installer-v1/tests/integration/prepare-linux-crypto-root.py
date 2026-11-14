@@ -56,7 +56,7 @@ def response(url, *, token=None, accept=None):
     raise ValueError("E_TEST_OCI_REDIRECT")
 
 
-def main(kind: str = "crypto"):
+def main(kind: str = "crypto", worker: Path | None = None):
     marker = json.loads(Path("/work/kyrion-systemd-fixture.json").read_bytes())
     if (
         os.geteuid() != 0
@@ -64,6 +64,8 @@ def main(kind: str = "crypto"):
         or platform.machine() != "x86_64"
     ):
         raise ValueError("E_TEST_ENVIRONMENT")
+    if worker is not None and kind != "transport":
+        raise ValueError("E_TEST_WORKER_PURPOSE")
     parent = Path("/work/crypto-clean-fixtures")
     parent.mkdir(mode=0o700, exist_ok=True)
     backup_store.secure_directory(parent)
@@ -189,12 +191,20 @@ def main(kind: str = "crypto"):
         shutil.copyfile(item, output)
     shutil.copyfile(
         Path(__file__).with_name(
-            "verify-linux-crypto-install.py"
-            if kind == "crypto"
-            else "verify-linux-runtime-packages.py"
+            {
+                "crypto": "verify-linux-crypto-install.py",
+                "runtime": "verify-linux-runtime-packages.py",
+                "transport": "verify-public-https.py",
+            }[kind]
         ),
         root / "opt/verify-crypto.py",
     )
+    if worker is not None:
+        backup_store.reject_links(worker)
+        if not worker.is_file() or not 1 <= worker.stat().st_size <= 128 * 1024**2:
+            raise ValueError("E_TEST_WORKER")
+        shutil.copyfile(worker, root / "opt/native-installer")
+        (root / "opt/native-installer").chmod(0o700)
     prefix = [
         "/usr/bin/unshare",
         "--mount",
@@ -220,9 +230,13 @@ def main(kind: str = "crypto"):
                 "--no-install-recommends",
                 "install",
                 "python3",
-                "ca-certificates",
+                *([] if kind == "transport" else ["ca-certificates"]),
             ],
-            ["/usr/bin/python3", "/opt/verify-crypto.py"],
+            [
+                "/usr/bin/python3",
+                "/opt/verify-crypto.py",
+                *(["--worker", "/opt/native-installer"] if worker is not None else []),
+            ],
         ):
             result = subprocess.run(
                 prefix + arguments,
@@ -243,5 +257,9 @@ def main(kind: str = "crypto"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--kind", choices=("crypto", "runtime"), default="crypto")
-    main(parser.parse_args().kind)
+    parser.add_argument(
+        "--kind", choices=("crypto", "runtime", "transport"), default="crypto"
+    )
+    parser.add_argument("--worker", type=Path)
+    arguments = parser.parse_args()
+    main(arguments.kind, arguments.worker)

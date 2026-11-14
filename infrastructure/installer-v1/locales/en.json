@@ -1,4 +1,5 @@
 {
+  "publicHttpsTrustError": "The public-download certificate trust could not be verified. Repair the system trust store or use an intact signed installer. Explicit certificate settings remain authoritative; do not disable TLS verification.",
   "backupScheduleCryptoRequired": "GnuPG and its matching gpgconf are required before enabling backups. On supported Linux targets the OS GnuPG package must be installed; the Windows native bundle supplies the signed support runtime. No backup schedule was enabled by this failed check.",
   "backupScheduleOffer": "Configure optional automatic encrypted backups now? You can skip this and use --backup-schedule configure later.",
   "backupScheduleDestination": "Absolute path to a dedicated protected backup folder outside the installation (existing parent required)",

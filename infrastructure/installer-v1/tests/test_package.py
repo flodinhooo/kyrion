@@ -30,6 +30,18 @@ class PackageTests(unittest.TestCase):
             inventory = json.loads(result.stdout)
             self.assertFalse(inventory["platformAccepted"])
             self.assertIn("usableAcceleration", inventory)
+            capabilities = subprocess.run(
+                [sys.executable, str(path), "--capabilities"],
+                capture_output=True,
+                text=True,
+                timeout=45,
+                check=True,
+            )
+            trust = json.loads(capabilities.stdout)["publicHttpsTrust"]
+            self.assertTrue(trust["bundleVerified"])
+            self.assertTrue(trust["certificateVerificationRequired"])
+            self.assertTrue(trust["hostnameVerificationRequired"])
+            self.assertFalse(trust["connectionTested"])
             with self.assertRaisesRegex(ValueError, "E_PACKAGE"):
                 package.build(path)
 

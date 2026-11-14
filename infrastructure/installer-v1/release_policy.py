@@ -297,6 +297,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def fetch_document(url: str) -> bytes:
+    from public_https import context
+
     parsed = urlsplit(url)
     if (
         parsed.scheme != "https"
@@ -306,7 +308,11 @@ def fetch_document(url: str) -> bytes:
         or parsed.fragment
     ):
         raise PolicyError("E_RELEASE_URL")
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        NoRedirect(),
+        urllib.request.HTTPSHandler(context=context()),
+    )
     with opener.open(url, timeout=20) as response:
         raw = response.read(LIMIT + 1)
         if response.status != 200 or len(raw) > LIMIT:

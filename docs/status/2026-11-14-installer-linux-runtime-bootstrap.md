@@ -75,8 +75,9 @@ Native packaging is recorded separately after build/source-hash verification.
 
 Full clean-host guided application installation plus systemd/restart acceptance,
 ARM64/Raspberry Pi and Windows service acceptance remain explicitly separate.
-Automatic early CA-store recovery before the first channel HTTPS request and
-package/channel preparation for bare-target restore or OS-runtime repair remain
+The early public CA-store gap is superseded by
+[the verified public HTTPS bootstrap](2026-11-14-installer-public-https.md).
+Package/channel preparation for bare-target restore or OS-runtime repair remain
 source work; this change does not silently declare those supported. Existing
 prepared candidate OS variants keep their provisioning path without claiming a
 new package implementation for them. Distributed/AI/voice/tutorial/local Web

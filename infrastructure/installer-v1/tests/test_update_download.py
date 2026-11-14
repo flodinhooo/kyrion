@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import os
+import socket
 import ssl
 import sys
 import tarfile
@@ -100,13 +101,20 @@ class DownloadTests(unittest.TestCase):
         self.addCleanup(server.shutdown)
         self.url = "https://127.0.0.1:" + str(server.server_port)
         trusted_context = ssl.create_default_context(cafile=str(cert_path))
+        self.certificate_path = cert_path
+        self.server_port = server.server_port
         original = urllib.request.build_opener
         self.original_opener = original
         self.enterContext(
             patch(
                 "urllib.request.build_opener",
                 side_effect=lambda *handlers: original(
-                    *handlers, urllib.request.HTTPSHandler(context=trusted_context)
+                    *(
+                        handler
+                        for handler in handlers
+                        if not isinstance(handler, urllib.request.HTTPSHandler)
+                    ),
+                    urllib.request.HTTPSHandler(context=trusted_context),
                 ),
             )
         )
@@ -124,6 +132,18 @@ class DownloadTests(unittest.TestCase):
         update_download.stream_artifact(
             self.url + "/runtime.bin", self.destination, self.partial, self.item
         )
+
+    def test_public_context_rejects_real_tls_hostname_mismatch(self):
+        import public_https
+
+        with patch.dict(os.environ, {"SSL_CERT_FILE": str(self.certificate_path)}):
+            context = public_https.context()
+        with (
+            socket.create_connection(("127.0.0.1", self.server_port), timeout=5) as raw,
+            self.assertRaises(ssl.SSLCertVerificationError),
+        ):
+            context.wrap_socket(raw, server_hostname="wrong-host.example.test")
+        self.assertEqual(self.requests, [])
 
     def test_interrupted_https_continues_with_real_range_and_final_hash(self):
         self.mode = "interrupt"

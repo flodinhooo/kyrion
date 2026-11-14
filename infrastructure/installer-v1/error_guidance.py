@@ -1,6 +1,8 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_PUBLIC_CA_BUNDLE": "publicHttpsTrustError",
+    "E_PUBLIC_CA_STORE": "publicHttpsTrustError",
     **dict.fromkeys(
         (
             "E_LINUX_RUNTIME_TOOLS",
