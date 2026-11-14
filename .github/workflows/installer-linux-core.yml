@@ -66,6 +66,12 @@ jobs:
         run: |
           set -euo pipefail
           sudo "$PWD/build/acceptance-python/bin/python" infrastructure/installer-v1/tests/integration/prepare-linux-crypto-root.py > build/linux-crypto-install-report.json
+      - name: Install packaged Docker CLI and Compose in a disposable Debian chroot
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo "$PWD/build/acceptance-python/bin/python" infrastructure/installer-v1/tests/integration/prepare-linux-crypto-root.py --kind runtime > build/linux-runtime-packages-report.json
       - name: Run synthetic accounts and HA only in an isolated network namespace
         shell: bash
         run: |
@@ -135,4 +141,5 @@ jobs:
             build/linux-startup-service-report.json
             build/linux-backup-timer-report.json
             build/linux-crypto-install-report.json
+            build/linux-runtime-packages-report.json
           if-no-files-found: error

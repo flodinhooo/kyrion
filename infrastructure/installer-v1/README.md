@@ -31,6 +31,13 @@ manifest again during provisioning/extraction. The later `INSTALL` confirmation
 still precedes application installation. Unconfigured development builds refuse
 this automatic path; no public release/feed is created by this source change.
 
+The native Linux fresh/resume flow now offers consented Debian 13 package/service
+preparation for Docker Engine, its separate CLI, Compose v2, GnuPG and CA
+certificates. It keeps the same protected journal and rechecks fresh ports and
+foreign containers even after prerequisite journal creation. See
+[actual package evidence and remaining host limits](../../docs/status/2026-11-14-installer-linux-runtime-bootstrap.md).
+No shared runtime is removed during Kyrion uninstall.
+
 The same local entrypoint now supports explicitly reviewed maintenance flags:
 
 * `--backup NEW_FILE.gpg`: pauses the owned Core writer during PostgreSQL custom

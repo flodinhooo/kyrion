@@ -7,6 +7,7 @@ is development fixture provenance, not a Kyrion signed release acceptance.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -55,7 +56,7 @@ def response(url, *, token=None, accept=None):
     raise ValueError("E_TEST_OCI_REDIRECT")
 
 
-def main():
+def main(kind: str = "crypto"):
     marker = json.loads(Path("/work/kyrion-systemd-fixture.json").read_bytes())
     if (
         os.geteuid() != 0
@@ -172,6 +173,7 @@ def main():
                 "scope": "installer-crypto-package-development-fixture",
                 "rootDevice": identity.st_dev,
                 "rootInode": identity.st_ino,
+                "purpose": kind,
             }
         )
     )
@@ -186,7 +188,11 @@ def main():
         output.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         shutil.copyfile(item, output)
     shutil.copyfile(
-        Path(__file__).with_name("verify-linux-crypto-install.py"),
+        Path(__file__).with_name(
+            "verify-linux-crypto-install.py"
+            if kind == "crypto"
+            else "verify-linux-runtime-packages.py"
+        ),
         root / "opt/verify-crypto.py",
     )
     prefix = [
@@ -236,4 +242,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--kind", choices=("crypto", "runtime"), default="crypto")
+    main(parser.parse_args().kind)

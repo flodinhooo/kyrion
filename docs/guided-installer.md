@@ -451,3 +451,12 @@ and exact version/download/allocation review are separate confirmations. Existin
 packages/keys/sources are preserved; no OS-wide repair or package upgrade is
 performed. See [actual clean-chroot package/recovery evidence and limits](status/2026-11-14-installer-linux-crypto.md).
 This does not supply Docker/Compose or imply ARM64/physical boot acceptance.
+
+## Guided Debian runtime preparation
+
+The native fresh/resume path now prepares required Debian 13 runtime packages
+through the existing protected journal, with service consent before package
+scripts can start Docker, then exact package review and actual readiness checks.
+Source/operator provisioning remains usable on prepared candidate hosts.
+[Implementation, clean-package evidence and unfinished acceptance](status/2026-11-14-installer-linux-runtime-bootstrap.md)
+separates this from full application boot and ARM64 acceptance.

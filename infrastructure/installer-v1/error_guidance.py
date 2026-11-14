@@ -3,6 +3,17 @@
 KEYS = {
     **dict.fromkeys(
         (
+            "E_LINUX_RUNTIME_TOOLS",
+            "E_LINUX_RUNTIME_OWNER",
+            "E_LINUX_RUNTIME_SERVICE",
+            "E_LINUX_RUNTIME_CUSTOM_SERVICE",
+            "E_LINUX_RUNTIME_EXISTING",
+            "E_LINUX_RUNTIME_SYSTEMD",
+        ),
+        "linuxRuntimeError",
+    ),
+    **dict.fromkeys(
+        (
             "E_CRYPTO_PACKAGE_OWNER",
             "E_CRYPTO_PACKAGE_TOOL",
             "E_CRYPTO_PACKAGE_PLAN",

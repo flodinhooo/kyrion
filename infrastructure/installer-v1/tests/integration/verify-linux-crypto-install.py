@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, "/opt/kyrion-installer")
 import linux_crypto
+import linux_packages
 from recovery import crypto, load_installation
 from runtime import Installation
 
@@ -23,6 +24,7 @@ def main():
         or marker_path.stat().st_uid != 0
         or marker_path.stat().st_mode & 0o077
         or marker.get("scope") != "installer-crypto-package-development-fixture"
+        or marker.get("purpose", "crypto") != "crypto"
         or (marker.get("rootDevice"), marker.get("rootInode"))
         != (root.st_dev, root.st_ino)
         or not linux_crypto.supported()
@@ -30,7 +32,7 @@ def main():
         raise ValueError("E_TEST_ENVIRONMENT")
     target = Path("/work/installed")
     if sys.argv[1:] == ["--install-cut"]:
-        real_run = linux_crypto.run
+        real_run = linux_packages.run
         reviews = []
 
         def approve_cut(summary):
@@ -44,7 +46,7 @@ def main():
                 os._exit(79)  # Explicit fixture cut after real APT, before journal ACK.
             return result
 
-        linux_crypto.run = cut_after_apt
+        linux_packages.run = cut_after_apt
         linux_crypto.configure(target, review=approve_cut)
         raise ValueError("E_TEST_CUT_NOT_REACHED")
     if sys.argv[1:]:

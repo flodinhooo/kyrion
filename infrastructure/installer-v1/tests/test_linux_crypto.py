@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import linux_crypto as crypto
+import linux_packages as package_ops
 from recovery import load_installation
 from runtime import Installation
 
@@ -27,13 +28,13 @@ class LinuxCryptoTests(unittest.TestCase):
         )
         self.enterContext(patch("operational_restore.require_admin"))
         self.enterContext(patch("update_worker.validate_host"))
-        self.enterContext(patch.object(crypto, "supported", return_value=True))
+        self.enterContext(patch.object(package_ops, "supported", return_value=True))
         self.available = self.enterContext(
             patch.object(crypto, "available", side_effect=[False, True])
         )
         self.enterContext(
             patch.object(
-                crypto.shutil,
+                package_ops.shutil,
                 "disk_usage",
                 return_value=SimpleNamespace(free=100 * 1024**3),
             )
@@ -42,7 +43,7 @@ class LinuxCryptoTests(unittest.TestCase):
         self.unfinished = ""
         self.interrupt = False
         self.solver = "Inst gnupg (2.4.7-21 Debian:13/stable [all])\nInst gpgconf (2.4.7-21 Debian:13/stable [amd64])\n"
-        self.enterContext(patch.object(crypto, "run", side_effect=self.execute))
+        self.enterContext(patch.object(package_ops, "run", side_effect=self.execute))
         self.review = Mock(return_value=True)
 
     def execute(self, installation, name, *arguments):
@@ -123,6 +124,31 @@ class LinuxCryptoTests(unittest.TestCase):
         self.available.side_effect = None
         self.available.return_value = True
         self.assertFalse(self.configure()["packagesChanged"])
+        self.assertEqual(self.calls, [])
+        self.review.assert_not_called()
+
+    def test_metadata_only_intent_can_close_when_tools_were_supplied_elsewhere(self):
+        self.installation.state["cryptoPrerequisite"] = {
+            "formatVersion": 1,
+            "phase": "metadata",
+            "packages": [],
+        }
+        self.installation.save()
+        self.available.side_effect = None
+        self.available.return_value = True
+        self.assertFalse(self.configure()["packagesChanged"])
+        self.assertNotIn("cryptoPrerequisite", load_installation(self.target).state)
+        self.assertEqual(self.calls, [])
+
+    def test_another_owned_active_package_intent_is_not_overlapped(self):
+        self.installation.state["runtimePrerequisite"] = {
+            "formatVersion": 1,
+            "phase": "installing",
+            "packages": [{"name": "docker.io", "version": "26.1.5"}],
+        }
+        self.installation.save()
+        with self.assertRaisesRegex(ValueError, "E_CRYPTO_PACKAGE_REPAIR"):
+            self.configure()
         self.assertEqual(self.calls, [])
         self.review.assert_not_called()
 

@@ -190,6 +190,10 @@ def runtime_checks(address: str, hostname: str, fresh: bool = True) -> None:
         raise ValueError(
             "E_AUTOSTART: enable Docker system startup explicitly before installation"
         )
+    network_checks(address, hostname, fresh=fresh)
+
+
+def network_checks(address: str, hostname: str, *, fresh: bool) -> None:
     try:
         addresses = {
             entry[4][0] for entry in socket.getaddrinfo(hostname, 443, socket.AF_INET)

@@ -14,6 +14,8 @@ FILES = (
     "release_channel.py",
     "install_download.py",
     "linux_crypto.py",
+    "linux_packages.py",
+    "linux_runtime.py",
     "host.py",
     "bundle.py",
     "crypto_support.py",

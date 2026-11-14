@@ -24,7 +24,6 @@ from runtime import (
     image_plan,
     installation_lock,
     provision,
-    validate_inputs,
 )
 
 ROOT = Path(__file__).resolve().parent
@@ -348,7 +347,9 @@ def main() -> int:
 
             preflight(args.target, hostname, address, fresh=mode == "fresh")
         else:
-            validate_inputs(args.target, hostname, address)
+            from runtime import preflight as linux_preflight
+
+            linux_preflight(args.target, hostname, address)
         if args.public_key is None:
             from install_download import prepare
 
@@ -437,6 +438,18 @@ def main() -> int:
             print(messages["cancelled"])
             return 0
         print(messages["working"])
+        if not native_windows:
+            from linux_runtime import interactive as prepare_linux_runtime
+
+            prepare_linux_runtime(
+                args.target,
+                args.bundle,
+                args.public_key,
+                digest,
+                hostname,
+                address,
+                messages,
+            )
         selected_provision = provision_native if native_windows else provision
         state = selected_provision(
             args.target,
@@ -497,7 +510,7 @@ def main() -> int:
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         # Error details from untrusted files, TLS or command output aren't logs.
         code = str(error).split(":", 1)[0]
-        if code == "E_INSTALL_DOWNLOAD_CANCELLED":
+        if code in {"E_INSTALL_DOWNLOAD_CANCELLED", "E_LINUX_RUNTIME_CANCELLED"}:
             print(messages["cancelled"])
             return 0
         advice = guidance(code, messages)

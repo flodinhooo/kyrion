@@ -133,7 +133,7 @@ class IdentitySettings(unittest.TestCase):
                     "candidateProvisioning": True,
                 },
             ),
-            patch("guided.validate_inputs"),
+            patch("runtime.preflight"),
             patch(
                 "guided.authenticated_review",
                 return_value=ReviewedBundle(manifest, "a" * 64),

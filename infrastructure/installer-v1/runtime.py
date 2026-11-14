@@ -591,6 +591,44 @@ class Installation:
         self.save()
 
 
+def preflight(target: Path, hostname: str, address: str) -> dict:
+    """Read-only target/resource checks that do not require an installed engine."""
+    validate_inputs(target, hostname, address)
+    observed = inventory(target)
+    if not observed["candidateProvisioning"] or os.geteuid() != 0:
+        raise ValueError("E_PLATFORM: supported candidate Linux host and root required")
+    if observed["ramBytes"] is None or observed["ramBytes"] < 4 * 1024**3:
+        raise ValueError(
+            "E_MEMORY: 4 GiB RAM required; unknown capacity cannot be approved"
+        )
+    if observed["freeBytes"] is None or observed["freeBytes"] < 12 * 1024**3:
+        raise ValueError("E_DISK: 12 GiB free required")
+    return observed
+
+
+def reject_existing_containers() -> None:
+    existing = execute(["docker", "ps", "-a", "--format", "{{.Image}} {{.Names}}"])
+    if any("kyrion" in line.lower() for line in existing.splitlines()):
+        raise ValueError(
+            "E_EXISTING_STATE: existing Kyrion containers require explicit migration"
+        )
+
+
+def fresh_target(installation: Installation | None) -> bool:
+    if installation is None:
+        return True
+    stage = installation.state.get("stage")
+    if not isinstance(stage, str) or stage not in {
+        "reviewed",
+        "configured",
+        "starting",
+        "services-healthy",
+        "uninstalled",
+    }:
+        raise ValueError("E_STATE: invalid installation stage")
+    return stage == "reviewed"
+
+
 def provision(
     target: Path,
     bundle: Path,
@@ -602,16 +640,7 @@ def provision(
     *,
     restore_request: dict | None = None,
 ) -> dict:
-    validate_inputs(target, hostname, address)
-    observed = inventory(target)
-    if not observed["candidateProvisioning"] or os.geteuid() != 0:
-        raise ValueError("E_PLATFORM: supported candidate Linux host and root required")
-    if observed["ramBytes"] is None or observed["ramBytes"] < 4 * 1024**3:
-        raise ValueError(
-            "E_MEMORY: 4 GiB RAM required; unknown capacity cannot be approved"
-        )
-    if observed["freeBytes"] is None or observed["freeBytes"] < 12 * 1024**3:
-        raise ValueError("E_DISK: 12 GiB free required")
+    observed = preflight(target, hostname, address)
     with installation_lock(target):
         reviewed = authenticated_review(bundle, public_key)
         manifest = reviewed.manifest
@@ -622,17 +651,21 @@ def provision(
         ):
             raise ValueError("E_RELEASE: reviewed release or architecture differs")
         plan = image_plan(manifest)
-        runtime_checks(address, hostname, fresh=not target.exists())
-        if not target.exists():
-            # Never adopt existing Kyrion containers, including stopped ones.
-            existing = execute(
-                ["docker", "ps", "-a", "--format", "{{.Image}} {{.Names}}"]
-            )
-            if any("kyrion" in line.lower() for line in existing.splitlines()):
-                raise ValueError(
-                    "E_EXISTING_STATE: existing Kyrion containers require explicit migration"
-                )
-        installation = Installation(target, manifest, digest, hostname, address)
+        installation = (
+            Installation(target, manifest, digest, hostname, address)
+            if target.exists()
+            else None
+        )
+        fresh = fresh_target(installation)
+        if installation is not None:
+            from authority import require_active
+
+            require_active(installation.state, preparing=restore_request is not None)
+        runtime_checks(address, hostname, fresh=fresh)
+        if fresh:
+            reject_existing_containers()
+        if installation is None:
+            installation = Installation(target, manifest, digest, hostname, address)
         if restore_request is not None:
             from authority import prepare_restore
 
