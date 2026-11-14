@@ -7,6 +7,7 @@ import os
 import re
 import stat
 import subprocess
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -300,7 +301,71 @@ class Compose:
         self.ensure_database()
 
     def ensure_database(self):
-        self.compose("up", "-d", "--pull", "never", "--no-deps", "--wait", "postgres")
+        # Compose 2.26's wait path can observe the previous clean stop while
+        # restarting an existing container. Check the daemon's current state
+        # ourselves; a successful `up` alone never establishes readiness.
+        self.compose("up", "-d", "--pull", "never", "--no-deps", "postgres")
+        deadline = time.monotonic() + 130
+        started = False
+        for _attempt in range(65):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            identifier = self.compose("ps", "--all", "-q", "postgres").decode().strip()
+            if not re.fullmatch(r"[a-f0-9]{12,64}", identifier):
+                raise ValueError("E_UPDATE_DATABASE_TARGET")
+            containers = json.loads(self.run("inspect", identifier))
+            if not isinstance(containers, list) or len(containers) != 1:
+                raise ValueError("E_UPDATE_DATABASE_TARGET")
+            container = containers[0]
+            labels = container.get("Config", {}).get("Labels", {})
+            expected = self.installation.state["runtimeImageIds"]["postgres"]
+            if (
+                labels.get("com.docker.compose.project")
+                != "kyrion-" + self.installation.state["installationId"]
+                or labels.get("com.docker.compose.service") != "postgres"
+                or container.get("Image") != expected
+                or not any(
+                    mount.get("Type") == "bind"
+                    and mount.get("Destination") == "/var/lib/postgresql/data"
+                    and Path(mount.get("Source", "")).resolve()
+                    == (self.root / "data/postgres").resolve()
+                    for mount in container.get("Mounts", [])
+                )
+            ):
+                raise ValueError("E_UPDATE_DATABASE_TARGET")
+            state = container.get("State", {})
+            if (
+                state.get("Status") == "exited"
+                and state.get("Running") is False
+                and state.get("ExitCode") == 0
+                and not state.get("OOMKilled")
+                and not state.get("Dead")
+                and not started
+            ):
+                # The supported Debian baseline can report Running for the
+                # previous stopped process. Start only this validated container
+                # once; never accept its old health or repeatedly restart it.
+                self.run("start", identifier)
+                started = True
+                time.sleep(min(2, remaining))
+                continue
+            if (
+                state.get("Running") is True
+                and state.get("Status") == "running"
+                and state.get("Health", {}).get("Status") == "healthy"
+            ):
+                return
+            if (
+                state.get("Dead") is True
+                or state.get("OOMKilled") is True
+                or state.get("Health", {}).get("Status") == "unhealthy"
+                or state.get("Status") in {"dead", "removing"}
+                or (state.get("Status") == "exited" and state.get("ExitCode") != 0)
+            ):
+                raise ValueError("E_UPDATE_DATABASE_HEALTH")
+            time.sleep(min(2, remaining))
+        raise ValueError("E_UPDATE_DATABASE_HEALTH")
 
     def capture(self, destination, password):
         from recovery import capture

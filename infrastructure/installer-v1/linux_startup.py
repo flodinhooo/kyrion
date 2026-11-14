@@ -120,7 +120,7 @@ def definition(installation, worker: str) -> str:
     return (
         "[Unit]\nDescription=Kyrion ordered platform startup\n"
         "After=docker.service network-online.target\nRequires=docker.service\n"
-        "Wants=network-online.target\nStartLimitIntervalSec=infinity\nStartLimitBurst=3\n"
+        "Wants=network-online.target\nStartLimitIntervalSec=300\nStartLimitBurst=3\n"
         "\n[Service]\nType=oneshot\nRemainAfterExit=yes\nUser=root\nUMask=0077\n"
         "WorkingDirectory="
         + target
@@ -269,6 +269,13 @@ def configure(target: Path, *, enabled: bool | None = None) -> dict:
         if not path.exists():
             publish_unit(path.parent, path.name, text)
         systemctl("daemon-reload")
+        # A reviewed administrator reconfiguration may retry a repaired service.
+        # Background startup never clears its own restart budget.
+        if (
+            systemctl("show", path.name, "--property=ActiveState", "--value")
+            == "failed"
+        ):
+            systemctl("reset-failed", path.name)
         # Enable only. Starting a second lock-owning worker here would race the
         # active installer; its existing checked start applies the overlay now.
         systemctl("enable" if selected else "disable", path.name)

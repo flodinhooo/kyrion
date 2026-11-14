@@ -137,7 +137,7 @@ class LinuxStartup(unittest.TestCase):
     def test_supervisor_has_finite_restart_budget_and_no_stop_lock_recursion(self):
         self.installation.target = PurePosixPath("/var/lib/kyrion")
         text = startup.definition(self.installation, self.value["workerFile"])
-        self.assertIn("StartLimitIntervalSec=infinity\nStartLimitBurst=3", text)
+        self.assertIn("StartLimitIntervalSec=300\nStartLimitBurst=3", text)
         self.assertIn("Requires=docker.service", text)
         self.assertIn("--background-platform-start", text)
         self.assertNotIn("ExecStop=", text)

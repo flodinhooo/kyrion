@@ -1,6 +1,8 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_DATABASE_HEALTH": "updatesErrorDatabaseHealth",
+    "E_UPDATE_DATABASE_TARGET": "updatesErrorDatabaseTarget",
     **dict.fromkeys(
         (
             "E_OLLAMA_MODEL_PROTOCOL",

@@ -19,6 +19,12 @@ to 49 pass in a disposable Debian AMD64 guest through split continuations.
 An uncaptured first-attempt Docker recreation error remains under investigation;
 cold boot, Windows SCM and ARM64 acceptance are not implied. Current suites:
 471 Windows tests (nine skips), 479 isolated Linux tests (twenty skips).
+The [database-startup correction](status/2026-11-14-installer-database-startup.md)
+supersedes that checkpoint's uncaptured-restart limitation and updates suites to
+476 Windows tests (nine skips) and 484 Linux tests (twenty skips). The fresh native
+Linux full-stack installation/update/recovery retest passes without an unplanned
+retry; no eligibility/systemd/readiness probes are injected. This remains
+isolated AMD64 evidence, not physical boot or general product acceptance.
 
 | ID  | Requirement                                             | Implementation                                                                                              | State               | Missing work / acceptance                                                                                                                                                                   | Evidence                                                                                                                                                             | External prerequisite                                                         |
 |-----|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|

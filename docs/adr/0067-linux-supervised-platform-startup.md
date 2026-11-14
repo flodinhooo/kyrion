@@ -32,6 +32,12 @@ second lock-owning worker while the installer holds its lock. Explicit disable
 affects future boot; application removal also removes only the owned unit.
 Source retirement disables that unit before issuing the existing transfer receipt.
 
+The start-rate budget is three attempts per five-minute window. An infinite
+interval would also exhaust successful manual starts across the unit lifetime.
+Reviewed administrator reconfiguration may reset an actually failed owned unit;
+background execution never resets its own rate limit. A newly created inactive
+unit does not require a failed-state reset.
+
 This adds no account, Space, general enrollment agent or competing authority
 database. Guest-init/systemd tests, container integration, physical cold boot,
 Windows pre-login startup and Raspberry Pi acceptance remain separate evidence.
