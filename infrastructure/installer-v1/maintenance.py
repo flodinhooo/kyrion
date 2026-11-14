@@ -922,6 +922,18 @@ def run(args, messages: dict[str, str]) -> int:
     if os.name == "nt" and args.check_updates:
         print(json.dumps(check_updates(args)))
         return 0
+    if os.name == "nt" and args.verify_backup:
+        from native_verify_backup import verify
+
+        print(messages["nativeBackupVerificationReview"])
+        if (
+            input("[VERIFY-IN-TEMPORARY-DATABASE/CANCEL]: ").strip()
+            != "VERIFY-IN-TEMPORARY-DATABASE"
+        ):
+            raise ValueError("E_CONFIRMATION")
+        password = getpass.getpass(messages["backupPassword"] + ": ")
+        print(json.dumps(verify(args.target, args.verify_backup, password)))
+        return 0
     if os.name != "posix" or os.geteuid() != 0:
         raise ValueError("E_PLATFORM: supported Linux root maintenance required")
     if args.check_updates:

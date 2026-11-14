@@ -1,6 +1,17 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_BACKUP_VERIFICATION_CORE_REQUIRED",
+            "E_BACKUP_VERIFICATION_CLUSTER",
+            "E_BACKUP_VERIFICATION_SCHEMA",
+            "E_BACKUP_VERIFICATION_DATABASE",
+            "E_BACKUP_VERIFICATION_JOURNAL",
+            "E_BACKUP_VERIFICATION_AMBIGUOUS",
+        ),
+        "nativeBackupVerificationError",
+    ),
     "E_SYSTEM_TOOL": "systemToolsError",
     "E_GPG_SOCKET_PARENT": "nativeCryptoScratchError",
     "E_NATIVE_DATA_DIRECTORY": "nativeCryptoScratchError",

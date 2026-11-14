@@ -55,6 +55,36 @@ class NativeBackup(unittest.TestCase):
                 )
             scm.assert_not_called()
 
+    def test_unsafe_agent_parent_fails_before_scratch_or_writer_pause(self):
+        installation = SimpleNamespace(
+            state={}, target=Path("unused"), verify_files=MagicMock()
+        )
+        with (
+            patch.object(
+                native_backup,
+                "read_configuration",
+                return_value={
+                    "hostname": "fixture.test",
+                    "address": "127.0.0.1",
+                    "ports": {},
+                },
+            ),
+            patch.object(native_backup, "preflight"),
+            patch.object(native_backup, "permissions"),
+            patch(
+                "recovery.native_crypto_parent",
+                side_effect=ValueError("E_GPG_SOCKET_PARENT"),
+            ),
+            patch.object(native_backup, "create_private_directory") as create,
+            patch.object(native_backup, "quiesce") as pause,
+            self.assertRaisesRegex(ValueError, "E_GPG_SOCKET_PARENT"),
+        ):
+            native_backup.capture(
+                installation, Path("unused.gpg"), "Synthetic-password-123456"
+            )
+        create.assert_not_called()
+        pause.assert_not_called()
+
     def fixture(self, states=None, foreign=None, stop_failure=None, start_failure=None):
         events = []
         manager = MagicMock(
@@ -253,6 +283,7 @@ class NativeBackup(unittest.TestCase):
                 patch.object(native_backup, "read_configuration", return_value=config),
                 patch.object(native_backup, "preflight"),
                 patch.object(native_backup, "permissions"),
+                patch("recovery.native_crypto_parent", return_value=root),
                 patch.object(native_backup, "admin_environment", return_value={}),
                 patch.object(
                     native_backup,

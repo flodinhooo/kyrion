@@ -166,6 +166,9 @@ def capture(
     )
     permissions(root, "verify")
     installation.verify_files()
+    from recovery import native_crypto_parent
+
+    native_crypto_parent()  # Fail before creating scratch or pausing writers.
     reject_links(destination)
     if destination.exists() or not destination.parent.is_dir():
         raise ValueError("E_BACKUP_TARGET")

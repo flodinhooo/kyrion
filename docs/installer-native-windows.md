@@ -20,6 +20,19 @@ password handoff. Whole-host elevation, service and reboot acceptance remain ope
 
 ## Build and trust
 
+Installed native Windows maintenance also supports
+`--verify-backup <encrypted-archive> --target "C:\Program Files\Kyrion"`.
+After explicit review and password entry it uses the verified installed runtime
+to create an inactive random database, run packaged Core migrations, import
+portable rows and check constraints/counts. It never starts Core application
+services against that database or replaces the live database. It requires a Core
+payload containing `BackupVerificationAdmin`; older payloads fail explicitly.
+An acknowledged interrupted check can clean up its exact database OID. An
+unacknowledged creation or changed OID requires administrator review and is not
+automatically deleted. This is installed-runtime verification, not verification
+on a bare target. Temporary database writes use protected PostgreSQL storage and
+normal WAL retention; deletion is not a secure-erasure guarantee. See ADR 0079.
+
 `release/build-windows-bundle.py --profile <clean-profile> --metadata <json>
 --output <new-directory>` produces `manifest.json` and
 `kyrion-windows-amd64.zip`. It never downloads dependencies or publishes a release.

@@ -407,6 +407,15 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
         clear = target / "service-backup-check.tar"
         recovery_password = "Synthetic-service-backup-password-123456"
         captured = backup(target, encrypted, recovery_password)
+        from native_verify_backup import verify as verify_backup
+
+        verified_backup = verify_backup(target, encrypted, recovery_password)
+        if (
+            verified_backup.get("restoreVerified") is not True
+            or verified_backup.get("liveDatabaseReplaced") is not False
+            or verified_backup.get("applicationServicesStarted") is not False
+        ):
+            raise ValueError("E_TEST_NATIVE_BACKUP_DATABASE_VERIFICATION")
         crypto(
             encrypted,
             clear,
@@ -509,6 +518,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             "nativeInstalledSchemaQueryVerified": True,
             "actualSystemUpdateTaskExecution": True,
             "actualSystemBackupTaskCaptureAndVerification": True,
+            "actualNativeInactiveBackupDatabaseVerification": True,
             "backupTaskManuallyTriggeredNotBootAcceptance": True,
             "nativeSingleHostUpdateAndSnapshotRecovery": True,
             "syntheticReleaseLabelUnchangedPublicBinaries": True,

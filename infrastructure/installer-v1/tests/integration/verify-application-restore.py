@@ -27,6 +27,7 @@ from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 import authority
+import native_verify_backup
 import operational_restore
 import portable_database
 from crypto_support import certificate, private_tls_key
@@ -236,6 +237,97 @@ def keys(installation):
     installation.write("secrets/bootstrap.secret", secrets.token_urlsafe(32))
     installation.write("secrets/postgres-password", "fixture")
     (installation.target / "data/knowledge").mkdir(parents=True)
+
+
+def verify_disposable_database(source, core, postgres, java, jar, backup, password):
+    """Real migration/encryption/row import; native OS/tool selection is adapted."""
+    database_password = "Synthetic-verification-role-password-123456"
+    postgres.query(
+        "postgres",
+        "CREATE ROLE kyrion LOGIN SUPERUSER PASSWORD '" + database_password + "'",
+    )
+    password_file = source.target / "verification-postgres-password"
+    password_file.write_text(database_password)
+    os.chmod(password_file, 0o600)
+
+    class Adapter:
+        gpg = None
+        environment = postgres.environment
+
+        def command(self, sql, *, database):
+            return postgres.query(database, sql)
+
+        def migrate(self, database):
+            environment = dict(postgres.environment)
+            environment.update(
+                KYRION_BACKUP_VERIFICATION_DATABASE_URL="jdbc:postgresql://127.0.0.1:"
+                + str(postgres.port)
+                + "/"
+                + database,
+                KYRION_DATABASE_PASSWORD_FILE=str(password_file),
+            )
+            native_verify_backup.prepare_schema(java, jar, source.target, environment)
+
+        def copy_in(self, database, sql, path):
+            if os.name == "nt":
+                postgres.query(database, portable_database.file_copy_command(sql, path))
+            else:
+                with path.open("rb") as stream:
+                    postgres.query(database, sql, stdin=stream)
+
+    adapter = Adapter()
+    before = core.command(COUNTS_SQL)
+    starts = core.starts
+    result = native_verify_backup.verify_loaded(source, backup, password, adapter)
+    if (
+        not result["restoreVerified"]
+        or result["liveDatabaseReplaced"]
+        or result["applicationServicesStarted"]
+    ):
+        raise ValueError("E_FIXTURE_BACKUP_VERIFICATION_RECEIPT")
+    try:
+        native_verify_backup.verify_loaded(
+            source, backup, "Synthetic-wrong-verification-password", adapter
+        )
+    except ValueError as error:
+        if str(error) != "E_BACKUP_INTEGRITY":
+            raise
+    else:
+        raise ValueError("E_FIXTURE_BACKUP_WRONG_PASSWORD")
+    migrate = adapter.migrate
+
+    def fail_after_schema(database):
+        migrate(database)
+        raise ValueError("E_FIXTURE_INJECTED_VERIFICATION_SCHEMA_FAILURE")
+
+    with patch.object(adapter, "migrate", side_effect=fail_after_schema):
+        try:
+            native_verify_backup.verify_loaded(source, backup, password, adapter)
+        except ValueError as error:
+            if str(error) != "E_FIXTURE_INJECTED_VERIFICATION_SCHEMA_FAILURE":
+                raise
+        else:
+            raise ValueError("E_FIXTURE_BACKUP_SCHEMA_FAILURE_IGNORED")
+    if "backupVerification" in source.state:
+        raise ValueError("E_FIXTURE_BACKUP_FAILED_SCHEMA_CLEANUP")
+    # Real leftover database plus a persisted identity simulates an acknowledged
+    # prior operation killed before cleanup. The next run must drop only it.
+    name = "kyrion_verify_" + uuid.uuid4().hex
+    postgres.query("postgres", 'CREATE DATABASE "' + name + '" TEMPLATE template0')
+    source.state["backupVerification"] = {
+        "database": name,
+        "oid": native_verify_backup.database_oid(adapter, name),
+    }
+    source.save()
+    native_verify_backup.verify_loaded(source, backup, password, adapter)
+    if native_verify_backup.database_oid(adapter, name) is not None:
+        raise ValueError("E_FIXTURE_BACKUP_VERIFICATION_CLEANUP")
+    if (
+        core.starts != starts
+        or core.command(COUNTS_SQL) != before
+        or "backupVerification" in source.state
+    ):
+        raise ValueError("E_FIXTURE_BACKUP_VERIFICATION_LIVE_MUTATION")
 
 
 def recovery_console(core, operation, space, key, secret):
@@ -460,6 +552,9 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         create_archive(sources, metadata, archive)
         password = "Synthetic-backup-encryption-password-123456"
         crypto(archive, backup, password)
+        verify_disposable_database(
+            source, source_core, postgres, java, jar, backup, password
+        )
         digest = hashlib.sha256(backup.read_bytes()).hexdigest()
         authority.prepare_restore(target, {"backupSha256": digest})
         keys(target)
@@ -712,6 +807,11 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
             "maintenancePreservesAccountsSessionsAndStartupAudit": True,
             "normalAccessRestoredWithoutIdentityChange": True,
             "actualEncryptedBackup": True,
+            "actualInactiveBackupVerificationDatabase": True,
+            "backupVerificationMigrationBinaryImportAndCounts": True,
+            "backupVerificationWrongPasswordAndAcknowledgedCleanup": True,
+            "backupVerificationCleansFailedSchemaPreparation": True,
+            "backupVerificationPreservesLiveDatabaseAndCoreStarts": True,
             "newTargetHostIdentity": True,
             "sourceRetirementRequired": True,
             "retiredSourceRestartDenied": True,

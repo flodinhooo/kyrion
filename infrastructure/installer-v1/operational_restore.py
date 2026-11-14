@@ -131,7 +131,7 @@ def retire_source(
         }
 
 
-def validate_backup(manifest: dict, installation) -> dict:
+def validate_backup(manifest: dict, installation, *, allow_same_identity=False) -> dict:
     metadata = manifest["metadata"]
     if (
         not isinstance(metadata.get("configuration"), dict)
@@ -157,7 +157,7 @@ def validate_backup(manifest: dict, installation) -> dict:
         source_id = str(uuid.UUID(metadata["installationId"]))
     except (KeyError, ValueError, TypeError, AttributeError):
         raise ValueError("E_RESTORE_COMPATIBILITY") from None
-    if source_id == installation.state["installationId"]:
+    if not allow_same_identity and source_id == installation.state["installationId"]:
         raise ValueError("E_RESTORE_TARGET_IDENTITY")
     return metadata
 

@@ -28,6 +28,7 @@ FILES = (
     "native_bundle.py",
     "native_runtime.py",
     "native_backup.py",
+    "native_verify_backup.py",
     "backup_policy.py",
     "backup_store.py",
     "backup_schedule.py",
