@@ -82,6 +82,7 @@ export function AccountMenu({ locale }: { locale: Locale }) {
           {t.linkTab}
         </Link>
         <form action="/api/account/manage" method="get">
+          <input type="hidden" name="locale" value={locale} />
           <button
             type="submit"
             className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-muted"

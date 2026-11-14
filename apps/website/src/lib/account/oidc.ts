@@ -37,6 +37,14 @@ export async function authorizationUrl(
     nonce: flow.nonce,
     ...(register ? { prompt: "create" } : {}),
     ui_locales: flow.locale,
+    ...(flow.destination === "profile" || flow.destination === "password"
+      ? {
+          kc_action:
+            flow.destination === "profile"
+              ? "UPDATE_PROFILE"
+              : "UPDATE_PASSWORD",
+        }
+      : {}),
   });
 }
 
@@ -62,6 +70,11 @@ export async function authenticate(
     !result.refresh_token
   )
     throw new Error("Invalid identity claims");
+  if (
+    (flow.destination === "profile" || flow.destination === "password") &&
+    (!flow.expectedSubject || claims.sub !== flow.expectedSubject)
+  )
+    throw new Error("Account action identity mismatch");
   return {
     issuer: claims.iss,
     subject: claims.sub,

@@ -18,7 +18,7 @@ Names are optional; the email address is the username. Verified email is checked
 in the signed identity proof before a website session is issued.
 
 The header has a shared account control on desktop and mobile. Signed-in users
-get account overview, provider account settings and logout. The account page
+get account overview, website account settings and logout. The account page
 shows customer actions and a separate Link account tab with code entry. No technical expiry
 countdown or invitation request is shown. The shared session state rechecks on
 focus, visibility and once per minute while visible, with stale-request guards
@@ -105,8 +105,11 @@ build/tests keep accounts disabled and make no external identity request.
 - `POST /api/account/logout`: requires exact configured Origin and session-bound
   CSRF header. Removes this website session, attempts provider renewal-credential
   revocation and clears its cookie. Logout does not require a successful refresh.
-- `GET /api/account/manage`: redirects to the configured provider account console;
-  no arbitrary return URL or administration endpoint is accepted.
+- `GET /api/account/manage`: returns to localized website settings; no arbitrary
+  return URL or administration endpoint is accepted.
+- `POST /api/account/profile` and `/api/account/password`: verified-session and
+  CSRF-protected provider actions, returning to the website through a one-use,
+  expected-subject-bound OIDC flow.
 
 Account records contain only generated UUID, exact issuer and subject, uniquely
 constrained together. No email, name, password, role or local user is copied.
@@ -153,7 +156,24 @@ local disablement and local password access remain independent.
 Cookie validity is not data retention: expiry alone does not delete account,
 security records or backups. Confirm operational deletion under KY-024.
 
-## Verification
+## Website-initiated settings
+
+The settings menu returns to the localized website account page. Profile and
+password buttons start supported provider application-initiated actions and
+return through the existing authorization-code callback. They require a verified
+website session, exact Origin and constant-time CSRF verification. A one-use flow
+also binds the expected central subject; a different signed identity is rejected.
+Cancellation does not claim a successful update. Passwords remain exclusively at
+the identity origin, which uses an inherited Kyrion login theme. No password grant,
+iframe or provider administrator credential is introduced.
+
+Apply `migrations/004-account-actions.sql` to the dedicated website database before
+deploying these actions. It adds a nullable flow column; existing flows and
+remembered sessions remain valid. Do not apply it to Core or Keycloak databases.
+This slice covers profile and password editing, not MFA/passkey management.
+See [ADR 0068](../../docs/adr/0068-customer-identity-experience.md).
+
+## Verification details
 
 `tests/account-security.spec.ts` exercises actual openid-client code against a
 synthetic loopback OIDC server with real RSA signatures, including wrong signature,

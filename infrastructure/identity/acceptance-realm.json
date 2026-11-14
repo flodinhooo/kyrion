@@ -1,6 +1,7 @@
 {
   "realm": "kyrion",
   "enabled": true,
+  "loginTheme": "kyrion",
   "sslRequired": "none",
   "registrationAllowed": true,
   "verifyEmail": true,

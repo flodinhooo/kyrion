@@ -757,7 +757,7 @@
     "remembered": "Auf deinem persönlichen Gerät bleibst du angemeldet. Auf gemeinsam genutzten Geräten melde dich nach der Nutzung ab.",
     "welcome": "Schön, dass du da bist. Hier findest du deine Kontoeinstellungen und die Hilfe zum Verbinden deiner Installation.",
     "manage": "Kontoeinstellungen",
-    "manageHelp": "Verwalte deine persönlichen Angaben, dein Passwort und die Sicherheit deines Accounts.",
+    "manageHelp": "Verwalte hier dein Profil und Passwort. Nach der sicheren Bestätigung kehrst du zu Kyrion zurück.",
     "openSettings": "Kontoeinstellungen öffnen",
     "checking": "Account wird geladen …",
     "accountNavigation": "Account-Bereiche",
@@ -779,7 +779,9 @@
     "businessInstallation": "Unternehmen",
     "localAccount": "Lokaler Benutzer",
     "linkedOn": "Verknüpft am",
-    "lastConfirmed": "Zuletzt bestätigt"
+    "lastConfirmed": "Zuletzt bestätigt",
+    "editProfile": "Profil bearbeiten",
+    "changePassword": "Passwort ändern"
   },
   "connect": {
     "description": "Verbinde deine lokale Kyrion-Installation mit deinem zentralen Account über den angezeigten Code."

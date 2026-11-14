@@ -61,6 +61,12 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
     await owner.query(readFileSync("account-schema.sql", "utf8"));
     await owner.query(readFileSync("account-runtime-grants.sql", "utf8"));
     await owner.query(
+      readFileSync("migrations/004-account-actions.sql", "utf8"),
+    );
+    await owner.query(
+      readFileSync("migrations/004-account-actions.sql", "utf8"),
+    );
+    await owner.query(
       readFileSync("migrations/002-remembered-sessions.sql", "utf8"),
     );
     await owner.query(
@@ -91,6 +97,20 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
       identity.expiresAt,
       "initial-renewal",
     );
+    expect(await store.actionSubject(session.id)).toBe(identity.subject);
+    expect(await store.actionSubject("unknown")).toBeNull();
+    const flowId = "one-use-account-action";
+    const flow = {
+      state: "state",
+      nonce: "nonce",
+      verifier: "verifier",
+      locale: "en",
+      destination: "password",
+      expectedSubject: identity.subject,
+    } as const;
+    await store.begin(flowId, flow);
+    expect(await store.consume(flowId)).toEqual(flow);
+    expect(await store.consume(flowId)).toBeNull();
     expect(Date.parse(session.expiresAt) - Date.now()).toBeGreaterThan(
       rememberedLifetime - 10000,
     );

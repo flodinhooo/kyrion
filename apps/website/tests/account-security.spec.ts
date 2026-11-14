@@ -189,6 +189,7 @@ for (const defect of [
   "state",
   "algorithm",
   "unverified-email",
+  "action-subject",
 ] as const) {
   test(`OIDC validates real RSA signatures and claims: ${defect}`, async () => {
     const key = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -198,6 +199,9 @@ for (const defect of [
       nonce: secret(),
       verifier: secret(),
       locale: "en",
+      destination: "password",
+      expectedSubject:
+        defect === "action-subject" ? "different-subject" : "stable-subject",
     } as const;
     let issuer = "";
     let exchangedVerifier = "";
@@ -294,6 +298,12 @@ for (const defect of [
       );
       expect(authorize.searchParams.get("redirect_uri")).toBe(config.callback);
       expect(authorize.searchParams.has("max_age")).toBe(false);
+      expect(authorize.searchParams.get("kc_action")).toBe("UPDATE_PASSWORD");
+      expect(
+        (
+          await authorizationUrl(config, { ...flow, destination: "profile" })
+        ).searchParams.get("kc_action"),
+      ).toBe("UPDATE_PROFILE");
       const registration = await authorizationUrl(config, flow, true);
       expect(registration.searchParams.get("prompt")).toBe("create");
       expect(registration.searchParams.get("state")).toBe(flow.state);
@@ -318,7 +328,11 @@ for (const defect of [
         });
       } else {
         await expect(authenticate(config, callback, flow)).rejects.toThrow();
-        if (defect !== "state" && defect !== "nonce")
+        if (
+          defect !== "state" &&
+          defect !== "nonce" &&
+          defect !== "action-subject"
+        )
           await expect(
             renewIdentity(config, "fixture-renewal-credential"),
           ).rejects.toThrow();
@@ -376,6 +390,16 @@ test("customer account menu, browser registration and local help work in both la
       );
       await page.goto(`${prefix}/account`);
       if (signedIn) {
+        for (const action of ["profile", "password"]) {
+          const form = page.locator(`form[action="/api/account/${action}"]`);
+          await expect(form).toHaveAttribute("method", "post");
+          await expect(form.locator('input[name="csrf"]')).toHaveValue(
+            "fixture-csrf",
+          );
+          await expect(form.locator('input[name="locale"]')).toHaveValue(
+            locale,
+          );
+        }
         await expect(
           page.getByRole("heading", { name: copy.menu, exact: true }),
         ).toBeVisible();

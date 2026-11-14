@@ -10,6 +10,8 @@ Place `pilot.compose.yaml`, `pilot-realm.json` and `pilot.Caddyfile` in an owner
 directory on the Pi, e.g. `~/.local/state/kyrion/identity-central/` (0700). Create
 `.env` there (0600) using `pilot.env.example`, independent random secrets and
 reviewed image digests. Keep it out of Git, chat, command arguments and logs.
+Copy `themes/` alongside the Compose file for its read-only Kyrion theme mount.
+Existing imported realms need explicit theme selection; see [theme operations](themes/README.md).
 
 ```sh
 cd ~/.local/state/kyrion/identity-central

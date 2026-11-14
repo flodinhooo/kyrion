@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS website_oidc_flow (
     verifier text NOT NULL,
     locale text NOT NULL CHECK (locale IN ('en','de')),
     destination text NOT NULL DEFAULT 'account',
+    expected_subject text,
     expires_at timestamptz NOT NULL
 );
 CREATE TABLE IF NOT EXISTS website_session (

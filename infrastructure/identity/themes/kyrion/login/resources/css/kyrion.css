@@ -1,0 +1,98 @@
+/* Inherit Keycloak's security forms, semantics and keyboard behavior. */
+:root {
+  color-scheme: light dark;
+  --kyrion-bg: #faf8f3;
+  --kyrion-card: #fffefa;
+  --kyrion-text: #191815;
+  --kyrion-muted: #665f55;
+  --kyrion-border: #ddd7ce;
+  --kyrion-accent: #6944c5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --kyrion-bg: #0d0c14;
+    --kyrion-card: #1b1826;
+    --kyrion-text: #f5f2fc;
+    --kyrion-muted: #c2b9d0;
+    --kyrion-border: #41384e;
+    --kyrion-accent: #bba3ff;
+  }
+}
+html,
+body,
+.pf-v5-c-login {
+  background: var(--kyrion-bg) !important;
+  color: var(--kyrion-text);
+  font-family: system-ui, sans-serif;
+}
+.pf-v5-c-login {
+  --pf-v5-c-login--BackgroundImage: none;
+  --pf-v5-c-login__main--BackgroundColor: var(--kyrion-card);
+  --pf-v5-c-login__main--Color: var(--kyrion-text);
+  --pf-v5-c-login__main--BorderTopColor: var(--kyrion-accent);
+  min-height: 100dvh;
+  padding: clamp(20px, 5vw, 64px);
+}
+.pf-v5-c-login__container {
+  max-width: 580px;
+  margin-inline: auto;
+}
+.pf-v5-c-login__main {
+  border: 1px solid var(--kyrion-border);
+  border-radius: 20px;
+  box-shadow: 0 16px 55px #00000014;
+  color: var(--kyrion-text) !important;
+}
+#kc-header-wrapper {
+  color: var(--kyrion-text) !important;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: 0.2em;
+  padding-block: 20px;
+}
+h1,
+label,
+.pf-v5-c-form__label,
+.pf-v5-c-title {
+  color: var(--kyrion-text);
+}
+a {
+  color: var(--kyrion-accent);
+  text-underline-offset: 0.2em;
+}
+input,
+select,
+textarea {
+  font-size: max(1rem, 1em);
+}
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--kyrion-bg);
+  --pf-v5-c-form-control--Color: var(--kyrion-text);
+  --pf-v5-c-form-control--BorderBottomColor: var(--kyrion-border);
+  min-height: 44px;
+  border-radius: 8px;
+}
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: #6944c5;
+  --pf-v5-c-button--m-primary--Color: #fff;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #5836b0;
+  border-radius: 9px;
+  min-height: 44px;
+}
+.pf-v5-c-login__main-footer-band {
+  background: transparent;
+  border-top: 1px solid var(--kyrion-border);
+  color: var(--kyrion-muted);
+}
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--kyrion-accent);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}

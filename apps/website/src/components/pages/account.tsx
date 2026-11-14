@@ -111,16 +111,34 @@ export function AccountPage({
             id="overview"
             className="rounded-2xl border border-border bg-card p-6"
           >
-            <h2 className="text-xl font-semibold">{t.account.manage}</h2>
+            <h2 id="settings" className="text-xl font-semibold">
+              {t.account.manage}
+            </h2>
             <p className="mt-3 text-muted-foreground">{t.account.manageHelp}</p>
-            <form action="/api/account/manage" method="get">
-              <button
-                type="submit"
-                className="mt-4 inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4"
-              >
-                {t.account.openSettings}
-              </button>
-            </form>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {(["profile", "password"] as const).map((action) => (
+                <form
+                  key={action}
+                  action={`/api/account/${action}`}
+                  method="post"
+                >
+                  <input type="hidden" name="locale" value={locale} />
+                  <input
+                    type="hidden"
+                    name="csrf"
+                    value={status?.session?.csrf ?? ""}
+                  />
+                  <button
+                    type="submit"
+                    className="mt-4 inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4"
+                  >
+                    {action === "profile"
+                      ? t.account.editProfile
+                      : t.account.changePassword}
+                  </button>
+                </form>
+              ))}
+            </div>
           </div>
           <section
             hidden={!connecting}

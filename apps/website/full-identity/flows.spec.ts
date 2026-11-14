@@ -178,7 +178,18 @@ test("real registration, verified email, website and local login/link/offline/un
   const suffix = randomBytes(6).toString("hex");
   const centralUsername = `central-${suffix}`;
   const email = `${centralUsername}@acceptance.invalid`;
-  const centralPassword = randomBytes(32).toString("base64url");
+  let centralPassword = randomBytes(32).toString("base64url");
+
+  for (const action of ["profile", "password"]) {
+    const denied = await context.request.post(
+      `${website}/api/account/${action}`,
+      {
+        headers: { origin: website },
+        form: { locale: "en", csrf: "invalid" },
+      },
+    );
+    expect(denied.status()).toBe(403);
+  }
 
   await page.goto(`${website}/en/account`);
   await page
@@ -196,7 +207,11 @@ test("real registration, verified email, website and local login/link/offline/un
   if (await page.locator("#password-new").count()) {
     await page.locator("#password-new").fill(centralPassword);
     await page.locator("#password-confirm").fill(centralPassword);
-    await page.locator('button[type="submit"],input[type="submit"]').click();
+    await page
+      .locator(
+        'button[type="submit"]:not([name="cancel-aia"]),input[type="submit"]',
+      )
+      .click();
   }
   await expect(
     page.getByText(/verify your email|verify your email address/i).first(),
@@ -253,6 +268,107 @@ test("real registration, verified email, website and local login/link/offline/un
   await expect(
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();
+
+  // Supported provider actions return to the website without the account console.
+  const invalidCsrf = await context.request.post(
+    `${website}/api/account/password`,
+    {
+      headers: { origin: website },
+      form: { locale: "en", csrf: "invalid" },
+    },
+  );
+  expect(invalidCsrf.status()).toBe(403);
+  const manage = await context.request.get(
+    `${website}/api/account/manage?locale=en`,
+    { maxRedirects: 0 },
+  );
+  expect(manage.headers().location).toBe(`${website}/en/account#settings`);
+  await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  await expect(page.locator('link[href*="kyrion.css"]')).toHaveCount(1);
+  await page.locator("#firstName").fill("Updated");
+  await page
+    .locator(
+      'button[type="submit"]:not([name="cancel-aia"]),input[type="submit"]',
+    )
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "My account", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Change password", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (await page.locator("#password").isVisible()) ||
+        (await page.locator("#password-new").isVisible()),
+    )
+    .toBe(true);
+  if (await page.locator("#password").isVisible()) {
+    await page.locator("#password").fill(centralPassword);
+    await page.locator("#kc-login").click();
+  }
+  centralPassword = randomBytes(32).toString("base64url");
+  await page.locator("#password-new").fill(centralPassword);
+  await page.locator("#password-confirm").fill(centralPassword);
+  await page
+    .locator(
+      'button[type="submit"]:not([name="cancel-aia"]),input[type="submit"]',
+    )
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "My account", exact: true }),
+  ).toBeVisible();
+
+  // Recovery uses a real one-use email action from the isolated mail catcher.
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await context.clearCookies();
+  await page.reload();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.locator('a[href*="reset-credentials"]').click();
+  await page.locator("#username").fill(email);
+  await page
+    .locator(
+      'button[type="submit"]:not([name="cancel-aia"]),input[type="submit"]',
+    )
+    .click();
+  let resetId = "";
+  await expect
+    .poll(async () => {
+      const messages = await (
+        await fetch("http://localhost:18025/api/v1/messages")
+      ).json();
+      resetId =
+        messages.messages.find(
+          (message: { Subject: string; To: { Address: string }[] }) =>
+            /reset password/i.test(message.Subject) &&
+            message.To.some((recipient) => recipient.Address === email),
+        )?.ID ?? "";
+      return !!resetId;
+    })
+    .toBe(true);
+  const resetMail = await (
+    await fetch(`http://localhost:18025/api/v1/message/${resetId}`)
+  ).json();
+  const resetUrl = String(resetMail.Text)
+    .match(/http:\/\/localhost:18089\/[^\s<>]+/g)
+    ?.find((value) => value.includes("action-token"));
+  if (!resetUrl) throw new Error("Missing local recovery action");
+  await page.goto(resetUrl);
+  centralPassword = randomBytes(32).toString("base64url");
+  await page.locator("#password-new").fill(centralPassword);
+  await page.locator("#password-confirm").fill(centralPassword);
+  await page
+    .locator(
+      'button[type="submit"]:not([name="cancel-aia"]),input[type="submit"]',
+    )
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "My account", exact: true }),
+  ).toBeVisible();
+  await page.goto(resetUrl);
+  await expect(page.locator("#password-new")).toHaveCount(0);
+  await page.goto(`${website}/en/account`);
 
   // Protected first setup uses the real existing UI and a host-provisioned proof.
   const setup = await (await fetch(`${core}/v1/auth/setup/status`)).json();

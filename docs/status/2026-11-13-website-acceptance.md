@@ -59,6 +59,10 @@ not by interrupting production devices or another user's account session.
 
 ## Remaining website acceptance
 
+The [Nov14 identity lifecycle follow-up](2026-11-14-identity-lifecycle.md) closes
+the bounded public KY-022 journey below. Its actual renewal evidence covers
+330 seconds across the proof-cache boundary, not 30 elapsed days.
+
 | Backlog | Remaining outcome                                                                                                | Input or work needed                                                                                                                                                                                    |
 | ------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | KY-021  | Receiving inbox/spam and Reply-To acceptance                                                                     | Owner confirms a real contact message arrived and replying targets its sender. Successful submission/Origin correction is already evidenced.                                                            |

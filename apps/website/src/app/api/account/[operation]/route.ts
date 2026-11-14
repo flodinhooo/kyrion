@@ -42,7 +42,10 @@ export async function GET(request: NextRequest, context: Context) {
   if (operation === "manage")
     return protect(
       NextResponse.redirect(
-        new URL(`${config.issuer.href.replace(/\/$/, "")}/account/`),
+        new URL(
+          `${request.nextUrl.searchParams.get("locale") === "en" ? "/en" : ""}/account#settings`,
+          config.origin,
+        ),
         303,
       ),
     );
@@ -171,20 +174,51 @@ export async function POST(request: NextRequest, context: Context) {
         ),
       );
     }
-    if (operation === "login" || operation === "register") {
+    if (
+      operation === "login" ||
+      operation === "register" ||
+      operation === "profile" ||
+      operation === "password"
+    ) {
       const form = await request.formData();
       const locale = form.get("locale") === "en" ? "en" : "de";
       failureTarget = new URL(
         locale === "en" ? "/en/account" : "/account",
         config.origin,
       );
+      let expectedSubject: string | null = null;
+      if (operation === "profile" || operation === "password") {
+        const token = request.cookies.get(sessionCookie)?.value ?? "";
+        const session = await store.session(token);
+        const expected = Buffer.from(session?.csrf ?? "");
+        const actual = Buffer.from(String(form.get("csrf") ?? ""));
+        if (
+          !session ||
+          !actual.length ||
+          actual.length !== expected.length ||
+          !timingSafeEqual(actual, expected)
+        )
+          return protect(
+            NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
+          );
+        expectedSubject = await store.actionSubject(token);
+        if (!expectedSubject)
+          return protect(
+            NextResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 }),
+          );
+      }
       const flow = {
         state: secret(),
         nonce: secret(),
         verifier: secret(),
         locale,
         destination:
-          form.get("destination") === "connect" ? "connect" : "account",
+          operation === "profile" || operation === "password"
+            ? operation
+            : form.get("destination") === "connect"
+              ? "connect"
+              : "account",
+        expectedSubject,
       } as const;
       const url = await authorizationUrl(
         config,

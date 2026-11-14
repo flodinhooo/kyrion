@@ -27,7 +27,8 @@ services:
       WEBSITE_CLIENT_SECRET: ${WEBSITE_CLIENT_SECRET:?Supply private acceptance configuration}
       KC_HOSTNAME: http://localhost:18089
     volumes:
-      [./acceptance-realm.json:/opt/keycloak/data/import/kyrion-realm.json:ro]
+      - ./acceptance-realm.json:/opt/keycloak/data/import/kyrion-realm.json:ro
+      - ./themes/kyrion:/opt/keycloak/themes/kyrion:ro
     depends_on:
       provider-db: { condition: service_healthy }
   mailpit:

@@ -87,7 +87,7 @@ if (!ready) throw new Error("Isolated Core PostgreSQL did not become ready");
 // Container start is not provider readiness: cold schema import can take over a
 // minute. Do not let browser account tests race the disposable provider startup.
 const issuer = "http://localhost:18089/realms/kyrion";
-const providerDeadline = Date.now() + 120_000;
+const providerDeadline = Date.now() + 240_000;
 let providerReady = false;
 while (!providerReady && Date.now() < providerDeadline) {
   try {

@@ -153,9 +153,8 @@ from the local platform; this website does not claim to be analytics-free.
 No real delivery is attempted by tests. Full public docs, search and a historical
 documentation version browser remain unimplemented. The installer catalog can
 render validated published versions, but currently contains no releases. The
-public account API reported enabled during the 2026-11-12 read-only audit; real
-signup, verification, reset and login/logout acceptance remain separately
-unverified. Optional central signup belongs to the configured identity provider.
+public account API reported enabled during the 2026-11-12 read-only audit; public signup, verification, recovery, real short-proof renewal, browser restart
+and logout passed on 2026-11-14; see the [lifecycle evidence](../../docs/status/2026-11-14-identity-lifecycle.md). Optional central signup belongs to the configured identity provider.
 No alpha access or release dates are
 announced. The root licence decision remains pending; this site makes no
 software reuse or commercial-availability promise.

@@ -757,7 +757,7 @@
     "remembered": "Stay signed in on your personal device. Sign out after use on shared devices.",
     "welcome": "Good to see you. Manage your account settings or find help connecting your installation.",
     "manage": "Account settings",
-    "manageHelp": "Manage your personal details, password and account security.",
+    "manageHelp": "Manage your profile and password here. Secure confirmation returns you to Kyrion.",
     "openSettings": "Open account settings",
     "checking": "Loading account …",
     "accountNavigation": "Account sections",
@@ -779,7 +779,9 @@
     "businessInstallation": "Business",
     "localAccount": "Local username",
     "linkedOn": "Linked on",
-    "lastConfirmed": "Last confirmed"
+    "lastConfirmed": "Last confirmed",
+    "editProfile": "Edit profile",
+    "changePassword": "Change password"
   },
   "connect": {
     "description": "Connect your local Kyrion installation to your central account using its displayed code."

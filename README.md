@@ -19,10 +19,13 @@ The Web interface and public website support German and English.
 
 > **LLM proposes. Core decides. Adapter executes. Result confirms.**
 
-**Website/documentation reviewed 2026-11-13:** website source is integrated on
+**Website/documentation reviewed 2026-11-14:** website source is integrated on
 `master`; [current website acceptance](docs/status/2026-11-13-website-acceptance.md)
 separates passing local verification from outstanding production acceptance.
 Parallel installer work and older platform evidence retain their own scope.
+The [Nov14 identity lifecycle follow-up](docs/status/2026-11-14-identity-lifecycle.md)
+records real public registration, recovery, browser restart, proof renewal and
+logout checks, plus the customer settings implementation.
 The account overview now includes linked installations; the dedicated `/connect`
 page accepts local linking codes. Local Profile identifies the verified central
 account. [Directory design and acceptance](docs/adr/0054-account-installation-directory.md)

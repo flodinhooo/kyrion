@@ -39,13 +39,13 @@ export default defineConfig({
       url: "http://127.0.0.1:18092/actuator/health",
       reuseExistingServer: false,
       // Includes bounded DB/provider cold-start readiness before Core starts.
-      timeout: 240_000,
+      timeout: 300_000,
     },
     {
       command: "pnpm exec next dev --port 3119 --hostname 127.0.0.1",
       url: "http://localhost:3119/api/account/session",
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: 240_000,
       env: {
         KYRION_BUILD_DIRECTORY: ".next-identity-full-website",
         KYRION_WEBSITE_ACCOUNT_ENABLED: "true",
@@ -62,7 +62,7 @@ export default defineConfig({
         "pnpm --dir ../web exec next dev --port 3219 --hostname 127.0.0.1",
       url: "http://localhost:3219/login",
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: 240_000,
       env: {
         CORE_SERVICE_URL: "http://127.0.0.1:18092",
         KYRION_BUILD_DIRECTORY: ".next-identity-full-web",

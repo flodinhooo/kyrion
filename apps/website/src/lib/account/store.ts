@@ -12,7 +12,8 @@ export type Flow = {
   nonce: string;
   verifier: string;
   locale: "en" | "de";
-  destination?: "account" | "connect";
+  destination?: "account" | "connect" | "profile" | "password";
+  expectedSubject?: string | null;
 };
 export type WebsiteSession = { id: string; csrf: string; expiresAt: string };
 export const rememberedLifetime = 30 * 24 * 60 * 60_000;
@@ -51,7 +52,7 @@ export class AccountStore {
       "DELETE FROM website_oidc_flow WHERE expires_at < now()",
     );
     await this.pool.query(
-      "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expires_at) VALUES ($1,$2,$3,$4,$5,$6,now()+interval '5 minutes')",
+      "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expected_subject,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,now()+interval '5 minutes')",
       [
         hash(id),
         flow.state,
@@ -59,13 +60,14 @@ export class AccountStore {
         flow.verifier,
         flow.locale,
         flow.destination ?? "account",
+        flow.expectedSubject ?? null,
       ],
     );
   }
 
   async consume(id: string): Promise<Flow | null> {
     const result = await this.pool.query<Flow>(
-      "DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale,destination",
+      'DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale,destination,expected_subject AS "expectedSubject"',
       [hash(id)],
     );
     return result.rows[0] ?? null;
@@ -123,6 +125,14 @@ export class AccountStore {
 
   async session(token: string): Promise<WebsiteSession | null> {
     return this.load(token, true);
+  }
+
+  async actionSubject(token: string): Promise<string | null> {
+    const result = await this.pool.query<{ subject: string }>(
+      "SELECT a.subject FROM website_session s JOIN website_account a ON a.id=s.account_id WHERE s.token_hash=$1 AND s.expires_at>now() AND a.issuer=$2",
+      [hash(token), this.config?.issuer.href],
+    );
+    return result.rows[0]?.subject ?? null;
   }
 
   async forLogout(token: string): Promise<WebsiteSession | null> {
