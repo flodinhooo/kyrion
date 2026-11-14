@@ -26,6 +26,10 @@ Latest [scheduled capture evidence](status/2026-11-14-installer-scheduled-captur
 adds real systemd-timer application capture, encrypted-content verification,
 restored local login and same-slot duplicate prevention. Current suites are
 480 Windows tests (nine skips) and 488 Linux tests (twenty skips).
+The [guest-init evidence](status/2026-11-14-installer-guest-init.md) additionally
+proves automatic enabled-service startup and offline same-identity login after
+a real isolated Linux PID-1 restart. Its shared WSL kernel was not restarted;
+physical cold boot and Windows pre-login acceptance remain open.
 
 | ID  | Requirement                                             | Implementation                                                                                              | State               | Missing work / acceptance                                                                                                                                                                   | Evidence                                                                                                                                                             | External prerequisite                                                         |
 |-----|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
