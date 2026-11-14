@@ -8,3 +8,7 @@ apps/website/** text=auto eol=lf
 
 # Preserve the verified upstream guidance bytes and provenance checksum.
 .agents/skills/modern-web-guidance/** text eol=lf
+
+# Hash-pinned public upstream trust data must retain its exact reviewed bytes.
+infrastructure/installer-v1/public-ca/cacert.pem -text
+infrastructure/installer-v1/public-ca/LICENSE -text
