@@ -8,6 +8,10 @@ The detailed [binding requirement matrix](installer-requirements.md) supersedes
 the coarse historical stage table below. Continuing source/test work is recorded
 in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
 full product scope remains open; no user acceptance is requested for this state.
+The [Debian Compose continuation](status/2026-11-14-installer-debian-compose.md)
+records local-image helper compatibility and real systemd update fencing,
+interrupted activation, resumed migration and snapshot recovery. Its split-run
+and platform limits remain explicit.
 The [model-operation continuation](status/2026-11-14-installer-ollama-models.md)
 adds reviewed download/resumption and single-model removal on the selected local
 Ollama runtime. It does not install the runtime or activate Kyrion AI. Maintenance

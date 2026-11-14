@@ -178,7 +178,9 @@ def exercise(root, worker):
     installed = root / "installed"
     installation = None
     dropin = None
-    network = "[Unit]\nJoinsNamespaceOf=docker.service\n[Service]\nPrivateNetwork=yes\n"
+    # The owned Docker fixture now enters this persistent namespace explicitly;
+    # joining its unit's manager-created namespace would select the wrong netns.
+    network = "[Service]\nNetworkNamespacePath=/run/netns/kyrion-installer-fixture\n"
     try:
         state = runtime.provision(
             installed,
@@ -244,6 +246,25 @@ def exercise(root, worker):
         installation.save()
         original = Compose(installation).identity()
         password = secrets.token_urlsafe(40)
+        # Private developer access survives a failed process so an interrupted
+        # encrypted update can be diagnosed/resumed without discarding its data.
+        # This file is never printed, exported or included in release inputs.
+        with os.fdopen(
+            os.open(
+                root / "private-test-access.json",
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+            ),
+            "w",
+        ) as access:
+            json.dump(
+                {
+                    "scope": "installer-systemd-stack-fixture",
+                    "login": credentials,
+                    "backupPassword": password,
+                },
+                access,
+            )
 
         def interrupted(_adapter):
             raise KeyboardInterrupt("synthetic activation interruption")

@@ -13,6 +13,13 @@ remains. A prerequisite does not convert missing code into an external blocker.
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 
+Latest transaction evidence: [Debian Compose continuation](status/2026-11-14-installer-debian-compose.md).
+Actual systemd fencing, migration 49→50, resumed activation and snapshot recovery
+to 49 pass in a disposable Debian AMD64 guest through split continuations.
+An uncaptured first-attempt Docker recreation error remains under investigation;
+cold boot, Windows SCM and ARM64 acceptance are not implied. Current suites:
+471 Windows tests (nine skips), 479 isolated Linux tests (twenty skips).
+
 | ID  | Requirement                                             | Implementation                                                                                              | State               | Missing work / acceptance                                                                                                                                                                   | Evidence                                                                                                                                                             | External prerequisite                                                         |
 |-----|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | R01 | Preserve existing code, architecture and history        | ADR0045, baseline commit                                                                                    | verified            | Reaudit each changed domain                                                                                                                                                                 | baseline 42 tests                                                                                                                                                    | None                                                                          |

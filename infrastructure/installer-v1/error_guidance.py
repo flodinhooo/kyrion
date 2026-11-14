@@ -148,6 +148,7 @@ KEYS = {
     "E_RESTORE_PORTABLE_DATA_REQUIRED": "restoreErrorCompatibility",
     "E_RESTORE_SCHEMA_MISMATCH": "restoreErrorCompatibility",
     "E_RESTORE_CORE_UPGRADE_REQUIRED": "restoreErrorCompatibility",
+    "E_RESTORE_IMAGE_PIN": "restoreErrorCompatibility",
     "E_RESTORE_SECURITY": "restoreErrorAudit",
     "E_AUTHORITY_UPGRADE_REQUIRED": "restoreErrorGuardUpgrade",
     "E_AUTHORITY_INACTIVE": "restoreErrorInactive",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import zipfile
@@ -253,7 +254,7 @@ class Compose:
                 "none",
                 "--entrypoint",
                 "java",
-                "kyrion/core:" + installation.configuration["release"],
+                self.core_image(),
                 "-Dloader.main=" + CORE_MAIN,
                 "-cp",
                 "/opt/kyrion/app.jar",
@@ -275,6 +276,15 @@ class Compose:
             "recoveryKeyTransfer": True,
         }:
             raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
+
+    def core_image(self) -> str:
+        images = self.installation.state.get("runtimeImageIds")
+        image = images.get("core") if isinstance(images, dict) else None
+        if not isinstance(image, str) or not re.fullmatch(
+            r"sha256:[a-f0-9]{64}", image
+        ):
+            raise ValueError("E_RESTORE_IMAGE_PIN")
+        return image
 
     def command(self, sql: str, *, stdin=None) -> bytes:
         result = run_system_command(
@@ -360,10 +370,20 @@ class Compose:
             if recovery.is_dir()
             else []
         )
-        if ":" in str(receipt) or not receipt.resolve().is_relative_to(
-            self.root.resolve()
+        if (
+            ":" in str(receipt)
+            or not receipt.is_file()
+            or receipt.stat().st_size > 4096
+            or not receipt.resolve().is_relative_to(self.root.resolve())
         ):
             raise ValueError("E_RESTORE_MATERIAL")
+        helper = self.root / "restore-helper.yml"
+        self.installation.write(
+            "restore-helper.yml",
+            "services:\n  core:\n    image: "
+            + self.core_image()
+            + "\n    pull_policy: never\n",
+        )
         # This receipt is public authentication metadata. The host owns it and
         # the container gets only a read-only bind; no extra Linux capability or
         # root container user is required to read original Core-owned secrets.
@@ -378,9 +398,9 @@ class Compose:
                 str(self.root / ".env"),
                 "-f",
                 str(self.root / "compose.yml"),
+                "-f",
+                str(helper),
                 "run",
-                "--pull",
-                "never",
                 "--rm",
                 "--no-deps",
                 "-T",

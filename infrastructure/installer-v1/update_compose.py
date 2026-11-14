@@ -346,9 +346,14 @@ class Compose:
         # selected database, using only existing private read-only secret mounts.
         helper = path(self.installation, "maintenance.yml").with_name("helper.yml")
         relative = helper.relative_to(self.root).as_posix()
+        image = value["targetImages"]["core"]
+        if not isinstance(image, str) or not re.fullmatch(
+            r"sha256:[a-f0-9]{64}", image
+        ):
+            raise ValueError("E_UPDATE_IMAGE")
         self.installation.write(
             relative,
-            "services:\n  core:\n    image: " + value["targetImages"]["core"] + "\n",
+            "services:\n  core:\n    image: " + image + "\n    pull_policy: never\n",
         )
         flags = [
             "compose",
@@ -365,8 +370,6 @@ class Compose:
         self.run(
             *flags,
             "run",
-            "--pull",
-            "never",
             "--rm",
             "--no-deps",
             "-T",
