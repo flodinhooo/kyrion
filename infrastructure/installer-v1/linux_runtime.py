@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 import linux_crypto
 import linux_packages as packages
-from authority import require_active
+from authority import prepare_restore, require_active, require_prerequisites
 from bundle import authenticated_review
 from host import network_checks, reject_links, runtime_checks
 from recovery import load_installation
@@ -121,6 +121,7 @@ def configure_service(
     *,
     review: Callable[[dict], bool],
     approved_manifest: str | None = None,
+    restore_request: dict | None = None,
 ) -> dict:
     from operational_restore import require_admin
     from update_worker import validate_host
@@ -129,7 +130,7 @@ def configure_service(
     validate_host(target)
     with installation_lock(target):
         installation = load_installation(target)
-        require_active(installation.state)
+        require_prerequisites(installation.state, restore_request)
         installation.verify_files()
         packages.require_complete(installation.state)
         if approved_manifest is not None and (
@@ -212,6 +213,7 @@ def prepare(
     address: str,
     *,
     review: Callable[[dict], bool],
+    restore_request: dict | None = None,
 ) -> dict:
     """Called after INSTALL consent; preserve one existing installer journal."""
     from operational_restore import require_admin
@@ -247,7 +249,7 @@ def prepare(
             installation = Installation(
                 target, checked.manifest, expected, hostname, address
             )
-            require_active(installation.state)
+            require_active(installation.state, preparing=restore_request is not None)
             fresh_target(installation)  # Reject malformed progress before OS mutation.
         else:
             # Validate parent ownership before creating the root-private journal.
@@ -256,6 +258,8 @@ def prepare(
             installation = Installation(
                 target, checked.manifest, expected, hostname, address
             )
+        if restore_request is not None:
+            prepare_restore(installation, restore_request)
         origin = {"manifestSha256": expected, "initialDaemonStateEmpty": True}
         if daemon_state:
             saved = installation.state.get("runtimePrerequisite")
@@ -296,7 +300,9 @@ def prepare(
             crypto_pending is not None and crypto_pending["phase"] != "complete"
         )
     if resume_crypto:
-        crypto_outcome = linux_crypto.configure(target, review=review)
+        crypto_outcome = linux_crypto.configure(
+            target, review=review, restore_request=restore_request
+        )
         if not crypto_outcome["available"]:
             raise ValueError("E_LINUX_RUNTIME_CANCELLED")
     if packages.supported():
@@ -306,6 +312,7 @@ def prepare(
             ready=tools_ready,
             review=review,
             reserve=reserve,
+            restore_request=restore_request,
         )
     else:
         # Preserve the original prepared-runtime candidate path; do not claim
@@ -319,7 +326,12 @@ def prepare(
         raise ValueError("E_LINUX_RUNTIME_CANCELLED")
     return {
         **outcome,
-        **configure_service(target, review=review, approved_manifest=expected),
+        **configure_service(
+            target,
+            review=review,
+            approved_manifest=expected,
+            restore_request=restore_request,
+        ),
     }
 
 
@@ -331,6 +343,8 @@ def interactive(
     hostname: str,
     address: str,
     messages: dict[str, str],
+    *,
+    restore_request: dict | None = None,
 ) -> dict:
     def review(summary):
         print(messages["linuxRuntimeReview"])
@@ -343,5 +357,12 @@ def interactive(
         return input("[" + token + "/CANCEL]: ").strip() == token
 
     return prepare(
-        target, bundle, authority, expected, hostname, address, review=review
+        target,
+        bundle,
+        authority,
+        expected,
+        hostname,
+        address,
+        review=review,
+        restore_request=restore_request,
     )

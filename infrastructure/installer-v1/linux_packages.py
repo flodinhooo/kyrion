@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from authority import require_active
+from authority import require_prerequisites
 from host import linux_release, reject_links
 from recovery import load_installation
 from runtime import Installation, installation_lock
@@ -223,6 +223,7 @@ def configure(
     ready: Callable[[Installation], bool],
     review: Callable[[dict], bool],
     reserve: int = 1024**3,
+    restore_request: dict | None = None,
 ) -> dict:
     from operational_restore import require_admin
     from update_worker import validate_host
@@ -239,7 +240,7 @@ def configure(
     validate_host(target)
     with installation_lock(target):
         installation = load_installation(target)
-        require_active(installation.state)
+        require_prerequisites(installation.state, restore_request)
         if installation.state.get("stage") == "uninstalled":
             raise ValueError("E_AUTHORITY_INACTIVE")
         installation.verify_files()

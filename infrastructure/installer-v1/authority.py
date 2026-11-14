@@ -38,6 +38,7 @@ def require_active(
 
 
 def prepare_restore(installation, request: dict) -> None:
+    validate_restore_request(request)
     previous = installation.state.get("restoreRequest")
     if previous is None:
         if installation.state.get("stage") != "reviewed" or installation.state["files"]:
@@ -49,6 +50,27 @@ def prepare_restore(installation, request: dict) -> None:
         previous != request or installation.state.get("preparedForRestore") is not True
     ):
         raise ValueError("E_RESTORE_REQUEST_CONFLICT")
+
+
+def validate_restore_request(request: dict) -> None:
+    if (
+        not isinstance(request, dict)
+        or set(request) != {"backupSha256"}
+        or not isinstance(request["backupSha256"], str)
+        or not re.fullmatch(r"[0-9a-f]{64}", request["backupSha256"])
+    ):
+        raise ValueError("E_RESTORE_REQUEST_CONFLICT")
+
+
+def require_prerequisites(state: dict, request: dict | None = None) -> None:
+    if request is not None:
+        validate_restore_request(request)
+        if (
+            state.get("restoreRequest") != request
+            or state.get("preparedForRestore") is not True
+        ):
+            raise ValueError("E_RESTORE_REQUEST_CONFLICT")
+    require_active(state, preparing=request is not None)
 
 
 def binding(source: str, target: str, digest: str) -> dict:

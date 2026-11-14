@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, "/opt/kyrion-installer")
 import linux_packages as packages
 import linux_runtime
+from authority import prepare_restore, require_active
 from recovery import load_installation
 from runtime import Installation
 
@@ -37,13 +38,15 @@ def main():
     target = Path("/work/installed")
     if target.exists():
         raise ValueError("E_TEST_TARGET_EXISTS")
-    Installation(
+    installation = Installation(
         target,
         {"release": "1.0.0", "architecture": "linux/amd64"},
         "a" * 64,
         "fixture.test",
         "10.231.0.1",
     )
+    request = {"backupSha256": "c" * 64}
+    prepare_restore(installation, request)
     reviews = []
 
     def approve(summary):
@@ -51,7 +54,11 @@ def main():
         return True  # Marked developer chroot; service starts denied by policy.
 
     result = packages.configure(
-        target, spec=packages.RUNTIME, ready=linux_runtime.tools_ready, review=approve
+        target,
+        spec=packages.RUNTIME,
+        ready=linux_runtime.tools_ready,
+        review=approve,
+        restore_request=request,
     )
     installation = load_installation(target)
     if (
@@ -74,9 +81,17 @@ def main():
         spec=packages.RUNTIME,
         ready=linux_runtime.tools_ready,
         review=lambda _: False,
+        restore_request=request,
     )
     if not repeated["available"] or repeated["packagesChanged"]:
         raise ValueError("E_TEST_RUNTIME_REPEAT")
+    try:
+        require_active(load_installation(target).state)
+    except ValueError as error:
+        if str(error) != "E_AUTHORITY_INACTIVE":
+            raise
+    else:
+        raise ValueError("E_TEST_RESTORE_FENCE_LOST")
     report = {
         "actualDebian13Chroot": True,
         "actualInitiallyMissingDockerAndGnuPG": True,
@@ -85,6 +100,8 @@ def main():
         "actualGnuPGProbes": True,
         "actualVendorUnitOwnershipAndDpkgIntegrityVerified": True,
         "actualRepeatWithoutPackageChanges": True,
+        "actualMatchingRestorePrerequisiteFence": True,
+        "applicationActivationRemainsFenced": True,
         "packages": installation.state["runtimePrerequisite"]["packages"],
         "dockerVersion": packages.run(installation, "docker", "--version").strip(),
         "composeVersion": packages.run(

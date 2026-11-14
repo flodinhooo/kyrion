@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shutil
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +29,29 @@ from update_download import (
 PROOF = "release-index.json"
 SCHEMA = 49
 API = 1
+
+
+def interactive(target: Path, platform: str, messages: dict[str, str]):
+    def review(summary):
+        print(messages["installDownloadReview"])
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return input(messages["approve"] + " [DOWNLOAD]: ").strip() == "DOWNLOAD"
+
+    last_progress = 0.0
+
+    def progress(name, done, total):
+        nonlocal last_progress
+        current = time.monotonic()
+        if done == total or current - last_progress >= 1:
+            print(
+                messages["installDownloadProgress"].format(
+                    name=name, done=done, total=total
+                ),
+                flush=True,
+            )
+            last_progress = current
+
+    return prepare(target, platform, review=review, progress=progress)
 
 
 def bounded(path: Path, limit: int) -> bytes:

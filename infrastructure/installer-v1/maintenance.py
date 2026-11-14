@@ -629,19 +629,16 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "restore", None):
         from operational_restore import restore
 
-        if args.public_key is None:
-            raise ValueError("E_SIGNATURE_TRUST_REQUIRED")
-        if os.name == "nt":
-            from native_bundle import authenticated_review
-        else:
-            from bundle import authenticated_review
-        reviewed = authenticated_review(args.bundle, args.public_key)
+        reject_links(args.restore)
         backup_digest = sha256(args.restore)
         existing = (
             load_installation(args.target, verify=False)
             if args.target.exists()
             else None
         )
+        request = {"backupSha256": backup_digest}
+        if existing is not None and existing.state.get("restoreRequest") != request:
+            raise ValueError("E_RESTORE_TARGET_NOT_EMPTY")
         hostname = args.restore_hostname or (
             existing.configuration["hostname"]
             if existing
@@ -652,6 +649,28 @@ def run(args, messages: dict[str, str]) -> int:
             if existing
             else input(messages["address"] + ": ").strip()
         )
+        from host import inventory
+
+        report = inventory(args.target)
+        if os.name == "nt":
+            from native_bundle import authenticated_review
+            from native_runtime import preflight
+
+            preflight(args.target, hostname, address, fresh=not args.target.exists())
+        else:
+            from bundle import authenticated_review
+            from runtime import preflight
+
+            preflight(args.target, hostname, address)
+        if args.public_key is None:
+            from install_download import interactive as download_release
+
+            args.bundle, args.public_key = download_release(
+                args.target,
+                ("windows/" if os.name == "nt" else "linux/") + report["architecture"],
+                messages,
+            )
+        reviewed = authenticated_review(args.bundle, args.public_key)
         print(
             json.dumps(
                 {
@@ -677,6 +696,23 @@ def run(args, messages: dict[str, str]) -> int:
         ):
             raise ValueError("E_CONFIRMATION")
         password = getpass.getpass(messages["backupPassword"] + ": ")
+        if sha256(args.restore) != backup_digest:
+            raise ValueError("E_REVIEW_CHANGED")
+        if os.name == "posix" and not (
+            existing and existing.state.get("restoreRuntimePrepared") is True
+        ):
+            from linux_runtime import interactive as prepare_runtime
+
+            prepare_runtime(
+                args.target,
+                args.bundle,
+                args.public_key,
+                reviewed.manifest_sha256,
+                hostname,
+                address,
+                messages,
+                restore_request=request,
+            )
         result = restore(
             args.target,
             args.bundle,

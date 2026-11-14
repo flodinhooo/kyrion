@@ -74,6 +74,24 @@ class LinuxCryptoTests(unittest.TestCase):
         self.assertIn("APT::Get::AllowUnauthenticated=false", final)
         self.assertNotIn("--fix-broken", final)
 
+    def test_restore_fence_allows_only_explicit_matching_package_preparation(self):
+        from authority import prepare_restore
+
+        request = {"backupSha256": "c" * 64}
+        prepare_restore(self.installation, request)
+        for supplied in (None, {"backupSha256": "d" * 64}):
+            with self.subTest(supplied=supplied), self.assertRaises(ValueError):
+                crypto.configure(
+                    self.target, review=self.review, restore_request=supplied
+                )
+        self.assertEqual(self.calls, [])
+        self.assertTrue(
+            crypto.configure(self.target, review=self.review, restore_request=request)[
+                "available"
+            ]
+        )
+        self.assertTrue(load_installation(self.target).state["preparedForRestore"])
+
     def test_declining_metadata_performs_no_package_mutation(self):
         self.review.return_value = False
         self.assertTrue(self.configure()["cancelled"])

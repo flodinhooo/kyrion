@@ -9,7 +9,6 @@ import os
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 from build_identity import read_build
@@ -354,34 +353,12 @@ def main() -> int:
 
             linux_preflight(args.target, hostname, address)
         if args.public_key is None:
-            from install_download import prepare
+            from install_download import interactive as download_release
 
-            def review_download(summary):
-                print(messages["installDownloadReview"])
-                print(json.dumps(summary, indent=2, ensure_ascii=False))
-                return (
-                    input(messages["approve"] + " [DOWNLOAD]: ").strip() == "DOWNLOAD"
-                )
-
-            last_progress = 0.0
-
-            def download_progress(name, done, total):
-                nonlocal last_progress
-                current = time.monotonic()
-                if done == total or current - last_progress >= 1:
-                    print(
-                        messages["installDownloadProgress"].format(
-                            name=name, done=done, total=total
-                        ),
-                        flush=True,
-                    )
-                    last_progress = current
-
-            args.bundle, args.public_key = prepare(
+            args.bundle, args.public_key = download_release(
                 args.target,
                 ("windows/" if native_windows else "linux/") + report["architecture"],
-                review=review_download,
-                progress=download_progress,
+                messages,
             )
         if native_windows:
             reviewed = native_review(args.bundle, args.public_key)

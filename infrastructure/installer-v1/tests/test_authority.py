@@ -93,3 +93,41 @@ class Authority(unittest.TestCase):
         authority.require_active(self.state, preparing=True)
         with self.assertRaisesRegex(ValueError, "E_RESTORE_REQUEST_CONFLICT"):
             authority.prepare_restore(self.installation, {"backupSha256": "b" * 64})
+
+    def test_restore_prerequisites_require_exact_intent_and_keep_other_fences(self):
+        request = {"backupSha256": "a" * 64}
+        self.state.update(stage="reviewed", files={})
+        with self.assertRaisesRegex(ValueError, "E_RESTORE_REQUEST_CONFLICT"):
+            authority.require_prerequisites(self.state, request)
+        authority.prepare_restore(self.installation, request)
+        authority.require_prerequisites(self.state, request)
+        for changed in (
+            {"backupSha256": "b" * 64},
+            {},
+            {"backupSha256": "a" * 64, "extra": True},
+        ):
+            with (
+                self.subTest(changed=changed),
+                self.assertRaisesRegex(ValueError, "E_RESTORE_REQUEST_CONFLICT"),
+            ):
+                authority.require_prerequisites(self.state, changed)
+        with self.assertRaisesRegex(ValueError, "E_AUTHORITY_INACTIVE"):
+            authority.require_prerequisites(self.state)
+        self.state["updateTransaction"] = {"phase": "migrating"}
+        with self.assertRaisesRegex(ValueError, "E_UPDATE_IN_PROGRESS"):
+            authority.require_prerequisites(self.state, request)
+        self.state.pop("updateTransaction")
+        self.state["authority"] = {"phase": "retired"}
+        with self.assertRaisesRegex(ValueError, "E_AUTHORITY_INACTIVE"):
+            authority.require_prerequisites(self.state, request)
+
+    def test_malformed_restore_intent_is_never_persisted(self):
+        self.state.update(stage="reviewed", files={})
+        for request in ({}, {"backupSha256": "invalid"}, {"backupSha256": 3}, None):
+            with (
+                self.subTest(request=request),
+                self.assertRaisesRegex(ValueError, "E_RESTORE_REQUEST_CONFLICT"),
+            ):
+                authority.prepare_restore(self.installation, request)
+        self.assertNotIn("preparedForRestore", self.state)
+        self.assertFalse(self.saved)

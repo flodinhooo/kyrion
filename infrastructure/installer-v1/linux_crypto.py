@@ -50,9 +50,13 @@ def needs_configuration(target: Path) -> bool:
     )
 
 
-def configure(target: Path, *, review) -> dict:
+def configure(target: Path, *, review, restore_request: dict | None = None) -> dict:
     return packages.configure(
-        target, spec=packages.CRYPTO, ready=available, review=review
+        target,
+        spec=packages.CRYPTO,
+        ready=available,
+        review=review,
+        restore_request=restore_request,
     )
 
 

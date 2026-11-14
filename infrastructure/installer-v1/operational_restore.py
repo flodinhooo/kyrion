@@ -9,6 +9,7 @@ import os
 import uuid
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from authority import export_receipt, retire, verify_receipt
 from bundle import VERSION, sha256, unique_object
@@ -25,6 +26,9 @@ from restore_material import (
 )
 from restore_platform import backend
 from runtime import installation_lock
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 
 SCHEMA_SQL = "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'"
 
@@ -341,7 +345,7 @@ def summary(installation) -> dict:
 def restore(
     target: Path,
     bundle: Path,
-    public_key: Path,
+    public_key: Path | IndexAuthority,
     backup: Path,
     password: str,
     hostname: str,

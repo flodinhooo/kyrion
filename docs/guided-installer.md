@@ -460,3 +460,20 @@ scripts can start Docker, then exact package review and actual readiness checks.
 Source/operator provisioning remains usable on prepared candidate hosts.
 [Implementation, clean-package evidence and unfinished acceptance](status/2026-11-14-installer-linux-runtime-bootstrap.md)
 separates this from full application boot and ARM64 acceptance.
+
+## Preparing an empty restore target
+
+The downloaded installer can acquire its compatible signed runtime bundle for
+restore through the same embedded release channel as fresh setup. Use Restore in
+the terminal or `--target TARGET --restore BACKUP`; independent manually trusted
+bundles remain available through `--bundle` and `--public-key`. Platform checks
+precede downloads. Download review and restore consent remain separate.
+
+On Debian 13, reviewed runtime packages and Docker service readiness are prepared
+under a backup-hash-bound restore fence before data import. Cancellation retains
+progress; repeat the same target, backup and runtime to continue. Preparation
+does not activate Kyrion or replace the required source-retirement receipt. Keep
+the original backup and recovery key separately. Schema/API restrictions and
+[verified behavior versus remaining recovery limits](status/2026-11-14-installer-restore-preparation.md)
+apply. Unsigned development builds without an embedded channel cannot invent a
+public download or signing authority.

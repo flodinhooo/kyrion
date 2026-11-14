@@ -118,7 +118,7 @@ class LinuxRuntimeTests(unittest.TestCase):
             installation.save()
         return {"available": True, "packagesChanged": True}
 
-    def prepare(self, target=None):
+    def prepare(self, target=None, **options):
         return setup.prepare(
             target or self.target,
             self.root,
@@ -127,7 +127,31 @@ class LinuxRuntimeTests(unittest.TestCase):
             "fixture.test",
             "10.231.0.1",
             review=self.review,
+            **options,
         )
+
+    def test_restore_preparation_persists_fence_before_packages_and_repeats(self):
+        request = {"backupSha256": "c" * 64}
+        original = self.package_operation.side_effect
+
+        def install(target, **options):
+            state = load_installation(target).state
+            self.assertEqual(state["restoreRequest"], request)
+            self.assertTrue(state["preparedForRestore"])
+            self.assertEqual(options["restore_request"], request)
+            return original(target, **options)
+
+        self.package_operation.side_effect = install
+        self.assertTrue(self.prepare(restore_request=request)["running"])
+        self.assertTrue(self.prepare(restore_request=request)["running"])
+        self.assertTrue(load_installation(self.target).state["preparedForRestore"])
+        self.assertNotIn("restoreRuntimePrepared", load_installation(self.target).state)
+        self.package_operation.reset_mock()
+        with self.assertRaisesRegex(ValueError, "E_RESTORE_REQUEST_CONFLICT"):
+            self.prepare(restore_request={"backupSha256": "d" * 64})
+        self.package_operation.assert_not_called()
+        with self.assertRaisesRegex(ValueError, "E_AUTHORITY_INACTIVE"):
+            self.prepare()
 
     def test_service_consent_precedes_apt_and_journal_precedes_start(self):
         result = self.prepare()
