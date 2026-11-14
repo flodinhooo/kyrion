@@ -21,6 +21,8 @@ FILES = (
     "linux_packages.py",
     "linux_runtime.py",
     "host.py",
+    "system_tools.py",
+    "hardware_inventory.py",
     "bundle.py",
     "crypto_support.py",
     "native_bundle.py",

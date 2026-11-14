@@ -212,6 +212,7 @@ class HostTests(unittest.TestCase):
                     return_value={"ID": distro, "VERSION_ID": version},
                 ),
                 patch("host.command", return_value=None),
+                patch("ollama_runtime.detected_version", return_value=None),
             ):
                 observed = host.inventory(Path(tempfile.gettempdir()))
                 self.assertEqual(observed["candidateProvisioning"], allowed)

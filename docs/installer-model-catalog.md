@@ -23,6 +23,12 @@ The 2/6 GiB memory estimates refer to a 2048-token planning context, without a
 speed promise. Coding excludes the smallest variant. CPU is the conservative
 execution estimate; an NVIDIA name or driver does not prove inference offload.
 
+The installer now includes structured DXGI/DRM and NVIDIA memory observations in
+the target report. Dedicated VRAM, shared-memory limits and overlapping source
+views remain distinct. Missing values stay unknown and do not relax the CPU/RAM
+planning reserves. [Actual hardware evidence and remaining acceleration work](status/2026-11-14-installer-hardware-observations.md)
+are separate from benchmarked inference support.
+
 The bundled reviewed document inherits trust from the eventual signed native
 distribution. Current development executables remain unsigned. An external
 catalog is accepted only as an Ed25519 `model-catalog` envelope using the existing

@@ -9,15 +9,34 @@ import platform
 import shutil
 import socket
 import subprocess
+import tempfile
 from pathlib import Path
 
 
 def command(args: list[str], timeout: int = 8) -> str | None:
+    from system_tools import environment, executable
+
+    if not args or (tool := executable(args[0])) is None:
+        return None
     try:
-        result = subprocess.run(
-            args, capture_output=True, text=True, timeout=timeout, check=False
+        with tempfile.TemporaryFile() as output:
+            result = subprocess.run(
+                [str(tool), *args[1:]],
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.DEVNULL,
+                timeout=timeout,
+                check=False,
+                env=environment(),
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            output.seek(0)
+            raw = output.read(65537)
+        return (
+            raw.decode("utf-8").strip()
+            if result.returncode == 0 and len(raw) <= 65536
+            else None
         )
-        return result.stdout.strip() if result.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired, UnicodeError):
         return None
 
@@ -123,29 +142,31 @@ def inventory(target: Path) -> dict:
         free = shutil.disk_usage(ancestor).free
     except OSError:
         free = None
-    gpu = command(
-        ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
-    )
-    # Report observed vendor values only; driver presence is not runtime acceleration.
-    gpu_rows = gpu.splitlines()[:8] if gpu else None
+    from hardware_inventory import cpu_description
+    from hardware_inventory import observe as hardware_observations
+    from ollama_runtime import detected_version
+
+    gpu, gpu_rows = hardware_observations(command)
     usb = None
     if system == "Linux":
         usb = command(["lsusb"])
-    ollama = command(["ollama", "--version"])
+    ollama = detected_version()
     return {
         "system": system,
         "osId": os_id or None,
         "osVersion": version if system == "Linux" else platform.version(),
         "architecture": architecture,
-        "cpu": platform.processor() or None,
+        "cpu": cpu_description(platform.processor() or None),
         "cpuCount": os.cpu_count(),
         "ramBytes": effective_ram(ram_bytes()),
         "freeBytes": free,
         "gpuVendorObservation": gpu_rows,
+        "gpu": gpu,
         "usableAcceleration": None,
         "usbObservation": usb.splitlines()[:32] if usb else None,
         "hardwareOwnership": None,
         "ollamaVersion": ollama,
+        "ollamaExecutableDetected": shutil.which("ollama") is not None,
         "tools": {
             tool: shutil.which(tool) is not None
             for tool in ("docker", "openssl", "systemctl")
@@ -181,6 +202,7 @@ def runtime_checks(address: str, hostname: str, fresh: bool = True) -> None:
     if (
         os.environ.get("DOCKER_HOST")
         or os.environ.get("DOCKER_CONTEXT")
+        or os.environ.get("DOCKER_CONFIG")
         or not endpoint.startswith("unix://")
     ):
         raise ValueError("E_DOCKER: remote or overridden Docker contexts are refused")

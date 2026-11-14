@@ -179,6 +179,7 @@ def recommend(catalog: dict, target: dict, preferences: Preferences) -> dict:
         "ramBytes": memory,
         "freeBytes": disk,
         "usableAcceleration": target.get("usableAcceleration"),
+        "gpu": target.get("gpu"),
     }
     result = {
         "catalogSequence": catalog["sequence"],

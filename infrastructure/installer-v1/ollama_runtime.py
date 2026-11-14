@@ -145,6 +145,22 @@ def probe(port: int = 11434) -> dict:
     }
 
 
+def detected_version(port: int = 11434) -> str | None:
+    """Inventory may read only version, never personal model names or inference."""
+    try:
+        before = loopback_bindings(port)
+        version = document(port, "/api/version").get("version")
+        if (
+            not isinstance(version, str)
+            or len(version) > 100
+            or not VERSION.fullmatch(version)
+        ):
+            return None
+        return version if loopback_bindings(port) == before else None
+    except ValueError:
+        return None
+
+
 def selection_snapshot(observed: dict) -> str:
     # Running models/VRAM can change naturally; selection binds catalog/version/scope.
     selected = {

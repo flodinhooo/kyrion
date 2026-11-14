@@ -100,6 +100,10 @@ class OllamaRuntime(unittest.TestCase):
             [("GET", "/api/version"), ("GET", "/api/tags"), ("GET", "/api/ps")],
         )
 
+    def test_inventory_reads_only_runtime_version_not_models(self):
+        self.assertEqual(runtime.detected_version(self.port), "0.99.1")
+        self.assertEqual(self.requests, [("GET", "/api/version")])
+
     def test_actual_ipv6_loopback_listener_is_distinguished(self):
         if not socket.has_ipv6:
             self.skipTest("IPv6 unavailable")
