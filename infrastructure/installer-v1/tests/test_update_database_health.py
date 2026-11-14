@@ -78,6 +78,28 @@ class DatabaseReadiness(unittest.TestCase):
         self.adapter.run.assert_any_call("start", "b" * 64)
         self.assertNotIn("--wait", self.adapter.compose.call_args_list[0].args)
 
+    def test_core_readiness_requires_its_own_image_and_knowledge_mount(self):
+        self.adapter.installation.state["runtimeImageIds"]["core"] = (
+            "sha256:" + "c" * 64
+        )
+        self.container["Image"] = "sha256:" + "c" * 64
+        self.container["Config"]["Labels"]["com.docker.compose.service"] = "core"
+        self.container["Mounts"][0].update(
+            Destination="/var/lib/kyrion/knowledge",
+            Source=str(self.adapter.root / "data/knowledge"),
+        )
+        self.responses(self.container)
+        self.adapter.wait_service("core")
+        self.container["Mounts"][0]["Source"] = str(self.adapter.root / "foreign")
+        self.responses(self.container)
+        with self.assertRaisesRegex(ValueError, "E_BACKUP_SERVICE_RECOVERY"):
+            self.adapter.wait_service("core")
+
+    def test_readiness_never_starts_an_arbitrary_service(self):
+        with self.assertRaisesRegex(ValueError, "E_UPDATE_SOURCE_COMPONENTS"):
+            self.adapter.wait_service("foreign")
+        self.adapter.compose.assert_not_called()
+
     def test_database_exiting_again_is_not_restarted_repeatedly(self):
         stopped = copy.deepcopy(self.container)
         stopped["State"] = {

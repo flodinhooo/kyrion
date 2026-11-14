@@ -13,18 +13,19 @@ remains. A prerequisite does not convert missing code into an external blocker.
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 
-Latest transaction evidence: [Debian Compose continuation](status/2026-11-14-installer-debian-compose.md).
-Actual systemd fencing, migration 49→50, resumed activation and snapshot recovery
-to 49 pass in a disposable Debian AMD64 guest through split continuations.
-An uncaptured first-attempt Docker recreation error remains under investigation;
-cold boot, Windows SCM and ARM64 acceptance are not implied. Current suites:
-471 Windows tests (nine skips), 479 isolated Linux tests (twenty skips).
-The [database-startup correction](status/2026-11-14-installer-database-startup.md)
-supersedes that checkpoint's uncaptured-restart limitation and updates suites to
-476 Windows tests (nine skips) and 484 Linux tests (twenty skips). The fresh native
-Linux full-stack installation/update/recovery retest passes without an unplanned
-retry; no eligibility/systemd/readiness probes are injected. This remains
-isolated AMD64 evidence, not physical boot or general product acceptance.
+Latest transaction evidence: [database and systemd startup corrections](status/2026-11-14-installer-database-startup.md).
+The fresh native Linux installation/update/recovery run passes without an
+unplanned retry, including actual backup, migration 49 to 50, systemd fencing,
+interrupted activation and snapshot recovery to 49. Eligibility, systemd and
+readiness probes are not injected. Current suites: 476 Windows tests (nine skips)
+and 484 isolated Linux tests (twenty skips). This is isolated AMD64 evidence;
+physical cold boot, Windows SCM and ARM64 acceptance remain separate.
+The earlier [Debian Compose checkpoint](status/2026-11-14-installer-debian-compose.md)
+records the prerequisite compatibility correction and historical split runs.
+Latest [scheduled capture evidence](status/2026-11-14-installer-scheduled-capture.md)
+adds real systemd-timer application capture, encrypted-content verification,
+restored local login and same-slot duplicate prevention. Current suites are
+480 Windows tests (nine skips) and 488 Linux tests (twenty skips).
 
 | ID  | Requirement                                             | Implementation                                                                                              | State               | Missing work / acceptance                                                                                                                                                                   | Evidence                                                                                                                                                             | External prerequisite                                                         |
 |-----|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|

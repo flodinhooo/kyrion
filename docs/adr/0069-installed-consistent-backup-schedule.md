@@ -34,6 +34,12 @@ than overwrite it. Bind its authenticated metadata to the exact backup-run UUID;
 a compatible older archive is not a fresh backup. Record stable errors without
 secret or provider output, including storage failures before capture starts.
 
+Linux Core restoration must confirm current health of the image-pinned,
+installation-owned container and its exact knowledge bind before clearing the
+durable pause obligation. A successful Compose start request is not sufficient.
+Reuse the same bounded daemon readiness checks as database startup, with no
+arbitrary service-name input and no authority/update-fence bypass.
+
 Prune only after a new backup is verified and its receipt is durable. Remove only
 recorded files with matching hashes from the authenticated owned store, retaining
 the requested number of successful backups. Unknown/changed files and other

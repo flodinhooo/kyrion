@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import maintenance
@@ -247,6 +247,12 @@ class RecoveryTests(unittest.TestCase):
         with (
             patch.object(installation, "compose", side_effect=compose),
             patch(
+                "update_compose.Compose",
+                side_effect=lambda current: SimpleNamespace(
+                    compose=current.compose, wait_service=Mock()
+                ),
+            ),
+            patch(
                 "recovery.run_system_command",
                 return_value=subprocess.CompletedProcess([], 1),
             ),
@@ -287,6 +293,12 @@ class RecoveryTests(unittest.TestCase):
 
         with (
             patch.object(installation, "compose", side_effect=compose),
+            patch(
+                "update_compose.Compose",
+                side_effect=lambda current: SimpleNamespace(
+                    compose=current.compose, wait_service=Mock()
+                ),
+            ),
             patch("recovery.run_system_command", side_effect=dump),
             patch("portable_database.capture", return_value=({}, {})),
             patch("recovery.crypto", side_effect=encrypt),
@@ -317,6 +329,12 @@ class RecoveryTests(unittest.TestCase):
 
         with (
             patch.object(installation, "compose", side_effect=compose),
+            patch(
+                "update_compose.Compose",
+                side_effect=lambda current: SimpleNamespace(
+                    compose=current.compose, wait_service=Mock()
+                ),
+            ),
             self.assertRaisesRegex(ValueError, "E_RUNTIME_TIMEOUT"),
         ):
             recovery.capture(
@@ -343,6 +361,12 @@ class RecoveryTests(unittest.TestCase):
 
         with (
             patch.object(installation, "compose", side_effect=compose),
+            patch(
+                "update_compose.Compose",
+                side_effect=lambda current: SimpleNamespace(
+                    compose=current.compose, wait_service=Mock()
+                ),
+            ),
             self.assertRaisesRegex(ValueError, "E_BACKUP_SERVICE_RECOVERY"),
         ):
             recovery.capture(
@@ -364,6 +388,12 @@ class RecoveryTests(unittest.TestCase):
 
         with (
             patch.object(resumed, "compose", side_effect=retry),
+            patch(
+                "update_compose.Compose",
+                side_effect=lambda current: SimpleNamespace(
+                    compose=current.compose, wait_service=Mock()
+                ),
+            ),
             self.assertRaisesRegex(ValueError, "E_FIXTURE_DUMP_FAILURE"),
         ):
             recovery.capture(
@@ -388,6 +418,42 @@ class RecoveryTests(unittest.TestCase):
                 "Synthetic-password-for-test-only",
             )
         execute.assert_not_called()
+
+    def test_restart_obligation_is_retained_until_actual_core_health(self):
+        installation = self.installation()
+        installation.state["backupServiceRecovery"] = ["core"]
+        installation.save()
+        adapter = Mock()
+        adapter.wait_service.side_effect = ValueError("E_BACKUP_SERVICE_RECOVERY")
+        with (
+            patch("update_compose.Compose", return_value=adapter),
+            self.assertRaisesRegex(ValueError, "E_BACKUP_SERVICE_RECOVERY"),
+        ):
+            recovery.recover_service_state(installation)
+        self.assertEqual(installation.state["backupServiceRecovery"], ["core"])
+        self.assertEqual(
+            recovery.load_installation(installation.target).state[
+                "backupServiceRecovery"
+            ],
+            ["core"],
+        )
+        adapter.wait_service.side_effect = None
+        with patch("update_compose.Compose", return_value=adapter):
+            recovery.recover_service_state(installation)
+        self.assertNotIn("backupServiceRecovery", installation.state)
+        adapter.wait_service.assert_called_with("core")
+
+    def test_backup_service_recovery_cannot_bypass_an_update_fence(self):
+        installation = self.installation()
+        installation.state["backupServiceRecovery"] = ["core"]
+        installation.state["updateTransaction"] = {"phase": "migrating"}
+        with (
+            patch("update_compose.Compose") as adapter,
+            self.assertRaisesRegex(ValueError, "E_UPDATE_IN_PROGRESS"),
+        ):
+            recovery.recover_service_state(installation)
+        adapter.assert_not_called()
+        self.assertEqual(installation.state["backupServiceRecovery"], ["core"])
 
     def test_diagnostic_export_cannot_include_credentials_or_logs(self):
         installation = self.installation()

@@ -305,35 +305,50 @@ class Compose:
         # restarting an existing container. Check the daemon's current state
         # ourselves; a successful `up` alone never establishes readiness.
         self.compose("up", "-d", "--pull", "never", "--no-deps", "postgres")
+        self.wait_service("postgres")
+
+    def wait_service(self, role: str) -> None:
+        if role not in {"postgres", "core"}:
+            raise ValueError("E_UPDATE_SOURCE_COMPONENTS")
+        destination, relative = (
+            ("/var/lib/postgresql/data", "data/postgres")
+            if role == "postgres"
+            else ("/var/lib/kyrion/knowledge", "data/knowledge")
+        )
+        identity_error, health_error = (
+            ("E_UPDATE_DATABASE_TARGET", "E_UPDATE_DATABASE_HEALTH")
+            if role == "postgres"
+            else ("E_BACKUP_SERVICE_RECOVERY", "E_BACKUP_SERVICE_RECOVERY")
+        )
         deadline = time.monotonic() + 130
         started = False
         for _attempt in range(65):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 break
-            identifier = self.compose("ps", "--all", "-q", "postgres").decode().strip()
+            identifier = self.compose("ps", "--all", "-q", role).decode().strip()
             if not re.fullmatch(r"[a-f0-9]{12,64}", identifier):
-                raise ValueError("E_UPDATE_DATABASE_TARGET")
+                raise ValueError(identity_error)
             containers = json.loads(self.run("inspect", identifier))
             if not isinstance(containers, list) or len(containers) != 1:
-                raise ValueError("E_UPDATE_DATABASE_TARGET")
+                raise ValueError(identity_error)
             container = containers[0]
             labels = container.get("Config", {}).get("Labels", {})
-            expected = self.installation.state["runtimeImageIds"]["postgres"]
+            expected = self.installation.state["runtimeImageIds"][role]
             if (
                 labels.get("com.docker.compose.project")
                 != "kyrion-" + self.installation.state["installationId"]
-                or labels.get("com.docker.compose.service") != "postgres"
+                or labels.get("com.docker.compose.service") != role
                 or container.get("Image") != expected
                 or not any(
                     mount.get("Type") == "bind"
-                    and mount.get("Destination") == "/var/lib/postgresql/data"
+                    and mount.get("Destination") == destination
                     and Path(mount.get("Source", "")).resolve()
-                    == (self.root / "data/postgres").resolve()
+                    == (self.root / relative).resolve()
                     for mount in container.get("Mounts", [])
                 )
             ):
-                raise ValueError("E_UPDATE_DATABASE_TARGET")
+                raise ValueError(identity_error)
             state = container.get("State", {})
             if (
                 state.get("Status") == "exited"
@@ -363,9 +378,9 @@ class Compose:
                 or state.get("Status") in {"dead", "removing"}
                 or (state.get("Status") == "exited" and state.get("ExitCode") != 0)
             ):
-                raise ValueError("E_UPDATE_DATABASE_HEALTH")
+                raise ValueError(health_error)
             time.sleep(min(2, remaining))
-        raise ValueError("E_UPDATE_DATABASE_HEALTH")
+        raise ValueError(health_error)
 
     def capture(self, destination, password):
         from recovery import capture

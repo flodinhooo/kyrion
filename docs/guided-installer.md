@@ -15,6 +15,9 @@ and platform limits remain explicit.
 The [database-startup follow-up](status/2026-11-14-installer-database-startup.md)
 records the reproduced stopped-container case, bounded identity-checked readiness
 and the corrected systemd start-rate window.
+The [installed capture follow-up](status/2026-11-14-installer-scheduled-capture.md)
+records a real automatic application backup and preserves the Core restart
+obligation until actual owned-container health is confirmed.
 The [model-operation continuation](status/2026-11-14-installer-ollama-models.md)
 adds reviewed download/resumption and single-model removal on the selected local
 Ollama runtime. It does not install the runtime or activate Kyrion AI. Maintenance

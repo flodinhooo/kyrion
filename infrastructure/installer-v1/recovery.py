@@ -397,6 +397,7 @@ def recover_service_state(installation):
     # Validate the local owned daemon/socket and use its protected environment.
     adapter = Compose(installation)
     adapter.compose("start", "core")
+    adapter.wait_service("core")
     installation.state.pop("backupServiceRecovery")
     installation.state.pop("backupServiceRecoveryAttempts", None)
     installation.save()
@@ -631,12 +632,9 @@ def capture(
         finally:
             if restore_core:
                 try:
-                    installation.compose("start", "core")
+                    recover_service_state(installation)
                 except (OSError, ValueError):
                     raise ValueError("E_BACKUP_SERVICE_RECOVERY") from None
-                installation.state.pop("backupServiceRecovery")
-                installation.state.pop("backupServiceRecoveryAttempts", None)
-                installation.save()
         # Keep the outage bounded to consistent capture, not encryption duration.
         temporary = destination.with_name(
             "." + destination.name + "." + uuid.uuid4().hex
