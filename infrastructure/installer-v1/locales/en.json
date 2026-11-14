@@ -1,4 +1,7 @@
 {
+  "ollamaSelectionReview": "Reuse this existing loopback-only Ollama instance? Review its version and models. Kyrion will retain its configuration and services. This selection does not enable inference or cloud processing.",
+  "ollamaSelectionResult": "Local runtime selected. Its configuration remains under your management. Kyrion AI connection: not connected yet.",
+  "ollamaRuntimeError": "The local Ollama runtime could not be safely verified. Check that it is running and bound only to loopback addresses. A status or selection does not enable a Kyrion AI connection. You can continue without AI.",
   "publicHttpsTrustError": "The public-download certificate trust could not be verified. Repair the system trust store or use an intact signed installer. Explicit certificate settings remain authoritative; do not disable TLS verification.",
   "backupScheduleCryptoRequired": "GnuPG and its matching gpgconf are required before enabling backups. On supported Linux targets the OS GnuPG package must be installed; the Windows native bundle supplies the signed support runtime. No backup schedule was enabled by this failed check.",
   "backupScheduleOffer": "Configure optional automatic encrypted backups now? You can skip this and use --backup-schedule configure later.",

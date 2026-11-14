@@ -45,8 +45,10 @@ Refreshing can replace expired data even after the bundled document expires.
 Automatic scheduling, release-root distribution and the public feed itself stay
 open in R48; this maintenance command does not claim those are available.
 
-Recommending a model does not download it or change Ollama settings. Runtime
-installation/adoption, hash-verified model pull, active Core profile selection,
+Recommending a model does not download it or change Ollama settings. Explicit
+[local runtime inspection and selection](status/2026-11-14-installer-ollama-selection.md)
+are now available as maintenance operations. Managed runtime installation,
+hash-verified model pull, active Core profile selection,
 benchmark and model removal remain separate open requirements. No cloud fallback
 is enabled by planning. When no recommendation fits, setup can continue without
 AI; choosing another execution device or optional cloud needs its own explicit

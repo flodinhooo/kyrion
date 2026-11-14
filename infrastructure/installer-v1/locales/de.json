@@ -1,4 +1,7 @@
 {
+  "ollamaSelectionReview": "Diese vorhandene, ausschliesslich lokal gebundene Ollama-Instanz weiterverwenden? Prüfe Version und Modelle. Kyrion behält ihre Konfiguration und Dienste bei. Diese Auswahl aktiviert keine Inferenz oder Cloud-Verarbeitung.",
+  "ollamaSelectionResult": "Lokale Laufzeit ausgewählt. Ihre Konfiguration bleibt in deiner Verwaltung. Kyrion-KI-Verbindung: noch nicht verbunden.",
+  "ollamaRuntimeError": "Die lokale Ollama-Laufzeit konnte nicht sicher geprüft werden. Prüfe, ob sie läuft und ausschliesslich an Loopback-Adressen gebunden ist. Status oder Auswahl aktivieren keine Kyrion-KI-Verbindung. Du kannst ohne KI fortfahren.",
   "publicHttpsTrustError": "Der Zertifikats-Vertrauensspeicher für öffentliche Downloads konnte nicht geprüft werden. Repariere den System-Vertrauensspeicher oder verwende einen unveränderten signierten Installer. Ausdrückliche Zertifikatseinstellungen bleiben massgeblich; die TLS-Prüfung darf nicht deaktiviert werden.",
   "backupScheduleCryptoRequired": "GnuPG und das passende gpgconf sind vor der Backup-Aktivierung erforderlich. Auf unterstützten Linux-Zielen muss das GnuPG-Paket des Betriebssystems installiert sein; das native Windows-Paket enthält die signierte Hilfslaufzeit. Diese fehlgeschlagene Prüfung hat keinen Backup-Auftrag aktiviert.",
   "backupScheduleOffer": "Optionale automatische verschlüsselte Backups jetzt einrichten? Überspringen und später mit --backup-schedule configure fortsetzen ist möglich.",

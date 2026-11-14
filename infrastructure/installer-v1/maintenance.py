@@ -321,6 +321,26 @@ def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
         return 0
+    if getattr(args, "ollama", None):
+        from ollama_runtime import select, status
+
+        if args.ollama == "status":
+            print(json.dumps(status(args.target, args.ollama_port), indent=2))
+        else:
+
+            def review_runtime(summary):
+                print(messages["ollamaSelectionReview"])
+                print(json.dumps(summary, indent=2, ensure_ascii=True))
+                return input("[REUSE-OLLAMA/CANCEL]: ").strip() == "REUSE-OLLAMA"
+
+            result = select(
+                args.target,
+                args.ollama_port if args.ollama_port is not None else 11434,
+                review=review_runtime,
+            )
+            print(messages["ollamaSelectionResult"])
+            print(json.dumps(result, indent=2))
+        return 0
     if getattr(args, "install_crypto", False):
         from linux_crypto import interactive
 

@@ -73,6 +73,8 @@ FILES = (
     "recovery.py",
     "release_policy.py",
     "models.py",
+    "local_listeners.py",
+    "ollama_runtime.py",
     "model_cache.py",
     "model-catalog.json",
     "locales/en.json",

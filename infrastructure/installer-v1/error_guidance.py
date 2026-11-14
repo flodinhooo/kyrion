@@ -1,6 +1,16 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_OLLAMA_BINDING",
+            "E_OLLAMA_ENDPOINT",
+            "E_OLLAMA_PROTOCOL",
+            "E_OLLAMA_CHANGED",
+            "E_OLLAMA_SELECTION",
+        ),
+        "ollamaRuntimeError",
+    ),
     "E_PUBLIC_CA_BUNDLE": "publicHttpsTrustError",
     "E_PUBLIC_CA_STORE": "publicHttpsTrustError",
     **dict.fromkeys(

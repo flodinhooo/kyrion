@@ -36,6 +36,13 @@ def maintenance_result(args, messages: dict[str, str]) -> int:
         return 130
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         code = str(error).split(":", 1)[0]
+        if code in {
+            "E_OLLAMA_CANCELLED",
+            "E_INSTALL_DOWNLOAD_CANCELLED",
+            "E_LINUX_RUNTIME_CANCELLED",
+        }:
+            print(messages["cancelled"])
+            return 0
         advice = guidance(code, messages)
         if advice:
             print(advice, file=sys.stderr)
@@ -65,6 +72,8 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--ollama", choices=("status", "select"))
+    parser.add_argument("--ollama-port", type=int)
     actions.add_argument("--capabilities", action="store_true", help=argparse.SUPPRESS)
     actions.add_argument(
         "--background-platform-start", action="store_true", help=argparse.SUPPRESS
@@ -313,6 +322,7 @@ def main() -> int:
         or args.autostart
         or args.backup_schedule
         or args.install_crypto
+        or args.ollama
     ):
         return maintenance_result(args, messages)
     report = inventory(args.target)
