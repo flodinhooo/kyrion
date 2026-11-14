@@ -26,6 +26,7 @@ from restore_material import (
 )
 from restore_platform import backend
 from runtime import installation_lock
+from schema_support import SUPPORTED_CORE_SCHEMAS
 
 if TYPE_CHECKING:
     from install_download import IndexAuthority
@@ -141,7 +142,7 @@ def validate_backup(manifest: dict, installation, *, allow_same_identity=False) 
         or type(metadata.get("postgresMajor")) is not int
         or metadata["postgresMajor"] != 17
         or type(metadata.get("schema")) is not int
-        or metadata["schema"] != 49
+        or metadata["schema"] not in SUPPORTED_CORE_SCHEMAS
         or not isinstance(metadata.get("portableDatabase"), dict)
         or not isinstance(metadata.get("verificationCounts"), dict)
         or set(metadata["verificationCounts"]) != {"users", "spaces", "audit"}

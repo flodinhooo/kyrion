@@ -33,6 +33,7 @@ data class GatewayEnrollRequest(
     @field:NotBlank @field:Size(max = 120) val osName: String,
     @field:NotBlank @field:Size(max = 80) val osVersion: String,
     @field:NotBlank @field:Size(max = 40) val architecture: String,
+    @field:Pattern(regexp = "^[A-Za-z0-9_-]{43}$") val nodeCredential: String? = null,
 )
 data class GatewayEnrollResponse(val nodeId: UUID, val gatewayToken: String)
 data class GatewayHeartbeatRequest(@field:Valid val health: GatewayHealth)
@@ -136,12 +137,16 @@ class GatewayAgentController(
     private val buttonBindings: ZigbeeButtonBindingService,
     private val motionEvents: ZigbeeMotionEventService,
 ) {
+    @GetMapping("/enrollment-capabilities")
+    fun enrollmentCapabilities() = GatewayEnrollmentCapabilities()
+
     @PostMapping("/enroll")
     @ResponseStatus(HttpStatus.CREATED)
     fun enroll(@Valid @RequestBody body: GatewayEnrollRequest): GatewayEnrollResponse {
         val registered = service.enroll(
             body.enrollmentToken, body.hostname.lowercase(), body.agentVersion,
             body.osName, body.osVersion, body.architecture,
+            body.nodeCredential,
         )
         return GatewayEnrollResponse(registered.node.id, registered.gatewayToken)
     }
@@ -189,6 +194,13 @@ class GatewayAgentController(
         motionEvents.record(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.detected)
     }
 }
+
+data class GatewayEnrollmentCapabilities(
+    val formatVersion: Int = 1,
+    val enrollmentProtocol: Int = 2,
+    val clientCredential: Boolean = true,
+    val acknowledgementWithinOriginalExpiry: Boolean = true,
+)
 
 @RestControllerAdvice
 class GatewayErrorHandler {

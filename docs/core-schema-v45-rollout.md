@@ -1,5 +1,17 @@
 # Schema-only V45 upgrade and recovery
 
+## Enrollment V50 source supplement
+
+The development source now contains V50, explicitly associating prepared gateway
+registrations with their existing enrollment and Space. The operator tool accepts
+exact contiguous catalogs through V50 and explicit target50; its default remains
+45. Unsupported/future catalogs fail with `ARTIFACT_CATALOG_UNSUPPORTED`. Source50
+is supported for a reviewed no-op/current-schema check, never downgrade. Existing
+artifact/tool/target approval hashes must be regenerated after this source change.
+This is source/test preparation, not a published release or authorization for any
+existing Windows, Pi or household installation. Earlier evidence keeps its exact
+schema/artifact scope. New rehearsal evidence must be recorded separately.
+
 ## Identity integration supplement
 
 Master now also contains optional Identity V46. Earlier V45 artifact hashes and

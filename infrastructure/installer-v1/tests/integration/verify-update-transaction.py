@@ -114,7 +114,9 @@ def public_bundle(directory, jar, release, schema):
     return ReviewedBundle(manifest, hashlib.sha256(raw).hexdigest())
 
 
-def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
+def signed_inputs(
+    installation, bundle, reviewed, *, source_schema=49, target_schema=50
+):
     private = Ed25519PrivateKey.generate()
     now = int(time.time())
     trust = {
@@ -139,7 +141,7 @@ def signed_inputs(installation, bundle, reviewed, *, target_schema=50):
         "version": reviewed.manifest["release"],
         "platform": reviewed.manifest["architecture"],
         "minimumInstaller": "1.0.0",
-        "fromSchemas": [49],
+        "fromSchemas": [source_schema],
         "targetSchema": target_schema,
         "apiMin": 1,
         "apiMax": 1,
@@ -421,6 +423,8 @@ def tempfile_directory(parent):
 def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=False):
     if sha256(jar) != expected_digest:
         raise ValueError("E_FIXTURE_SOURCE_CHANGED")
+    source_schema = helpers["packaged_schema"](jar)
+    target_schema = source_schema + 1
     if os.name == "posix":
         runpy.run_path(str(Path(__file__).with_name("verify-linux-core.py")))[
             "isolated_namespace"
@@ -434,17 +438,17 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
         if failing:
             migration += " SELECT 1/0;"
         package.writestr(
-            "BOOT-INF/classes/db/migration/V50__update_transaction_fixture.sql",
+            f"BOOT-INF/classes/db/migration/V{target_schema}__update_transaction_fixture.sql",
             migration,
         )
         if failing:
             package.writestr(
-                "BOOT-INF/classes/db/migration/V50__update_transaction_fixture.sql.conf",
+                f"BOOT-INF/classes/db/migration/V{target_schema}__update_transaction_fixture.sql.conf",
                 "executeInTransaction=false\n",
             )
     source_bundle, target_bundle = root / "source-public", root / "target-public"
-    source = public_bundle(source_bundle, jar, "1.1.0", 49)
-    target = public_bundle(target_bundle, target_jar, "1.2.0", 50)
+    source = public_bundle(source_bundle, jar, "1.1.0", source_schema)
+    target = public_bundle(target_bundle, target_jar, "1.2.0", target_schema)
     installation = Installation(
         root / "installed",
         source.manifest,
@@ -461,7 +465,13 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
     )
     create_keys(installation)
     installation.save()
-    signed_inputs(installation, target_bundle, target)
+    signed_inputs(
+        installation,
+        target_bundle,
+        target,
+        source_schema=source_schema,
+        target_schema=target_schema,
+    )
     password = "Synthetic-update-recovery-password-123456"
     with PostgresFixture(postgres_bin) as postgres, contextlib.ExitStack() as stack:
         postgres.query("postgres", "CREATE DATABASE kyrion")
@@ -495,6 +505,14 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
         adapter.query(
             f"INSERT INTO gateway_node(id,owner_id,display_name,hostname,credential_hash,agent_version,os_name,os_version,architecture,created_at,updated_at) VALUES('{node}','{original_user['id']}','Synthetic update node','synthetic.invalid','{'a' * 64}','fixture','fixture','fixture','amd64',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
         )
+        if source_schema >= 50:
+            enrollment = str(uuid.uuid4())
+            adapter.query(
+                f"INSERT INTO gateway_enrollment(id,owner_id,token_hash,display_name,expires_at,used_at,created_at) VALUES('{enrollment}','{original_user['id']}','{'e' * 64}','Synthetic bound enrollment',CURRENT_TIMESTAMP+INTERVAL '10 minutes',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
+            )
+            adapter.query(
+                f"UPDATE gateway_node SET enrollment_id='{enrollment}' WHERE id='{node}'"
+            )
         adapter.query(
             f"INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at) SELECT gen_random_uuid(),'{node}','{original_user['id']}','synthetic.no-device','{{}}',state,CURRENT_TIMESTAMP FROM unnest(ARRAY['pending','running']) state"
         )
@@ -659,7 +677,7 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
                 complete = updater.resume(
                     installation.target, password, automatic=automatic
                 )
-            if complete["phase"] != "complete" or adapter.schema() != 50:
+            if complete["phase"] != "complete" or adapter.schema() != target_schema:
                 raise ValueError("E_FIXTURE_UPDATE_NOT_COMPLETE")
             if (
                 load_installation(installation.target)
@@ -685,7 +703,7 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
             recovered = updater.recover(
                 installation.target, password, acknowledge_writes=True
             )
-        if recovered["phase"] != "recovered" or adapter.schema() != 49:
+        if recovered["phase"] != "recovered" or adapter.schema() != source_schema:
             raise ValueError("E_FIXTURE_UPDATE_RECOVERY_FAILED")
         if (
             adapter.query(
@@ -722,6 +740,14 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
             == b"a" * 64
         ):
             raise ValueError("E_FIXTURE_RECOVERED_DEVICE_CREDENTIAL_REPLAY")
+        if (
+            source_schema >= 50
+            and adapter.query(
+                "SELECT count(*) FROM gateway_node WHERE enrollment_id IS NOT NULL"
+            ).strip()
+            != b"0"
+        ):
+            raise ValueError("E_FIXTURE_RECOVERED_ENROLLMENT_REPLAY")
         session_count = adapter.query("SELECT count(*) FROM auth_session")
         updater.resume(installation.target, password)
         if adapter.query("SELECT count(*) FROM auth_session") != session_count:
@@ -739,6 +765,8 @@ def exercise_inner(postgres_bin, java, jar, expected_digest, work, *, failing=Fa
         ):
             raise ValueError("E_FIXTURE_FAILED_DATABASE_NOT_RETAINED")
         return {
+            "sourceSchema": source_schema,
+            "syntheticTargetSchema": target_schema,
             "failingMigration": failing,
             "encryptedBackupVerified": True,
             "actualFlywayMigration": True,

@@ -25,7 +25,7 @@ class FreshDownloadTests(unittest.TestCase):
         )
         self.http.setUp()
         self.addCleanup(self.http.doCleanups)
-        installed, self.selected = self.http.staged_fixture()
+        installed, self.selected = self.http.staged_fixture(schema=download.SCHEMA)
         policy = load_installation(installed).state["updatePolicy"]
         self.enterContext(
             patch.object(

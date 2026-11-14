@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 
 FILES = (
+    "schema_support.py",
     "guided.py",
     "build_identity.py",
     "release_channel.py",

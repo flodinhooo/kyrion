@@ -55,6 +55,81 @@ class GatewayServiceTest {
     }
 
     @Test
+    fun `same prepared credential acknowledges lost response without another node`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "prepared")
+        val credential = SessionTokenService().create().rawToken
+        val first = service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential)
+        val retry = service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential)
+        assertThat(retry.node.id).isEqualTo(first.node.id)
+        assertThat(retry.gatewayToken).isEqualTo(credential)
+        assertThat(repository.nodes).hasSize(1)
+        assertThat(repository.nodes.single().enrollmentId).isEqualTo(enrollment.id)
+        assertThat(repository.nodes.single().credentialHash).isEqualTo(SessionTokenService().hash(credential))
+    }
+
+    @Test
+    fun `consumed enrollment cannot be reused by a different credential or identity`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "prepared")
+        val credential = SessionTokenService().create().rawToken
+        service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential)
+        val identities = listOf(
+            listOf("other", "1", "Debian", "13", "amd64", credential),
+            listOf("prepared", "2", "Debian", "13", "amd64", credential),
+            listOf("prepared", "1", "Windows", "13", "amd64", credential),
+            listOf("prepared", "1", "Debian", "14", "amd64", credential),
+            listOf("prepared", "1", "Debian", "13", "arm64", credential),
+            listOf("prepared", "1", "Debian", "13", "amd64", SessionTokenService().create().rawToken),
+        )
+        identities.forEach { values ->
+            assertThatThrownBy { service.enroll(enrollment.enrollmentToken, values[0], values[1], values[2], values[3], values[4], values[5]) }
+                .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+        }
+        assertThat(repository.nodes).hasSize(1)
+    }
+
+    @Test
+    fun `acknowledgement expires at original enrollment deadline`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "prepared")
+        val credential = SessionTokenService().create().rawToken
+        service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential)
+        val expired = GatewayService(repository, SessionTokenService(), ActivityService(FakeActivityRepository(), clock),
+            Clock.fixed(enrollment.expiresAt, ZoneOffset.UTC))
+        assertThatThrownBy { expired.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential) }
+            .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+        assertThat(repository.nodes).hasSize(1)
+    }
+
+    @Test
+    fun `legacy server generated enrollment is still strictly one use`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "legacy")
+        val legacy = service.enroll(enrollment.enrollmentToken, "legacy", "1", "Debian", "13", "amd64")
+        assertThat(legacy.node.enrollmentId).isNull()
+        assertThatThrownBy { service.enroll(enrollment.enrollmentToken, "legacy", "1", "Debian", "13", "amd64", legacy.gatewayToken) }
+            .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+    }
+
+    @Test
+    fun `malformed prepared credentials do not consume authorization`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "prepared")
+        listOf("", "short", "a".repeat(43), "A".repeat(42), "*".repeat(43)).forEach { credential ->
+            assertThatThrownBy { service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential) }
+                .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+        }
+        assertThat(repository.enrollments.single().usedAt).isNull()
+        assertThat(repository.nodes).isEmpty()
+    }
+
+    @Test
+    fun `acknowledgement cannot cross enrollment Space boundary`() {
+        val enrollment = service.createEnrollment(UUID.randomUUID(), "prepared")
+        val credential = SessionTokenService().create().rawToken
+        service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential)
+        repository.nodes[0] = repository.nodes[0].copy(ownerId = UUID.randomUUID())
+        assertThatThrownBy { service.enroll(enrollment.enrollmentToken, "prepared", "1", "Debian", "13", "amd64", credential) }
+            .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+    }
+
+    @Test
     fun `heartbeat rejects impossible untrusted metrics`() {
         val enrollment = service.createEnrollment(UUID.randomUUID(), "kyrion-node")
         val registered = service.enroll(
@@ -107,6 +182,9 @@ class GatewayServiceTest {
             if (index < 0) return null
             return enrollments[index].copy(usedAt = usedAt).also { enrollments[index] = it }
         }
+        override fun consumedEnrollment(tokenHash: String, now: Instant) =
+            enrollments.singleOrNull { it.tokenHash == tokenHash && it.usedAt != null && it.expiresAt > now }
+        override fun findByEnrollment(id: UUID) = nodes.singleOrNull { it.enrollmentId == id }
         override fun create(node: GatewayNode) { nodes += node }
         override fun all(ownerId: UUID) = nodes.filter { it.ownerId == ownerId }
         override fun findById(id: UUID) = nodes.singleOrNull { it.id == id }

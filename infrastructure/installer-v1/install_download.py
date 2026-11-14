@@ -19,6 +19,7 @@ from host import reject_links
 from release_channel import embedded
 from release_policy import fetch_document, fresh_release, verify
 from runtime import installation_lock
+from schema_support import CURRENT_CORE_SCHEMA
 from update_download import (
     artifact_plan,
     manifest_bytes,
@@ -27,7 +28,7 @@ from update_download import (
 )
 
 PROOF = "release-index.json"
-SCHEMA = 49
+SCHEMA = CURRENT_CORE_SCHEMA
 API = 1
 
 

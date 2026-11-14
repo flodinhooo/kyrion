@@ -11,6 +11,7 @@ import contextlib
 import hashlib
 import json
 import os
+import re
 import runpy
 import secrets
 import socket
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import time
 import uuid
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
@@ -34,6 +36,23 @@ from crypto_support import certificate, private_tls_key
 from postgres_fixture import PostgresFixture
 from recovery import COUNTS_SQL, create_archive, crypto
 from runtime import Installation
+
+
+def packaged_schema(jar: Path) -> int:
+    with zipfile.ZipFile(jar) as package:
+        versions = sorted(
+            int(match[1])
+            for name in package.namelist()
+            if (
+                match := re.fullmatch(
+                    r"BOOT-INF/classes/db/migration/V([1-9][0-9]*)__[A-Za-z0-9_]+\.sql",
+                    name,
+                )
+            )
+        )
+    if not versions or versions != list(range(1, versions[-1] + 1)):
+        raise ValueError("E_FIXTURE_MIGRATION_CATALOG")
+    return versions[-1]
 
 
 def resume_fixture(target, backup, password, receipt):
@@ -501,6 +520,23 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
             "source",
             f"INSERT INTO gateway_node(id,owner_id,display_name,hostname,credential_hash,agent_version,os_name,os_version,architecture,created_at,updated_at) VALUES('{node_id}','{owner}','Synthetic node','synthetic.invalid','{'a' * 64}','fixture','fixture','fixture','amd64',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
         )
+        schema = int(
+            source_core.command(
+                "SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'"
+            ).strip()
+        )
+        if schema != packaged_schema(jar):
+            raise ValueError("E_FIXTURE_SCHEMA_MISMATCH")
+        if schema >= 50:
+            enrollment = str(uuid.uuid4())
+            postgres.query(
+                "source",
+                f"INSERT INTO gateway_enrollment(id,owner_id,token_hash,display_name,expires_at,used_at,created_at) VALUES('{enrollment}','{owner}','{'e' * 64}','Synthetic bound enrollment',CURRENT_TIMESTAMP+INTERVAL '10 minutes',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+            )
+            postgres.query(
+                "source",
+                f"UPDATE gateway_node SET enrollment_id='{enrollment}' WHERE id='{node_id}'",
+            )
         for status in ("pending", "running"):
             postgres.query(
                 "source",
@@ -543,7 +579,7 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
         metadata = {
             "installationId": source.state["installationId"],
             "configuration": source.configuration,
-            "schema": 49,
+            "schema": schema,
             "postgresMajor": 17,
             "verificationCounts": json.loads(source_core.command(COUNTS_SQL)),
             "portableDatabase": snapshot,
@@ -766,6 +802,14 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
             ):
                 raise ValueError("E_RESTORE_FIXTURE_OLD_DEVICE_CREDENTIALS")
             if (
+                schema >= 50
+                and target_core.command(
+                    "SELECT count(*) FROM gateway_node WHERE enrollment_id IS NOT NULL"
+                ).strip()
+                != b"0"
+            ):
+                raise ValueError("E_RESTORE_FIXTURE_ENROLLMENT_NOT_REVOKED")
+            if (
                 target_core.command(
                     "SELECT count(*) FROM activity_event WHERE event_type='installation.restored'"
                 ).strip()
@@ -802,6 +846,8 @@ def exercise(postgres_bin, java, jar, expected_digest, work):
             )
         return {
             "coreJarSha256": expected_digest,
+            "sourceSchema": schema,
+            "boundEnrollmentRevokedOnRestore": schema >= 50,
             "actualCoreAndPostgreSQL": True,
             "maintenanceHealthOnlyStart": True,
             "maintenancePreservesAccountsSessionsAndStartupAudit": True,

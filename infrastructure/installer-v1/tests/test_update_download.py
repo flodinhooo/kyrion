@@ -182,14 +182,14 @@ class DownloadTests(unittest.TestCase):
             self.assertFalse(self.destination.exists())
         self.assertTrue(all(path == "/runtime.bin" for path, _ in self.requests))
 
-    def staged_fixture(self):
+    def staged_fixture(self, *, schema=49):
         fixture = native_fixture.NativeBundleTests(
             methodName="test_actual_unpack_repeat_and_refusal_to_replace_changed_public_file"
         )
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         manifest = fixture.bundle()
-        manifest["compatibility"]["schema"] = 49
+        manifest["compatibility"]["schema"] = schema
         raw = json.dumps(manifest).encode()
         self.files["/manifest.json"] = raw
         self.files["/kyrion-windows-amd64.zip"] = (
@@ -219,8 +219,8 @@ class DownloadTests(unittest.TestCase):
             "version": "1.2.3",
             "platform": "windows/amd64",
             "minimumInstaller": "1.0.0",
-            "fromSchemas": [49],
-            "targetSchema": 49,
+            "fromSchemas": [schema],
+            "targetSchema": schema,
             "apiMin": 1,
             "apiMax": 1,
             "manifestUrl": self.url + "/manifest.json",

@@ -13,6 +13,9 @@ import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.sql.Timestamp
+import java.security.MessageDigest
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -42,6 +45,7 @@ data class GatewayNode(
     val health: GatewayHealth?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val enrollmentId: UUID? = null,
 )
 
 data class GatewayHealth(
@@ -116,6 +120,8 @@ data class GatewayServiceHealth(val id: String, val status: String)
 interface GatewayRepository {
     fun createEnrollment(enrollment: GatewayEnrollment)
     fun consumeEnrollment(tokenHash: String, usedAt: Instant): GatewayEnrollment?
+    fun consumedEnrollment(tokenHash: String, now: Instant): GatewayEnrollment?
+    fun findByEnrollment(id: UUID): GatewayNode?
     fun create(node: GatewayNode)
     fun all(ownerId: UUID): List<GatewayNode>
     fun findById(id: UUID): GatewayNode?
@@ -157,14 +163,15 @@ class JdbcGatewayRepository(
             jdbc.sql(
                 """INSERT INTO gateway_node
                    (id, owner_id, display_name, hostname, credential_hash, agent_version, os_name,
-                    os_version, architecture, last_seen_at, health, created_at, updated_at)
+                    os_version, architecture, last_seen_at, health, created_at, updated_at, enrollment_id)
                    VALUES (:id, :ownerId, :displayName, :hostname, :credentialHash, :agentVersion,
-                    :osName, :osVersion, :architecture, NULL, NULL, :createdAt, :updatedAt)""",
+                    :osName, :osVersion, :architecture, NULL, NULL, :createdAt, :updatedAt, :enrollmentId)""",
             ).param("id", node.id).param("ownerId", node.ownerId).param("displayName", node.displayName)
                 .param("hostname", node.hostname).param("credentialHash", node.credentialHash)
                 .param("agentVersion", node.agentVersion).param("osName", node.osName)
                 .param("osVersion", node.osVersion).param("architecture", node.architecture)
                 .param("createdAt", Timestamp.from(node.createdAt)).param("updatedAt", Timestamp.from(node.updatedAt))
+                .param("enrollmentId", node.enrollmentId, java.sql.Types.OTHER)
                 .update()
         } catch (_: DuplicateKeyException) {
             throw GatewayAlreadyRegisteredException()
@@ -177,6 +184,22 @@ class JdbcGatewayRepository(
 
     override fun findById(id: UUID): GatewayNode? = jdbc.sql("SELECT * FROM gateway_node WHERE id = :id")
         .param("id", id).query { rs, _ -> mapNode(rs) }.optional().orElse(null)
+
+    override fun consumedEnrollment(tokenHash: String, now: Instant): GatewayEnrollment? = jdbc.sql(
+        """SELECT * FROM gateway_enrollment
+           WHERE token_hash=:tokenHash AND used_at IS NOT NULL AND expires_at>:now""",
+    ).param("tokenHash", tokenHash).param("now", Timestamp.from(now)).query { rs, _ ->
+        GatewayEnrollment(
+            rs.getObject("id", UUID::class.java), rs.getObject("owner_id", UUID::class.java),
+            rs.getString("token_hash"), rs.getString("display_name"),
+            rs.getTimestamp("expires_at").toInstant(), rs.getTimestamp("used_at").toInstant(),
+            rs.getTimestamp("created_at").toInstant(),
+        )
+    }.optional().orElse(null)
+
+    override fun findByEnrollment(id: UUID): GatewayNode? = jdbc.sql(
+        "SELECT * FROM gateway_node WHERE enrollment_id=:id",
+    ).param("id", id).query { rs, _ -> mapNode(rs) }.optional().orElse(null)
 
     override fun updateHeartbeat(id: UUID, credentialHash: String, health: GatewayHealth, seenAt: Instant): Boolean =
         jdbc.sql(
@@ -194,6 +217,7 @@ class JdbcGatewayRepository(
             rs.getString("architecture"), rs.getTimestamp("last_seen_at")?.toInstant(),
             healthJson?.let { objectMapper.readValue(it, GatewayHealth::class.java) },
             rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
+            rs.getObject("enrollment_id", UUID::class.java),
         )
     }
 }
@@ -225,14 +249,39 @@ class GatewayService(
     }
 
     @Transactional
-    fun enroll(token: String, hostname: String, agentVersion: String, osName: String, osVersion: String, architecture: String): RegisteredGateway {
+    fun enroll(token: String, hostname: String, agentVersion: String, osName: String, osVersion: String, architecture: String, nodeCredential: String? = null): RegisteredGateway {
         val now = clock.instant()
-        val enrollment = repository.consumeEnrollment(tokens.hash(token), now) ?: throw GatewayEnrollmentInvalidException()
+        if (nodeCredential != null && (
+                !nodeCredential.matches(Regex("^[A-Za-z0-9_-]{43}$")) ||
+                Base64.getUrlEncoder().withoutPadding().encodeToString(Base64.getUrlDecoder().decode(nodeCredential)) != nodeCredential
+            )
+        ) {
+            throw GatewayEnrollmentInvalidException()
+        }
+        val enrollment = repository.consumeEnrollment(tokens.hash(token), now) ?: run {
+            // Only the same protected client credential can acknowledge a lost
+            // response. This does not consume the code for another claimant.
+            if (nodeCredential == null) throw GatewayEnrollmentInvalidException()
+            val used = repository.consumedEnrollment(tokens.hash(token), now)
+                ?: throw GatewayEnrollmentInvalidException()
+            boundary?.workspace(used.ownerId)
+            val existing = repository.findByEnrollment(used.id)
+                ?: throw GatewayEnrollmentInvalidException()
+            if (existing.ownerId != used.ownerId || !MessageDigest.isEqual(
+                    existing.credentialHash.toByteArray(StandardCharsets.US_ASCII),
+                    tokens.hash(nodeCredential).toByteArray(StandardCharsets.US_ASCII),
+                ) ||
+                existing.hostname != hostname || existing.agentVersion != agentVersion ||
+                existing.osName != osName || existing.osVersion != osVersion || existing.architecture != architecture
+            ) throw GatewayEnrollmentInvalidException()
+            return RegisteredGateway(existing, nodeCredential)
+        }
         boundary?.workspace(enrollment.ownerId)
-        val credential = tokens.create()
+        val credential = nodeCredential?.let { dev.kyrion.core.security.SessionToken(it, tokens.hash(it)) } ?: tokens.create()
         val node = GatewayNode(
             UUID.randomUUID(), enrollment.ownerId, enrollment.displayName, hostname, credential.tokenHash,
             agentVersion, osName, osVersion, architecture, null, null, now, now,
+            if (nodeCredential == null) null else enrollment.id,
         )
         repository.create(node)
         activity.record(

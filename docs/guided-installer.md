@@ -22,6 +22,10 @@ The [guest-init follow-up](status/2026-11-14-installer-guest-init.md) proves act
 enabled systemd startup and offline same-identity login after restarting the
 owned Debian guest. It explicitly does not establish physical kernel/cold boot
 or Windows pre-login startup.
+The [Core enrollment follow-up](status/2026-11-14-installer-enrollment-core.md)
+adds retry acknowledgement to existing node identities and records schema50
+backup/restore/update tests. Complete installer pairing and node runtime work
+remain open.
 The [model-operation continuation](status/2026-11-14-installer-ollama-models.md)
 adds reviewed download/resumption and single-model removal on the selected local
 Ollama runtime. It does not install the runtime or activate Kyrion AI. Maintenance

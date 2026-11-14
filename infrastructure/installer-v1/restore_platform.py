@@ -12,6 +12,7 @@ from pathlib import Path
 
 from bundle import sha256, unique_object
 from host import reject_links
+from schema_support import restore_capability
 from system_tools import run as run_system_command
 
 CORE_MAIN = "dev.kyrion.core.security.OperationalRestoreAdmin"
@@ -105,13 +106,9 @@ class Native:
             )
             if result.returncode or len(result.stdout) > 4096:
                 raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
-            if json.loads(result.stdout, object_pairs_hook=unique_object) != {
-                "formatVersion": 1,
-                "coreSchema": 49,
-                "coreOwnedDisposition": True,
-                "recoveryKeyTransfer": True,
-            }:
-                raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
+            self.core_schema = restore_capability(
+                json.loads(result.stdout, object_pairs_hook=unique_object)
+            )
 
     def command(self, sql: str, *, stdin=None, database="kyrion") -> bytes:
         result = subprocess.run(
@@ -269,13 +266,7 @@ class Compose:
         if result.returncode or len(result.stdout) > 4096:
             raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
         capability = json.loads(result.stdout, object_pairs_hook=unique_object)
-        if capability != {
-            "formatVersion": 1,
-            "coreSchema": 49,
-            "coreOwnedDisposition": True,
-            "recoveryKeyTransfer": True,
-        }:
-            raise ValueError("E_RESTORE_CORE_UPGRADE_REQUIRED")
+        self.core_schema = restore_capability(capability)
 
     def core_image(self) -> str:
         images = self.installation.state.get("runtimeImageIds")

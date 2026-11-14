@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -47,6 +48,87 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val buttonAddress = "0x0011223344556688"
     private val payload get() = mapOf<String, Any>("deviceId" to address, "on" to true)
     private val human get() = GatewayAuthority(owner, GatewayPrincipalKind.HUMAN, member, "devices:execute", "power.set")
+
+    @Test fun `prepared enrollment HTTP retry acknowledges the same node and rejects a second claimant`() {
+        val capability = mvc.perform(get("/v1/gateway-agent/enrollment-capabilities"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readTree(capability).get("enrollmentProtocol").asInt()).isEqualTo(2)
+        val enrollment = gateways.createEnrollment(owner, "Prepared fixture")
+        val credential = SessionTokenService().create().rawToken
+        fun body(value: String) = """{"enrollmentToken":"${enrollment.enrollmentToken}","hostname":"prepared-fixture","agentVersion":"1","osName":"Debian","osVersion":"13","architecture":"amd64","nodeCredential":"$value"}"""
+        fun request(value: String) = mvc.perform(post("/v1/gateway-agent/enroll").contentType(MediaType.APPLICATION_JSON).content(body(value)))
+        val first = request(credential).andExpect(status().isCreated).andReturn().response.contentAsString
+        val retry = request(credential).andExpect(status().isCreated).andReturn().response.contentAsString
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        assertThat(mapper.readTree(retry).get("nodeId").asText()).isEqualTo(mapper.readTree(first).get("nodeId").asText())
+        request(SessionTokenService().create().rawToken).andExpect(status().isUnauthorized)
+        assertThat(jdbc.sql("SELECT count(*) FROM gateway_node WHERE enrollment_id=:id").param("id", enrollment.id).query(Int::class.java).single()).isEqualTo(1)
+        jdbc.sql("UPDATE gateway_enrollment SET expires_at=:expired WHERE id=:id")
+            .param("expired", java.sql.Timestamp.from(Instant.EPOCH)).param("id", enrollment.id).update()
+        request(credential).andExpect(status().isUnauthorized)
+    }
+
+    @Test fun `concurrent same enrollment requests commit one node and both acknowledge it`() {
+        val enrollment = gateways.createEnrollment(owner, "Concurrent fixture")
+        val credential = SessionTokenService().create().rawToken
+        val start = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { executor ->
+            val futures = (1..2).map {
+                executor.submit<RegisteredGateway> {
+                    check(start.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                    gateways.enroll(enrollment.enrollmentToken, "concurrent-fixture", "1", "Debian", "13", "amd64", credential)
+                }
+            }
+            start.countDown()
+            val nodes = futures.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS).node.id }
+            assertThat(nodes.distinct()).hasSize(1)
+            assertThat(jdbc.sql("SELECT count(*) FROM gateway_node WHERE enrollment_id=:id").param("id", enrollment.id).query(Int::class.java).single()).isEqualTo(1)
+        }
+    }
+
+    @Test fun `database rejects enrollment association from another Space`() {
+        val other = user()
+        rbac.initializeUser(other, other, true)
+        val foreign = gateways.createEnrollment(other, "Foreign fixture")
+        assertThatThrownBy {
+            jdbc.sql("UPDATE gateway_node SET enrollment_id=:enrollment WHERE id=:node")
+                .param("enrollment", foreign.id).param("node", node).update()
+        }.isInstanceOf(org.springframework.dao.DataIntegrityViolationException::class.java)
+        assertThat(jdbc.sql("SELECT enrollment_id IS NULL FROM gateway_node WHERE id=:node").param("node", node).query(Boolean::class.java).single()).isTrue()
+    }
+
+    @Test fun `concurrent different claimants cannot reuse a one use enrollment`() {
+        val enrollment = gateways.createEnrollment(owner, "Contested fixture")
+        val start = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { executor ->
+            val futures = (1..2).map {
+                val credential = SessionTokenService().create().rawToken
+                executor.submit<UUID?> {
+                    check(start.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                    try {
+                        gateways.enroll(enrollment.enrollmentToken, "contested-fixture", "1", "Debian", "13", "amd64", credential).node.id
+                    } catch (_: GatewayEnrollmentInvalidException) {
+                        null
+                    }
+                }
+            }
+            start.countDown()
+            assertThat(futures.mapNotNull { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }).hasSize(1)
+            assertThat(jdbc.sql("SELECT count(*) FROM gateway_node WHERE enrollment_id=:id").param("id", enrollment.id).query(Int::class.java).single()).isEqualTo(1)
+        }
+    }
+
+    @Test fun `recovery enrollment cleanup preserves node identity and owner`() {
+        val enrollment = gateways.createEnrollment(owner, "Cleanup fixture")
+        val credential = SessionTokenService().create().rawToken
+        val registered = gateways.enroll(enrollment.enrollmentToken, "cleanup-fixture", "1", "Debian", "13", "amd64", credential)
+        jdbc.sql("DELETE FROM gateway_enrollment WHERE id=:id").param("id", enrollment.id).update()
+        assertThat(jdbc.sql("SELECT enrollment_id IS NULL AND owner_id=:owner FROM gateway_node WHERE id=:node")
+            .param("owner", owner).param("node", registered.node.id).query(Boolean::class.java).single()).isTrue()
+        assertThat(gateways.authenticate(registered.node.id, credential).id).isEqualTo(registered.node.id)
+        assertThatThrownBy { gateways.enroll(enrollment.enrollmentToken, "cleanup-fixture", "1", "Debian", "13", "amd64", credential) }
+            .isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+    }
 
     @BeforeEach fun prepare() {
         jdbc.sql("TRUNCATE user_account,activity_event,activity_integrity_chain CASCADE").update()
@@ -353,7 +435,8 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
             connection.schema = schema
             connection.createStatement().use { sql ->
                 sql.execute("INSERT INTO user_account(id,username,password_hash) VALUES('$owner','upgrade-owner','fixture')")
-                sql.execute("INSERT INTO gateway_node SELECT * FROM public.gateway_node WHERE id='$node'")
+                val legacyColumns = "id,owner_id,display_name,hostname,credential_hash,agent_version,os_name,os_version,architecture,last_seen_at,health,created_at,updated_at"
+                sql.execute("INSERT INTO gateway_node($legacyColumns) SELECT $legacyColumns FROM public.gateway_node WHERE id='$node'")
                 sql.execute("INSERT INTO integration_connection SELECT * FROM public.integration_connection WHERE owner_id='$owner'")
                 val command = UUID.randomUUID()
                 sql.execute("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at,correlation_id)
