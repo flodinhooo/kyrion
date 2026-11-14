@@ -8,6 +8,12 @@ The detailed [binding requirement matrix](installer-requirements.md) supersedes
 the coarse historical stage table below. Continuing source/test work is recorded
 in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
 full product scope remains open; no user acceptance is requested for this state.
+The [model-operation continuation](status/2026-11-14-installer-ollama-models.md)
+adds reviewed download/resumption and single-model removal on the selected local
+Ollama runtime. It does not install the runtime or activate Kyrion AI. Maintenance
+uses `--ollama pull --ollama-model <catalog-id>` or
+`--ollama remove --ollama-model <exact-local-model>`; status shows saved operation
+state. Model size/license are reviewed separately from runtime selection.
 The later [linked account evidence](status/2026-11-12-installer-identity.md) and
 [integration/build evidence](status/2026-11-13-installer-integrations.md) supersede
 older planned-only descriptions of those implemented slices. They do not close

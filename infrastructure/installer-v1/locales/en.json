@@ -1,4 +1,8 @@
 {
+  "ollamaModelName": "Exact model identifier including variant, for example qwen3:0.6b",
+  "ollamaModelPullReview": "Review the exact variant, download size, license and resource estimate. This operation changes the explicitly selected local Ollama instance. Free capacity of an externally managed model directory is unknown. An interrupted download can be explicitly repeated using Ollama's partial cache. No inference or cloud processing is activated.",
+  "ollamaModelRemoveReview": "Remove this single model from the selected local Ollama instance? Check its name and digest. Other applications may use it. The runtime, configuration and other models are not selected for removal. A loaded model must first be deliberately stopped outside this operation.",
+  "ollamaModelError": "The model operation could not be confirmed. Inspect its saved state with --ollama status. After interruption, explicitly repeat the same operation. Existing tags with a different digest are not overwritten; loaded models are not removed. A changed inventory requires another runtime inspection and selection. Preserve foreign models and settings.",
   "systemToolsError": "A required protected system tool is missing or could not be verified. Check the runtime prerequisites.",
   "nativeCryptoScratchError": "A short protected GnuPG working directory could not be prepared in the system application folder. Check its path and administrator permissions. No backup password is passed to a process until this check succeeds.",
   "ollamaSelectionReview": "Reuse this existing loopback-only Ollama instance? Review its version and models. Kyrion will retain its configuration and services. This selection does not enable inference or cloud processing.",

@@ -324,7 +324,43 @@ def run(args, messages: dict[str, str]) -> int:
     if getattr(args, "ollama", None):
         from ollama_runtime import select, status
 
-        if args.ollama == "status":
+        if args.ollama in {"pull", "remove"}:
+            from ollama_models import pull, remove
+
+            model_id = args.ollama_model
+            if not model_id:
+                model_id = input(messages["ollamaModelName"] + ": ").strip()
+
+            def review_model(summary):
+                print(
+                    messages[
+                        "ollamaModelPullReview"
+                        if args.ollama == "pull"
+                        else "ollamaModelRemoveReview"
+                    ]
+                )
+                print(json.dumps(summary, indent=2, ensure_ascii=True))
+                confirmation = (
+                    "DOWNLOAD-THIS-MODEL"
+                    if args.ollama == "pull"
+                    else "REMOVE-THIS-MODEL"
+                )
+                return input("[" + confirmation + "/CANCEL]: ").strip() == confirmation
+
+            if args.ollama == "pull":
+                result = pull(
+                    args.target,
+                    model_id,
+                    port=args.ollama_port,
+                    review=review_model,
+                    progress=lambda record: print(json.dumps(record), flush=True),
+                )
+            else:
+                result = remove(
+                    args.target, model_id, port=args.ollama_port, review=review_model
+                )
+            print(json.dumps(result, indent=2))
+        elif args.ollama == "status":
             print(json.dumps(status(args.target, args.ollama_port), indent=2))
         else:
 

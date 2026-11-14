@@ -248,6 +248,7 @@ def selection(state: dict) -> dict | None:
 
 
 def status(target: Path, port: int | None = None) -> dict:
+    from ollama_models import pending
     from operational_restore import require_admin
     from update_worker import validate_host
 
@@ -280,6 +281,7 @@ def status(target: Path, port: int | None = None) -> dict:
             }
         return {
             "runtimeSelected": saved is not None,
+            "modelOperation": pending(installation.state),
             "selection": saved,
             "observation": observed,
             "selectionMatchesCurrent": bool(

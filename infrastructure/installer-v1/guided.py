@@ -72,8 +72,9 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument("--ollama", choices=("status", "select"))
+    actions.add_argument("--ollama", choices=("status", "select", "pull", "remove"))
     parser.add_argument("--ollama-port", type=int)
+    parser.add_argument("--ollama-model")
     actions.add_argument("--capabilities", action="store_true", help=argparse.SUPPRESS)
     actions.add_argument(
         "--background-platform-start", action="store_true", help=argparse.SUPPRESS
@@ -165,6 +166,8 @@ def main() -> int:
         type=Path,
     )
     args = parser.parse_args()
+    if args.ollama_model is not None and args.ollama not in {"pull", "remove"}:
+        parser.error("E_OLLAMA_MODEL_ARGUMENT")
     if args.target is None:
         if os.name == "nt":
             from windows_system import program_files_directory

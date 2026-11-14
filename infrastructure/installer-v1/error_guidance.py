@@ -3,6 +3,19 @@
 KEYS = {
     **dict.fromkeys(
         (
+            "E_OLLAMA_MODEL_PROTOCOL",
+            "E_OLLAMA_MODEL_INTERRUPTED",
+            "E_OLLAMA_MODEL_SOURCE",
+            "E_OLLAMA_MODEL_NAME",
+            "E_OLLAMA_MODEL_CONFLICT",
+            "E_OLLAMA_MODEL_JOURNAL",
+            "E_OLLAMA_MODEL_RESULT",
+            "E_OLLAMA_MODEL_IN_USE",
+        ),
+        "ollamaModelError",
+    ),
+    **dict.fromkeys(
+        (
             "E_BACKUP_VERIFICATION_CORE_REQUIRED",
             "E_BACKUP_VERIFICATION_CLUSTER",
             "E_BACKUP_VERIFICATION_SCHEMA",

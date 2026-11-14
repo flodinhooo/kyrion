@@ -78,6 +78,7 @@ FILES = (
     "models.py",
     "local_listeners.py",
     "ollama_runtime.py",
+    "ollama_models.py",
     "model_cache.py",
     "model-catalog.json",
     "locales/en.json",

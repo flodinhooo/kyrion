@@ -468,6 +468,24 @@ sys.exit(0)
 
 
 class ContractTests(unittest.TestCase):
+    def test_model_argument_requires_an_explicit_model_operation(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve().parents[1] / "guided.py"),
+                "--ollama-model",
+                "fixture:small",
+                "--capabilities",
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(b"E_OLLAMA_MODEL_ARGUMENT", result.stderr)
+        self.assertEqual(result.stdout, b"")
+
     def test_locale_parity(self):
         root = Path(__file__).resolve().parents[1]
         en = json.loads((root / "locales/en.json").read_text(encoding="utf-8"))
