@@ -46,6 +46,24 @@ Light desktop/dark mobile theme inspection found no horizontal overflow and
 confirmed preserved `autocomplete="current-password"`. The light brand contrast
 was corrected after visual inspection. No provider upgrade is included.
 
-Deployment verification is recorded below when completed.
+## Deployment and public settings checks
+
+Source `5591ffb2b6dd9fa8db76366a1e6dfb248832cab5` was pushed to `master` and
+[Vercel reported success](https://vercel.com/florianrogenmosers-projects/kyrion-website/GbJA7w2LTr6cDr9vyG1KZnSPtNsR).
+Migration 004 was applied only to the verified dedicated website database before
+deployment. The existing provider retained its reviewed 26.8.2 image, database,
+secrets and realm configuration. Its Compose/realm settings were privately
+snapshotted before adding the read-only theme mount and selecting `kyrion`.
+Existing realm import was skipped; production caching remains enabled.
+
+Public browser checks passed for profile editing, action cancellation, password
+change, returning to the website, the localized website settings target and fresh
+login with the changed test password. Both anonymous action endpoints returned 403. The inherited Kyrion stylesheet was present on the actual public action page.
+The newly created test identity and its website account/session rows were removed
+after checking its exact identity, creation date and absence of linked installations.
+The test password was discarded. No mailbox or personal account was deleted.
+
+The isolated Core journey used the reviewed V49 packaged runtime, not unrelated
+in-progress installer/Core work. This slice changes no local authorization rules.
 MFA/passkey administration, cross-browser certification, 30-day elapsed testing,
 abuse limits and operational backup/deletion/recovery remain separate work.

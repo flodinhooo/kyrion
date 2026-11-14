@@ -70,6 +70,10 @@ used: local login uses the real public client's outbound device grant.
 - A new central user registers in the actual provider UI, receives a real local
   verification email, follows its action and establishes a website session.
 - Website logout and subsequent login with that existing central account work.
+- Website profile/password actions return through the signed-subject-bound OIDC
+  callback; invalid session/CSRF is denied and settings remain on the website.
+- The inherited Kyrion theme preserves the provider forms. Password recovery uses
+  a real Mailpit action, and reopening its consumed link offers no password form.
 - The existing host-secret UI creates the local OWNER when necessary; the
   existing local invitation/signup UI creates a non-OWNER local member.
 - Central login before linking is denied without creating a local user/role.
@@ -81,8 +85,9 @@ used: local login uses the real public client's outbound device grant.
   works without the provider. The local user and OWNER grants survive. `finally`
   starts that test provider again.
 
-Tracing, video, screenshots and automatic failure DOM snapshots are disabled;
-navigation logs omit query strings,
+Tracing, video and screenshots are disabled. Any automatic failure DOM snapshot
+remains in ignored test output and must not be published: inputs can contain
+synthetic credentials. Navigation logs omit query strings,
 and central response logs include machine status/code only. Test usernames/mail
 are synthetic. The acceptance script uses SQL only against its fixed isolated
 database to inspect user/role/link preservation, not to manufacture credentials,

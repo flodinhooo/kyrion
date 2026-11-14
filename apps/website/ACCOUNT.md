@@ -29,7 +29,7 @@ website code entry and provider approval. The local UI completes the approved
 LINK automatically through Core; LOGIN keeps its existing confirmation. Website login
 never guesses a local address, sends local credentials or joins accounts by email.
 See [identity guide](../../docs/unified-identity.md) and the
-[current acceptance](../../docs/status/2026-11-12-website-acceptance.md).
+[current lifecycle acceptance](../../docs/status/2026-11-14-identity-lifecycle.md).
 
 ## Configuration
 
