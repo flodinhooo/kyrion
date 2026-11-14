@@ -110,6 +110,36 @@ class WorkerTests(unittest.TestCase):
             )
         self.sql.assert_not_called()
 
+    def test_automatic_success_requires_matching_current_transaction_and_phase(self):
+        self.prepare()
+        identifier = str(uuid.uuid4())
+        self.installation.state["updateTransaction"] = {
+            "id": identifier,
+            "phase": "complete",
+        }
+        outcome = {"transactionId": identifier, "phase": "complete", "complete": True}
+        self.assertEqual(
+            update_worker.automatic_attempt(self.root, lambda _: outcome), 0
+        )
+        self.assertTrue(self.installation.state["automaticUpdateAttempt"]["completed"])
+        for current in (
+            {"id": str(uuid.uuid4()), "phase": "complete"},
+            {"id": identifier, "phase": "recovered"},
+            {"id": identifier, "phase": "migrating"},
+            {"id": identifier, "phase": {"untrusted": "private-token"}},
+            {"id": None, "phase": "complete"},
+            None,
+        ):
+            with self.subTest(current=current):
+                self.installation.state["updateTransaction"] = current
+                self.assertEqual(
+                    update_worker.automatic_attempt(self.root, lambda _: outcome), 2
+                )
+                report = self.installation.state["automaticUpdateAttempt"]
+                self.assertFalse(report["completed"])
+                self.assertEqual(report["error"], "E_UPDATE_RESULT_CHANGED")
+                self.assertNotIn("private-token", str(report))
+
     def test_retired_and_inactive_targets_never_check(self):
         self.prepare()
         for value in (

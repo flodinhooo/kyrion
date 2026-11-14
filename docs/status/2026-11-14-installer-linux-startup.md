@@ -70,7 +70,7 @@ counts. Secret/path injection regressions pass. The manual-only Linux Core CI
 also prepares real frozen-worker systemd fence/integrity/retry execution on its
 disposable runner. YAML is parsed locally; that workflow has not been dispatched.
 
-New unsigned native development artifacts `.0.0.0-dev.20261114.2` build and pass
+New unsigned native development artifacts `0.0.0-dev.20261114.2` build and pass
 embedded version/channel smoke checks on Windows x64 and Linux x64. They include
 the startup/capability/restore/repair work from `2ac20a7`, preceding the diagnostic
 addition. Windows executable SHA-256:
@@ -85,6 +85,21 @@ provisioning reaches an OCI runtime entrypoint error in the privately namespaced
 test Docker. No application-boot/update result is claimed from this failed run.
 Only the owned test guest/runtime is being diagnosed. The earlier successful
 full Docker Desktop Compose transaction remains separate valid evidence.
+
+The automatic attempt summary now correlates a claimed completion with the
+current canonical transaction UUID and final phase under the installation lock.
+A concurrent recovery/new transaction cannot inherit an earlier success. Known
+phase values only enter the summary. The new regression includes changed IDs,
+recovered/incomplete phases and malformed private state. Full suites pass:
+**331 Windows tests (three skips)** and **333 isolated Linux tests (16 skips)**.
+Native `.2` artifacts predate this addition.
+
+The owned test guest was restarted using its registry-verified workspace path;
+no global WSL shutdown or data deletion was performed. The test Docker/CLI is
+still under diagnosis. Docker Desktop's local endpoint is independently absent,
+so the additional restart-overlay Compose run refuses its local-engine gate
+before building or starting containers. Neither unavailable path is a successful
+test. New complete-systemd and overlay acceptance scripts remain unaccepted.
 
 The full current regression suites pass: **329 Windows tests (three skips)** and
 **331 isolated Linux tests (16 skips)**; Ruff and Git whitespace checks pass.

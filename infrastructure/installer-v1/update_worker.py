@@ -268,6 +268,9 @@ def run(target: Path) -> int:
 
 
 def automatic_attempt(target, operation) -> int:
+    from update_gate import FINAL
+    from update_state import PHASES
+
     error_code = None
     try:
         outcome = operation(target)
@@ -279,11 +282,32 @@ def automatic_attempt(target, operation) -> int:
         outcome = None
     with installation_lock(target):
         installation = load_installation(target, verify=False)
+        current = installation.state.get("updateTransaction")
+        current = current if isinstance(current, dict) else {}
+        phase = current.get("phase")
+        completed = outcome is not None and outcome.get("complete") is True
+        identifier = current.get("id")
+        try:
+            valid_identifier = (
+                isinstance(identifier, str) and str(uuid.UUID(identifier)) == identifier
+            )
+        except (ValueError, AttributeError):
+            valid_identifier = False
+        if completed and (
+            not valid_identifier
+            or outcome.get("transactionId") != current.get("id")
+            or outcome.get("phase") != phase
+            or not isinstance(phase, str)
+            or phase not in FINAL
+        ):
+            # A manual recovery or a new transaction can acquire the lock after
+            # execution returned. Never attribute the old result to that state.
+            error_code = "E_UPDATE_RESULT_CHANGED"
         installation.state["automaticUpdateAttempt"] = {
             "at": int(time.time()),
             "error": error_code,
-            "phase": installation.state.get("updateTransaction", {}).get("phase"),
-            "completed": outcome is not None and outcome.get("complete") is True,
+            "phase": phase if isinstance(phase, str) and phase in PHASES else None,
+            "completed": completed and error_code is None,
         }
         installation.save()
     return 0 if error_code is None else 2

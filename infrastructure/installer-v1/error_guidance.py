@@ -1,6 +1,7 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_UPDATE_RESULT_CHANGED": "updatesErrorResultChanged",
     **dict.fromkeys(
         (
             "E_STARTUP_POLICY",

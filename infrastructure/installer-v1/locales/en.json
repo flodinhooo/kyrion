@@ -1,4 +1,5 @@
 {
+  "updatesErrorResultChanged": "The installation changed after this automatic operation finished. Its earlier result is not reported as the current result. Open the current update journal/status and continue that transaction if required; no recovery or new update was started by this check.",
   "linuxServicesReview": "Kyrion will install an owned systemd startup service and a protected installer worker. It starts the local Compose project after Docker without an interactive login, uses bounded retries and defers normal startup during unfinished updates or inactive restores. Registration is checked now; physical restart acceptance is a separate check.",
   "startupError": "The owned startup service could not be verified. Preserve the installation journal, check systemd, host identity, Docker and worker ownership, then repeat startup configuration. Do not edit ownership or update fences to bypass this check.",
   "identityErrorChanged": "This installation already uses a different account issuer or public client. Resume without overriding its saved settings. Existing identity configuration and data are preserved.",
