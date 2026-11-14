@@ -49,12 +49,34 @@ class CompatibilityTests(unittest.TestCase):
         )
         self.assertEqual(selected["version"], "1.3.0")
 
+    def test_fresh_selection_needs_no_fabricated_source_schema(self):
+        selected = policy.fresh_release(self.index(), "1.0.0", "linux/arm64", 47, 1)
+        self.assertEqual(selected["version"], "1.3.0")
+        self.assertIsNone(
+            policy.fresh_release(self.index(), "1.0.0", "linux/arm64", 46, 1)
+        )
+        self.assertIsNone(
+            policy.fresh_release(self.index(), "0.9.0", "linux/arm64", 47, 1)
+        )
+        self.assertIsNone(
+            policy.fresh_release(self.index(), "1.0.0", "windows/amd64", 47, 1)
+        )
+        self.assertIsNone(
+            policy.fresh_release(self.index(), "1.0.0", "linux/arm64", 47, 3)
+        )
+
+    def test_fresh_selection_keeps_full_index_validation(self):
+        index = self.index()
+        index["releases"][0]["schemaDowngradeSupported"] = True
+        with self.assertRaisesRegex(ValueError, "E_RELEASE_CONTRACT"):
+            policy.fresh_release(index, "1.0.0", "linux/arm64", 47, 1)
+
     def test_schema_platform_installer_and_api_are_enforced(self):
         for installer, platform, schema, api in (
-                ("0.9.0", "linux/arm64", 46, 1),
-                ("1.0.0", "windows/amd64", 46, 1),
-                ("1.0.0", "linux/arm64", 45, 1),
-                ("1.0.0", "linux/arm64", 46, 3),
+            ("0.9.0", "linux/arm64", 46, 1),
+            ("1.0.0", "windows/amd64", 46, 1),
+            ("1.0.0", "linux/arm64", 45, 1),
+            ("1.0.0", "linux/arm64", 46, 3),
         ):
             with self.subTest(
                 installer=installer, platform=platform, schema=schema, api=api

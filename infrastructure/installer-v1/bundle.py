@@ -13,6 +13,10 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 
 MAX_MANIFEST = 1024 * 1024
 VERSION = re.compile(r"[0-9][0-9A-Za-z._-]{0,79}\Z")
@@ -100,7 +104,7 @@ class ReviewedBundle:
     manifest_sha256: str
 
 
-def authenticated_review(root: Path, public_key: Path) -> ReviewedBundle:
+def authenticated_review(root: Path, public_key: Path | IndexAuthority) -> ReviewedBundle:
     """Authenticate exact manifest bytes before interpreting artifact paths."""
     raw = verify_signature(root, public_key)
     return ReviewedBundle(
@@ -108,14 +112,18 @@ def authenticated_review(root: Path, public_key: Path) -> ReviewedBundle:
     )
 
 
-def authenticate(root: Path, public_key: Path) -> dict:
+def authenticate(root: Path, public_key: Path | IndexAuthority) -> dict:
     return authenticated_review(root, public_key).manifest
 
 
 def verify_signature(
-    root: Path, public_key: Path, maximum: int = MAX_MANIFEST
+    root: Path, public_key: Path | IndexAuthority, maximum: int = MAX_MANIFEST
 ) -> bytes:
     """Shared detached-signature boundary; each runtime validates its own schema."""
+    from install_download import IndexAuthority
+
+    if isinstance(public_key, IndexAuthority):
+        return public_key.manifest(root, maximum)
     manifest = root / "manifest.json"
     signature = root / "manifest.sig"
     snapshots = []

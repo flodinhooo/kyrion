@@ -23,6 +23,14 @@ locally (Linux x64 inside the isolated Debian 13 development guest). ARM64 CI jo
 prepared. None of these results is native Windows provisioning or system boot
 acceptance. Native artifacts remain unsigned development outputs.
 
+Released native builds with an embedded authenticated channel now obtain their
+fresh-install runtime bundle themselves when no manual `--public-key` is supplied.
+The installer reviews exact bytes/components/notes, asks for `DOWNLOAD`, resumes
+known partials in a private sibling cache and verifies the signed index and
+manifest again during provisioning/extraction. The later `INSTALL` confirmation
+still precedes application installation. Unconfigured development builds refuse
+this automatic path; no public release/feed is created by this source change.
+
 The same local entrypoint now supports explicitly reviewed maintenance flags:
 
 * `--backup NEW_FILE.gpg`: pauses the owned Core writer during PostgreSQL custom

@@ -6,6 +6,10 @@ import hashlib
 import secrets
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 
 from bundle import ReviewedBundle, sha256, verify_signature
 from crypto_support import verify_ed25519
@@ -15,7 +19,10 @@ from runtime import Installation, copy_image_input
 
 
 def stage_bundle(
-    installation: Installation, source: Path, key: Path, reviewed: ReviewedBundle
+    installation: Installation,
+    source: Path,
+    key: Path | IndexAuthority,
+    reviewed: ReviewedBundle,
 ) -> Path:
     root = installation.target / "release-input"
     reject_links(root)
@@ -57,14 +64,16 @@ def stage_bundle(
         raise ValueError("E_NATIVE_STAGING_STATE")
     root.mkdir(mode=0o700, exist_ok=True)
     item = reviewed.manifest["artifact"]
+    from install_download import PROOF, IndexAuthority, bounded
+
+    channel_authority = isinstance(key, IndexAuthority)
     archive = root / item["name"]
     allowed = {
         "manifest.json",
-        "manifest.sig",
-        "public.pem",
         item["name"],
         *state["preserved"],
     }
+    allowed.update({PROOF} if channel_authority else {"manifest.sig", "public.pem"})
     if state["pending"]:
         allowed.add(state["pending"])
     for child in root.iterdir():
@@ -80,18 +89,22 @@ def stage_bundle(
     raw = verify_signature(source, key, MAXIMUM_MANIFEST)
     if hashlib.sha256(raw).hexdigest() != reviewed.manifest_sha256:
         raise ValueError("E_REVIEW_CHANGED")
-    with (source / "manifest.sig").open("rb") as stream:
-        signature = stream.read(1025)
-    with key.open("rb") as stream:
-        public = stream.read(16385)
-    if len(signature) > 1024 or len(public) > 16384:
-        raise ValueError("E_SIGNATURE")
-    verify_ed25519(raw, signature, public)
-    for name, payload in (
-        ("manifest.json", raw),
-        ("manifest.sig", signature),
-        ("public.pem", public),
-    ):
+    if channel_authority:
+        inputs = (("manifest.json", raw), (PROOF, bounded(source / PROOF, 1024**2)))
+    else:
+        with (source / "manifest.sig").open("rb") as stream:
+            signature = stream.read(1025)
+        with key.open("rb") as stream:
+            public = stream.read(16385)
+        if len(signature) > 1024 or len(public) > 16384:
+            raise ValueError("E_SIGNATURE")
+        verify_ed25519(raw, signature, public)
+        inputs = (
+            ("manifest.json", raw),
+            ("manifest.sig", signature),
+            ("public.pem", public),
+        )
+    for name, payload in inputs:
         installation.write("release-input/" + name, payload)
     if archive.exists():
         if archive.stat().st_size != item["bytes"] or sha256(archive) != item["sha256"]:

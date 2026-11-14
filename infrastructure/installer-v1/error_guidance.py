@@ -1,6 +1,15 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_INSTALLER_CHANNEL_REQUIRED": "installDownloadChannelRequired",
+    **dict.fromkeys(
+        (
+            "E_INSTALL_DOWNLOAD_OWNER",
+            "E_INSTALL_DOWNLOAD_PROOF",
+            "E_INSTALL_DOWNLOAD_COMPATIBILITY",
+        ),
+        "installDownloadError",
+    ),
     "E_GPG_REQUIRED": "backupScheduleCryptoRequired",
     **dict.fromkeys(
         (

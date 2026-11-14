@@ -178,6 +178,36 @@ def compatible_release(
     api: int,
     last_sequence: int = 0,
 ) -> dict | None:
+    return _select_release(
+        index, installer, installed, platform, schema, api, last_sequence
+    )
+
+
+def fresh_release(
+    index: dict,
+    installer: str,
+    platform: str,
+    target_schema: int,
+    api: int,
+    last_sequence: int = 0,
+) -> dict | None:
+    if type(target_schema) is not int or target_schema < 1:
+        raise PolicyError("E_RELEASE_CONTRACT")
+    return _select_release(
+        index, installer, None, platform, None, api, last_sequence, target_schema
+    )
+
+
+def _select_release(
+    index: dict,
+    installer: str,
+    installed: str | None,
+    platform: str,
+    schema: int | None,
+    api: int,
+    last_sequence: int = 0,
+    target_schema: int | None = None,
+) -> dict | None:
     if (
         index.get("formatVersion") != 1
         or index.get("kind") != "release-index"
@@ -187,7 +217,8 @@ def compatible_release(
         or len(index["releases"]) > 1000
     ):
         raise PolicyError("E_RELEASE_INDEX")
-    installer_version, installed_version = version(installer), version(installed)
+    installer_version = version(installer)
+    installed_version = version(installed) if installed is not None else None
     candidates = []
     seen = set()
     for entry in index["releases"]:
@@ -251,8 +282,9 @@ def compatible_release(
         if (
             entry["platform"] == platform
             and minimum <= installer_version
-            and selected_version > installed_version
-            and schema in entry["fromSchemas"]
+            and (installed_version is None or selected_version > installed_version)
+            and (schema is None or schema in entry["fromSchemas"])
+            and (target_schema is None or entry["targetSchema"] == target_schema)
             and entry["apiMin"] <= api <= entry["apiMax"]
         ):
             candidates.append(entry)

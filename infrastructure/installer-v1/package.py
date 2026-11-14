@@ -12,6 +12,7 @@ FILES = (
     "guided.py",
     "build_identity.py",
     "release_channel.py",
+    "install_download.py",
     "host.py",
     "bundle.py",
     "crypto_support.py",

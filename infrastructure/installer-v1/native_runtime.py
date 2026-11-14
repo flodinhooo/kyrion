@@ -12,6 +12,10 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 
 from bundle import sha256, unique_object
 from crypto_support import certificate, private_tls_key
@@ -570,7 +574,7 @@ def retire_services(installation: Installation) -> None:
 def provision_native(
     target: Path,
     bundle: Path,
-    public_key: Path,
+    public_key: Path | IndexAuthority,
     hostname: str,
     address: str,
     expected_manifest: str,
@@ -621,7 +625,14 @@ def provision_native(
             )
             permissions(target, "verify")
             private_bundle = stage_bundle(installation, bundle, public_key, reviewed)
-            unpack(private_bundle, private_bundle / "public.pem", target / "payload")
+            from install_download import IndexAuthority
+
+            extraction_key = (
+                public_key
+                if isinstance(public_key, IndexAuthority)
+                else private_bundle / "public.pem"
+            )
+            unpack(private_bundle, extraction_key, target / "payload")
             configure(
                 installation,
                 reviewed.manifest,

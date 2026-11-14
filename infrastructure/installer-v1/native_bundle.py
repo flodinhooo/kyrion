@@ -11,6 +11,10 @@ import stat
 import struct
 import zipfile
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 
 from bundle import VERSION, ReviewedBundle, sha256, unique_object, verify_signature
 from host import reject_links
@@ -284,12 +288,14 @@ def validate(root: Path, authenticated_bytes: bytes | None = None) -> dict:
     return manifest
 
 
-def authenticated_review(root: Path, public_key: Path) -> ReviewedBundle:
+def authenticated_review(
+    root: Path, public_key: Path | IndexAuthority
+) -> ReviewedBundle:
     raw = verify_signature(root, public_key, MAXIMUM_MANIFEST)
     return ReviewedBundle(validate(root, raw), hashlib.sha256(raw).hexdigest())
 
 
-def authenticate(root: Path, public_key: Path) -> dict:
+def authenticate(root: Path, public_key: Path | IndexAuthority) -> dict:
     return authenticated_review(root, public_key).manifest
 
 
@@ -311,7 +317,7 @@ def copy_member(
         raise ValueError("E_NATIVE_FILE_DIGEST")
 
 
-def unpack(root: Path, public_key: Path, destination: Path) -> dict:
+def unpack(root: Path, public_key: Path | IndexAuthority, destination: Path) -> dict:
     """Resume immutable public payload extraction, never overwrite active data.
 
     The caller owns/protects the parent. Native Windows ACL preparation and

@@ -16,6 +16,10 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from install_download import IndexAuthority
 from urllib.error import HTTPError, URLError
 
 from bundle import authenticated_review, sha256
@@ -590,7 +594,7 @@ class Installation:
 def provision(
     target: Path,
     bundle: Path,
-    public_key: Path,
+    public_key: Path | IndexAuthority,
     hostname: str,
     address: str,
     expected_digest: str,

@@ -431,3 +431,13 @@ does not automatically activate the old host's schedule.
 
 See [ADR 0069](adr/0069-installed-consistent-backup-schedule.md) and
 [backup execution evidence](status/2026-11-14-installer-backup-scheduling.md).
+
+## Authenticated runtime acquisition for fresh setup
+
+The native terminal can obtain the runtime bundle through its embedded signed
+release channel, with separate DOWNLOAD/INSTALL consent, visible progress,
+protected resumable input and proof checks at provisioning/extraction boundaries.
+Manual independently trusted bundles remain supported. Unconfigured development
+builds do not imply public availability. See [current implementation, developer
+evidence and operator procedure](status/2026-11-14-installer-release-download.md).
+The automatic fresh selector currently accepts target schema 49/API 1 only.

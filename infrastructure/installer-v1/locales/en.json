@@ -191,5 +191,9 @@
   "restoreErrorInactive": "This installation is retired or prepared as an inactive restore target. Ordinary repair/start must not activate it. Continue only the same displayed transfer with the same backup and target ID.",
   "restoreErrorReceipt": "The transfer receipt is missing or does not match the source, target and backup. Generate it with --retire-for-restore on the supported source and transfer only the receipt file. An offline source that has not been safely retired cannot authorize target activation.",
   "restoreErrorTarget": "The target contains existing/unexpectedly changed data or belongs to another restore request. Data is preserved. Inspect the saved operation and use only the originally reviewed backup; do not overwrite unexplained changes.",
-  "maintenancePaused": "Maintenance was interrupted. Checkpointed steps remain available; resume the same operation with unchanged verified inputs. A prepared restore target is not activated automatically."
+  "maintenancePaused": "Maintenance was interrupted. Checkpointed steps remain available; resume the same operation with unchanged verified inputs. A prepared restore target is not activated automatically.",
+  "installDownloadReview": "Download the authenticated published platform bundle. Review its components, exact download size and release notes below. System installation requires a separate confirmation afterwards. Known partial downloads are resumed; the cache is retained.",
+  "installDownloadProgress": "Downloading {name}: {done} / {total} bytes",
+  "installDownloadChannelRequired": "This development build has no embedded authenticated release channel. No public runtime download is available through it. Use an operator-provided signed bundle with its independently trusted key, or a released installer with a configured channel.",
+  "installDownloadError": "The selected release or protected download cache could not be verified. No installation was started. Preserve the cache and use a compatible signed release; do not replace its proof, marker or files manually."
 }
