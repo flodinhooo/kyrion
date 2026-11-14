@@ -208,6 +208,19 @@ class UpdateTransactions(unittest.TestCase):
         self.assertEqual(self.events, [])
         self.assertNotIn("updateTransaction", load_installation(self.root).state)
 
+    def test_pending_crypto_install_is_rejected_before_transaction_fence(self):
+        installation = load_installation(self.root)
+        installation.state["cryptoPrerequisite"] = {
+            "formatVersion": 1,
+            "phase": "metadata",
+            "packages": [],
+        }
+        installation.save()
+        with self.assertRaisesRegex(ValueError, "E_CRYPTO_PACKAGE_REPAIR"):
+            self.apply()
+        self.assertEqual(self.events, [])
+        self.assertNotIn("updateTransaction", load_installation(self.root).state)
+
     def test_tagged_source_configuration_is_retained_but_recovery_uses_source_pins(
         self,
     ):

@@ -1,6 +1,18 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_CRYPTO_PACKAGE_OWNER",
+            "E_CRYPTO_PACKAGE_TOOL",
+            "E_CRYPTO_PACKAGE_PLAN",
+            "E_CRYPTO_PACKAGE_REPAIR",
+            "E_CRYPTO_PACKAGE_OPERATION",
+            "E_CRYPTO_PACKAGE_INTERRUPTED",
+            "E_CRYPTO_PACKAGE_PLATFORM",
+        ),
+        "cryptoPackageError",
+    ),
     "E_INSTALLER_CHANNEL_REQUIRED": "installDownloadChannelRequired",
     **dict.fromkeys(
         (

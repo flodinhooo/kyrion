@@ -13,6 +13,7 @@ FILES = (
     "build_identity.py",
     "release_channel.py",
     "install_download.py",
+    "linux_crypto.py",
     "host.py",
     "bundle.py",
     "crypto_support.py",

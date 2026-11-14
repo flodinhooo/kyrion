@@ -28,8 +28,9 @@ The guided terminal offers configuration after setup/restore and maintenance
 supports configure/status/run-now/disable/reset-incomplete. English and German
 are paired. System changes, quiescence, key custody and retention are reviewed.
 Removal/retirement clean only the owned schedule, leaving external backups and
-exports. Linux GnuPG package bootstrap is still an open runtime prerequisite
-implementation; absence is detected before backup scheduling is enabled.
+exports. Debian 13 GnuPG package bootstrap is now implemented with separate consent and
+real clean-chroot evidence in [the prerequisite record](2026-11-14-installer-linux-crypto.md).
+Other package paths remain unavailable rather than silently simulated.
 
 ## Evidence and boundaries
 

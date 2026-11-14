@@ -418,6 +418,9 @@ def _run(installation, *, manual=False) -> dict:
         return {"completed": False, "deferred": True}
     require_active(installation.state)
     recover_services(installation, manual=manual)
+    from linux_crypto import require_complete
+
+    require_complete(installation.state)
     policy = installation.state.get("backupPolicy")
     if policy is None:
         return {"completed": False, "configured": False}
@@ -599,6 +602,12 @@ def status(target: Path) -> dict:
 
 
 def configure_interactive(target: Path, messages: dict[str, str]) -> dict:
+    from linux_crypto import interactive, needs_configuration
+
+    if needs_configuration(target):
+        result = interactive(target, messages)
+        if not result["available"]:
+            return {"configured": False, "cancelled": True}
     destination = Path(input(messages["backupScheduleDestination"] + ": ").strip())
     export = Path(input(messages["backupScheduleExport"] + ": ").strip())
     days = (

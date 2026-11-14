@@ -441,3 +441,13 @@ Manual independently trusted bundles remain supported. Unconfigured development
 builds do not imply public availability. See [current implementation, developer
 evidence and operator procedure](status/2026-11-14-installer-release-download.md).
 The automatic fresh selector currently accepts target schema 49/API 1 only.
+
+## Consented Linux GnuPG prerequisite
+
+For Debian 13 AMD64/ARM64, backup configuration now offers a separate reviewed
+GnuPG package path when its tools or an owned prerequisite transaction are
+incomplete. Later invoke `--target TARGET --install-crypto`. Metadata refresh
+and exact version/download/allocation review are separate confirmations. Existing
+packages/keys/sources are preserved; no OS-wide repair or package upgrade is
+performed. See [actual clean-chroot package/recovery evidence and limits](status/2026-11-14-installer-linux-crypto.md).
+This does not supply Docker/Compose or imply ARM64/physical boot acceptance.

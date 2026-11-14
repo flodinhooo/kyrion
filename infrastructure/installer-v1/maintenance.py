@@ -194,6 +194,17 @@ def diagnostic(target: Path, output: Path) -> None:
         if type(attempts) is int and 0 <= attempts <= 3
         else None,
     }
+    from linux_crypto import PHASES as CRYPTO_PHASES
+
+    crypto_state = state.get("cryptoPrerequisite")
+    crypto_state = crypto_state if isinstance(crypto_state, dict) else {}
+    crypto_phase = crypto_state.get("phase")
+    report["cryptoPrerequisite"] = {
+        "present": state.get("cryptoPrerequisite") is not None,
+        "phase": crypto_phase
+        if isinstance(crypto_phase, str) and crypto_phase in CRYPTO_PHASES
+        else None,
+    }
     try:
         installation.verify_files()
         report["managedFilesIntact"] = True
@@ -309,6 +320,11 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "install_crypto", False):
+        from linux_crypto import interactive
+
+        print(json.dumps(interactive(args.target, messages)))
         return 0
     if getattr(args, "backup_schedule", None):
         from backup_worker import (

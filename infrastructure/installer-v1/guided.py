@@ -85,6 +85,7 @@ def main() -> int:
     )
     actions.add_argument("--recommend-ai", action="store_true")
     actions.add_argument("--backup", type=Path)
+    actions.add_argument("--install-crypto", action="store_true")
     actions.add_argument("--verify-backup", type=Path)
     actions.add_argument("--restore", type=Path)
     actions.add_argument("--retire-for-restore", type=Path)
@@ -310,6 +311,7 @@ def main() -> int:
         or args.home_assistant
         or args.autostart
         or args.backup_schedule
+        or args.install_crypto
     ):
         return maintenance_result(args, messages)
     report = inventory(args.target)

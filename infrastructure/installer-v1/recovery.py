@@ -379,6 +379,9 @@ def capture(
 
     require_active(installation.state, update=update)
     scheduled_run = scheduled_capture_id(installation, scheduled_run)
+    from linux_crypto import require_complete
+
+    require_complete(installation.state)
     installation.verify_files()
     if not {
         "secrets/credential.key",

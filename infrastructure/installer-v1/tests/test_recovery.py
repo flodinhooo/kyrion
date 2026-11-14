@@ -342,6 +342,10 @@ class RecoveryTests(unittest.TestCase):
     def test_diagnostic_export_cannot_include_credentials_or_logs(self):
         installation = self.installation()
         installation.state["sessionToken"] = "private-session"
+        installation.state["cryptoPrerequisite"] = {
+            "phase": "private-path",
+            "packages": [{"name": "private-token"}],
+        }
         installation.state["lastError"] = "credential=private-token"
         installation.state["configuration"]["password"] = "private-password"
         installation.state["updateTransaction"] = {
@@ -360,6 +364,9 @@ class RecoveryTests(unittest.TestCase):
         self.assertNotIn("private-", text)
         self.assertNotIn("sessionToken", text)
         self.assertIsNone(json.loads(text)["lastError"])
+        self.assertEqual(
+            json.loads(text)["cryptoPrerequisite"], {"present": True, "phase": None}
+        )
         self.assertEqual(
             json.loads(text)["updateTransaction"],
             {

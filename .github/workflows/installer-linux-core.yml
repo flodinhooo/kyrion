@@ -60,6 +60,12 @@ jobs:
           sudo "$PWD/build/acceptance-python/bin/python" infrastructure/installer-v1/tests/integration/verify-backup-timer.py \
             --worker "$PWD/build/native-linux-worker-unpacked/kyrion-installer" \
             --report "$PWD/build/linux-backup-timer-report.json"
+      - name: Install missing GnuPG and resume its acknowledgement in a disposable Debian chroot
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo "$PWD/build/acceptance-python/bin/python" infrastructure/installer-v1/tests/integration/prepare-linux-crypto-root.py > build/linux-crypto-install-report.json
       - name: Run synthetic accounts and HA only in an isolated network namespace
         shell: bash
         run: |
@@ -128,4 +134,5 @@ jobs:
             build/linux-update-unit-report.json
             build/linux-startup-service-report.json
             build/linux-backup-timer-report.json
+            build/linux-crypto-install-report.json
           if-no-files-found: error

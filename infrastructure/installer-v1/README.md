@@ -37,6 +37,9 @@ The same local entrypoint now supports explicitly reviewed maintenance flags:
   dump plus original configuration/keys/TLS/Knowledge/recovery-material capture;
   restarts Core in a finally path and encrypts using GnuPG in isolated scratch.
   A passphrase is requested privately and must be kept separately. Requires GnuPG.
+* `--install-crypto`: reviewed Debian 13 GnuPG prerequisite installation/recovery
+  using existing authenticated APT sources and pinned package versions. No
+  existing-package upgrades/removal/global repair; background tasks never run it.
 * `--backup-schedule configure|status|run-now|disable|reset-incomplete`: explicitly
   configures and manages installed encrypted backups, protected external stores,
   separate key export, UTC windows, bounded continuation and verified retention.
