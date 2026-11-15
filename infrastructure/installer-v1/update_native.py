@@ -116,6 +116,7 @@ class Native:
             [str(payload / "runtime/installer/kyrion-service.exe"), "--capabilities"],
             cwd=self.root,
             env=base_environment(),
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=30,
             check=False,
@@ -123,12 +124,21 @@ class Native:
         )
         if result.returncode or len(result.stdout) > 4096:
             raise ValueError("E_UPDATE_HOST_UPGRADE_REQUIRED")
-        if json.loads(result.stdout) != {
-            "formatVersion": 1,
-            "updateProtocol": 1,
-            "startupFence": True,
-            "maintenanceCore": True,
-        }:
+        try:
+            capability = json.loads(result.stdout, object_pairs_hook=unique_object)
+        except (ValueError, UnicodeError):
+            raise ValueError("E_UPDATE_HOST_UPGRADE_REQUIRED") from None
+        if (
+            not isinstance(capability, dict)
+            or any(
+                type(capability.get(key)) is not int or capability[key] != 1
+                for key in ("formatVersion", "updateProtocol")
+            )
+            or any(
+                capability.get(key) is not True
+                for key in ("startupFence", "maintenanceCore")
+            )
+        ):
             raise ValueError("E_UPDATE_HOST_UPGRADE_REQUIRED")
 
     def admin(self, operation: str, *, payload=None, schema=None) -> None:
