@@ -39,6 +39,14 @@ identity fields so upgraded software does not break a pending acknowledgement.
 These permission leases are not exclusive cross-device task ownership or central
 migration fencing. Dedicated installer service deployment remains separate work.
 
+Windows protected storage now extends the same prepared pending/configuration
+implementation, with actual DACL/lock developer evidence. Windows foreground
+installer, health/runtime and service integration are still being implemented;
+this is not completed Windows node support. See
+[the storage checkpoint](../../docs/status/2026-11-15-installer-windows-agent-storage.md).
+Prepared Linux publication requires `renameat2(RENAME_NOREPLACE)` support on the
+selected local filesystem; unsupported systems fail safely without overwriting.
+
 Core enrollment protocol 2 supports an interrupted registration acknowledgement
 without creating a second node. The Linux agent now offers `enroll-prepared`,
 using the same `agent.json`, gateway identity, permissions and runtime commands.

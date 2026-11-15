@@ -22,6 +22,11 @@ IDENTITY_LIMITS = {"hostname": 253, "osName": 120, "osVersion": 80, "architectur
 
 
 def private_directory(directory: Path) -> None:
+    if os.name == "nt":
+        from kyrion_gateway_agent.windows_storage import private_directory as windows_directory
+
+        windows_directory(directory)
+        return
     if (
         not sys.platform.startswith("linux")
         or not directory.is_absolute()
@@ -45,8 +50,12 @@ def private_directory(directory: Path) -> None:
 
 
 def read_private(path: Path, maximum: int = 65536) -> bytes:
+    if os.name == "nt":
+        from kyrion_gateway_agent.windows_storage import read_private as windows_read
+
+        return windows_read(path, maximum)
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except OSError as error:
         raise ValueError("E_AGENT_PRIVATE_FILE") from error
     with os.fdopen(descriptor, "rb") as stream:
@@ -64,27 +73,60 @@ def read_private(path: Path, maximum: int = 65536) -> bytes:
     return raw
 
 
-def publish(path: Path, raw: bytes) -> None:
-    temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex)
+def rename_no_replace(source: Path, destination: Path) -> None:
+    import ctypes
+    import errno
+
+    library = ctypes.CDLL(None, use_errno=True)
     try:
-        with os.fdopen(
-            os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), "wb"
-        ) as stream:
+        rename = library.renameat2
+    except AttributeError:
+        raise ValueError("E_AGENT_PRIVATE_FILESYSTEM") from None
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(source), -100, os.fsencode(destination), 1) != 0:
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise FileExistsError("E_AGENT_CONFIG_EXISTS")
+        if error in {errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP}:
+            raise ValueError("E_AGENT_PRIVATE_FILESYSTEM")
+        raise ValueError("E_AGENT_PRIVATE_FILE")
+
+
+def publish(path: Path, raw: bytes) -> None:
+    if os.name == "nt":
+        from kyrion_gateway_agent.windows_storage import publish as windows_publish
+
+        windows_publish(path, raw)
+        return
+    temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex)
+    created = False
+    try:
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        created = True
+        with os.fdopen(descriptor, "wb") as stream:
             stream.write(raw)
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(temporary, path, follow_symlinks=False)
+        rename_no_replace(temporary, path)
         descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
     finally:
-        temporary.unlink(missing_ok=True)
+        if created:
+            temporary.unlink(missing_ok=True)
 
 
 @contextlib.contextmanager
 def enrollment_lock(path: Path):
+    if os.name == "nt":
+        from kyrion_gateway_agent.windows_storage import enrollment_lock as windows_lock
+
+        with windows_lock(path):
+            yield
+        return
     import fcntl
 
     descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
@@ -104,6 +146,14 @@ def enrollment_lock(path: Path):
         yield
     finally:
         os.close(descriptor)
+
+
+def read_input(path: Path, maximum: int = 128) -> bytes:
+    if os.name == "nt":
+        from kyrion_gateway_agent.windows_storage import read_private as windows_read
+
+        return windows_read(path, maximum, inherited=True, current_owner=False)
+    return read_private(path, maximum)
 
 
 def core_url(value: str) -> str:
@@ -213,7 +263,7 @@ def enroll_prepared(
                 raise ValueError("E_AGENT_ENROLLMENT_CONFLICT")
             if (
                 token_file is not None
-                and read_private(token_file).decode("ascii").strip() != value["enrollment_token"]
+                and read_input(token_file).decode("ascii").strip() != value["enrollment_token"]
             ):
                 raise ValueError("E_AGENT_ENROLLMENT_CONFLICT")
             if (
@@ -228,7 +278,7 @@ def enroll_prepared(
                 raise ValueError("E_AGENT_ENROLLMENT_INPUT")
             if expected_ca_sha256 is not None and certificate is None:
                 raise ValueError("E_AGENT_TLS_CONFIGURATION")
-            token = read_private(token_file, 128).decode("ascii").strip()
+            token = read_input(token_file, 128).decode("ascii").strip()
             ca_path, ca_digest = None, None
             if certificate is not None:
                 with certificate.open("rb") as stream:

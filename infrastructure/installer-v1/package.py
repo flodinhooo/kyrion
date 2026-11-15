@@ -22,6 +22,7 @@ GATEWAY_FILES = tuple(
         "lan_transport.py",
         "media_player.py",
         "prepared_runtime.py",
+        "windows_storage.py",
     )
 )
 

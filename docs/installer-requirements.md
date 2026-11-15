@@ -23,6 +23,12 @@ into normal linked onboarding. Actual Windows process acceptance passed without
 optional hardware/AI, and actual Linux Compose acceptance passed individual pairing.
 This does not complete task placement or native service acceptance.
 
+The [Windows agent storage checkpoint](status/2026-11-15-installer-windows-agent-storage.md)
+adds actual protected native file/lock primitives and existing pending-record
+support; Windows target CLI, real Core enrollment, hardware/runtime and SCM
+integration remain in progress. It also fixes prepared Linux publication after
+abrupt process death. These are partial components, not completed R23-R29.
+
 Latest transaction evidence: [database and systemd startup corrections](status/2026-11-14-installer-database-startup.md).
 The fresh native Linux installation/update/recovery run passes without an
 unplanned retry, including actual backup, migration 49 to 50, systemd fencing,

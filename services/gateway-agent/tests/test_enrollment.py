@@ -2,7 +2,9 @@
 
 import hashlib
 import json
+import os
 import secrets
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -231,3 +233,49 @@ class PreparedEnrollment(unittest.TestCase):
             )
         request.assert_not_called()
         self.assertFalse(self.pending.exists())
+
+    def test_fifo_input_is_rejected_without_waiting_for_a_writer(self):
+        path = self.root / "fifo"
+        os.mkfifo(path, 0o600)
+        script = (
+            "import sys; from pathlib import Path; "
+            "from kyrion_gateway_agent.enrollment import read_private; "
+            "read_private(Path(sys.argv[1]))"
+        )
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+        result = subprocess.run(
+            [sys.executable, "-c", script, str(path)],
+            env=environment,
+            capture_output=True,
+            timeout=3,
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"E_AGENT_PRIVATE_FILE", result.stderr)
+
+    def test_abrupt_process_death_after_actual_rename_keeps_single_private_file(self):
+        path = self.root / "committed.json"
+        script = """import os,signal,sys
+from pathlib import Path
+from kyrion_gateway_agent import enrollment
+rename=enrollment.rename_no_replace
+def stop(source,destination):
+    rename(source,destination)
+    os.kill(os.getpid(),signal.SIGKILL)
+enrollment.rename_no_replace=stop
+enrollment.publish(Path(sys.argv[1]),b'synthetic committed private bytes')
+"""
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+        result = subprocess.run(
+            [sys.executable, "-c", script, str(path)],
+            env=environment,
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+        self.assertEqual(result.returncode, -9)
+        self.assertEqual(enrollment.read_private(path), b"synthetic committed private bytes")
+        self.assertEqual(path.stat().st_nlink, 1)
+        self.assertEqual(list(self.root.glob(".committed.json.*")), [])
