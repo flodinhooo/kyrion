@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 import node_ingress
 from authority import require_active
 from bundle import sha256
-from node_pairing import guided_export
+from device_management import offer_device_setup
 from onboarding import CoreClient
 from recovery import load_installation
 from runtime import Installation, installation_lock
@@ -136,14 +136,17 @@ def exercise(args):
             patch(
                 "builtins.input",
                 side_effect=[
+                    "DEVICES",
+                    "PAIR",
                     "Prepared fixture node",
                     "PAIR",
                     "ENABLE-AGENT-INGRESS",
+                    "0",
                 ],
             ),
             contextlib.redirect_stdout(capture),
         ):
-            guided_export(client, messages)
+            offer_device_setup(client, messages, client.request("GET", "/v1/auth/me"))
         if installation.state[node_ingress.KEY]["phase"] != "verified":
             raise ValueError("E_FIXTURE_INGRESS_NOT_VERIFIED")
         changed_ids = containers(installation)

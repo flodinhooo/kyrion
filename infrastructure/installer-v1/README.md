@@ -283,6 +283,16 @@ maintenance in an owned developer environment. It requires root and a separate
 unprivileged fixture user; it never activates real household hardware. Hosted
 execution is prepared in the manual Linux workflow, not implied by source edits.
 
+### Guided device choice
+
+Normal linked-account/Space setup offers `SINGLE`, `DEVICES` or `LATER`. Individual
+setup uses the same Core device management and private pairing transfer as
+`--devices`. Its journal entry records only onboarding progress; Core remains the
+device/task authority. Interrupted setup can be resumed using setup continuation
+or `--devices`. Previously paired devices are never removed by choosing SINGLE.
+A reviewed choice is not proof of remote installation, task deployment or service
+readiness. Extra devices, AI, microphones and hardware remain optional.
+
 ### Extending an existing Linux central installation for paired devices
 
 `--devices --target /protected/kyrion` offers an explicit ingress transition if

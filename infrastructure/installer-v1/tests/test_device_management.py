@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from device_management import guided_devices, managed_devices
+from device_management import guided_devices, managed_devices, offer_device_setup
 from onboarding import CoreClient
 
 NODE = {
@@ -21,6 +21,52 @@ NODE = {
 
 
 class DeviceManagementTests(unittest.TestCase):
+    def offer(self, choice, permissions=("gateways:read",)):
+        self.client.installation.state = {}
+        with patch("builtins.input", return_value=choice), patch("builtins.print"):
+            offer_device_setup(
+                self.client, self.messages, {"permissions": list(permissions)}
+            )
+        return self.client.installation.state["deviceSetup"]
+
+    def test_single_device_path_preserves_existing_device_authority(self):
+        progress = self.offer("SINGLE")
+        self.assertEqual(progress["phase"], "reviewed")
+        self.client.request.assert_called_once_with("GET", "/v1/gateways/management")
+        self.assertNotIn(NODE["id"], json.dumps(self.client.installation.state))
+
+    def test_deferred_device_setup_needs_no_gateway_or_hardware_access(self):
+        self.assertEqual(self.offer("LATER")["phase"], "deferred")
+        self.client.request.assert_not_called()
+
+    def test_device_setup_without_read_permission_does_not_block_other_setup(self):
+        self.assertEqual(self.offer("DEVICES", ())["phase"], "permission-required")
+        self.client.request.assert_not_called()
+
+    def test_individual_setup_calls_existing_management_and_reads_actual_result(self):
+        with patch("device_management.guided_devices") as manage:
+            progress = self.offer("DEVICES")
+        manage.assert_called_once_with(self.client, self.messages)
+        self.assertEqual(progress["phase"], "reviewed")
+        self.client.request.assert_called_once_with("GET", "/v1/gateways/management")
+
+    def test_interrupted_individual_setup_keeps_pending_progress(self):
+        with (
+            patch("device_management.guided_devices", side_effect=KeyboardInterrupt),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            self.offer("DEVICES")
+        self.assertEqual(
+            self.client.installation.state["deviceSetup"]["phase"], "in-progress"
+        )
+        self.client.request.assert_not_called()
+
+    def test_invalid_device_setup_choice_leaves_state_unchanged(self):
+        with self.assertRaisesRegex(ValueError, "E_DEVICE_SETUP_SELECTION"):
+            self.offer("invalid")
+        self.assertEqual(self.client.installation.state, {})
+        self.client.request.assert_not_called()
+
     def test_pairing_is_available_before_any_device_is_enrolled(self):
         self.messages = json.loads(
             (Path(__file__).resolve().parents[1] / "locales/en.json").read_text(

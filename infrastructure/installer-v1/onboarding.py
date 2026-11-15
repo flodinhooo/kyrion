@@ -293,6 +293,9 @@ def guided_setup(installation: Installation, messages: dict[str, str]) -> None:
         ):
             space = client.request("GET", "/v1/space")
             provision_recovery(installation, str(uuid.UUID(space["id"])), messages)
+        from device_management import offer_device_setup
+
+        offer_device_setup(client, messages, user)
         print(messages["hardwareHelp"])
         hardware = input(messages["hardwareChoice"] + ": ").strip().split(",")
         allowed = {"ha", "zigbee", "matter", "thread", "audio", "none"}

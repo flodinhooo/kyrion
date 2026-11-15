@@ -266,7 +266,16 @@ def _exercise_linked_account(request, root, ports, provider, target):
     with (
         patch(
             "builtins.input",
-            side_effect=["YES", "ONLINE", "CHECK", "USE", "skip", "none", "skip"],
+            side_effect=[
+                "YES",
+                "ONLINE",
+                "CHECK",
+                "USE",
+                "skip",
+                "SINGLE",
+                "none",
+                "skip",
+            ],
         ),
         patch("builtins.print"),
     ):
@@ -274,6 +283,8 @@ def _exercise_linked_account(request, root, ports, provider, target):
     if (
         installation.state.get("hardwareSelection") != ["none"]
         or "aiRecommendation" in installation.state
+        or installation.state.get("deviceSetup")
+        != {"formatVersion": 1, "choice": "SINGLE", "phase": "reviewed"}
     ):
         raise ValueError("E_LINKED_FIXTURE_OPTIONAL_SETUP")
     legacy_invitation = request("POST", "/v1/space/invitations", {}, token=token)

@@ -17,6 +17,12 @@ Latest checkpoint: [reviewed existing-proxy extension](status/2026-11-15-install
 
 Latest device checkpoint: [Core device management and restricted agent transport](status/2026-11-15-installer-device-management.md). Device metadata, revocation and task authorization are implemented; full deployment and coordinated task placement remain open.
 
+The [guided device-choice checkpoint](status/2026-11-15-installer-device-onboarding.md)
+integrates current-device continuation, individual management/pairing and deferral
+into normal linked onboarding. Actual Windows process acceptance passed without
+optional hardware/AI, and actual Linux Compose acceptance passed individual pairing.
+This does not complete task placement or native service acceptance.
+
 Latest transaction evidence: [database and systemd startup corrections](status/2026-11-14-installer-database-startup.md).
 The fresh native Linux installation/update/recovery run passes without an
 unplanned retry, including actual backup, migration 49 to 50, systemd fencing,

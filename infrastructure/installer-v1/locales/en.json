@@ -97,7 +97,7 @@
   "working": "Preparing runtimes, verifying images and applying approved configuration. Progress is saved; resume with the same target and release after an interruption.",
   "servicesHealthy": "Core and local HTTPS login passed the current readiness check. Owner setup and recovery are still separate open steps.",
   "certificate": "Public local TLS certificate: trust it through your operating system after verifying its origin. Do not disable TLS verification. It expires after 365 days",
-  "handoff": "Continue protected owner and Space setup in this installation's local Kyrion interface. Then optionally link the same identity through Profile/Identity and configure integrations through the existing catalog. Website passwords are never entered here. Home Assistant currently imports read-only devices. AI and voice can be skipped.",
+  "handoff": "Continue linked-account, local access and authorized Space setup in this downloaded installer. Secure account login opens in your browser; website passwords are never entered here. Home Assistant uses selected entities and permissions; control requires a deliberate action. Additional devices, AI and voice can be skipped and configured later.",
   "bootstrap": "Read the bootstrap value privately from this protected file, not from logs (Core expiry: 30 minutes)",
   "pending": "Installation status and remaining steps are listed below. Optional setup can be continued with this installer; local administration remains available in Kyrion. A recommendation or saved setting alone does not establish successful operation.",
   "interrupted": "E_INTERRUPTED: Progress was preserved. Resume the same installation; ambiguous partial files require inspection and are never silently replaced.",
@@ -248,5 +248,10 @@
   "agentIngressReview": "Confirm this local proxy operation?",
   "agentIngressError": "The proxy transition is incomplete or could not be verified. Preserve the installation. Use --agent-ingress status, then resume with an authorized linked account or explicitly recover the recorded original configuration. Ordinary startup and updates remain fenced while the transition is incomplete. No keys or application data were replaced.",
   "agentIngressWorkerUpgrade": "An enabled installed startup, update or backup worker cannot honor the proxy transition fence. Before retrying, upgrade that owned worker with this current installer using its existing autostart, update or backup configuration. Source changes alone do not replace scheduled executables. No proxy change was made.",
-  "agentIngressPlatform": "This managed proxy transition is currently implemented for Linux Compose. The native Windows transition adapter is not implemented yet. Existing configuration is preserved."
+  "agentIngressPlatform": "This managed proxy transition is currently implemented for Linux Compose. The native Windows transition adapter is not implemented yet. Existing configuration is preserved.",
+  "deviceSetupScope": "Keep the required Kyrion central components on this device, or open individual device setup. Additional devices need their own downloaded installer and explicit one-use pairing. Pairing and task permissions do not install AI or activate microphones. An intermittent or unreachable device only supplies its assigned functions while available. No automatic cloud fallback is enabled.",
+  "deviceSetupChoice": "SINGLE: continue with this central device; DEVICES: pair and manage individual devices; LATER: defer this optional step",
+  "deviceSetupPermission": "Your current role cannot read this Space's device management. Continue without changing devices; an authorized Space administrator can resume with --devices.",
+  "deviceSetupExisting": "Core still lists previously paired devices. Choosing this-device setup keeps those devices and task permissions unchanged; use device management for deliberate removal or reassignment.",
+  "deviceSetupReviewed": "Device setup choice reviewed against Core. Pairing files awaiting use are not counted as enrolled devices. Continue later with --devices; this review does not claim remote installation or service readiness."
 }

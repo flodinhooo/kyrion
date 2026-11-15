@@ -6,6 +6,51 @@ import json
 import uuid
 
 
+def offer_device_setup(client, messages: dict[str, str], user: dict) -> None:
+    """Resume the existing device authority inside onboarding, not a new registry."""
+    installation = client.installation
+    print(messages["deviceSetupScope"])
+    choice = input(messages["deviceSetupChoice"] + " [SINGLE/DEVICES/LATER]: ").strip()
+    if choice not in {"SINGLE", "DEVICES", "LATER"}:
+        raise ValueError("E_DEVICE_SETUP_SELECTION")
+    progress = {"formatVersion": 1, "choice": choice, "phase": "deferred"}
+    if choice == "LATER":
+        installation.state["deviceSetup"] = progress
+        installation.save()
+        return
+    permissions = user.get("permissions")
+    if (
+        not isinstance(permissions, list)
+        or not all(isinstance(value, str) for value in permissions)
+        or "gateways:read" not in permissions
+    ):
+        print(messages["deviceSetupPermission"])
+        installation.state["deviceSetup"] = {**progress, "phase": "permission-required"}
+        installation.save()
+        return
+    # This is progress only. Core remains the authoritative source of device
+    # membership, live availability and task grants. A reviewed choice is never
+    # represented as successful remote installation or service activation.
+    installation.state["deviceSetup"] = {**progress, "phase": "in-progress"}
+    installation.save()
+    if choice == "DEVICES":
+        guided_devices(client, messages)
+    nodes = managed_devices(client)
+    if choice == "SINGLE" and any(node.get("revokedAt") is None for node in nodes):
+        print(messages["deviceSetupExisting"])
+    print(messages["deviceSetupReviewed"])
+    print(
+        json.dumps(
+            {
+                "pairedDevices": sum(node.get("revokedAt") is None for node in nodes),
+                "remoteInstallationPerformed": False,
+            }
+        )
+    )
+    installation.state["deviceSetup"] = {**progress, "phase": "reviewed"}
+    installation.save()
+
+
 def managed_devices(client) -> list[dict]:
     response = client.request("GET", "/v1/gateways/management")
     if not isinstance(response, list) or len(response) > 1000:

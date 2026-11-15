@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import native_bundle
 from bundle import sha256
 from crypto_support import certificate, private_tls_key
+from host import reject_links
 from native_web_transport import WebTransport
 
 
@@ -64,13 +65,39 @@ def main(
     work_parent: Path,
     core_jar: Path | None = None,
     linked_account: bool = False,
+    verified_profile: bool = False,
 ) -> dict:
     if os.name != "nt":
         raise ValueError("E_WINDOWS_FIXTURE_PLATFORM")
     if core_jar is not None and not core_jar.is_file():
         raise ValueError("E_LINKED_FIXTURE_SOURCE_CORE_REQUIRED")
     # Authenticate and verify every actual executable before starting anything.
-    native_bundle.unpack(bundle, key, payload)
+    if verified_profile:
+        # Read-only process-fixture optimization: validate every existing public
+        # build-profile byte instead of repeating thousands of journaled writes.
+        # This path explicitly does not test installer extraction/SCM or ACLs.
+        reviewed = native_bundle.authenticated_review(bundle, key)
+        reject_links(payload)
+        records = {row["path"]: row for row in reviewed.manifest["files"]}
+        actual = set()
+        for path in payload.rglob("*"):
+            reject_links(path)
+            if path.is_file():
+                name = path.relative_to(payload).as_posix()
+                actual.add(name)
+                row = records.get(name)
+                if (
+                    row is None
+                    or path.stat().st_size != row["bytes"]
+                    or sha256(path) != row["sha256"]
+                ):
+                    raise ValueError("E_NATIVE_FIXTURE_PROFILE_INTEGRITY")
+            elif not path.is_dir():
+                raise ValueError("E_NATIVE_FIXTURE_PROFILE_INTEGRITY")
+        if actual != records.keys():
+            raise ValueError("E_NATIVE_FIXTURE_PROFILE_INTEGRITY")
+    else:
+        native_bundle.unpack(bundle, key, payload)
     selected_core = (
         core_jar if core_jar is not None else payload / "app/core/core-runtime.jar"
     )
@@ -312,8 +339,8 @@ def main(
                     KYRION_CENTRAL_CLIENT_ID="kyrion-local",
                     KYRION_CENTRAL_ALLOW_LOOPBACK_HTTP="false",
                     JAVA_TOOL_OPTIONS='-Djavax.net.ssl.trustStore="'
-                                      + str(provider.truststore)
-                                      + '" -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.trustStorePassword=isolated-test-store',
+                    + str(provider.truststore)
+                    + '" -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.trustStorePassword=isolated-test-store',
                 )
             core_command = [
                 runtime / "java/bin/java.exe",
@@ -506,8 +533,8 @@ https://localhost:PORT {
                 if (
                     restarted_user["id"] != expected_owner
                     or request("GET", "/v1/auth/central/status", token=token).get(
-                    "linked"
-                )
+                        "linked"
+                    )
                     is not True
                     or restarted_user["space"]["type"] != "BUSINESS"
                 ):
@@ -524,6 +551,8 @@ https://localhost:PORT {
                 "observedSchema": observed_schema,
                 "sourceCoreOverride": core_jar is not None,
                 "nativeProcesses": True,
+                "profileExtractionTested": not verified_profile,
+                "existingPublicProfileFullyVerified": verified_profile,
                 "freshDatabase": True,
                 "coreMigrations": True,
                 "ownerAndSpaceCreated": True,
@@ -574,6 +603,7 @@ if __name__ == "__main__":
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--core-jar", type=Path)
     parser.add_argument("--linked-account", action="store_true")
+    parser.add_argument("--verified-profile", action="store_true")
     args = parser.parse_args()
     result = main(
         args.bundle.resolve(),
@@ -582,6 +612,7 @@ if __name__ == "__main__":
         args.work_parent.resolve(),
         args.core_jar.resolve() if args.core_jar else None,
         args.linked_account,
+        args.verified_profile,
     )
     args.report.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result))
