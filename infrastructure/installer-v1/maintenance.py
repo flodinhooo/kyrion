@@ -334,6 +334,24 @@ def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
         return 0
+    if getattr(args, "agent_ingress", None):
+        from linked_onboarding import linked_setup
+        from node_ingress import guided, inspect
+        from onboarding import CoreClient
+        from update_worker import validate_host
+
+        with installation_lock(args.target):
+            validate_host(args.target)
+            installation = load_installation(args.target, verify=False)
+            inspect(installation)
+            client = CoreClient(installation)
+            try:
+                if args.agent_ingress in {"configure", "resume"}:
+                    linked_setup(client, messages)
+                guided(client, installation, messages, args.agent_ingress)
+            finally:
+                client.close()
+        return 0
     if getattr(args, "devices", False):
         from authority import require_active
         from device_management import guided_devices

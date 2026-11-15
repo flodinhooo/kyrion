@@ -76,6 +76,9 @@ def main() -> int:
     actions.add_argument("--node-heartbeat", action="store_true")
     actions.add_argument("--node-run", action="store_true")
     actions.add_argument(
+        "--agent-ingress", choices=("configure", "resume", "recover", "status")
+    )
+    actions.add_argument(
         "--node-service", choices=("install", "repair", "status", "disable", "remove")
     )
     actions.add_argument(
@@ -263,6 +266,7 @@ def main() -> int:
                     "formatVersion": 1,
                     "updateProtocol": 1,
                     "startupFence": True,
+                    "agentIngressFence": True,
                     "maintenanceCore": True,
                     "linuxComposeStart": os.name == "posix",
                     "backupProtocol": 1,
@@ -438,6 +442,7 @@ def main() -> int:
         or args.owner_recovery
         or args.home_assistant
         or args.devices
+        or args.agent_ingress
         or args.autostart
         or args.backup_schedule
         or args.install_crypto

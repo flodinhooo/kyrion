@@ -7,6 +7,58 @@ permissions:
   contents: read
 
 jobs:
+  isolated-agent-ingress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Build actual application images and retain test-only vendor runtimes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          python -m venv build/ingress-python
+          build/ingress-python/bin/python -m pip install -r infrastructure/installer-v1/runtime-requirements.txt
+          docker build --iidfile build/ingress-core.id services/core
+          docker build --iidfile build/ingress-web.id apps/web
+          docker pull postgres:17.6
+          docker pull caddy:2.10.2-alpine
+          docker image inspect --format '{{.Id}}' postgres:17.6 > build/ingress-postgres.id
+          docker image inspect --format '{{.Id}}' caddy:2.10.2-alpine > build/ingress-caddy.id
+          container="kyrion-ingress-jar-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker create --name "$container" "$(cat build/ingress-core.id)" >/dev/null
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/opt/kyrion/app.jar" build/ingress-core.jar
+          build/ingress-python/bin/python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          images = {name: Path(f'build/ingress-{name}.id').read_text().strip() for name in ('core', 'web', 'postgres', 'caddy')}
+          with Path('build/ingress-core.jar').open('rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          Path('build/ingress-image-plan.json').write_text(json.dumps({'scope': 'installer-agent-ingress-development-images', 'images': images, 'coreJarSha256': digest}), encoding='utf-8')
+          PY
+          docker image save --output build/ingress-images.tar "$(cat build/ingress-core.id)" "$(cat build/ingress-web.id)" "$(cat build/ingress-postgres.id)" "$(cat build/ingress-caddy.id)"
+      - name: Test the actual Compose transaction inside a private Docker and containerd runtime
+        timeout-minutes: 25
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="/var/lib/kyrion-ingress-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sudo mkdir -m 700 "$work"
+          sudo "$PWD/build/ingress-python/bin/python" infrastructure/installer-v1/tests/integration/run-ingress-private-daemon.py \
+            --work "$work" --images "$PWD/build/ingress-images.tar" \
+            --images-sha256 "$(sha256sum build/ingress-images.tar | cut -d ' ' -f 1)" \
+            --image-plan "$PWD/build/ingress-image-plan.json" --daemon "$(command -v dockerd)" \
+            --report "$work/report.json"
+          sudo install -m 644 "$work/report.json" build/isolated-ingress-report.json
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: isolated-linux-agent-ingress-evidence
+          path: build/isolated-ingress-report.json
+          if-no-files-found: error
   isolated-core:
     runs-on: ubuntu-24.04
     timeout-minutes: 45

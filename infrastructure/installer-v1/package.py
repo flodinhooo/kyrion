@@ -79,6 +79,7 @@ FILES = (
     "node_entry.py",
     "node_service.py",
     "node_pairing.py",
+    "node_ingress.py",
     "identity_settings.py",
     "bootstrap_maintenance.py",
     "error_guidance.py",

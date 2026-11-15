@@ -134,7 +134,7 @@ def load(path: Path | None) -> Pairing | None:
     if os.name != "posix":
         raise ValueError("E_AGENT_PLATFORM")
     reject_links(path)
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(descriptor, "rb") as stream:
         metadata = os.fstat(stream.fileno())
         if (
@@ -301,6 +301,16 @@ def guided_export(client, messages):
         != "PAIR"
     ):
         return
-    path, pairing = export(client, name)
+    try:
+        path, pairing = export(client, name)
+    except ValueError as error:
+        if str(error) != "E_NODE_PAIRING_INGRESS":
+            raise
+        from node_ingress import guided
+
+        print(messages["nodePairingIngressRequired"])
+        if guided(client, client.installation, messages, "configure") is None:
+            return
+        path, pairing = export(client, name)
     print(messages["nodePairingExportSaved"])
     print(json.dumps({"file": str(path), **pairing.metadata()}, ensure_ascii=True))

@@ -1,6 +1,22 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_AGENT_INGRESS_PENDING",
+            "E_AGENT_INGRESS_CUSTOM",
+            "E_AGENT_INGRESS_JOURNAL",
+            "E_AGENT_INGRESS_OWNERSHIP",
+            "E_AGENT_INGRESS_PERMISSION",
+            "E_AGENT_INGRESS_VERIFY",
+            "E_AGENT_INGRESS_ACTION",
+            "E_AGENT_INGRESS_RECOVERY",
+            "E_AGENT_INGRESS_RUNTIME",
+        ),
+        "agentIngressError",
+    ),
+    "E_AGENT_INGRESS_WORKER": "agentIngressWorkerUpgrade",
+    "E_AGENT_INGRESS_PLATFORM": "agentIngressPlatform",
     "E_NODE_PAIRING_INGRESS": "nodePairingIngressRequired",
     "E_AGENT_ENROLLMENT_UPGRADE_REQUIRED": "nodePolicyUnavailable",
     **dict.fromkeys(

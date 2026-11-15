@@ -24,6 +24,7 @@ def require_active(
     preparing: bool = False,
     migration: bool = False,
     update: bool = False,
+    ingress: bool = False,
 ) -> None:
     if state.get("authority") is not None or (
         state.get("preparedForRestore")
@@ -35,6 +36,16 @@ def require_active(
 
     if fenced(state) and not update:
         raise ValueError("E_UPDATE_IN_PROGRESS")
+    transition = state.get("agentIngressTransition")
+    if (
+        transition is not None
+        and not ingress
+        and (
+            not isinstance(transition, dict)
+            or transition.get("phase") not in {"verified", "recovered"}
+        )
+    ):
+        raise ValueError("E_AGENT_INGRESS_PENDING")
 
 
 def prepare_restore(installation, request: dict) -> None:

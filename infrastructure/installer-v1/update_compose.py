@@ -93,12 +93,21 @@ class Compose:
         ):
             raise ValueError("E_UPDATE_DOCKER_CHANGED")
 
-    def run(self, *arguments, output=None, timeout=180) -> bytes:
+    def run(
+        self, *arguments, output=None, timeout=180, payload: bytes | None = None
+    ) -> bytes:
+        if payload is not None and (
+            not isinstance(payload, bytes) or len(payload) > 65536
+        ):
+            raise ValueError("E_UPDATE_DOCKER_INPUT")
+        source = (
+            {"stdin": subprocess.DEVNULL} if payload is None else {"input": payload}
+        )
         result = subprocess.run(
             [str(self.docker), *arguments],
             cwd=self.root,
             env=self.env,
-            stdin=subprocess.DEVNULL,
+            **source,
             stdout=output or subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=timeout,
@@ -108,7 +117,14 @@ class Compose:
             raise ValueError("E_UPDATE_DOCKER")
         return result.stdout or b""
 
-    def compose(self, *arguments, maintenance=False, output=None, timeout=180):
+    def compose(
+        self,
+        *arguments,
+        maintenance=False,
+        output=None,
+        timeout=180,
+        payload: bytes | None = None,
+    ):
         flags = [
             "compose",
             "--project-name",
@@ -121,6 +137,10 @@ class Compose:
         ]
         if maintenance:
             flags += ["-f", str(path(self.installation, "maintenance.yml"))]
+        if payload is not None:
+            return self.run(
+                *flags, *arguments, output=output, timeout=timeout, payload=payload
+            )
         return self.run(*flags, *arguments, output=output, timeout=timeout)
 
     def query(self, sql, *, database="kyrion"):

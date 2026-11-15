@@ -60,7 +60,7 @@ def enrollment_input(args) -> tuple[dict, bytes, bytes] | None:
 
 
 def read_owned(path: Path, uid: int, maximum: int) -> bytes:
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(descriptor, "rb") as stream:
         metadata = os.fstat(stream.fileno())
         if (

@@ -283,7 +283,26 @@ maintenance in an owned developer environment. It requires root and a separate
 unprivileged fixture user; it never activates real household hardware. Hosted
 execution is prepared in the manual Linux workflow, not implied by source edits.
 
-### Existing platform verification
+### Extending an existing Linux central installation for paired devices
+
+`--devices --target /protected/kyrion` offers an explicit ingress transition if
+the existing managed proxy lacks supported agent routes. Alternatively use
+`--agent-ingress configure|resume|recover|status --target /protected/kyrion`.
+Configuration and resume require local root plus current linked Core permissions;
+recovery restores only previously approved known bytes and can run without Core.
+The review identifies the unchanged listener, no downloads and proxy-only restart.
+Custom configuration is refused. Before starting, enabled installed maintenance
+workers must already support the ingress fence; use their existing verified
+maintenance upgrade paths when prompted. An interrupted transaction must be
+resumed or explicitly recovered before ordinary maintenance continues.
+
+`tests/integration/verify-agent-ingress-compose.py` exercises actual pinned
+development images and controlled failures in an owned isolated Linux namespace.
+`run-ingress-private-daemon.py` additionally isolates Docker and containerd; its
+inputs are an explicitly hashed local image archive and immutable image plan.
+These fixtures never act on household devices or publish artifacts.
+
+### Existing platform checks
 
 ```sh
 python -m unittest discover -s tests -v

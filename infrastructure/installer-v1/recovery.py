@@ -45,6 +45,16 @@ def load_installation(target: Path, verify: bool = True) -> Installation:
     state = json.loads(path.read_text(encoding="utf-8"))
     if state.get("backend") == "linux-prepared-node":
         raise ValueError("E_NODE_PROFILE_OPERATION")
+    ingress = state.get("agentIngressTransition")
+    if (
+        verify
+        and ingress is not None
+        and (
+            not isinstance(ingress, dict)
+            or ingress.get("phase") not in {"verified", "recovered"}
+        )
+    ):
+        raise ValueError("E_AGENT_INGRESS_PENDING")
     config = state["configuration"]
     return Installation(
         target,
