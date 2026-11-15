@@ -230,11 +230,14 @@ def repair(target: Path) -> dict:
             from docker_images import pin_compose
 
             compose = pin_compose(compose, installation.state["runtimeImageIds"])
+        from node_transport import agent_handle
+
         candidates = {
             "compose.yml": compose.encode("utf-8"),
             "data/Caddyfile": (ROOT / "templates/Caddyfile")
             .read_text(encoding="utf-8")
             .replace("__KYRION_HOSTNAME__", config["hostname"])
+            .replace("__KYRION_AGENT_HANDLE__", agent_handle("core:8080"))
             .encode(),
             ".env": (
                 "\n".join(
@@ -251,6 +254,16 @@ def repair(target: Path) -> dict:
         }
         from linux_startup import OVERLAY, OVERLAY_TEXT
 
+        legacy_proxy = (
+            "https://" + config["hostname"] + " {\n"
+            "  tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem\n"
+            "  reverse_proxy web:3000\n}\n"
+        ).encode()
+        if hashlib.sha256(legacy_proxy).hexdigest() == installation.state["files"].get(
+            "data/Caddyfile"
+        ):
+            # Repair the recorded original, never silently enable agent ingress.
+            candidates["data/Caddyfile"] = legacy_proxy
         if OVERLAY in installation.state["files"]:
             candidates[OVERLAY] = OVERLAY_TEXT.encode()
         damaged = []
@@ -320,6 +333,28 @@ def uninstall(target: Path, purge: bool = False) -> dict:
 def run(args, messages: dict[str, str]) -> int:
     if input(messages["maintenanceReview"] + " [MAINTAIN]: ").strip() != "MAINTAIN":
         print(messages["cancelled"])
+        return 0
+    if getattr(args, "devices", False):
+        from authority import require_active
+        from device_management import guided_devices
+        from linked_onboarding import linked_setup
+        from onboarding import CoreClient
+
+        with installation_lock(args.target):
+            installation = load_installation(args.target)
+            require_active(installation.state)
+            if installation.state.get("backend") == "windows-native":
+                from native_runtime import permissions
+
+                permissions(args.target, "verify")
+            elif os.name != "posix" or os.geteuid() != 0:
+                raise ValueError("E_PLATFORM")
+            client = CoreClient(installation)
+            try:
+                linked_setup(client, messages)
+                guided_devices(client, messages)
+            finally:
+                client.close()
         return 0
     if getattr(args, "ollama", None):
         from ollama_runtime import select, status

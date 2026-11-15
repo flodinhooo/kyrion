@@ -19,7 +19,7 @@ object BackupVerificationAdmin {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.contentEquals(arrayOf("--capability"))) {
-            println("{\"formatVersion\":1,\"backupVerification\":1,\"coreSchema\":50,\"migrationOnly\":true}")
+            println("{\"formatVersion\":1,\"backupVerification\":1,\"coreSchema\":51,\"migrationOnly\":true}")
             return
         }
         try {

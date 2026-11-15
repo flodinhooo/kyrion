@@ -213,5 +213,18 @@
   "linuxRuntimeReview": "Linux runtime prerequisite: review exact package versions and allocation before installing Docker Engine, Compose v2 and GnuPG from existing authenticated Debian sources. Package maintainer scripts may start/enable Docker, so service consent is requested first. Existing containers may resume according to their own policies. No daemon configuration, group membership or LAN TCP API is added; shared runtimes are retained on Kyrion removal. Actual system boot remains separately unverified.",
   "linuxRuntimeError": "The supported local Linux runtime could not be prepared or verified. This guided package path targets Debian 13 with systemd and the standard packaged local rootful Docker service. Existing custom tools, daemon data, masks and service overrides are preserved. Use a compatible prepared local service or another supported target; do not remove foreign data or disable security checks. Resume the installer for an interrupted approved runtime operation.",
   "nativeBackupVerificationReview": "Verification creates an inactive temporary database on this installation's verified local PostgreSQL server, imports the backup and checks its schema, constraints and counts. It needs additional disk space. The live database is not replaced and application services are not started. A prior unacknowledged database creation requires review before cleanup.",
-  "nativeBackupVerificationError": "Backup database verification could not finish. Keep the archive and installation journal. This path needs an installed compatible signed Core runtime and its verified local PostgreSQL. An unacknowledged or replaced temporary database is preserved for administrator review; never delete a database based on its name alone. The live database has not been selected as a restore target."
+  "nativeBackupVerificationError": "Backup database verification could not finish. Keep the archive and installation journal. This path needs an installed compatible signed Core runtime and its verified local PostgreSQL. An unacknowledged or replaced temporary database is preserved for administrator review; never delete a database based on its name alone. The live database has not been selected as a restore target.",
+  "devicesScope": "Manage paired devices in this Space. This does not move the Kyrion central installation. Intermittent devices cannot provide their functions while switched off.",
+  "devicesEmpty": "No paired devices. Run the installer or supported agent on another device before pairing it.",
+  "devicesSelect": "Select device number; 0 finishes",
+  "devicesRevoked": "This device is revoked. Its previous access cannot be restored; a new authorized enrollment is required.",
+  "devicesAction": "Edit name/availability, task permissions, or revoke device access",
+  "devicesName": "Device name",
+  "devicesAvailability": "Expected availability (unknown / always on / intermittently on)",
+  "devicesSaveReview": "Save the displayed change",
+  "devicesRemoveReview": "Revoke this device and its linked voice access, and fail outstanding commands? Already delivered physical actions cannot be recalled. Local software and user data are retained.",
+  "devicesReadBack": "Request accepted. Reading current device state from Core.",
+  "devicesTasksScope": "These task permissions control existing gateway integrations and linked voice access in Core. They do not install or start software or microphones. Reported services are last-known agent observations; offline reports are not proof of readiness. Distributed AI and central migration require their own supported setup.",
+  "devicesTasksChoice": "Allow integration and/or voice, or choose none",
+  "devicesTasksReview": "Apply the displayed task permissions? Removing integration fails outstanding commands; removing voice ends linked sessions. Software, hardware configuration and data are retained."
 }

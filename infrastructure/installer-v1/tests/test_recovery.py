@@ -556,6 +556,46 @@ class RecoveryTests(unittest.TestCase):
             maintenance.repair(installation.target)
         self.assertEqual(path.read_bytes(), b"changed original key")
 
+    def test_proxy_repair_preserves_recorded_old_or_new_ingress_without_silent_upgrade(
+        self,
+    ):
+        from node_transport import agent_handle
+
+        installation = self.installation()
+        hostname = installation.configuration["hostname"]
+        legacy = (
+            "https://" + hostname + " {\n"
+            "  tls /etc/caddy/tls/cert.pem /etc/caddy/tls/key.pem\n"
+            "  reverse_proxy web:3000\n}\n"
+        ).encode()
+        current = (
+            (maintenance.ROOT / "templates/Caddyfile")
+            .read_text(encoding="utf-8")
+            .replace("__KYRION_HOSTNAME__", hostname)
+            .replace("__KYRION_AGENT_HANDLE__", agent_handle("core:8080"))
+            .encode()
+        )
+        path = installation.target / "data/Caddyfile"
+        path.parent.mkdir(mode=0o700, exist_ok=True)
+        for original in (legacy, current):
+            path.write_bytes(original)
+            path.chmod(0o600)
+            installation.state["files"]["data/Caddyfile"] = recovery.sha256(path)
+            installation.save()
+            path.write_bytes(b"synthetic corruption")
+            with (
+                patch(
+                    "maintenance.installation_lock",
+                    return_value=contextlib.nullcontext(),
+                ),
+                patch("maintenance.runtime_checks"),
+                patch.object(Installation, "start"),
+            ):
+                result = maintenance.repair(installation.target)
+            self.assertEqual(result["repairedFiles"], ["data/Caddyfile"])
+            self.assertEqual(path.read_bytes(), original)
+            self.assertNotIn(b"__KYRION_", path.read_bytes())
+
     def test_repair_restores_reviewed_immutable_image_pins(self):
         from docker_images import pin_compose
 

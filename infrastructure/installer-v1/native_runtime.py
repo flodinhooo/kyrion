@@ -23,6 +23,7 @@ from host import reject_links
 from native_bundle import authenticated_review, unpack
 from native_roles import healthy, read_configuration, validate_ports
 from native_staging import stage_bundle
+from node_transport import agent_handle
 from runtime import Installation, atomic_json, installation_lock, validate_network
 from windows_service import ROLES, ServiceManager, service_plan
 from windows_system import base_environment, native_architecture, system_directory
@@ -304,11 +305,16 @@ def configure(
         + (root / "data/tls/cert.pem").as_posix()
         + '" "'
         + (root / "data/tls/key.pem").as_posix()
-        + '"\n reverse_proxy https://127.0.0.1:'
+        + '"\n'
+        + agent_handle(
+            "https://127.0.0.1:" + str(config["ports"]["core"]),
+            root / "core-cert.pem",
+        )
+        + " handle {\n reverse_proxy https://127.0.0.1:"
         + str(config["ports"]["web"])
         + ' {\n transport http {\n tls_trust_pool file "'
         + (root / "web-cert.pem").as_posix()
-        + '"\n }\n }\n}\n',
+        + '"\n }\n }\n }\n}\n',
     )
     password = (root / "secrets/postgres-password").read_text().strip()
     installation.write(

@@ -1,6 +1,6 @@
 # Guided installer implementation and acceptance
 
-Initial baseline 2026-11-11; maintenance sections updated 2026-11-14.
+Initial baseline 2026-11-11; maintenance sections updated 2026-11-15.
 This is the work record for the downloaded installer;
 kyrion.ch is a download/documentation surface, never an installation authority.
 
@@ -8,6 +8,14 @@ The detailed [binding requirement matrix](installer-requirements.md) supersedes
 the coarse historical stage table below. Continuing source/test work is recorded
 in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
 full product scope remains open; no user acceptance is requested for this state.
+The [device-management continuation](status/2026-11-15-installer-device-management.md)
+adds revision-bound edits, persistent revocation, existing integration/voice task
+permissions and restricted local agent TLS ingress. Verified task authorization
+is distinct from node deployment and runtime readiness. The next implementation
+milestones remain installer-driven prepared-node deployment, durable exclusive
+task handoff including offline peers, and local management integration, followed
+by all still-open rows of the binding matrix. Each requires executable behavior
+and isolated tests before its state can advance.
 The [Debian Compose continuation](status/2026-11-14-installer-debian-compose.md)
 records local-image helper compatibility and real systemd update fencing,
 interrupted activation, resumed migration and snapshot recovery. Its split-run

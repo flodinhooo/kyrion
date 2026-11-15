@@ -147,6 +147,35 @@ does not install a runtime, download a model, or activate cloud processing.
 
 ## Resume and maintenance
 
+### Paired device maintenance
+
+`--devices --target EXISTING_ROOT` uses the existing linked-account/offline login,
+Space and gateway permissions. On Core schema 51 it lists paired identities,
+versions, expected availability, last contact and last reported services. It can
+rename devices, change expected availability, apply integration/voice task
+permissions, or explicitly revoke a device. Mutations use a management revision;
+stale writes fail instead of overwriting another administrator's changes. A
+revoked identity remains in history and its old credentials remain invalid after
+restart. Linked voice access and outstanding commands are invalidated. Removing
+access does not uninstall software or remove user data, and cannot recall an
+already delivered physical action.
+
+New prepared enrollments start without task permissions. Existing legacy nodes
+retain their previous behavior until explicitly configured. Allowed tasks are
+authorization for existing runtimes: applying them does not install/start services,
+activate recording, transfer the central writer, or attest readiness. Distributed
+AI deployment and coordinated task migration remain open source work.
+
+New installation configurations include enumerated gateway and established voice
+protocol paths on the existing local TLS listener. Immediate nonlocal peers are
+rejected independently of forwarded headers. The complete Core API is not
+published by this route; native upstream TLS validation remains enabled. Existing
+installed configuration is not silently rewritten by a source-code change; a
+reviewed extension path remains required. See ADRs 0082 and 0083 and the evidence
+ledger for the remaining distributed installation work.
+
+### Resume an existing installation
+
 Rerun with identical target/hostname/IP/release and choose `resume`. A private,
 atomic journal and exclusive process lock prevent parallel writes; recorded files
 must match. Existing installations without this journal are refused. No database,

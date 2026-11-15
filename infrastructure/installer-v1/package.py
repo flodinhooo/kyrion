@@ -57,6 +57,8 @@ FILES = (
     "linux_startup.py",
     "docker_images.py",
     "onboarding.py",
+    "device_management.py",
+    "node_transport.py",
     "identity_settings.py",
     "bootstrap_maintenance.py",
     "error_guidance.py",

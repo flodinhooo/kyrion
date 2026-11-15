@@ -72,6 +72,11 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
+        "--devices",
+        action="store_true",
+        help="Manage paired devices in the current Space",
+    )
     actions.add_argument("--ollama", choices=("status", "select", "pull", "remove"))
     parser.add_argument("--ollama-port", type=int)
     parser.add_argument("--ollama-model")
@@ -330,6 +335,7 @@ def main() -> int:
         or args.extend_bootstrap
         or args.owner_recovery
         or args.home_assistant
+        or args.devices
         or args.autostart
         or args.backup_schedule
         or args.install_crypto

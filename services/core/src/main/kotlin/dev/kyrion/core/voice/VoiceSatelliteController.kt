@@ -73,15 +73,16 @@ class VoiceSatelliteAgentController(
     }
 
     @PostMapping("/bootstrap-from-gateway")
+    @org.springframework.transaction.annotation.Transactional
     @ResponseStatus(HttpStatus.CREATED)
     fun bootstrap(
         @RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
         @RequestHeader("Authorization") authorization: String,
         @Valid @RequestBody body: BootstrapVoiceSatelliteRequest,
     ): EnrollVoiceSatelliteResponse {
-        val gateway = gateways.authenticate(nodeId, authorization.bearer())
+        val gateway = gateways.authenticateTask(nodeId, authorization.bearer(), "voice")
         val registered = service.bootstrap(
-            gateway.ownerId, "${gateway.displayName} Voice", body.hostname.lowercase(), body.runtimeVersion,
+            gateway.ownerId, "${gateway.displayName} Voice", body.hostname.lowercase(), body.runtimeVersion, gateway.id,
         )
         return EnrollVoiceSatelliteResponse(registered.satellite.id, registered.token)
     }

@@ -89,7 +89,11 @@ class SchemaToolTest(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "ARTIFACT_CATALOG_UNSUPPORTED"
         ):
-            TOOL.extract_artifact(self.jar, self.artifact(range(1, 52)), self.extract)
+            TOOL.extract_artifact(self.jar, self.artifact(range(1, 53)), self.extract)
+
+    def test_accepts_device_management_v51_catalog(self):
+        catalog = TOOL.extract_artifact(self.jar, self.artifact(range(1, 52)), self.extract)
+        self.assertEqual(51, len(catalog["migrations"]))
 
     def test_rejects_callback_or_path_traversal(self):
         for name in ("beforeMigrate.sql", "../../escape.sql"):

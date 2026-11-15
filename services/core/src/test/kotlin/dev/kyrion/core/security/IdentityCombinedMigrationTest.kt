@@ -24,9 +24,9 @@ class IdentityCombinedMigrationTest {
     @Test fun `fresh database has unique ordered canonical migrations and repeated startup is a no-op`() {
         val schema = "fresh_" + UUID.randomUUID().toString().replace("-", "")
         val flyway = migrate(schema)
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(50)
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(51)
         flyway.validate()
-        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..50).map(Int::toString))
+        assertThat(flyway.info().applied().filter { it.version != null }.map { it.version.version }).containsExactlyElementsOf((1..51).map(Int::toString))
         assertThat(flyway.migrate().migrationsExecuted).isZero()
     }
 

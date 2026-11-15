@@ -34,6 +34,7 @@ data class VoiceSatellite(
     val runtimeVersion: String,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val sourceGatewayNodeId: UUID? = null,
 )
 
 data class VoiceDialogueSession(
@@ -89,25 +90,30 @@ class JdbcVoiceSatelliteRepository(private val jdbc: JdbcClient) : VoiceSatellit
     override fun createSatellite(satellite: VoiceSatellite) {
         jdbc.sql(
             """INSERT INTO voice_satellite
-               (id, owner_id, display_name, hostname, credential_hash, runtime_version, created_at, updated_at)
+               (id, owner_id, display_name, hostname, credential_hash, runtime_version, created_at, updated_at, source_gateway_node_id)
                VALUES (:id, :ownerId, :displayName, :hostname, :credentialHash, :runtimeVersion,
-                       :createdAt, :updatedAt)""",
+                       :createdAt, :updatedAt, :sourceGatewayNodeId)""",
         ).param("id", satellite.id).param("ownerId", satellite.ownerId)
             .param("displayName", satellite.displayName).param("hostname", satellite.hostname)
             .param("credentialHash", satellite.credentialHash)
             .param("runtimeVersion", satellite.runtimeVersion)
             .param("createdAt", Timestamp.from(satellite.createdAt))
-            .param("updatedAt", Timestamp.from(satellite.updatedAt)).update()
+            .param("updatedAt", Timestamp.from(satellite.updatedAt))
+            .param("sourceGatewayNodeId", satellite.sourceGatewayNodeId, java.sql.Types.OTHER).update()
     }
 
     override fun findSatellite(id: UUID): VoiceSatellite? = jdbc.sql(
-        "SELECT * FROM voice_satellite WHERE id = :id",
+        """SELECT s.* FROM voice_satellite s WHERE s.id = :id AND s.revoked_at IS NULL AND
+           (s.source_gateway_node_id IS NULL OR EXISTS (SELECT 1 FROM gateway_node g
+            WHERE g.id=s.source_gateway_node_id AND g.owner_id=s.owner_id AND g.revoked_at IS NULL
+            AND (g.task_policy IS NULL OR g.task_policy @> '["voice"]'::jsonb)))""",
     ).param("id", id).query { rs, _ ->
         VoiceSatellite(
             rs.getObject("id", UUID::class.java), rs.getObject("owner_id", UUID::class.java),
             rs.getString("display_name"), rs.getString("hostname"), rs.getString("credential_hash"),
             rs.getString("runtime_version"), rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("updated_at").toInstant(),
+            rs.getObject("source_gateway_node_id", UUID::class.java),
         )
     }.optional().orElse(null)
 
@@ -180,8 +186,8 @@ class VoiceSatelliteService(
         return register(enrollment.ownerId, enrollment.displayName, hostname, runtimeVersion, now)
     }
 
-    fun bootstrap(ownerId: UUID, displayName: String, hostname: String, runtimeVersion: String) =
-        register(ownerId, displayName, hostname, runtimeVersion, clock.instant())
+    fun bootstrap(ownerId: UUID, displayName: String, hostname: String, runtimeVersion: String, sourceGatewayNodeId: UUID? = null) =
+        register(ownerId, displayName, hostname, runtimeVersion, clock.instant(), sourceGatewayNodeId)
 
     fun openSession(satelliteId: UUID, credential: String): VoiceDialogueSession {
         val satellite = authenticate(satelliteId, credential)
@@ -227,12 +233,13 @@ class VoiceSatelliteService(
         hostname: String,
         runtimeVersion: String,
         now: Instant,
+        sourceGatewayNodeId: UUID? = null,
     ): RegisteredVoiceSatellite {
         boundary?.workspace(ownerId)
         val credential = tokens.create()
         val satellite = VoiceSatellite(
             UUID.randomUUID(), ownerId, displayName, hostname,
-            credential.tokenHash, runtimeVersion, now, now,
+            credential.tokenHash, runtimeVersion, now, now, sourceGatewayNodeId,
         )
         repository.createSatellite(satellite)
         activity.record(

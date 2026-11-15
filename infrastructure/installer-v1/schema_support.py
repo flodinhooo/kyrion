@@ -1,7 +1,7 @@
 """Explicit reviewed Core schemas; signed releases cannot extend this set."""
 
-CURRENT_CORE_SCHEMA = 50
-SUPPORTED_CORE_SCHEMAS = frozenset({49, 50})
+CURRENT_CORE_SCHEMA = 51
+SUPPORTED_CORE_SCHEMAS = frozenset({49, 50, 51})
 
 
 def restore_capability(value: object) -> int:

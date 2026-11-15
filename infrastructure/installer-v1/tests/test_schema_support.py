@@ -18,11 +18,11 @@ class SchemaSupport(unittest.TestCase):
         }
 
     def test_known_legacy_and_current_disposition_contracts_are_accepted(self):
-        for schema in (49, 50):
+        for schema in (49, 50, 51):
             self.assertEqual(restore_capability(self.capability(schema)), schema)
 
     def test_future_old_unknown_and_noninteger_schemas_are_refused(self):
-        for schema in (48, 51, 1000, True, 49.0, "50", None):
+        for schema in (48, 52, 1000, True, 49.0, "50", None):
             with (
                 self.subTest(schema=schema),
                 self.assertRaisesRegex(ValueError, "E_RESTORE_CORE_UPGRADE_REQUIRED"),

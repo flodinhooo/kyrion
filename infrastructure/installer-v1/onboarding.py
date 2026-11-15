@@ -15,6 +15,7 @@ from models import guided_recommendation
 from runtime import Installation
 
 ROUTES = {
+    ("GET", "/v1/gateways/management"),
     ("GET", "/v1/auth/setup/status"),
     ("POST", "/v1/auth/setup"),
     ("POST", "/v1/auth/login"),
@@ -77,7 +78,17 @@ class CoreClient:
         body: dict | None = None,
         bootstrap: str | None = None,
     ):
-        if (method, route) not in ROUTES:
+        device_route = re.fullmatch(
+            r"/v1/gateways/([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})(/management|/tasks)?",
+            route,
+        )
+        device_operation = device_route is not None and (
+            method == "PUT"
+            and device_route.group(2) in {"/management", "/tasks"}
+            or method == "DELETE"
+            and device_route.group(2) is None
+        )
+        if (method, route) not in ROUTES and not device_operation:
             raise ValueError("E_API_ROUTE: unsupported installer operation")
         if self.installation.state.get("backend") == "windows-native":
             return self._native_request(method, route, body, bootstrap)

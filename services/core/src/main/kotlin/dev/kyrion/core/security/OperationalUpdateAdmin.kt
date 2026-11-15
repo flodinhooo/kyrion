@@ -15,14 +15,14 @@ object OperationalUpdateAdmin {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.contentEquals(arrayOf("--capability"))) {
-            println("{\"formatVersion\":1,\"updateProtocol\":1,\"sourceSchemas\":[49,50],\"maintenanceStart\":true}")
+            println("{\"formatVersion\":1,\"updateProtocol\":1,\"sourceSchemas\":[49,50,51],\"maintenanceStart\":true}")
             return
         }
         try {
             require(args.size == 1 && args.single() in setOf("--prepare", "--completed", "--recovered", "--aborted"))
             val operation = args.single().removePrefix("--")
             val expectedSchema = required("KYRION_UPDATE_EXPECTED_SCHEMA").toInt()
-            if (operation != "completed") require(expectedSchema in setOf(49, 50))
+            if (operation != "completed") require(expectedSchema in setOf(49, 50, 51))
             val transaction = UUID.fromString(required("KYRION_UPDATE_TRANSACTION_ID"))
             val password = Files.readString(Path.of(required("KYRION_DATABASE_PASSWORD_FILE"))).trimEnd('\r', '\n')
             val source = DriverManagerDataSource(required("KYRION_DATABASE_URL"), required("KYRION_DATABASE_USER"), password)

@@ -25,10 +25,13 @@ data class GatewayCommandStatus(val id: UUID, val status: String, val errorCode:
 class GatewayCommandRepository(private val jdbc: JdbcClient) {
     private val mapper: ObjectMapper = jacksonObjectMapper()
     fun create(id: UUID, nodeId: UUID, ownerId: UUID, type: String, payload: Map<String, Any>, now: Instant, correlationId: UUID = id, authority: GatewayAuthority) {
-        jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at,correlation_id,authority)
-            VALUES (:id,:nodeId,:ownerId,:type,CAST(:payload AS jsonb),'pending',:now,:correlation,CAST(:authority AS jsonb))""")
+        val inserted = jdbc.sql("""INSERT INTO gateway_command(id,node_id,owner_id,command_type,payload,status,created_at,correlation_id,authority)
+            SELECT :id,:nodeId,:ownerId,:type,CAST(:payload AS jsonb),'pending',:now,:correlation,CAST(:authority AS jsonb)
+            FROM gateway_node WHERE id=:nodeId AND owner_id=:ownerId AND revoked_at IS NULL
+            AND (task_policy IS NULL OR task_policy @> '["integration"]'::jsonb) FOR SHARE""")
             .param("id", id).param("nodeId", nodeId).param("ownerId", ownerId).param("type", type)
             .param("authority", mapper.writeValueAsString(authority)).param("payload", mapper.writeValueAsString(payload)).param("now", Timestamp.from(now)).param("correlation", correlationId).update()
+        if (inserted != 1) throw GatewayTaskDeniedException()
     }
 
     fun correlation(ownerId: UUID, id: UUID): UUID = jdbc.sql("SELECT COALESCE(correlation_id,id) FROM gateway_command WHERE owner_id=:owner AND id=:id")
@@ -77,7 +80,8 @@ class GatewayCommandService(
     private val authorityService: GatewayAuthorityService,
 ) {
     fun gateway(ownerId: UUID, nodeId: UUID) =
-        gateways.all(ownerId).singleOrNull { it.id == nodeId } ?: throw GatewayCommandInvalidException()
+        gateways.all(ownerId).singleOrNull { it.id == nodeId && (it.taskPolicy == null || "integration" in it.taskPolicy) }
+            ?: throw GatewayCommandInvalidException()
 
     fun enqueue(provenance: GatewayAuthority, nodeId: UUID, type: String, payload: Map<String, Any>, correlationId: UUID? = null): UUID {
         val authority = authorityService.bindTarget(provenance, type, payload)
@@ -123,7 +127,8 @@ class GatewayCommandService(
 
     @Transactional
     fun next(nodeId: UUID, credential: String): GatewayCommand? {
-        val node = gateways.authenticate(nodeId, credential)
+        val node = gateways.authenticateForDispatch(nodeId, credential)
+        if (node.taskPolicy != null && "integration" !in node.taskPolicy) return null
         val claimed = repository.claim(nodeId, clock.instant()) ?: return null
         val authority = claimed.authority
         val denied = try {

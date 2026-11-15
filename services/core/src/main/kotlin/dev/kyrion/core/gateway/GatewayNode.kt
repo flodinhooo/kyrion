@@ -46,6 +46,8 @@ data class GatewayNode(
     val createdAt: Instant,
     val updatedAt: Instant,
     val enrollmentId: UUID? = null,
+    val revokedAt: Instant? = null,
+    val taskPolicy: List<String>? = null,
 )
 
 data class GatewayHealth(
@@ -125,6 +127,8 @@ interface GatewayRepository {
     fun create(node: GatewayNode)
     fun all(ownerId: UUID): List<GatewayNode>
     fun findById(id: UUID): GatewayNode?
+    fun findForDispatch(id: UUID): GatewayNode? = findById(id)
+    fun findForHeartbeat(id: UUID): GatewayNode? = findById(id)
     fun updateHeartbeat(id: UUID, credentialHash: String, health: GatewayHealth, seenAt: Instant): Boolean
 }
 
@@ -163,15 +167,16 @@ class JdbcGatewayRepository(
             jdbc.sql(
                 """INSERT INTO gateway_node
                    (id, owner_id, display_name, hostname, credential_hash, agent_version, os_name,
-                    os_version, architecture, last_seen_at, health, created_at, updated_at, enrollment_id)
+                    os_version, architecture, last_seen_at, health, created_at, updated_at, enrollment_id, task_policy)
                    VALUES (:id, :ownerId, :displayName, :hostname, :credentialHash, :agentVersion,
-                    :osName, :osVersion, :architecture, NULL, NULL, :createdAt, :updatedAt, :enrollmentId)""",
+                    :osName, :osVersion, :architecture, NULL, NULL, :createdAt, :updatedAt, :enrollmentId, CAST(:taskPolicy AS jsonb))""",
             ).param("id", node.id).param("ownerId", node.ownerId).param("displayName", node.displayName)
                 .param("hostname", node.hostname).param("credentialHash", node.credentialHash)
                 .param("agentVersion", node.agentVersion).param("osName", node.osName)
                 .param("osVersion", node.osVersion).param("architecture", node.architecture)
                 .param("createdAt", Timestamp.from(node.createdAt)).param("updatedAt", Timestamp.from(node.updatedAt))
                 .param("enrollmentId", node.enrollmentId, java.sql.Types.OTHER)
+                .param("taskPolicy", node.taskPolicy?.let(objectMapper::writeValueAsString), java.sql.Types.VARCHAR)
                 .update()
         } catch (_: DuplicateKeyException) {
             throw GatewayAlreadyRegisteredException()
@@ -179,10 +184,16 @@ class JdbcGatewayRepository(
     }
 
     override fun all(ownerId: UUID): List<GatewayNode> = jdbc.sql(
-        "SELECT * FROM gateway_node WHERE owner_id = :ownerId ORDER BY lower(display_name)",
+        "SELECT * FROM gateway_node WHERE owner_id = :ownerId AND revoked_at IS NULL ORDER BY lower(display_name)",
     ).param("ownerId", ownerId).query { rs, _ -> mapNode(rs) }.list()
 
     override fun findById(id: UUID): GatewayNode? = jdbc.sql("SELECT * FROM gateway_node WHERE id = :id")
+        .param("id", id).query { rs, _ -> mapNode(rs) }.optional().orElse(null)
+
+    override fun findForDispatch(id: UUID): GatewayNode? = jdbc.sql("SELECT * FROM gateway_node WHERE id=:id FOR SHARE")
+        .param("id", id).query { rs, _ -> mapNode(rs) }.optional().orElse(null)
+
+    override fun findForHeartbeat(id: UUID): GatewayNode? = jdbc.sql("SELECT * FROM gateway_node WHERE id=:id FOR UPDATE")
         .param("id", id).query { rs, _ -> mapNode(rs) }.optional().orElse(null)
 
     override fun consumedEnrollment(tokenHash: String, now: Instant): GatewayEnrollment? = jdbc.sql(
@@ -204,7 +215,7 @@ class JdbcGatewayRepository(
     override fun updateHeartbeat(id: UUID, credentialHash: String, health: GatewayHealth, seenAt: Instant): Boolean =
         jdbc.sql(
             """UPDATE gateway_node SET health = CAST(:health AS jsonb), last_seen_at = :seenAt,
-               updated_at = :seenAt WHERE id = :id AND credential_hash = :credentialHash""",
+               updated_at = :seenAt WHERE id = :id AND credential_hash = :credentialHash AND revoked_at IS NULL""",
         ).param("health", objectMapper.writeValueAsString(health)).param("seenAt", Timestamp.from(seenAt))
             .param("id", id).param("credentialHash", credentialHash).update() == 1
 
@@ -217,7 +228,8 @@ class JdbcGatewayRepository(
             rs.getString("architecture"), rs.getTimestamp("last_seen_at")?.toInstant(),
             healthJson?.let { objectMapper.readValue(it, GatewayHealth::class.java) },
             rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
-            rs.getObject("enrollment_id", UUID::class.java),
+            rs.getObject("enrollment_id", UUID::class.java), rs.getTimestamp("revoked_at")?.toInstant(),
+            rs.getString("task_policy")?.let { objectMapper.readTree(it).map { item -> item.asText() } },
         )
     }
 }
@@ -267,7 +279,7 @@ class GatewayService(
             boundary?.workspace(used.ownerId)
             val existing = repository.findByEnrollment(used.id)
                 ?: throw GatewayEnrollmentInvalidException()
-            if (existing.ownerId != used.ownerId || !MessageDigest.isEqual(
+            if (existing.revokedAt != null || existing.ownerId != used.ownerId || !MessageDigest.isEqual(
                     existing.credentialHash.toByteArray(StandardCharsets.US_ASCII),
                     tokens.hash(nodeCredential).toByteArray(StandardCharsets.US_ASCII),
                 ) ||
@@ -282,6 +294,7 @@ class GatewayService(
             UUID.randomUUID(), enrollment.ownerId, enrollment.displayName, hostname, credential.tokenHash,
             agentVersion, osName, osVersion, architecture, null, null, now, now,
             if (nodeCredential == null) null else enrollment.id,
+            taskPolicy = if (nodeCredential == null) null else emptyList(),
         )
         repository.create(node)
         activity.record(
@@ -294,8 +307,9 @@ class GatewayService(
 
     fun all(ownerId: UUID): List<GatewayNodeView> = repository.all(ownerId).map { it.view(clock.instant()) }
 
+    @Transactional
     fun heartbeat(nodeId: UUID, rawCredential: String, health: GatewayHealth) {
-        authenticate(nodeId, rawCredential)
+        authenticated(repository.findForHeartbeat(nodeId), rawCredential)
         validateHealth(health)
         if (!repository.updateHeartbeat(nodeId, tokens.hash(rawCredential), health, clock.instant())) {
             throw GatewayUnauthenticatedException()
@@ -303,8 +317,19 @@ class GatewayService(
     }
 
     fun authenticate(nodeId: UUID, rawCredential: String): GatewayNode =
-        repository.findById(nodeId)?.takeIf { it.credentialHash == tokens.hash(rawCredential) }?.also { boundary?.workspace(it.ownerId) }
+        authenticated(repository.findById(nodeId), rawCredential)
+
+    fun authenticateForDispatch(nodeId: UUID, rawCredential: String): GatewayNode =
+        authenticated(repository.findForDispatch(nodeId), rawCredential)
+
+    private fun authenticated(node: GatewayNode?, rawCredential: String): GatewayNode =
+        node?.takeIf { it.revokedAt == null && it.credentialHash == tokens.hash(rawCredential) }?.also { boundary?.workspace(it.ownerId) }
             ?: throw GatewayUnauthenticatedException()
+
+    fun authenticateTask(nodeId: UUID, rawCredential: String, task: String): GatewayNode =
+        authenticateForDispatch(nodeId, rawCredential).also {
+            if (it.taskPolicy != null && task !in it.taskPolicy) throw GatewayTaskDeniedException()
+        }
 
     private fun validateHealth(health: GatewayHealth) {
         if (health.temperatureCelsius != null && health.temperatureCelsius !in -20.0..150.0) {
@@ -371,7 +396,7 @@ class GatewayService(
         }
         return GatewayNodeView(
             id, displayName, hostname, availability, agentVersion, osName, osVersion, architecture,
-            lastSeenAt, health, createdAt,
+            lastSeenAt, health, createdAt, taskPolicy,
         )
     }
 
@@ -393,9 +418,11 @@ data class GatewayNodeView(
     val lastSeenAt: Instant?,
     val health: GatewayHealth?,
     val createdAt: Instant,
+    val taskPolicy: List<String>? = null,
 )
 
 class GatewayEnrollmentInvalidException : RuntimeException()
 class GatewayAlreadyRegisteredException : RuntimeException()
 class GatewayUnauthenticatedException : RuntimeException()
 class GatewayHealthInvalidException : RuntimeException()
+class GatewayTaskDeniedException : RuntimeException()

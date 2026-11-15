@@ -37,6 +37,8 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val mvc: MockMvc,
     private val sessions: AuthSessionService,
     private val executions: dev.kyrion.core.action.ActionExecutionService,
+    private val management: GatewayManagementService,
+    private val voice: dev.kyrion.core.voice.VoiceSatelliteService,
 ) {
     private lateinit var owner: UUID
     private lateinit var member: UUID
@@ -48,6 +50,146 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val buttonAddress = "0x0011223344556688"
     private val payload get() = mapOf<String, Any>("deviceId" to address, "on" to true)
     private val human get() = GatewayAuthority(owner, GatewayPrincipalKind.HUMAN, member, "devices:execute", "power.set")
+
+    @Test fun `concurrent heartbeats serialize without shared lock upgrade deadlocks or changing management revision`() {
+        val health = gateways.all(owner).single().health!!
+        val revision = management.all(owner).single().revision
+        val start = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { executor ->
+            val futures = (1..2).map { executor.submit<Boolean> {
+                check(start.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                gateways.heartbeat(node, token, health)
+                true
+            } }
+            start.countDown()
+            assertThat(futures.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }).containsOnly(true)
+        }
+        assertThat(management.all(owner).single().revision).isEqualTo(revision)
+        assertThat(gateways.all(owner).single().availability).isEqualTo("online")
+    }
+
+    @Test fun `task policy gates existing command and voice authority without inventing runtime readiness`() {
+        val linked = voice.bootstrap(owner, "Linked", "task-voice", "1", node)
+        val command = queue.enqueue(human, node, "zigbee.power", payload)
+        val current = management.all(owner).single()
+        val changed = management.tasks(owner, owner, node, UpdateGatewayTasksRequest(current.revision, emptyList()))
+        assertThat(changed.allowedTasks).isEmpty()
+        assertThat(queue.status(owner, command).errorCode).isEqualTo("gateway.task_revoked")
+        assertThat(queue.next(node, token)).isNull()
+        assertThatThrownBy { queue.enqueue(human, node, "zigbee.power", payload) }
+            .isInstanceOf(GatewayCommandInvalidException::class.java)
+        assertThatThrownBy { gateways.authenticateTask(node, token, "voice") }
+            .isInstanceOf(GatewayTaskDeniedException::class.java)
+        assertThatThrownBy { voice.authenticate(linked.satellite.id, linked.token) }
+            .isInstanceOf(dev.kyrion.core.voice.VoiceSatelliteUnauthenticatedException::class.java)
+        assertThatThrownBy { management.tasks(owner, owner, node, UpdateGatewayTasksRequest(current.revision, listOf("voice"))) }
+            .isInstanceOf(GatewayManagementConflictException::class.java)
+        assertThatThrownBy { management.tasks(owner, owner, node, UpdateGatewayTasksRequest(changed.revision, listOf("local_ai"))) }
+            .isInstanceOf(GatewayManagementInvalidException::class.java)
+        val enabled = management.tasks(owner, owner, node, UpdateGatewayTasksRequest(changed.revision, listOf("voice")))
+        assertThat(enabled.allowedTasks).containsExactly("voice")
+        assertThat(enabled.reportedServices).isEmpty()
+        assertThat(voice.authenticate(linked.satellite.id, linked.token).id).isEqualTo(linked.satellite.id)
+        assertThat(gateways.authenticateTask(node, token, "voice").id).isEqualTo(node)
+        assertThatThrownBy { gateways.authenticateTask(node, token, "integration") }
+            .isInstanceOf(GatewayTaskDeniedException::class.java)
+    }
+
+    @Test fun `concurrent task policies cannot overwrite a newly committed revision`() {
+        val current = management.all(owner).single()
+        val start = java.util.concurrent.CountDownLatch(1)
+        java.util.concurrent.Executors.newFixedThreadPool(2).use { executor ->
+            val futures = listOf("voice", "integration").map { task -> executor.submit<String> {
+                check(start.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                try {
+                    management.tasks(owner, owner, node, UpdateGatewayTasksRequest(current.revision, listOf(task)))
+                    "updated"
+                } catch (_: GatewayManagementConflictException) { "conflict" }
+            } }
+            start.countDown()
+            assertThat(futures.map { it.get(30, java.util.concurrent.TimeUnit.SECONDS) })
+                .containsExactlyInAnyOrder("updated", "conflict")
+        }
+        assertThat(management.all(owner).single().allowedTasks).hasSize(1)
+        assertThat(jdbc.sql("SELECT count(*) FROM activity_event WHERE event_type='gateway.tasks.updated'")
+            .query(Int::class.java).single()).isEqualTo(1)
+    }
+
+    @Test fun `management changes require current revision and preserve identity heartbeat and Space isolation`() {
+        val original = management.all(owner).single()
+        val updated = management.update(owner, owner, node,
+            UpdateGatewayManagementRequest(original.revision, " Office node ", "intermittent"))
+        assertThat(updated.displayName).isEqualTo("Office node")
+        assertThat(updated.expectedAvailability).isEqualTo("intermittent")
+        assertThat(updated.revision).isNotEqualTo(original.revision)
+        assertThat(updated.lastSeenAt).isEqualTo(original.lastSeenAt)
+        assertThat(gateways.authenticate(node, token).id).isEqualTo(node)
+        assertThatThrownBy { management.update(owner, owner, node,
+            UpdateGatewayManagementRequest(original.revision, "Stale", "always_on")) }
+            .isInstanceOf(GatewayManagementConflictException::class.java)
+        val other = user()
+        assertThat(management.all(other)).isEmpty()
+        assertThatThrownBy { management.revoke(other, other, node, updated.revision) }
+            .isInstanceOf(GatewayManagementNotFoundException::class.java)
+        assertThat(management.all(owner).single().displayName).isEqualTo("Office node")
+        assertThatThrownBy { management.update(owner, owner, node,
+            UpdateGatewayManagementRequest(updated.revision, "bad\u001bname", "always_on")) }
+            .isInstanceOf(GatewayManagementInvalidException::class.java)
+    }
+
+    @Test fun `revocation invalidates gateway and bound voice credentials without deleting history or independent voice`() {
+        val linked = voice.bootstrap(owner, "Linked", "linked-voice", "1", node)
+        val independent = voice.bootstrap(owner, "Independent", "independent-voice", "1")
+        val dialogue = voice.openSession(linked.satellite.id, linked.token)
+        val command = queue.enqueue(human, node, "zigbee.power", payload)
+        val original = management.all(owner).single()
+        val removed = management.revoke(owner, owner, node, original.revision)
+        assertThat(removed.revokedAt).isNotNull()
+        assertThat(gateways.all(owner)).isEmpty()
+        assertThat(management.all(owner)).hasSize(1)
+        assertThat(queue.status(owner, command).status).isEqualTo("failed")
+        assertThat(queue.status(owner, command).errorCode).isEqualTo("gateway.revoked")
+        assertThatThrownBy { queue.next(node, token) }.isInstanceOf(GatewayUnauthenticatedException::class.java)
+        assertThatThrownBy { voice.authenticate(linked.satellite.id, linked.token) }
+            .isInstanceOf(dev.kyrion.core.voice.VoiceSatelliteUnauthenticatedException::class.java)
+        assertThat(voice.authenticate(independent.satellite.id, independent.token).id).isEqualTo(independent.satellite.id)
+        assertThat(jdbc.sql("SELECT status FROM voice_dialogue_session WHERE id=:id")
+            .param("id", dialogue.id).query(String::class.java).single()).isEqualTo("closed")
+        assertThat(management.revoke(owner, owner, node, original.revision)).isEqualTo(removed)
+        assertThat(jdbc.sql("SELECT count(*) FROM activity_event WHERE event_type='gateway.revoked'")
+            .query(Int::class.java).single()).isEqualTo(1)
+        val enrollment = gateways.createEnrollment(owner, "Replacement")
+        val replacement = gateways.enroll(enrollment.enrollmentToken, "test-node", "1", "Test", "1", "test")
+        assertThat(replacement.node.id).isNotEqualTo(node)
+        val replacementVoice = voice.bootstrap(owner, "Replacement voice", "linked-voice", "1", replacement.node.id)
+        assertThat(replacementVoice.satellite.id).isNotEqualTo(linked.satellite.id)
+        assertThat(voice.authenticate(replacementVoice.satellite.id, replacementVoice.token).sourceGatewayNodeId)
+            .isEqualTo(replacement.node.id)
+    }
+
+    @Test fun `HTTP management requires live gateway permissions and cannot target a foreign Space`() {
+        mvc.perform(get("/v1/gateways/management")).andExpect(status().isUnauthorized)
+        val credential = sessions.create(owner).rawToken
+        val current = management.all(owner).single()
+        val body = """{"revision":"${current.revision}","displayName":"Renamed","expectedAvailability":"always_on"}"""
+        mvc.perform(put("/v1/gateways/$node/management").header("Authorization", "Bearer $credential")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk)
+        mvc.perform(put("/v1/gateways/$node/management").header("Authorization", "Bearer $credential")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict)
+        val other = user()
+        rbac.initializeUser(other, other, true)
+        val foreign = sessions.create(other).rawToken
+        mvc.perform(put("/v1/gateways/$node/management").header("Authorization", "Bearer $foreign")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound)
+        val role = rbac.createRole(owner, RoleRequest("device_manager", "Device manager", setOf("gateways:read", "gateways:update")))
+        rbac.assignRoles(owner, member, setOf(role.id))
+        val memberCredential = sessions.create(member).rawToken
+        mvc.perform(get("/v1/gateways/management").header("Authorization", "Bearer $memberCredential"))
+            .andExpect(status().isOk)
+        jdbc.sql("DELETE FROM rbac_user_role WHERE user_id=:id").param("id", member).update()
+        mvc.perform(put("/v1/gateways/$node/management").header("Authorization", "Bearer $memberCredential")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden)
+    }
 
     @Test fun `prepared enrollment HTTP retry acknowledges the same node and rejects a second claimant`() {
         val capability = mvc.perform(get("/v1/gateway-agent/enrollment-capabilities"))

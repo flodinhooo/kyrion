@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -152,6 +153,7 @@ class GatewayAgentController(
     }
 
     @PutMapping("/heartbeat")
+    @Transactional
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun heartbeat(
         @RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
@@ -161,8 +163,11 @@ class GatewayAgentController(
         if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
         val credential = authorization.substring(7)
         service.heartbeat(nodeId, credential, body.health)
-        zigbeeDevices.sync(service.authenticate(nodeId, credential), body.health)
-        bluetoothDevices.sync(service.authenticate(nodeId, credential), body.health)
+        val node = service.authenticate(nodeId, credential)
+        if (node.taskPolicy == null || "integration" in node.taskPolicy) {
+            zigbeeDevices.sync(node, body.health)
+            bluetoothDevices.sync(node, body.health)
+        }
     }
 
     @PostMapping("/commands/next")
@@ -179,19 +184,21 @@ class GatewayAgentController(
     }
 
     @PostMapping("/zigbee/button-events")
+    @Transactional
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun buttonEvent(@RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
         @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: ZigbeeButtonEventRequest) {
         if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
-        buttonBindings.handle(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.action)
+        buttonBindings.handle(service.authenticateTask(nodeId, authorization.substring(7), "integration"), body.deviceId, body.action)
     }
 
     @PostMapping("/zigbee/motion-events")
+    @Transactional
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun motionEvent(@RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
         @RequestHeader("Authorization") authorization: String, @Valid @RequestBody body: ZigbeeMotionEventRequest) {
         if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
-        motionEvents.record(service.authenticate(nodeId, authorization.substring(7)), body.deviceId, body.detected)
+        motionEvents.record(service.authenticateTask(nodeId, authorization.substring(7), "integration"), body.deviceId, body.detected)
     }
 }
 
@@ -204,6 +211,10 @@ data class GatewayEnrollmentCapabilities(
 
 @RestControllerAdvice
 class GatewayErrorHandler {
+    @ExceptionHandler(GatewayTaskDeniedException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun taskDenied() = mapOf("code" to "GATEWAY_TASK_DENIED")
+
     @ExceptionHandler(GatewayEnrollmentInvalidException::class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     fun invalidEnrollment() = mapOf("code" to "GATEWAY_ENROLLMENT_INVALID")

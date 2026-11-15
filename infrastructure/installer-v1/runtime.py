@@ -448,11 +448,14 @@ class Installation:
                 ]
             ),
         )
+        from node_transport import agent_handle
+
         self.write(
             "data/Caddyfile",
             (ROOT / "templates/Caddyfile")
             .read_text(encoding="utf-8")
-            .replace("__KYRION_HOSTNAME__", config["hostname"]),
+            .replace("__KYRION_HOSTNAME__", config["hostname"])
+            .replace("__KYRION_AGENT_HANDLE__", agent_handle("core:8080")),
         )
         knowledge = self.target / "data/knowledge"
         reject_links(knowledge)

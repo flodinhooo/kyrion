@@ -70,7 +70,7 @@ class OperationalRestoreDisposition(
 ) {
     fun apply(permit: OperationalTransferPermit, recoveryDirectory: Path? = null) {
         transactions.executeWithoutResult {
-            require(jdbc.sql("SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'").query(Int::class.java).single() == 50)
+            require(jdbc.sql("SELECT max(version::integer) FROM flyway_schema_history WHERE success AND version ~ '^[0-9]+$'").query(Int::class.java).single() == 51)
             val current = jdbc.sql("SELECT id FROM installation_identity WHERE singleton FOR UPDATE").query(UUID::class.java).single()
             val spaces = jdbc.sql("SELECT id FROM kyrion_space").query(UUID::class.java).list()
             require(spaces.size == 1)
@@ -123,7 +123,7 @@ object OperationalRestoreAdmin {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.contentEquals(arrayOf("--capability"))) {
-            println("{\"formatVersion\":1,\"coreSchema\":50,\"coreOwnedDisposition\":true,\"recoveryKeyTransfer\":true}")
+            println("{\"formatVersion\":1,\"coreSchema\":51,\"coreOwnedDisposition\":true,\"recoveryKeyTransfer\":true}")
             return
         }
         try {

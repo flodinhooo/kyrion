@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import hashlib
+import io
 import json
 import os
 import runpy
@@ -16,6 +17,7 @@ import secrets
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -33,7 +35,7 @@ def exercise(
 ) -> dict:
     if (
         os.name != "posix"
-        or helpers["packaged_schema"](jar) != 50
+        or helpers["packaged_schema"](jar) != 51
         or hashlib.sha256(jar.read_bytes()).hexdigest() != digest
     ):
         raise ValueError("E_FIXTURE_CORE_REQUIRED")
@@ -202,8 +204,81 @@ print(json.dumps({'authenticated':True}))
                 raise ValueError("E_FIXTURE_CHANGED_TRUST_ACCEPTED")
         finally:
             ca.write_bytes(original_ca)
+        from device_management import guided_devices
+
+        class AuthenticatedCore:
+            def request(self, method, route, body=None):
+                return core.request(method, route, body, token=owner["sessionToken"])
+
+        management = AuthenticatedCore()
+        messages = json.loads((ROOT / "locales/en.json").read_text(encoding="utf-8"))
+        if (
+            management.request("GET", "/v1/gateways/management")[0]["allowedTasks"]
+            != []
+        ):
+            raise ValueError("E_FIXTURE_PREPARED_NODE_PRIVILEGES")
+        with (
+            patch(
+                "builtins.input",
+                side_effect=["1", "TASKS", "integration,voice", "APPLY", "0"],
+            ),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            guided_devices(management, messages)
+        assigned = management.request("GET", "/v1/gateways/management")[0]
+        if (
+            assigned["allowedTasks"] != ["integration", "voice"]
+            or assigned["reportedServices"] != []
+            or assigned["availability"] != "unknown"
+        ):
+            raise ValueError("E_FIXTURE_TASK_AUTHORITY_IS_NOT_READINESS")
+        # Only terminal choices are supplied by the fixture. Core, TLS,
+        # authorization, persistence and the installer wizard are real.
+        with (
+            patch(
+                "builtins.input",
+                side_effect=[
+                    "1",
+                    "EDIT",
+                    "Office fixture",
+                    "intermittent",
+                    "SAVE",
+                    "0",
+                ],
+            ),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            guided_devices(management, messages)
+        devices = management.request("GET", "/v1/gateways/management")
+        if (
+            len(devices) != 1
+            or devices[0]["displayName"] != "Office fixture"
+            or devices[0]["expectedAvailability"] != "intermittent"
+        ):
+            raise ValueError("E_FIXTURE_DEVICE_MANAGEMENT")
+        with (
+            patch("builtins.input", side_effect=["1", "REMOVE", "REMOVE", "0"]),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            guided_devices(management, messages)
+        if management.request("GET", "/v1/gateways") != []:
+            raise ValueError("E_FIXTURE_DEVICE_REVOCATION")
+        core.stop_application()
+        core.activate()
+        devices = management.request("GET", "/v1/gateways/management")
+        if len(devices) != 1 or not devices[0]["revokedAt"]:
+            raise ValueError("E_FIXTURE_DEVICE_REVOCATION_RESTART")
+        revoked = subprocess.run(
+            [sys.executable, "-c", authenticated, str(config)],
+            env=environment,
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        if revoked.returncode == 0:
+            raise ValueError("E_FIXTURE_REVOKED_AGENT_ACCEPTED")
         return {
-            "sourceSchema": 50,
+            "sourceSchema": 51,
             "actualCorePostgreSQLAndAgentProcesses": True,
             "actualVerifiedLocalTls": True,
             "actualPrivatePendingBeforeRequest": True,
@@ -212,6 +287,13 @@ print(json.dumps({'authenticated':True}))
             "singleNodeAndSingleAuditEvent": True,
             "actualAuthenticatedEmptyPoll": True,
             "changedCaRefused": True,
+            "actualInstallerDeviceEditAndRevocation": True,
+            "actualInstallerTaskPermissionAssignment": True,
+            "preparedDeviceStartsWithoutTaskPermissions": True,
+            "taskPermissionsDoNotInventRuntimeReadiness": True,
+            "actualRevocationPersistsAcrossCoreRestart": True,
+            "actualOldAgentCredentialRejectedAfterRestart": True,
+            "terminalChoicesSuppliedByFixture": True,
             "credentialNotInChildOutput": True,
             "networkNamespaceIsolated": True,
             "ackLossFaultInjected": True,
