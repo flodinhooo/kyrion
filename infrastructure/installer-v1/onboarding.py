@@ -16,6 +16,7 @@ from runtime import Installation
 
 ROUTES = {
     ("GET", "/v1/gateways/management"),
+    ("POST", "/v1/gateways/enrollments"),
     ("GET", "/v1/auth/setup/status"),
     ("POST", "/v1/auth/setup"),
     ("POST", "/v1/auth/login"),

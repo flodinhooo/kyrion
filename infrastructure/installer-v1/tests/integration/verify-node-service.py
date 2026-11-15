@@ -78,12 +78,36 @@ def child(args):
         code = args.work / "pairing-code"
         code.write_text(enrollment["enrollmentToken"], encoding="ascii")
         code.chmod(0o600)
+        from node_pairing import validate
+
+        pairing = validate(
+            {
+                "formatVersion": 1,
+                "kind": "kyrion-device-pairing",
+                "coreUrl": "https://127.0.0.1:" + str(core.port),
+                "certificate": (core.root / "tls.pem").read_text(encoding="ascii"),
+                "certificateSha256": hashlib.sha256(
+                    (core.root / "tls.pem").read_bytes()
+                ).hexdigest(),
+                "enrollmentId": enrollment["id"],
+                "expiresAt": enrollment["expiresAt"],
+                "enrollmentToken": enrollment["enrollmentToken"],
+                "spaceId": core.request(
+                    "GET", "/v1/space", token=owner["sessionToken"]
+                )["id"],
+                "installationId": installation.state["installationId"],
+            }
+        )
+        transfer = args.work / "pairing.json"
+        transfer.write_text(json.dumps(pairing.document()), encoding="utf-8")
+        transfer.chmod(0o600)
         (args.work / "ready.json").write_text(
             json.dumps(
                 {
                     "url": "https://127.0.0.1:" + str(core.port),
                     "certificate": str(core.root / "tls.pem"),
                     "token": str(code),
+                    "pairing": str(transfer),
                 }
             ),
             encoding="utf-8",
@@ -205,12 +229,8 @@ def exercise(args):
                 "install",
                 "--target",
                 str(target),
-                "--node-url",
-                ready["url"],
-                "--node-token-file",
-                ready["token"],
-                "--node-certificate",
-                ready["certificate"],
+                "--node-pairing",
+                ready["pairing"],
             ]
             code, output = invoke(args.installer, arguments, b"en\nSERVICE\n", root)
             (root / "installer.log").write_bytes(output)
@@ -252,11 +272,13 @@ def exercise(args):
             same_inputs, _ = invoke(args.installer, arguments, b"en\nSERVICE\n", root)
             if same_inputs or (target / "agent/agent.json").read_bytes() != credentials:
                 raise ValueError("E_FIXTURE_NODE_SERVICE_REPEAT_INPUTS")
-            foreign_code = root / "different-code"
-            foreign_code.write_text(secrets.token_urlsafe(32), encoding="ascii")
+            foreign_code = root / "different-pairing.json"
+            conflicting_value = json.loads(Path(ready["pairing"]).read_bytes())
+            conflicting_value["enrollmentToken"] = secrets.token_urlsafe(32)
+            foreign_code.write_text(json.dumps(conflicting_value), encoding="utf-8")
             foreign_code.chmod(0o600)
             conflicting = list(arguments)
-            conflicting[conflicting.index("--node-token-file") + 1] = str(foreign_code)
+            conflicting[conflicting.index("--node-pairing") + 1] = str(foreign_code)
             rejected, _ = invoke(args.installer, conflicting, b"en\nSERVICE\n", root)
             if (
                 rejected == 0
@@ -319,6 +341,10 @@ def exercise(args):
                 "actualSystemdSystemService": True,
                 "actualNonRootDedicatedUid": True,
                 "actualFrozenInstallerAndWorker": True,
+                "actualPairingTransferServiceSetup": True,
+                "pairingFileBuiltFromActualCoreEnrollment": True,
+                "installerSha256": args.installer_sha256,
+                "coreJarSha256": args.core_sha256,
                 "actualCorePostgreSQLTls": True,
                 "actualConfirmedCoreHeartbeat": True,
                 "actualServiceRestart": True,

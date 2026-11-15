@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 
-def component() -> None:
-    if not sys.platform.startswith("linux"):
+def component(*, require_linux: bool = True) -> None:
+    if require_linux and not sys.platform.startswith("linux"):
         raise ValueError("E_AGENT_PLATFORM")
     if not getattr(sys, "frozen", False):
         source_root = Path(__file__).resolve().parent
@@ -102,6 +102,7 @@ def run(args, messages: dict[str, str]) -> int:
     from kyrion_gateway_agent import client
     from kyrion_gateway_agent.config import AgentConfig
     from kyrion_gateway_agent.enrollment import (
+        core_url,
         enroll_prepared,
         private_directory,
         read_private,
@@ -114,17 +115,25 @@ def run(args, messages: dict[str, str]) -> int:
     print(json.dumps({"configuration": str(config_path)}, ensure_ascii=True))
     if args.prepare_node:
         from host import inventory
+        from node_pairing import load as load_pairing
+        from node_pairing import materialize
 
         print(json.dumps(inventory(config_path.parent), ensure_ascii=True))
+        pairing = load_pairing(getattr(args, "node_pairing", None))
         digest = None
         supplied = (args.node_url, args.node_token_file, args.node_certificate)
         if any(value is not None for value in supplied) and not all(
             value is not None for value in supplied
         ):
             raise ValueError("E_NODE_ENROLL_INPUT")
-        if all(value is not None for value in supplied):
+        if pairing is not None:
+            digest = pairing.certificate_sha256
+            print(messages["nodePairingImportReview"])
+            print(json.dumps(pairing.metadata(), ensure_ascii=True))
+        elif all(value is not None for value in supplied):
             from host import reject_links
 
+            args.node_url = core_url(args.node_url)
             reject_links(args.node_certificate)
             with args.node_certificate.open("rb") as stream:
                 raw = stream.read(65537)
@@ -143,14 +152,15 @@ def run(args, messages: dict[str, str]) -> int:
         print(messages["nodePairReview"])
         if input("[PAIR/CANCEL]: ").strip() != "PAIR":
             return 0
-        config = enroll_prepared(
-            config_path,
-            url=args.node_url,
-            token_file=args.node_token_file,
-            certificate=args.node_certificate,
-            expected_ca_sha256=digest,
-            identity=platform_identity(),
-        )
+        with materialize(args, pairing) as prepared:
+            config = enroll_prepared(
+                config_path,
+                url=prepared.node_url,
+                token_file=prepared.node_token_file,
+                certificate=prepared.node_certificate,
+                expected_ca_sha256=digest,
+                identity=platform_identity(),
+            )
         print(messages["nodePaired"])
         print(
             json.dumps(

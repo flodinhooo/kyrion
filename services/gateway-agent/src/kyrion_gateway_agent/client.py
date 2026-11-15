@@ -75,6 +75,30 @@ class EnrollmentResult:
     gateway_token: str
 
 
+def prepared_capabilities(core_url: str, certificate: str, digest: str) -> dict[str, Any]:
+    """Probe the actual restricted ingress before issuing a transferable code."""
+    value = _request(
+        f"{core_url.rstrip('/')}/v1/gateway-agent/enrollment-capabilities",
+        "GET",
+        {},
+        tls=trusted_context(certificate, digest),
+        local_only=True,
+    )
+    if (
+        not isinstance(value, dict)
+        or type(value.get("formatVersion")) is not int
+        or value["formatVersion"] != 1
+        or type(value.get("enrollmentProtocol")) is not int
+        or value["enrollmentProtocol"] != 2
+        or value.get("clientCredential") is not True
+        or value.get("acknowledgementWithinOriginalExpiry") is not True
+        or type(value.get("taskPolicyVersion")) is not int
+        or value["taskPolicyVersion"] != 1
+    ):
+        raise CoreRequestError("E_AGENT_ENROLLMENT_UPGRADE_REQUIRED")
+    return value
+
+
 def enroll(
     core_url: str,
     enrollment_token: str,

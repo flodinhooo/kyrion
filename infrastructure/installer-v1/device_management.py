@@ -38,10 +38,14 @@ def guided_devices(client, messages: dict[str, str]) -> None:
             )
         if not nodes:
             print(messages["devicesEmpty"])
-            return
-        choice = input(messages["devicesSelect"] + " [0]: ").strip()
+        choice = input(messages["devicesSelect"] + " [PAIR/0]: ").strip()
         if choice in {"", "0"}:
             return
+        if choice == "PAIR":
+            from node_pairing import guided_export
+
+            guided_export(client, messages)
+            continue
         if (
             not choice.isascii()
             or not choice.isdigit()

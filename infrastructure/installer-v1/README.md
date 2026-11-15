@@ -231,6 +231,32 @@ Do not use the old migration scripts as a general updater.
 
 ### Prepared-node Linux boot service
 
+Use `--devices --target /path/to/central-installation` on the central installer,
+complete its existing linked-account login and choose `PAIR`, including when no
+devices exist yet. The installer checks the actual configured pinned local TLS
+agent ingress before issuing a ten-minute, one-use Core enrollment. It writes a
+private `pairing-transfer-<id>/pairing.json`, displaying only metadata and its
+certificate fingerprint. Transfer that file privately to the other target and
+compare the fingerprint. A configured hostname must resolve from that target;
+source-side success does not prove target reachability.
+
+On a supported Linux target, use either `--prepare-node --node-config
+/private/agent.json --node-pairing /private/pairing.json` for foreground preparation
+or `--node-service install --target /var/lib/kyrion-node --node-pairing
+/private/pairing.json` for the boot service. The installer reviews the transfer
+before creating temporary private enrollment material and reuses the existing
+pending enrollment journal. Import never renews an expired code, replaces an
+existing device identity, grants tasks or activates audio. Remove the transfer
+after use. Core enforces one-use and expiry even if the local file remains.
+Windows prepared-node import/storage/service remains source work; Windows central
+export has implementation and isolated boundary tests, not elevated host acceptance.
+
+Old proxy configurations without the prepared-agent ingress are preserved and
+reported as needing a reviewed extension. Issuing a pairing file does not silently
+rewrite the proxy. `tests/integration/verify-pairing-transfer.py` exercises actual
+Core/Caddy export and a frozen target, including consumed/server-expired codes and
+BUSINESS Space binding, in a no-default-route network namespace.
+
 `--node-service install --target /var/lib/kyrion-node --node-url https://CORE:PORT
 --node-token-file /private/one-use-code --node-certificate /trusted/local-ca.pem`
 reviews the actual target and trust fingerprint before `SERVICE`. It requires a

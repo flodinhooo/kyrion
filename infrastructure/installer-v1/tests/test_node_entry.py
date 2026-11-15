@@ -23,6 +23,15 @@ from crypto_support import certificate, private_tls_key
 
 
 class NodeEntryTests(unittest.TestCase):
+    def test_url_credentials_are_refused_before_the_review_can_print_them(self):
+        self.args.node_url = "https://user:must-not-print-this@fixture.test"
+        with (
+            self.synthetic_linux("PAIR") as output,
+            self.assertRaisesRegex(ValueError, "E_AGENT_TLS_REQUIRED"),
+        ):
+            node_entry.run(self.args, self.messages)
+        self.assertNotIn("must-not-print-this", output.getvalue())
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

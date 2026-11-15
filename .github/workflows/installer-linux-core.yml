@@ -162,6 +162,37 @@ jobs:
               --work "$3/build/isolated-frozen-node-work" \
               --report "$3/build/isolated-frozen-node-report.json"
           ' kyrion-frozen-node "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java" "$worker" "$worker_digest" "$version"
+      - name: Export and import pairing through actual configured local TLS ingress
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull caddy:2.10.2-alpine
+          image="$(docker image inspect caddy:2.10.2-alpine --format '{{.Id}}')"
+          container="$(docker create --network none --label io.kyrion.fixture=installer-pairing "$image" caddy version)"
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/usr/bin/caddy" build/pairing-fixture-caddy
+          chmod 755 build/pairing-fixture-caddy
+          cp /etc/hosts build/isolated-pairing-hosts
+          printf '\n10.231.0.1 fixture.test\n' >> build/isolated-pairing-hosts
+          mkdir build/isolated-pairing-work
+          jar="$PWD/services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar"
+          worker="$PWD/build/native-linux-worker-unpacked/kyrion-installer"
+          version="0.0.0-ci.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          sudo unshare --mount --net --propagation private /bin/bash -c '
+            set -euo pipefail
+            mount --bind "$3/build/isolated-pairing-hosts" /etc/hosts
+            ip link set lo up
+            ip addr add 10.231.0.1/32 dev lo
+            sysctl -q -w net.ipv4.ip_unprivileged_port_start=0
+            exec setpriv --reuid "$1" --regid "$2" --init-groups \
+              "$3/build/acceptance-python/bin/python" \
+              "$3/infrastructure/installer-v1/tests/integration/verify-pairing-transfer.py" \
+              --core-jar "$4" --core-sha256 "$5" --java "$6" \
+              --installer "$7" --installer-sha256 "$8" --installer-version "${11}" \
+              --caddy "$9" --caddy-sha256 "${10}" --postgres-bin /usr/lib/postgresql/17/bin \
+              --work "$3/build/isolated-pairing-work" --report "$3/build/isolated-pairing-report.json"
+          ' kyrion-pairing "$(id -u)" "$(id -g)" "$PWD" "$jar" "$(sha256sum "$jar" | cut -d ' ' -f 1)" "$JAVA_HOME/bin/java" "$worker" "$(sha256sum "$worker" | cut -d ' ' -f 1)" "$PWD/build/pairing-fixture-caddy" "$(sha256sum build/pairing-fixture-caddy | cut -d ' ' -f 1)" "$version"
       - name: Exercise prepared-node system service with a real dedicated non-root account
         timeout-minutes: 12
         shell: bash
@@ -207,6 +238,7 @@ jobs:
             build/isolated-agent-report.json
             build/isolated-frozen-node-report.json
             build/linux-node-service-report.json
+            build/isolated-pairing-report.json
             build/linux-update-unit-report.json
             build/linux-startup-service-report.json
             build/linux-backup-timer-report.json

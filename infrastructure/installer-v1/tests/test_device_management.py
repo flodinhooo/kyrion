@@ -21,6 +21,18 @@ NODE = {
 
 
 class DeviceManagementTests(unittest.TestCase):
+    def test_pairing_is_available_before_any_device_is_enrolled(self):
+        self.messages = json.loads(
+            (Path(__file__).resolve().parents[1] / "locales/en.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.client = Mock()
+        self.client.request.return_value = []
+        with patch("node_pairing.guided_export") as export:
+            self.run_wizard(["PAIR", "0"])
+        export.assert_called_once_with(self.client, self.messages)
+
     def setUp(self):
         self.messages = json.loads(
             (Path(__file__).resolve().parents[1] / "locales/en.json").read_text(

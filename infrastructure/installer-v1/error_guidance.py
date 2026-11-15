@@ -1,6 +1,17 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_NODE_PAIRING_INGRESS": "nodePairingIngressRequired",
+    "E_AGENT_ENROLLMENT_UPGRADE_REQUIRED": "nodePolicyUnavailable",
+    **dict.fromkeys(
+        (
+            "E_NODE_PAIRING_FORMAT",
+            "E_NODE_PAIRING_EXPIRED",
+            "E_NODE_PAIRING_PRIVATE",
+            "E_NODE_PAIRING_ORIGIN",
+        ),
+        "nodePairingError",
+    ),
     **dict.fromkeys(
         (
             "E_NODE_SERVICE_ACCOUNT",

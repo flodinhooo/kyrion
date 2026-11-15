@@ -78,6 +78,7 @@ FILES = (
     "node_transport.py",
     "node_entry.py",
     "node_service.py",
+    "node_pairing.py",
     "identity_settings.py",
     "bootstrap_maintenance.py",
     "error_guidance.py",

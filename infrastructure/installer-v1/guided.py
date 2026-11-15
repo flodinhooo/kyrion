@@ -86,6 +86,7 @@ def main() -> int:
     )
     parser.add_argument("--node-ca-sha256", help=argparse.SUPPRESS)
     parser.add_argument("--node-config", type=Path)
+    parser.add_argument("--node-pairing", type=Path)
     parser.add_argument("--node-url")
     parser.add_argument("--node-token-file", type=Path)
     parser.add_argument("--node-certificate", type=Path)
@@ -192,6 +193,7 @@ def main() -> int:
         value is not None
         for value in (
             args.node_config,
+            args.node_pairing,
             args.node_url,
             args.node_token_file,
             args.node_certificate,
@@ -208,6 +210,14 @@ def main() -> int:
     if args.node_service and args.target is None:
         parser.error("E_NODE_TARGET_REQUIRED")
     if args.node_service and args.node_config is not None:
+        parser.error("E_NODE_ARGUMENT")
+    if args.node_pairing is not None and (
+        not (args.prepare_node or args.node_service in {"install", "repair"})
+        or any(
+            value is not None
+            for value in (args.node_url, args.node_token_file, args.node_certificate)
+        )
+    ):
         parser.error("E_NODE_ARGUMENT")
     if args.ollama_model is not None and args.ollama not in {"pull", "remove"}:
         parser.error("E_OLLAMA_MODEL_ARGUMENT")

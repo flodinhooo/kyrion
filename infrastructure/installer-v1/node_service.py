@@ -561,8 +561,14 @@ def configure(args) -> dict:
 
 def guided(args, messages) -> int:
     from host import inventory
+    from node_pairing import load as load_pairing
+    from node_pairing import materialize
 
     print(messages["nodeServiceReview"])
+    pairing = load_pairing(getattr(args, "node_pairing", None))
+    if pairing is not None:
+        print(messages["nodePairingImportReview"])
+        print(json.dumps(pairing.metadata(), ensure_ascii=True))
     observed = inventory(args.target)
     # The general probe also describes the central Compose deployment. Its
     # Docker boot prerequisites do not apply to the standalone node service.
@@ -581,6 +587,14 @@ def guided(args, messages) -> int:
         )
     )
     if args.node_certificate is not None:
+        from node_entry import component
+
+        component()
+        from kyrion_gateway_agent.enrollment import core_url
+
+        if args.node_url is None:
+            raise ValueError("E_NODE_ENROLL_INPUT")
+        args.node_url = core_url(args.node_url)
         reject_links(args.node_certificate)
         with args.node_certificate.open("rb") as stream:
             certificate = stream.read(65537)
@@ -600,5 +614,6 @@ def guided(args, messages) -> int:
         and input("[SERVICE/CANCEL]: ").strip() != "SERVICE"
     ):
         return 0
-    print(json.dumps(configure(args)))
+    with materialize(args, pairing) as prepared:
+        print(json.dumps(configure(prepared)))
     return 0
