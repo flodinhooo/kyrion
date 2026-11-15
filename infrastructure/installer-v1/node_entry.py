@@ -32,6 +32,7 @@ def run(args, messages: dict[str, str]) -> int:
         enroll_prepared,
         private_directory,
         read_private,
+        runtime_lock,
     )
     from kyrion_gateway_agent.health import collect_health, platform_identity
 
@@ -101,6 +102,24 @@ def run(args, messages: dict[str, str]) -> int:
         or config.ca_sha256 is None
     ):
         raise ValueError("E_AGENT_TLS_CONFIGURATION")
+    if getattr(args, "node_run", False):
+        from kyrion_gateway_agent.cli import run_prepared
+
+        print(messages["nodeRunReview"])
+        if input("[RUN/CANCEL]: ").strip() != "RUN":
+            return 0
+        print(
+            json.dumps(
+                {
+                    "nodeId": config.node_id,
+                    "mode": "foreground",
+                    "serviceInstalled": False,
+                }
+            )
+        )
+        with runtime_lock(config_path):
+            run_prepared(config)
+        return 0
     print(messages["nodeHeartbeatReview"])
     if input("[HEARTBEAT/CANCEL]: ").strip() != "HEARTBEAT":
         return 0

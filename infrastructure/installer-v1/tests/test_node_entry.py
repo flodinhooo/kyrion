@@ -134,3 +134,41 @@ class NodeEntryTests(unittest.TestCase):
             node_entry.run(self.args, self.messages)
         heartbeat.assert_called_once_with(config, {"synthetic": True})
         commands.assert_not_called()
+
+    def test_foreground_runtime_requires_deliberate_confirmation_and_the_existing_runtime_lock(
+        self,
+    ):
+        self.args.prepare_node = False
+        self.args.node_run = True
+        self.args.node_url = self.args.node_token_file = self.args.node_certificate = (
+            None
+        )
+        self.args.node_config.parent.mkdir()
+        self.args.node_config.write_text("synthetic protected configuration")
+        config = SimpleNamespace(
+            local_only=True,
+            ca_certificate="fixture",
+            ca_sha256="b" * 64,
+            node_id="fixture",
+        )
+        for answer in ("CANCEL", "RUN"):
+            with (
+                self.synthetic_linux(answer),
+                patch("kyrion_gateway_agent.enrollment.private_directory"),
+                patch("kyrion_gateway_agent.enrollment.read_private"),
+                patch(
+                    "kyrion_gateway_agent.enrollment.runtime_lock",
+                    return_value=contextlib.nullcontext(),
+                ) as lock,
+                patch(
+                    "kyrion_gateway_agent.config.AgentConfig.load", return_value=config
+                ),
+                patch("kyrion_gateway_agent.cli.run_prepared") as run,
+            ):
+                node_entry.run(self.args, self.messages)
+            if answer == "RUN":
+                lock.assert_called_once_with(self.args.node_config.absolute())
+                run.assert_called_once_with(config)
+            else:
+                lock.assert_not_called()
+                run.assert_not_called()

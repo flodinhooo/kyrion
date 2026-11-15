@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any  # noqa: UP035
 
+from kyrion_gateway_agent import __version__
 from kyrion_gateway_agent.bluetooth import BluetoothLightError, known_melk_lights
 
 SERVICE_UNITS = {
@@ -20,10 +21,13 @@ SERVICE_UNITS = {
 NON_RUNTIME_FAILED_UNITS = {"NetworkManager-wait-online.service"}
 
 
-def collect_health() -> dict[str, Any]:
+def collect_health(
+    *, include_integrations: bool = True, include_voice: bool = True
+) -> dict[str, Any]:
     memory_total, memory_available = _memory()
     storage = shutil.disk_usage("/")
     return {
+        "runtimeVersion": __version__,
         "temperatureCelsius": _temperature(),
         "throttled": _throttled(),
         "memoryTotalBytes": memory_total,
@@ -35,23 +39,25 @@ def collect_health() -> dict[str, Any]:
         "ipv6": _has_global_ipv6(),
         "bluetooth": Path("/sys/class/bluetooth").exists(),
         "systemState": _system_state(),
-        "adapters": _serial_adapters(),
+        "adapters": _serial_adapters() if include_integrations else [],
         "audio": {
             "capture": _audio_endpoint("@DEFAULT_AUDIO_SOURCE@", "capture"),
             "playback": _audio_endpoint("@DEFAULT_AUDIO_SINK@", "playback"),
-        },
-        "zigbee": _zigbee_health(),
-        "bluetoothDevices": _bluetooth_devices(),
+        }
+        if include_voice
+        else None,
+        "zigbee": _zigbee_health() if include_integrations else None,
+        "bluetoothDevices": _bluetooth_devices() if include_integrations else [],
         "services": [
             {
                 "id": service_id,
                 "status": (
-                    _voice_service_status()
-                    if service_id == "voice"
-                    else _service_status(unit)
+                    _voice_service_status() if service_id == "voice" else _service_status(unit)
                 ),
             }
             for service_id, unit in SERVICE_UNITS.items()
+            if (service_id == "voice" and include_voice)
+            or (service_id != "voice" and include_integrations)
         ],
     }
 
@@ -174,8 +180,15 @@ def _serial_adapters() -> list[dict[str, str]]:
 def _zigbee_health() -> dict[str, Any] | None:
     raw_devices = _command(
         [
-            "mosquitto_sub", "-h", "127.0.0.1", "-t",
-            "zigbee2mqtt/bridge/devices", "-C", "1", "-W", "2",
+            "mosquitto_sub",
+            "-h",
+            "127.0.0.1",
+            "-t",
+            "zigbee2mqtt/bridge/devices",
+            "-C",
+            "1",
+            "-W",
+            "2",
         ],
         "",
     )
@@ -204,71 +217,76 @@ def _zigbee_health() -> dict[str, Any] | None:
             state = json.loads(raw_state)
         except json.JSONDecodeError:
             state = {}
-        devices.append({
-            "ieeeAddress": ieee_address,
-            "friendlyName": friendly_name,
-            "vendor": str(definition.get("vendor", "Unknown"))[:100],
-            "model": str(definition.get("model", "Unknown"))[:100],
-            "description": str(definition.get("description", "Zigbee device"))[:200],
-            "supported": bool(item.get("supported", False)),
-            "on": (
-                state.get("state") == "ON"
-                if isinstance(state, dict) and state.get("state") in {"ON", "OFF"}
-                else None
-            ),
-            "brightness": (
-                state.get("brightness")
-                if isinstance(state, dict) and isinstance(state.get("brightness"), int)
-                else None
-            ),
-            "hue": (
-                state.get("color", {}).get("hue")
-                if isinstance(state, dict) and isinstance(state.get("color"), dict)
-                and isinstance(state.get("color", {}).get("hue"), (int, float))
-                else None
-            ),
-            "saturation": (
-                state.get("color", {}).get("saturation")
-                if isinstance(state, dict) and isinstance(state.get("color"), dict)
-                and isinstance(state.get("color", {}).get("saturation"), (int, float))
-                else None
-            ),
-            "colorTemperature": (
-                state.get("color_temp")
-                if isinstance(state, dict) and isinstance(state.get("color_temp"), int)
-                else None
-            ),
-            "linkquality": (
-                state.get("linkquality")
-                if isinstance(state, dict) and isinstance(state.get("linkquality"), int)
-                else None
-            ),
-            "occupancy": (
-                state.get("occupancy")
-                if isinstance(state, dict) and isinstance(state.get("occupancy"), bool)
-                else None
-            ),
-            "battery": (
-                state.get("battery")
-                if isinstance(state, dict) and isinstance(state.get("battery"), (int, float))
-                else None
-            ),
-            "illuminance": (
-                state.get("illuminance")
-                if isinstance(state, dict) and isinstance(state.get("illuminance"), (int, float))
-                else None
-            ),
-            "illumination": (
-                state.get("illumination")
-                if isinstance(state, dict) and state.get("illumination") in {"dim", "bright"}
-                else None
-            ),
-            "action": (
-                state.get("action")[:40]
-                if isinstance(state, dict) and isinstance(state.get("action"), str)
-                else None
-            ),
-        })
+        devices.append(
+            {
+                "ieeeAddress": ieee_address,
+                "friendlyName": friendly_name,
+                "vendor": str(definition.get("vendor", "Unknown"))[:100],
+                "model": str(definition.get("model", "Unknown"))[:100],
+                "description": str(definition.get("description", "Zigbee device"))[:200],
+                "supported": bool(item.get("supported", False)),
+                "on": (
+                    state.get("state") == "ON"
+                    if isinstance(state, dict) and state.get("state") in {"ON", "OFF"}
+                    else None
+                ),
+                "brightness": (
+                    state.get("brightness")
+                    if isinstance(state, dict) and isinstance(state.get("brightness"), int)
+                    else None
+                ),
+                "hue": (
+                    state.get("color", {}).get("hue")
+                    if isinstance(state, dict)
+                    and isinstance(state.get("color"), dict)
+                    and isinstance(state.get("color", {}).get("hue"), (int, float))
+                    else None
+                ),
+                "saturation": (
+                    state.get("color", {}).get("saturation")
+                    if isinstance(state, dict)
+                    and isinstance(state.get("color"), dict)
+                    and isinstance(state.get("color", {}).get("saturation"), (int, float))
+                    else None
+                ),
+                "colorTemperature": (
+                    state.get("color_temp")
+                    if isinstance(state, dict) and isinstance(state.get("color_temp"), int)
+                    else None
+                ),
+                "linkquality": (
+                    state.get("linkquality")
+                    if isinstance(state, dict) and isinstance(state.get("linkquality"), int)
+                    else None
+                ),
+                "occupancy": (
+                    state.get("occupancy")
+                    if isinstance(state, dict) and isinstance(state.get("occupancy"), bool)
+                    else None
+                ),
+                "battery": (
+                    state.get("battery")
+                    if isinstance(state, dict) and isinstance(state.get("battery"), (int, float))
+                    else None
+                ),
+                "illuminance": (
+                    state.get("illuminance")
+                    if isinstance(state, dict)
+                    and isinstance(state.get("illuminance"), (int, float))
+                    else None
+                ),
+                "illumination": (
+                    state.get("illumination")
+                    if isinstance(state, dict) and state.get("illumination") in {"dim", "bright"}
+                    else None
+                ),
+                "action": (
+                    state.get("action")[:40]
+                    if isinstance(state, dict) and isinstance(state.get("action"), str)
+                    else None
+                ),
+            }
+        )
     return {
         "permitJoin": bool(info.get("permit_join", False)),
         "channel": int(info.get("network", {}).get("channel", 0)),
@@ -283,18 +301,33 @@ def _zigbee_device_state(friendly_name: str, model: str = "") -> str:
     try:
         subscriber = subprocess.Popen(
             [
-                "mosquitto_sub", "-h", "127.0.0.1", "-t",
-                f"zigbee2mqtt/{friendly_name}", "-C", "1", "-W", "2",
+                "mosquitto_sub",
+                "-h",
+                "127.0.0.1",
+                "-t",
+                f"zigbee2mqtt/{friendly_name}",
+                "-C",
+                "1",
+                "-W",
+                "2",
             ],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
         )
         subprocess.run(
             [
-                "mosquitto_pub", "-h", "127.0.0.1", "-t",
-                f"zigbee2mqtt/{friendly_name}/get", "-m",
+                "mosquitto_pub",
+                "-h",
+                "127.0.0.1",
+                "-t",
+                f"zigbee2mqtt/{friendly_name}/get",
+                "-m",
                 '{"state":"","brightness":"","color":"","color_temp":""}',
             ],
-            capture_output=True, check=False, timeout=2,
+            capture_output=True,
+            check=False,
+            timeout=2,
         )
         stdout, _ = subscriber.communicate(timeout=3)
         return stdout.strip()
@@ -360,9 +393,7 @@ def _has_global_ipv6() -> bool:
 def _system_state() -> str:
     value = _command(["systemctl", "is-system-running"], "unknown")
     if value == "degraded":
-        failed_output = _command(
-            ["systemctl", "--failed", "--no-legend", "--plain"], "unknown"
-        )
+        failed_output = _command(["systemctl", "--failed", "--no-legend", "--plain"], "unknown")
         failed_units = {
             line.split()[0]
             for line in failed_output.splitlines()

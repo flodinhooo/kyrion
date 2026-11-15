@@ -22,6 +22,23 @@ remains restricted to the node by the host firewall.
 
 ## Prepared verified-TLS enrollment (development source)
 
+Version `0.2.0` adds a task-scoped prepared runtime. It is source/development
+versioning, not a public release or an update to the previously deployed Pi.
+The native installer's foreground prepared mode embeds this existing component.
+Prepared `run` obtains short-lived authenticated task permissions from Core and
+uses a suspend-aware expiry clock on Linux. Missing/invalid policies fail closed;
+transport failures clear local authority and use bounded reconnect backoff.
+Revoked credentials stop the runtime. A private configuration lock prevents two
+local prepared runtimes from consuming the same configuration simultaneously.
+
+Integration observation, command polling and event forwarding require current
+integration authority. Audio enumeration requires voice authority; granting it
+does not start microphone capture. Owned event subprocesses are stopped during
+shutdown. Runtime versions are reported separately from immutable enrollment
+identity fields so upgraded software does not break a pending acknowledgement.
+These permission leases are not exclusive cross-device task ownership or central
+migration fencing. Dedicated installer service deployment remains separate work.
+
 Core enrollment protocol 2 supports an interrupted registration acknowledgement
 without creating a second node. The Linux agent now offers `enroll-prepared`,
 using the same `agent.json`, gateway identity, permissions and runtime commands.

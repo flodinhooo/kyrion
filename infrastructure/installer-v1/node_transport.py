@@ -8,6 +8,7 @@ from pathlib import Path
 
 AGENT_PATHS = (
     "/v1/gateway-agent/enrollment-capabilities",
+    "/v1/gateway-agent/tasks",
     "/v1/gateway-agent/enroll",
     "/v1/gateway-agent/heartbeat",
     "/v1/gateway-agent/commands/next",

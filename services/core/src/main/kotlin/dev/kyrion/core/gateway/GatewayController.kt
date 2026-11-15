@@ -138,6 +138,14 @@ class GatewayAgentController(
     private val buttonBindings: ZigbeeButtonBindingService,
     private val motionEvents: ZigbeeMotionEventService,
 ) {
+    @GetMapping("/tasks")
+    fun taskPolicy(@RequestHeader("X-Kyrion-Node-Id") nodeId: UUID,
+        @RequestHeader("Authorization") authorization: String): GatewayAgentTaskPolicy {
+        if (!authorization.startsWith("Bearer ") || authorization.length <= 7) throw GatewayUnauthenticatedException()
+        val node = service.authenticate(nodeId, authorization.substring(7))
+        return GatewayAgentTaskPolicy(nodeId = node.id,
+            allowedTasks = node.taskPolicy ?: listOf("integration", "voice"))
+    }
     @GetMapping("/enrollment-capabilities")
     fun enrollmentCapabilities() = GatewayEnrollmentCapabilities()
 
@@ -207,6 +215,14 @@ data class GatewayEnrollmentCapabilities(
     val enrollmentProtocol: Int = 2,
     val clientCredential: Boolean = true,
     val acknowledgementWithinOriginalExpiry: Boolean = true,
+    val taskPolicyVersion: Int = 1,
+)
+
+data class GatewayAgentTaskPolicy(
+    val formatVersion: Int = 1,
+    val nodeId: UUID,
+    val allowedTasks: List<String>,
+    val leaseSeconds: Int = 30,
 )
 
 @RestControllerAdvice

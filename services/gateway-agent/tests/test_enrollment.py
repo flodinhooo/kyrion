@@ -39,6 +39,16 @@ class PreparedEnrollment(unittest.TestCase):
             self.config, url="https://localhost:8443", token_file=self.token, identity=self.identity
         )
 
+    def test_one_local_runtime_per_config_and_lock_release_after_stop(self):
+        with (
+            enrollment.runtime_lock(self.config),
+            self.assertRaisesRegex(ValueError, "E_AGENT_RUNTIME_BUSY"),
+            enrollment.runtime_lock(self.config),
+        ):
+            self.fail("A second runtime acquired the same private configuration")
+        with enrollment.runtime_lock(self.config):
+            self.assertTrue(self.config.with_name("agent.json.runtime.lock").is_file())
+
     def test_changed_certificate_cannot_replace_the_reviewed_fingerprint_before_pairing(self):
         certificate = self.root / "source-ca.pem"
         reviewed = hashlib.sha256(b"reviewed certificate bytes").hexdigest()

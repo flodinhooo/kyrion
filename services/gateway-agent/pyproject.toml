@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "kyrion-gateway-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Least-privilege health and capability agent for Kyrion gateway nodes"
 requires-python = ">=3.12"
 

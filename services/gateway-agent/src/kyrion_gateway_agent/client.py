@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import ssl
+import time
 import uuid
 from dataclasses import dataclass
 from email.message import Message
@@ -21,7 +22,51 @@ from kyrion_gateway_agent.lan_transport import LocalHTTPSHandler
 
 
 class CoreRequestError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
+
+
+def permission_time() -> float:
+    if hasattr(time, "CLOCK_BOOTTIME"):
+        return time.clock_gettime(time.CLOCK_BOOTTIME)
+    return time.monotonic()
+
+
+@dataclass(frozen=True, slots=True)
+class TaskLease:
+    allowed_tasks: frozenset[str]
+    expires_at: float
+
+    def allows(self, task: str, now: float | None = None) -> bool:
+        return (
+            task in self.allowed_tasks
+            and (permission_time() if now is None else now) < self.expires_at
+        )
+
+
+def task_policy(config: AgentConfig) -> TaskLease:
+    value = _request(
+        f"{config.core_url}/v1/gateway-agent/tasks", "GET", {}, _auth(config), config=config
+    )
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"formatVersion", "nodeId", "allowedTasks", "leaseSeconds"}
+        or type(value.get("formatVersion")) is not int
+        or value["formatVersion"] != 1
+        or value.get("nodeId") != config.node_id
+        or type(value.get("leaseSeconds")) is not int
+        or not 1 <= value["leaseSeconds"] <= 30
+        or not isinstance(value.get("allowedTasks"), list)
+        or len(value["allowedTasks"]) > 2
+        or any(
+            not isinstance(task, str) or task not in {"integration", "voice"}
+            for task in value["allowedTasks"]
+        )
+        or len(set(value["allowedTasks"])) != len(value["allowedTasks"])
+    ):
+        raise CoreRequestError("E_AGENT_TASK_POLICY_INVALID")
+    return TaskLease(frozenset(value["allowedTasks"]), permission_time() + value["leaseSeconds"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,7 +254,9 @@ def _request(
             body = raw.decode("utf-8")
             return json.loads(body) if body else None
     except HTTPError as error:
-        raise CoreRequestError(f"Core rejected the request with HTTP {error.code}") from error
+        raise CoreRequestError(
+            f"Core rejected the request with HTTP {error.code}", error.code
+        ) from error
     except (URLError, TimeoutError, ConnectionError, json.JSONDecodeError, UnicodeError) as error:
         raise CoreRequestError("Core is unavailable or returned invalid data") from error
 

@@ -21,6 +21,7 @@ GATEWAY_FILES = tuple(
         "health.py",
         "lan_transport.py",
         "media_player.py",
+        "prepared_runtime.py",
     )
 )
 

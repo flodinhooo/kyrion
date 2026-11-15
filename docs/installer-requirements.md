@@ -13,7 +13,7 @@ remains. A prerequisite does not convert missing code into an external blocker.
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 
-Latest prepared-node checkpoint: [frozen installer enrollment and target reporting](status/2026-11-15-installer-embedded-node.md). The Linux native installer embeds the existing agent and has real Core/PG/TLS foreground enrollment/restart/revocation evidence. Dedicated service deployment, Windows prepared storage and full task placement remain open.
+Latest prepared-node checkpoint: [task-scoped foreground runtime](status/2026-11-15-installer-task-runtime.md). The native Linux installer has actual Core/PG/TLS/Caddy enrollment, task authorization, reconnect and revocation evidence. Current developer suites: 506 Windows installer tests (nine skips), 514 Linux installer tests (twenty skips), seventy Linux agent tests, and 218 Core security/gateway tests (one skip). Dedicated service deployment, Windows prepared storage and full task placement remain open. Earlier [frozen enrollment evidence](status/2026-11-15-installer-embedded-node.md) retains its historical scope.
 
 Latest device checkpoint: [Core device management and restricted agent transport](status/2026-11-15-installer-device-management.md). Device metadata, revocation and task authorization are implemented; full deployment and coordinated task placement remain open.
 

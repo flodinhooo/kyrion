@@ -8,6 +8,7 @@ import socket
 import subprocess
 import threading
 import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from kyrion_gateway_agent.bluetooth import (
@@ -79,6 +80,13 @@ def main() -> None:
         LOGGER.info("Gateway heartbeat completed")
         return
 
+    if config.local_only:
+        from kyrion_gateway_agent.enrollment import runtime_lock
+
+        with runtime_lock(args.config):
+            run_prepared(config, interval=args.interval, command_interval=args.command_interval)
+        return
+
     heartbeat_interval = max(5, min(args.interval, 60))
     command_interval = max(0.1, min(args.command_interval, 2.0))
     next_heartbeat_at = 0.0
@@ -108,19 +116,82 @@ def main() -> None:
         time.sleep(command_interval)
 
 
-def _forward_button_events(config: AgentConfig) -> None:
-    while True:
-        process: subprocess.Popen[str] | None = None
+def run_prepared(
+    config: AgentConfig, *, interval: int = 15, command_interval: float = 0.25
+) -> None:
+    from kyrion_gateway_agent.prepared_runtime import run
+
+    run(
+        config,
+        _execute_command,
+        _forward_button_events,
+        interval=interval,
+        command_interval=command_interval,
+    )
+
+
+def _scoped_event_lines(
+    process: subprocess.Popen[bytes], allowed: Callable[[], bool], stopped: threading.Event
+) -> Iterator[str]:
+    import selectors
+
+    if process.stdout is None:
+        return
+    pending = b""
+    with selectors.DefaultSelector() as selector:
+        selector.register(process.stdout, selectors.EVENT_READ)
+        while not stopped.is_set() and allowed():
+            if not selector.select(timeout=0.5):
+                continue
+            block = os.read(process.stdout.fileno(), 4096)
+            if not block:
+                return
+            pending += block
+            if len(pending) > 65536:
+                return
+            while b"\n" in pending:
+                line, pending = pending.split(b"\n", 1)
+                if len(line) > 16384:
+                    continue
+                try:
+                    yield line.decode("utf-8")
+                except UnicodeDecodeError:
+                    continue
+
+
+def _forward_button_events(
+    config: AgentConfig,
+    allowed: Callable[[], bool] | None = None,
+    stopped: threading.Event | None = None,
+    register_child: Callable[[subprocess.Popen[bytes] | None], None] | None = None,
+) -> None:
+    from kyrion_gateway_agent.prepared_runtime import stop_child
+
+    stopped = stopped if stopped is not None else threading.Event()
+    while not stopped.is_set():
+        if allowed is not None and not allowed():
+            stopped.wait(0.5)
+            continue
+        process: subprocess.Popen[bytes] | None = None
         try:
             process = subprocess.Popen(
                 ["mosquitto_sub", "-h", "127.0.0.1", "-t", "zigbee2mqtt/+", "-v"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                text=True,
+                text=False,
             )
+            if register_child is not None:
+                register_child(process)
             if process.stdout is None:
                 raise RuntimeError("mqtt subscription unavailable")
-            for line in process.stdout:
+            lines = (
+                (line.decode("utf-8") for line in process.stdout)
+                if allowed is None
+                else _scoped_event_lines(process, allowed, stopped)
+            )
+            for line in lines:
+                if stopped.is_set() or (allowed is not None and not allowed()):
+                    break
                 topic, separator, raw_payload = line.rstrip("\n").partition(" ")
                 if not separator:
                     continue
@@ -135,12 +206,9 @@ def _forward_button_events(config: AgentConfig) -> None:
                 if action not in {"single", "double", "long"} and not isinstance(occupancy, bool):
                     continue
                 friendly_name = topic.removeprefix("zigbee2mqtt/")
-                device_id = _resolve_zigbee_device_id(friendly_name)
+                device_id = _resolve_zigbee_device_id(friendly_name, prepared=allowed is not None)
                 if not isinstance(device_id, str):
-                    LOGGER.warning(
-                        "Ignoring button event from unknown Zigbee topic %s",
-                        friendly_name[:80],
-                    )
+                    LOGGER.warning("Ignoring event from unknown Zigbee topic")
                     continue
                 try:
                     if action in {"single", "double", "long"}:
@@ -159,14 +227,18 @@ def _forward_button_events(config: AgentConfig) -> None:
             LOGGER.warning("Zigbee button subscription failed: %s", error)
         finally:
             if process is not None and process.poll() is None:
-                process.terminate()
-        time.sleep(2)
+                stop_child(process)
+            if process is not None and process.stdout is not None:
+                process.stdout.close()
+            if register_child is not None:
+                register_child(None)
+        stopped.wait(2)
 
 
-def _resolve_zigbee_device_id(friendly_name: str) -> str | None:
+def _resolve_zigbee_device_id(friendly_name: str, *, prepared: bool = False) -> str | None:
     if len(friendly_name) == 18 and friendly_name.startswith("0x"):
         return friendly_name
-    health = collect_health()
+    health = collect_health(include_voice=not prepared)
     devices = health.get("zigbee", {}).get("devices", [])
     device = next(
         (item for item in devices if item.get("friendlyName") == friendly_name),

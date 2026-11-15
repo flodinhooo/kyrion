@@ -1,6 +1,7 @@
 package dev.kyrion.core.gateway
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.kyrion.core.activity.ActivityActorType
 import dev.kyrion.core.activity.ActivityCategory
@@ -67,6 +68,7 @@ data class GatewayHealth(
     val zigbee: GatewayZigbeeHealth?,
     val services: List<GatewayServiceHealth>,
     val bluetoothDevices: List<GatewayBluetoothDevice> = emptyList(),
+    @get:JsonInclude(JsonInclude.Include.NON_NULL) val runtimeVersion: String? = null,
 )
 
 data class GatewayInterfaceHealth(val present: Boolean, val connected: Boolean)
@@ -332,6 +334,9 @@ class GatewayService(
         }
 
     private fun validateHealth(health: GatewayHealth) {
+        if (health.runtimeVersion != null && !health.runtimeVersion.matches(Regex("^[A-Za-z0-9+._-]{1,40}$"))) {
+            throw GatewayHealthInvalidException()
+        }
         if (health.temperatureCelsius != null && health.temperatureCelsius !in -20.0..150.0) {
             throw GatewayHealthInvalidException()
         }
@@ -395,7 +400,7 @@ class GatewayService(
             else -> "online"
         }
         return GatewayNodeView(
-            id, displayName, hostname, availability, agentVersion, osName, osVersion, architecture,
+            id, displayName, hostname, availability, health?.runtimeVersion ?: agentVersion, osName, osVersion, architecture,
             lastSeenAt, health, createdAt, taskPolicy,
         )
     }

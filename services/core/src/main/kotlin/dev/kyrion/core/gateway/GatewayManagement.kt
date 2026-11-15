@@ -160,7 +160,8 @@ class GatewayManagementService(
 
     private fun map(rs: java.sql.ResultSet) = ManagedGateway(
         rs.getObject("id", UUID::class.java), rs.getString("display_name"), rs.getString("hostname"),
-        rs.getString("os_name"), rs.getString("architecture"), rs.getString("agent_version"),
+        rs.getString("os_name"), rs.getString("architecture"),
+        rs.getString("health")?.let { mapper.readTree(it).get("runtimeVersion")?.textValue() } ?: rs.getString("agent_version"),
         rs.getString("expected_availability"), rs.getObject("management_revision", UUID::class.java),
         rs.getTimestamp("last_seen_at")?.toInstant(), rs.getTimestamp("revoked_at")?.toInstant(),
         rs.getString("task_policy")?.let { mapper.readTree(it).map { item -> item.asText() } },

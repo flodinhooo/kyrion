@@ -74,6 +74,7 @@ def main() -> int:
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--prepare-node", action="store_true")
     actions.add_argument("--node-heartbeat", action="store_true")
+    actions.add_argument("--node-run", action="store_true")
     parser.add_argument("--node-config", type=Path)
     parser.add_argument("--node-url")
     parser.add_argument("--node-token-file", type=Path)
@@ -185,7 +186,7 @@ def main() -> int:
             args.node_token_file,
             args.node_certificate,
         )
-    ) and not (args.prepare_node or args.node_heartbeat):
+    ) and not (args.prepare_node or args.node_heartbeat or args.node_run):
         parser.error("E_NODE_ARGUMENT")
     if args.ollama_model is not None and args.ollama not in {"pull", "remove"}:
         parser.error("E_OLLAMA_MODEL_ARGUMENT")
@@ -308,7 +309,7 @@ def main() -> int:
         (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
     )
     print(messages["intro"])
-    if args.prepare_node or args.node_heartbeat:
+    if args.prepare_node or args.node_heartbeat or args.node_run:
         from node_entry import run as run_node
 
         try:
@@ -317,6 +318,9 @@ def main() -> int:
             return 130
         except (OSError, ValueError, RuntimeError, TypeError, KeyError) as error:
             code = str(error).split(":", 1)[0]
+            advice = guidance(code, messages)
+            if advice:
+                print(advice, file=sys.stderr)
             print(
                 code if re.fullmatch(r"E_[A-Z_]{1,77}", code) else "E_NODE_OPERATION",
                 file=sys.stderr,

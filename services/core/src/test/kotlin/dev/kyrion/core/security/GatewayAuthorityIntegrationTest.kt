@@ -51,6 +51,38 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val payload get() = mapOf<String, Any>("deviceId" to address, "on" to true)
     private val human get() = GatewayAuthority(owner, GatewayPrincipalKind.HUMAN, member, "devices:execute", "power.set")
 
+    @Test fun `reported runtime version advances without changing original enrollment acknowledgement identity`() {
+        val enrollment = gateways.createEnrollment(owner, "Version fixture")
+        val credential = SessionTokenService().create().rawToken
+        val enrolled = gateways.enroll(enrollment.enrollmentToken, "version-fixture", "0.1.0", "Debian", "13", "amd64", credential)
+        gateways.heartbeat(enrolled.node.id, credential, gateways.all(owner).first { it.id == node }.health!!.copy(runtimeVersion = "0.2.0"))
+        assertThat(gateways.all(owner).first { it.id == enrolled.node.id }.agentVersion).isEqualTo("0.2.0")
+        assertThat(management.all(owner).first { it.id == enrolled.node.id }.agentVersion).isEqualTo("0.2.0")
+        val acknowledged = gateways.enroll(enrollment.enrollmentToken, "version-fixture", "0.1.0", "Debian", "13", "amd64", credential)
+        assertThat(acknowledged.node.id).isEqualTo(enrolled.node.id)
+        assertThat(acknowledged.node.agentVersion).isEqualTo("0.1.0")
+        assertThatThrownBy { gateways.heartbeat(enrolled.node.id, credential,
+            gateways.all(owner).first { it.id == node }.health!!.copy(runtimeVersion = "bad\u001bversion")) }
+            .isInstanceOf(GatewayHealthInvalidException::class.java)
+    }
+
+    @Test fun `agent task policy is node authenticated and reflects current assignment and revocation`() {
+        fun read(credential: String = token) = mvc.perform(get("/v1/gateway-agent/tasks")
+            .header("X-Kyrion-Node-Id", node).header("Authorization", "Bearer $credential"))
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        val initial = mapper.readTree(read().andExpect(status().isOk).andReturn().response.contentAsString)
+        assertThat(initial.get("nodeId").asText()).isEqualTo(node.toString())
+        assertThat(initial.get("allowedTasks").map { it.asText() }).containsExactly("integration", "voice")
+        assertThat(initial.get("leaseSeconds").asInt()).isEqualTo(30)
+        read(sessions.create(owner).rawToken).andExpect(status().isUnauthorized)
+        val current = management.all(owner).single()
+        val changed = management.tasks(owner, owner, node, UpdateGatewayTasksRequest(current.revision, emptyList()))
+        val restricted = mapper.readTree(read().andExpect(status().isOk).andReturn().response.contentAsString)
+        assertThat(restricted.get("allowedTasks").size()).isZero()
+        management.revoke(owner, owner, node, changed.revision)
+        read().andExpect(status().isUnauthorized)
+    }
+
     @Test fun `concurrent heartbeats serialize without shared lock upgrade deadlocks or changing management revision`() {
         val health = gateways.all(owner).single().health!!
         val revision = management.all(owner).single().revision

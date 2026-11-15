@@ -192,6 +192,15 @@ remain separate open implementation work. These commands do not make the full
 distributed installer ready for user acceptance. The source Python archive still
 requires Python; the frozen executable uses its embedded interpreter.
 
+`--node-run --node-config PRIVATE_PATH` adds reviewed foreground operation using
+the same agent. It requires the authenticated Core task-policy endpoint. The
+runtime checks short-lived permissions before integration activity, clears local
+authority when connection fails, reconnects with bounded backoff, and stops after
+access revocation. One local runtime can hold a private configuration at a time.
+Unassigned tasks are not probed or executed. Running this foreground path neither
+registers an OS service nor starts microphone recording. It does not implement
+exclusive handoff between devices or automatic node software updates.
+
 ### Resume an existing installation
 
 Rerun with identical target/hostname/IP/release and choose `resume`. A private,

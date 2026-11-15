@@ -292,3 +292,16 @@ def enroll_prepared(
             publish(path, json.dumps(asdict(config), separators=(",", ":")).encode("utf-8"))
         pending.unlink()
         return config
+
+
+@contextlib.contextmanager
+def runtime_lock(config: Path):
+    config = config.absolute()
+    private_directory(config.parent)
+    try:
+        with enrollment_lock(config.with_name(config.name + ".runtime.lock")):
+            yield
+    except ValueError as error:
+        if str(error) == "E_AGENT_ENROLLMENT_BUSY":
+            raise ValueError("E_AGENT_RUNTIME_BUSY") from None
+        raise

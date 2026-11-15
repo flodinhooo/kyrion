@@ -1,6 +1,12 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    "E_AGENT_RUNTIME_BUSY": "nodeRuntimeBusy",
+    "E_AGENT_ACCESS_REVOKED": "nodeAccessDenied",
+    "E_AGENT_TASK_POLICY_UNSUPPORTED": "nodePolicyUnavailable",
+    "E_AGENT_TASK_POLICY_INVALID": "nodePolicyUnavailable",
+    "E_AGENT_TLS_CONFIGURATION": "nodeTrustInvalid",
+    "E_AGENT_TLS_REQUIRED": "nodeTrustInvalid",
     "E_UPDATE_DATABASE_HEALTH": "updatesErrorDatabaseHealth",
     "E_UPDATE_DATABASE_TARGET": "updatesErrorDatabaseTarget",
     **dict.fromkeys(
