@@ -35,6 +35,133 @@ from recovery import load_installation
 from windows_service import ROLES, ServiceManager
 
 
+def verify_agent_ingress(target: Path, password: str) -> None:
+    """Real SCM/protected files/Core/TLS; only DNS and fault timing are fixtures."""
+    import node_ingress
+    from native_proxy import configuration
+    from native_roles import read_configuration
+    from node_entry import component
+    from node_ingress_native import NativeRuntime
+
+    component(require_linux=False)
+    from kyrion_gateway_agent import lan_transport
+
+    original_lookup = socket.getaddrinfo
+
+    def lookup(host, *arguments, **options):
+        return original_lookup(
+            "127.0.0.1" if host == "fixture.test" else host, *arguments, **options
+        )
+
+    def seed_legacy(installation):
+        adapter = NativeRuntime(installation)
+        adapter.stop()
+        node_ingress.publish(
+            installation, configuration(target, read_configuration(target), agent=False)
+        )
+        installation.state.pop(node_ingress.KEY, None)
+        installation.save()
+        adapter.start()
+        adapter.probe_original()
+
+    def pids(installation):
+        with ServiceManager() as scm:
+            result = {}
+            for role in ROLES:
+                plan = plan_for(installation, role)
+                with scm.opened(plan["name"]) as handle:
+                    result[role] = scm.assert_owned(handle, plan)["pid"]
+            return result
+
+    with patch.object(lan_transport.socket, "getaddrinfo", lookup):
+        installation = load_installation(target)
+        client = CoreClient(installation)
+        try:
+            owner = client.login_or_setup("fixture-owner", password)
+            approval = node_ingress.actor(client)
+            keys = {
+                name: (target / "secrets" / name).read_bytes()
+                for name in (
+                    "credential.key",
+                    "audit-integrity.key",
+                    "postgres-password",
+                )
+            }
+            seed_legacy(installation)
+            previous = pids(installation)
+            result = node_ingress.apply(installation, approval, "configure")
+            current = pids(installation)
+            if (
+                result["phase"] != "verified"
+                or current["caddy"] == previous["caddy"]
+                or any(
+                    current[role] != previous[role]
+                    for role in ("postgres", "core", "web")
+                )
+            ):
+                raise ValueError("E_TEST_NATIVE_INGRESS_RESTART_SCOPE")
+            seed_legacy(installation)
+            checkpoint = node_ingress.checkpoint
+
+            def interrupted(installation, phase):
+                if phase == "published":
+                    raise KeyboardInterrupt()
+                checkpoint(installation, phase)
+
+            with patch.object(node_ingress, "checkpoint", interrupted):
+                try:
+                    node_ingress.apply(installation, approval, "configure")
+                except KeyboardInterrupt:
+                    pass
+                else:
+                    raise ValueError("E_TEST_NATIVE_INGRESS_INTERRUPTION")
+            installation = load_installation(target, verify=False)
+            identity = installation.state[node_ingress.KEY]["id"]
+            node_ingress.apply(installation, node_ingress.actor(client), "resume")
+            if installation.state[node_ingress.KEY]["id"] != identity:
+                raise ValueError("E_TEST_NATIVE_INGRESS_TRANSACTION")
+            seed_legacy(installation)
+
+            def core_outage(adapter):
+                with ServiceManager(writable=True) as scm:
+                    for role in ("caddy", "web", "core"):
+                        plan = plan_for(adapter.installation, role)
+                        with scm.opened(plan["name"], mutate=True) as handle:
+                            scm.stop(handle, plan)
+                raise ValueError("E_TEST_NATIVE_CORE_OUTAGE")
+
+            with patch.object(NativeRuntime, "probe", core_outage):
+                try:
+                    node_ingress.apply(installation, approval, "configure")
+                except ValueError as error:
+                    if str(error) != "E_TEST_NATIVE_CORE_OUTAGE":
+                        raise
+                else:
+                    raise ValueError("E_TEST_NATIVE_OUTAGE_NOT_REACHED")
+            installation = load_installation(target, verify=False)
+            recovered = node_ingress.apply(installation, None, "recover")
+            if recovered["phase"] != "recovered":
+                raise ValueError("E_TEST_NATIVE_INGRESS_RECOVERY")
+            # Recovery starts stopped owned dependencies through actual SCM.
+            # It must not silently reduce the graph to a desktop-login task.
+            restored = CoreClient(load_installation(target))
+            try:
+                if (
+                    restored.login_or_setup("fixture-owner", password)["id"]
+                    != owner["id"]
+                ):
+                    raise ValueError("E_TEST_NATIVE_INGRESS_IDENTITY")
+            finally:
+                restored.close()
+            if any(
+                (target / "secrets" / name).read_bytes() != value
+                for name, value in keys.items()
+            ):
+                raise ValueError("E_TEST_NATIVE_INGRESS_KEY_CHANGE")
+        finally:
+            client.close()
+
+
 def verify_native_update(target: Path, bundle: Path) -> None:
     """Real SCM/ACL update and recovery using a synthetic signed release label.
 
@@ -397,6 +524,7 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
             client.close()
         verify_update_task(target, worker)
         verify_backup_task(target, worker)
+        verify_agent_ingress(target, password)
         verify_native_update(target, bundle)
         # Actual privileged backup capture is restricted to this fresh synthetic
         # installation. It is not a full application restore/identity acceptance.
@@ -504,6 +632,10 @@ def main(bundle: Path, key: Path, worker: Path) -> dict:
                         raise ValueError("E_TEST_RETIRED_SOURCE_NOT_DISABLED")
         return {
             "actualWindowsServices": True,
+            "nativeAgentIngressActualScmCoreAndTls": True,
+            "nativeAgentIngressInterruptedPublicationResumed": True,
+            "nativeAgentIngressRecoveryStartsStoppedDependencies": True,
+            "nativeAgentIngressDnsLookupIsFixture": True,
             "dedicatedVirtualAccounts": True,
             "actualNegativeSecretAccessChecks": True,
             "realApplicationSetup": True,

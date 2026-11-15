@@ -18,6 +18,19 @@ from runtime import atomic_json
 DOMAIN = b"kyrion-operational-authority-transfer-v1\x00"
 
 
+def pending_ingress_format(state: dict) -> bool:
+    value = state.get("agentIngressTransition")
+    return (
+        type(state.get("formatVersion")) is int
+        and state["formatVersion"] == 2
+        and isinstance(value, dict)
+        and type(value.get("formatVersion")) is int
+        and value["formatVersion"] == 1
+        and value.get("phase")
+        in {"prepared", "stopped", "published", "started", "recovering", "restored"}
+    )
+
+
 def require_active(
     state: dict,
     *,

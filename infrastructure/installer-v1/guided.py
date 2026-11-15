@@ -267,6 +267,7 @@ def main() -> int:
                     "updateProtocol": 1,
                     "startupFence": True,
                     "agentIngressFence": True,
+                    "nativeAgentIngressVersion": 1 if os.name == "nt" else 0,
                     "maintenanceCore": True,
                     "linuxComposeStart": os.name == "posix",
                     "backupProtocol": 1,

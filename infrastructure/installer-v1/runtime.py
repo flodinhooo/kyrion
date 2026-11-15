@@ -278,22 +278,11 @@ class Installation:
                 raise ValueError(
                     "E_STATE: installation journal permissions or owner are unsafe"
                 )
-            ingress = self.state.get("agentIngressTransition")
-            ingress_format = (
-                os.name == "posix"
-                and self.state.get("backend") is None
-                and self.state.get("formatVersion") == 2
-                and isinstance(ingress, dict)
-                and ingress.get("formatVersion") == 1
-                and ingress.get("phase")
-                in {
-                    "prepared",
-                    "stopped",
-                    "published",
-                    "started",
-                    "recovering",
-                    "restored",
-                }
+            from authority import pending_ingress_format
+
+            ingress_format = pending_ingress_format(self.state) and (
+                (os.name == "posix" and self.state.get("backend") is None)
+                or (os.name == "nt" and self.state.get("backend") == "windows-native")
             )
             if (
                 (self.state.get("formatVersion") != 1 and not ingress_format)

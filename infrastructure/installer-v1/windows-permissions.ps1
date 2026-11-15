@@ -62,7 +62,9 @@ try {
         $journalFile=Get-Item -LiteralPath $journalPath -Force
         if ($journalFile.Length -gt 1048576 -or ($journalFile.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'E_NATIVE_JOURNAL' }
         $state=Get-Content -LiteralPath $journalPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($state.formatVersion -ne 1 -or $state.backend -ne 'windows-native' -or
+        $pendingIngress=($state.formatVersion -eq 2 -and $state.agentIngressTransition.formatVersion -eq 1 -and
+            $state.agentIngressTransition.phase -cin @('prepared','stopped','published','started','recovering','restored'))
+        if (($state.formatVersion -ne 1 -and -not $pendingIngress) -or $state.backend -ne 'windows-native' -or
             $state.installationId -cnotmatch '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' -or
             [IO.Path]::GetFullPath($state.rootPath) -ine $root -or $state.files.'installer.exe' -notmatch '^[a-f0-9]{64}$') { throw 'E_NATIVE_JOURNAL' }
         Assert-Protected $journalPath

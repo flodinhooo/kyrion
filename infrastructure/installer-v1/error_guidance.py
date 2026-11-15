@@ -17,6 +17,8 @@ KEYS = {
     ),
     "E_AGENT_INGRESS_WORKER": "agentIngressWorkerUpgrade",
     "E_AGENT_INGRESS_PLATFORM": "agentIngressPlatform",
+    "E_AGENT_INGRESS_HOST_CHANGED": "agentIngressHostChanged",
+    "E_AGENT_INGRESS_HOST_UPGRADE": "agentIngressHostUpgrade",
     "E_NODE_PAIRING_INGRESS": "nodePairingIngressRequired",
     "E_AGENT_ENROLLMENT_UPGRADE_REQUIRED": "nodePolicyUnavailable",
     **dict.fromkeys(

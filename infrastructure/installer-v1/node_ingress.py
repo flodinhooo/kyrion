@@ -1,4 +1,4 @@
-"""Journaled, reviewed extension of exact owned Linux agent proxy definitions."""
+"""Journaled, reviewed extension of exact owned local agent proxy definitions."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from authority import require_active
-from bundle import sha256
+from bundle import sha256, unique_object
 from host import reject_links
 from linux_startup import machine_binding
 from node_pairing import configured_origin
@@ -48,6 +48,17 @@ def definitions(installation) -> tuple[str, set[str]]:
     hostname = installation.configuration["hostname"]
     if not re.fullmatch(r"[a-z0-9.-]{1,253}", hostname):
         raise ValueError("E_AGENT_INGRESS_CUSTOM")
+    if installation.state.get("backend") == "windows-native":
+        from native_proxy import configuration
+        from native_roles import read_configuration
+
+        config = read_configuration(installation.target)
+        current = configuration(installation.target, config)
+        return current, {
+            current,
+            configuration(installation.target, config, agent=False),
+            current.replace(" /v1/gateway-agent/tasks", ""),
+        }
     current = (
         (Path(__file__).parent / "templates/Caddyfile")
         .read_text(encoding="utf-8")
@@ -102,9 +113,18 @@ def transition(installation) -> dict | None:
             or digest(value[name]) != value[name + "Sha256"]
         ):
             raise ValueError("E_AGENT_INGRESS_JOURNAL")
-    if value["machine"] != machine_binding(installation.state["installationId"]):
+    if installation.state.get("backend") == "windows-native":
+        from windows_machine import verify_marker
+
+        verify_marker(installation.state["installationId"], value["machine"])
+    elif value["machine"] != machine_binding(installation.state["installationId"]):
         raise ValueError("E_STARTUP_HOST_CHANGED")
-    if value["recoveredBy"] not in {None, "os-root"} or (
+    if value["recoveredBy"] not in {
+        None,
+        "os-admin"
+        if installation.state.get("backend") == "windows-native"
+        else "os-root",
+    } or (
         value["lastError"] is not None
         and (
             not isinstance(value["lastError"], str)
@@ -122,8 +142,13 @@ def transition(installation) -> dict | None:
 
 
 def inspect(installation) -> str | None:
-    if os.name != "posix" or installation.state.get("backend") == "windows-native":
+    native = installation.state.get("backend") == "windows-native"
+    if (native and os.name != "nt") or (not native and os.name != "posix"):
         raise ValueError("E_AGENT_INGRESS_PLATFORM")
+    if native:
+        from native_runtime import permissions
+
+        permissions(installation.target, "verify")
     files = installation.state["files"]
     if FILE not in files:
         raise ValueError("E_AGENT_INGRESS_CUSTOM")
@@ -138,12 +163,17 @@ def inspect(installation) -> str | None:
         installation.state["files"] = files
     path = installation.target / FILE
     reject_links(path)
-    for directory in (path.parent, installation.target):
+    for directory in () if native else (path.parent, installation.target):
         if directory.stat().st_uid != 0 or directory.stat().st_mode & 0o022:
             raise ValueError("E_AGENT_INGRESS_OWNERSHIP")
     value = transition(installation)
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        descriptor = os.open(
+            path,
+            os.O_RDONLY | os.O_BINARY
+            if native
+            else os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+        )
     except FileNotFoundError:
         if value is not None and value["phase"] not in {"verified", "recovered"}:
             return None
@@ -152,8 +182,7 @@ def inspect(installation) -> str | None:
         metadata = os.fstat(stream.fileno())
         if (
             not stat.S_ISREG(metadata.st_mode)
-            or metadata.st_uid != 0
-            or metadata.st_mode & 0o077
+            or (not native and (metadata.st_uid != 0 or metadata.st_mode & 0o077))
             or metadata.st_nlink != 1
         ):
             raise ValueError("E_AGENT_INGRESS_OWNERSHIP")
@@ -211,19 +240,29 @@ def publish(installation, text: str) -> None:
     inspect(installation)
     temporary = path.with_name(".Caddyfile.ingress-" + secrets.token_hex(12))
     try:
-        descriptor = os.open(
-            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
-        )
+        if os.name == "nt":
+            from windows_security import open_secured_file
+
+            descriptor = open_secured_file(
+                temporary, installation.target / "native-runtime.json"
+            )
+        else:
+            descriptor = os.open(
+                temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
+            )
         with os.fdopen(descriptor, "wb") as stream:
             stream.write(text.encode())
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
-        descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        if os.name == "posix":
+            descriptor = os.open(
+                path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+            )
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
         installation.state["files"][FILE] = digest(text)
     finally:
         temporary.unlink(missing_ok=True)
@@ -330,7 +369,7 @@ def require_workers(installation) -> None:
             continue
         name = policy.get("workerFile")
         if not isinstance(name, str) or not re.fullmatch(
-            r"maintenance-[a-f0-9]{32}", name
+            r"maintenance-[a-f0-9]{32}" + (r"\.exe" if os.name == "nt" else ""), name
         ):
             raise ValueError("E_AGENT_INGRESS_WORKER")
         if name in checked:
@@ -342,23 +381,35 @@ def require_workers(installation) -> None:
         if (
             not isinstance(expected, str)
             or sha256(path) != expected
-            or path.stat().st_uid != 0
-            or path.stat().st_mode & 0o077
+            or path.stat().st_nlink != 1
+            or (
+                os.name != "nt"
+                and (path.stat().st_uid != 0 or path.stat().st_mode & 0o077)
+            )
         ):
             raise ValueError("E_AGENT_INGRESS_WORKER")
+        if os.name == "nt":
+            from native_runtime import permissions
+            from windows_system import base_environment
+
+            permissions(installation.target, "verify")
+            environment = base_environment()
+        else:
+            environment = {"PATH": "/usr/bin:/bin", "LANG": "C"}
         result = subprocess.run(
             [str(path), "--capabilities"],
             cwd=installation.target,
-            env={"PATH": "/usr/bin:/bin", "LANG": "C"},
+            env=environment,
             stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=30,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
         if result.returncode or len(result.stdout) > 16384:
             raise ValueError("E_AGENT_INGRESS_WORKER")
         try:
-            capability = json.loads(result.stdout)
+            capability = json.loads(result.stdout, object_pairs_hook=unique_object)
         except (ValueError, UnicodeError) as error:
             raise ValueError("E_AGENT_INGRESS_WORKER") from error
         if (
@@ -395,9 +446,17 @@ def apply(installation, approval: dict | None, action: str, *, runtime=None) -> 
             "configurationMissing": before is None,
             "managedAgentRoutesPresent": before == current,
         }
-    if os.geteuid() != 0:
-        raise ValueError("E_AGENT_INGRESS_OWNERSHIP")
-    runtime = runtime if runtime is not None else ComposeRuntime(installation)
+    from operational_restore import require_admin
+
+    require_admin()
+    native = installation.state.get("backend") == "windows-native"
+    if runtime is None:
+        if native:
+            from node_ingress_native import NativeRuntime
+
+            runtime = NativeRuntime(installation)
+        else:
+            runtime = ComposeRuntime(installation)
     if action == "recover":
         if value is None or value["phase"] == "verified":
             raise ValueError("E_AGENT_INGRESS_RECOVERY")
@@ -408,7 +467,7 @@ def apply(installation, approval: dict | None, action: str, *, runtime=None) -> 
                 "originalProxyTlsVerified": True,
                 "coreVerified": False,
             }
-        value["recoveredBy"] = "os-root"
+        value["recoveredBy"] = "os-admin" if native else "os-root"
         checkpoint(installation, "recovering")
     else:
         if (
@@ -430,6 +489,12 @@ def apply(installation, approval: dict | None, action: str, *, runtime=None) -> 
             if action == "resume":
                 raise ValueError("E_AGENT_INGRESS_JOURNAL")
             runtime.validate(current)
+            if native:
+                from windows_machine import protect_marker
+
+                binding = protect_marker(installation.state["installationId"])
+            else:
+                binding = machine_binding(installation.state["installationId"])
             value = {
                 "formatVersion": 1,
                 "id": str(uuid.uuid4()),
@@ -440,7 +505,7 @@ def apply(installation, approval: dict | None, action: str, *, runtime=None) -> 
                 "afterSha256": digest(current),
                 **approval,
                 "lastActorId": approval["actorId"],
-                "machine": machine_binding(installation.state["installationId"]),
+                "machine": binding,
                 "preparedAt": now(),
                 "updatedAt": now(),
                 "lastError": None,
@@ -502,13 +567,18 @@ def guided(client, installation, messages, action: str) -> dict | None:
     desired, _ = definitions(installation)
     origin, _ = configured_origin(installation)
     print(messages["agentIngressScope"])
+    native = installation.state.get("backend") == "windows-native"
+    if native:
+        print(messages["agentIngressNativeScope"])
     print(
         json.dumps(
             {
                 "origin": origin,
                 "operation": action,
                 "localPeersOnly": True,
-                "restart": "owned-proxy-only",
+                "restart": "owned-proxy-with-scm-dependencies"
+                if native
+                else "owned-proxy-only",
                 "newPorts": False,
                 "downloads": False,
                 "configurationChanges": current != desired,

@@ -293,14 +293,19 @@ or `--devices`. Previously paired devices are never removed by choosing SINGLE.
 A reviewed choice is not proof of remote installation, task deployment or service
 readiness. Extra devices, AI, microphones and hardware remain optional.
 
-### Extending an existing Linux central installation for paired devices
+### Extending an existing central installation for paired devices
 
 `--devices --target /protected/kyrion` offers an explicit ingress transition if
 the existing managed proxy lacks supported agent routes. Alternatively use
 `--agent-ingress configure|resume|recover|status --target /protected/kyrion`.
-Configuration and resume require local root plus current linked Core permissions;
+Configuration and resume require local administration plus current linked Core permissions;
 recovery restores only previously approved known bytes and can run without Core.
-The review identifies the unchanged listener, no downloads and proxy-only restart.
+The review identifies the unchanged listener and no downloads. Linux recreates
+only the owned proxy. Native Windows preserves SCM dependencies and may start
+previously stopped owned dependencies. It requires an installed service host
+advertising native ingress protocol 1; upgrade the verified payload first when
+prompted. Native source/private-file/Caddy checks do not establish elevated SCM
+or cold-boot acceptance; the disposable Windows workflow remains required.
 Custom configuration is refused. Before starting, enabled installed maintenance
 workers must already support the ingress fence; use their existing verified
 maintenance upgrade paths when prompted. An interrupted transaction must be

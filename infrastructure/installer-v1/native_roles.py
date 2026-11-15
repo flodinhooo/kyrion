@@ -43,8 +43,12 @@ def read_configuration(root: Path) -> dict:
     state = json.loads(
         journal.read_text(encoding="utf-8"), object_pairs_hook=unique_object
     )
+    from authority import pending_ingress_format
+
     if (
         state.get("backend") != "windows-native"
+        or type(state.get("formatVersion")) is not int
+        or (state["formatVersion"] != 1 and not pending_ingress_format(state))
         or state.get("rootPath") != str(root.resolve())
         or not isinstance(state.get("files"), dict)
     ):
@@ -297,11 +301,14 @@ def run_role(root: Path, role: str, stop, report) -> None:
     from update_gate import role_mode
 
     maintenance = role_mode(state, role)
+    from node_ingress_native import role_allowed
+
     require_active(
         state,
         preparing=role == "postgres-init",
         migration=role == "core",
         update=True,
+        ingress=role_allowed(root, state, role),
     )
     manifest_path = root / "native-manifest.json"
     if manifest_path.stat().st_size > 8 * 1024**2:

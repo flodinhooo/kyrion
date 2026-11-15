@@ -75,6 +75,11 @@ jobs:
           & $worker.FullName --verify-bundle --bundle build/windows-ci-bundle --public-key build/windows-ci-bundle/test-public.pem
           if ($LASTEXITCODE -ne 0) { throw 'E_CI_BUNDLE_VERIFICATION' }
           python infrastructure/installer-v1/tests/integration/verify-windows-services.py --bundle build/windows-ci-bundle --key build/windows-ci-bundle/test-public.pem --worker $worker.FullName --report build/windows-services-report.json
+      - name: Validate exact native proxy configurations with the verified runtime
+        shell: pwsh
+        run: |
+          python infrastructure/installer-v1/tests/integration/verify-native-agent-proxy.py --bundle build/windows-ci-bundle --key build/windows-ci-bundle/test-public.pem --profile build/windows-ci-profile --report build/windows-agent-proxy-report.json
+          if ($LASTEXITCODE -ne 0) { throw 'E_CI_AGENT_PROXY_VALIDATION' }
       - name: Keep public developer evidence only
         if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
@@ -83,5 +88,6 @@ jobs:
           path: |
             build/windows-services-report.json
             build/windows-gpg-paths-report.json
+            build/windows-agent-proxy-report.json
             build/native-service-installer/*.json
           if-no-files-found: warn
