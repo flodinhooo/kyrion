@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def build(output: Path, version: str, channel: Path | None = None) -> Path:
     sys.path.insert(0, str(ROOT))
     from bundle import VERSION
-    from package import FILES
+    from package import FILES, source_file
     from release_channel import stamp
     from source_snapshot import stage_sources
 
@@ -62,6 +62,8 @@ def build(output: Path, version: str, channel: Path | None = None) -> Path:
             str(temporary),
             "--paths",
             str(source),
+            "--collect-submodules",
+            "kyrion_gateway_agent",
         ]
         # Explicit data allowlist. Python imports are analyzed by PyInstaller.
         for relative in (
@@ -146,7 +148,7 @@ def build(output: Path, version: str, channel: Path | None = None) -> Path:
         ):
             raise ValueError("E_NATIVE_BUILD_CHANNEL")
         if source_snapshot != {
-            name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+            name: hashlib.sha256(source_file(ROOT, name).read_bytes()).hexdigest()
             for name in source_snapshot
         }:
             raise ValueError("E_NATIVE_SOURCE_CHANGED")

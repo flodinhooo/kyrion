@@ -32,7 +32,7 @@ def build(
     sys.path.insert(0, str(ROOT))
     from build_identity import DEVELOPMENT_VERSION
     from bundle import VERSION, sha256
-    from package import FILES
+    from package import FILES, source_file
     from release_channel import stamp
     from source_snapshot import stage_sources
 
@@ -57,6 +57,8 @@ def build(
             "kyrion-service",
             "--paths",
             str(source_root),
+            "--collect-submodules",
+            "kyrion_gateway_agent",
             "--distpath",
             str(temporary / "dist"),
             "--workpath",
@@ -140,7 +142,9 @@ def build(
             raise ValueError("E_SERVICE_HOST_BUILD_CHANNEL")
         if any(path.is_symlink() for path in profile.rglob("*")):
             raise ValueError("E_SERVICE_HOST_LINK")
-        if source_snapshot != {name: sha256(ROOT / name) for name in source_snapshot}:
+        if source_snapshot != {
+            name: sha256(source_file(ROOT, name)) for name in source_snapshot
+        }:
             raise ValueError("E_SERVICE_HOST_SOURCE_CHANGED")
         shutil.copytree(profile, output)
 

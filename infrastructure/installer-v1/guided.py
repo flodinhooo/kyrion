@@ -72,6 +72,12 @@ def main() -> int:
     )
     parser.add_argument("--bundle", type=Path, default=ROOT / "release")
     actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--prepare-node", action="store_true")
+    actions.add_argument("--node-heartbeat", action="store_true")
+    parser.add_argument("--node-config", type=Path)
+    parser.add_argument("--node-url")
+    parser.add_argument("--node-token-file", type=Path)
+    parser.add_argument("--node-certificate", type=Path)
     actions.add_argument(
         "--devices",
         action="store_true",
@@ -171,6 +177,16 @@ def main() -> int:
         type=Path,
     )
     args = parser.parse_args()
+    if any(
+        value is not None
+        for value in (
+            args.node_config,
+            args.node_url,
+            args.node_token_file,
+            args.node_certificate,
+        )
+    ) and not (args.prepare_node or args.node_heartbeat):
+        parser.error("E_NODE_ARGUMENT")
     if args.ollama_model is not None and args.ollama not in {"pull", "remove"}:
         parser.error("E_OLLAMA_MODEL_ARGUMENT")
     if args.target is None:
@@ -292,6 +308,20 @@ def main() -> int:
         (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
     )
     print(messages["intro"])
+    if args.prepare_node or args.node_heartbeat:
+        from node_entry import run as run_node
+
+        try:
+            return run_node(args, messages)
+        except KeyboardInterrupt:
+            return 130
+        except (OSError, ValueError, RuntimeError, TypeError, KeyError) as error:
+            code = str(error).split(":", 1)[0]
+            print(
+                code if re.fullmatch(r"E_[A-Z_]{1,77}", code) else "E_NODE_OPERATION",
+                file=sys.stderr,
+            )
+            return 2
     if args.recommend_ai:
         try:
             if args.model_catalog is not None and args.trust_store is None:

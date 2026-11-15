@@ -226,5 +226,9 @@
   "devicesReadBack": "Request accepted. Reading current device state from Core.",
   "devicesTasksScope": "These task permissions control existing gateway integrations and linked voice access in Core. They do not install or start software or microphones. Reported services are last-known agent observations; offline reports are not proof of readiness. Distributed AI and central migration require their own supported setup.",
   "devicesTasksChoice": "Allow integration and/or voice, or choose none",
-  "devicesTasksReview": "Apply the displayed task permissions? Removing integration fails outstanding commands; removing voice ends linked sessions. Software, hardware configuration and data are retained."
+  "devicesTasksReview": "Apply the displayed task permissions? Removing integration fails outstanding commands; removing voice ends linked sessions. Software, hardware configuration and data are retained.",
+  "nodeForegroundScope": "Prepared Linux node: use the existing protected gateway identity over verified local TLS. These foreground operations do not install services or start recording.",
+  "nodePairReview": "Compare the displayed certificate fingerprint with your Kyrion central installation before pairing. The code file is short-lived and used once; its contents are not displayed. PAIR saves protected credentials. With no connection arguments, resume the existing pending operation.",
+  "nodePaired": "Core confirmed the device identity. Task permissions must be assigned in the central device management; enrollment alone is not a running service.",
+  "nodeHeartbeatReview": "Send one real device health/inventory report to the paired central installation? No command polling, microphone capture or device-control test is started."
 }

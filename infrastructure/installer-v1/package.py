@@ -5,8 +5,24 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
+
+GATEWAY_FILES = tuple(
+    "kyrion_gateway_agent/" + name
+    for name in (
+        "__init__.py",
+        "bluetooth.py",
+        "cli.py",
+        "client.py",
+        "config.py",
+        "enrollment.py",
+        "health.py",
+        "lan_transport.py",
+        "media_player.py",
+    )
+)
 
 FILES = (
     "schema_support.py",
@@ -59,6 +75,7 @@ FILES = (
     "onboarding.py",
     "device_management.py",
     "node_transport.py",
+    "node_entry.py",
     "identity_settings.py",
     "bootstrap_maintenance.py",
     "error_guidance.py",
@@ -88,10 +105,32 @@ FILES = (
     "locales/de.json",
     "templates/compose.yml",
     "templates/Caddyfile",
-)
+) + GATEWAY_FILES
+
+
+def source_file(root: Path, name: str) -> Path:
+    if (
+        not re.fullmatch(r"[A-Za-z0-9_./-]+", name)
+        or name.startswith("/")
+        or any(part.startswith(".") for part in Path(name).parts)
+    ):
+        raise ValueError("E_PACKAGE_SOURCE")
+    # Only the real source checkout can supply enumerated sibling component
+    # inputs. Sealed build roots contain their own immutable copies instead.
+    source_root = Path(__file__).resolve().parent
+    if (
+        name in GATEWAY_FILES
+        and root.resolve() == source_root
+        and source_root.name == "installer-v1"
+        and source_root.parent.name == "infrastructure"
+    ):
+        return Path(__file__).resolve().parents[2] / "services/gateway-agent/src" / name
+    return root / name
 
 
 def build(output: Path) -> None:
+    from host import reject_links
+
     source = Path(__file__).resolve().parent
     if output.exists() or output.is_symlink() or not output.parent.is_dir():
         raise ValueError("E_PACKAGE: new output file in an existing directory required")
@@ -123,7 +162,8 @@ with tempfile.TemporaryDirectory(prefix="kyrion-installer-") as directory:
             stream, mode="w", compression=zipfile.ZIP_DEFLATED
         ) as archive:
             for name in FILES:
-                path = source / name
+                path = source_file(source, name)
+                reject_links(path)
                 if path.is_symlink() or not path.is_file():
                     raise ValueError("E_PACKAGE: missing reviewed source")
                 archive.writestr(name, path.read_bytes())

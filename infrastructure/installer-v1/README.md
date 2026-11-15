@@ -174,6 +174,24 @@ installed configuration is not silently rewritten by a source-code change; a
 reviewed extension path remains required. See ADRs 0082 and 0083 and the evidence
 ledger for the remaining distributed installation work.
 
+### Foreground prepared Linux node
+
+The source archive and native builders now embed an explicit allowlist of the
+existing `services/gateway-agent` implementation. A frozen Linux installer can
+use `--prepare-node --node-config PRIVATE_PATH --node-url LOCAL_HTTPS_URL
+--node-token-file PRIVATE_CODE_FILE --node-certificate CONFIRMED_CERTIFICATE`.
+It displays the certificate fingerprint and requires `PAIR` before saving the
+existing protected enrollment state. A pending operation can be resumed with
+`--prepare-node --node-config PRIVATE_PATH`, without re-entering its secret.
+
+`--node-heartbeat --node-config PRIVATE_PATH` sends one actual target health
+report after explicit confirmation. It does not poll commands, start microphone
+capture, install a service, or assign task permissions. Windows prepared storage,
+end-user pairing-code transfer, dedicated service installation and task deployment
+remain separate open implementation work. These commands do not make the full
+distributed installer ready for user acceptance. The source Python archive still
+requires Python; the frozen executable uses its embedded interpreter.
+
 ### Resume an existing installation
 
 Rerun with identical target/hostname/IP/release and choose `resume`. A private,

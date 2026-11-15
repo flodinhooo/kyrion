@@ -1,5 +1,6 @@
 """Protected POSIX lifecycle with the HTTP boundary injected, no OS service claims."""
 
+import hashlib
 import json
 import secrets
 import sys
@@ -37,6 +38,28 @@ class PreparedEnrollment(unittest.TestCase):
         return enrollment.enroll_prepared(
             self.config, url="https://localhost:8443", token_file=self.token, identity=self.identity
         )
+
+    def test_changed_certificate_cannot_replace_the_reviewed_fingerprint_before_pairing(self):
+        certificate = self.root / "source-ca.pem"
+        reviewed = hashlib.sha256(b"reviewed certificate bytes").hexdigest()
+        certificate.write_bytes(b"replacement certificate bytes")
+        with (
+            patch.object(client, "enroll") as request,
+            patch.object(client, "trusted_context") as trust,
+            self.assertRaisesRegex(ValueError, "E_AGENT_TLS_CONFIGURATION"),
+        ):
+            enrollment.enroll_prepared(
+                self.config,
+                url="https://localhost:8443",
+                token_file=self.token,
+                certificate=certificate,
+                expected_ca_sha256=reviewed,
+                identity=self.identity,
+            )
+        request.assert_not_called()
+        trust.assert_not_called()
+        self.assertFalse(self.pending.exists())
+        self.assertFalse(self.config.with_name("agent.json.ca.pem").exists())
 
     def acknowledged(self, *_arguments, **options):
         saved = json.loads(enrollment.read_private(self.pending))

@@ -26,7 +26,7 @@ from urllib.parse import urljoin, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import backup_store
-from package import FILES
+from package import FILES, source_file
 
 
 class StopRedirect(urllib.request.HTTPRedirectHandler):
@@ -183,7 +183,7 @@ def main(kind: str = "crypto", worker: Path | None = None):
     source = Path(__file__).resolve().parents[2]
     destination = root / "opt/kyrion-installer"
     for name in FILES:
-        item = source / name
+        item = source_file(source, name)
         if item.is_symlink() or not item.is_file() or item.stat().st_size > 1024**2:
             raise ValueError("E_TEST_PUBLIC_SOURCE")
         output = destination / name

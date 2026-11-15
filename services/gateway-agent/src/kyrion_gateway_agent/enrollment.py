@@ -192,8 +192,11 @@ def enroll_prepared(
     url: str | None = None,
     token_file: Path | None = None,
     certificate: Path | None = None,
+    expected_ca_sha256: str | None = None,
     identity: dict[str, str] | None = None,
 ) -> AgentConfig:
+    if expected_ca_sha256 is not None and not re.fullmatch(r"[a-f0-9]{64}", expected_ca_sha256):
+        raise ValueError("E_AGENT_TLS_CONFIGURATION")
     path = path.absolute()
     private_directory(path.parent)
     pending = path.with_name(path.name + ".enrollment.json")
@@ -204,6 +207,8 @@ def enroll_prepared(
             value = validate_pending(
                 json.loads(read_private(pending), object_pairs_hook=unique_object), path
             )
+            if expected_ca_sha256 is not None and value["ca_sha256"] != expected_ca_sha256:
+                raise ValueError("E_AGENT_TLS_CONFIGURATION")
             if url is not None and core_url(url) != value["core_url"]:
                 raise ValueError("E_AGENT_ENROLLMENT_CONFLICT")
             if (
@@ -221,6 +226,8 @@ def enroll_prepared(
                 raise ValueError("E_AGENT_CONFIG_EXISTS")
             if url is None or token_file is None or identity is None:
                 raise ValueError("E_AGENT_ENROLLMENT_INPUT")
+            if expected_ca_sha256 is not None and certificate is None:
+                raise ValueError("E_AGENT_TLS_CONFIGURATION")
             token = read_private(token_file, 128).decode("ascii").strip()
             ca_path, ca_digest = None, None
             if certificate is not None:
@@ -230,6 +237,8 @@ def enroll_prepared(
                     raise ValueError("E_AGENT_TLS_CONFIGURATION")
                 selected = path.with_name(path.name + ".ca.pem")
                 ca_path, ca_digest = str(selected), hashlib.sha256(raw).hexdigest()
+                if expected_ca_sha256 is not None and ca_digest != expected_ca_sha256:
+                    raise ValueError("E_AGENT_TLS_CONFIGURATION")
                 if selected.exists():
                     if read_private(selected) != raw:
                         raise ValueError("E_AGENT_TLS_CONFIGURATION")

@@ -15,6 +15,44 @@ stage_sources = runpy.run_path(str(ROOT / "release/source_snapshot.py"))[
 
 
 class SourceSnapshot(unittest.TestCase):
+    def test_existing_agent_component_is_sealed_from_its_canonical_public_sources(self):
+        from package import GATEWAY_FILES, source_file
+
+        with tempfile.TemporaryDirectory() as directory:
+            sealed = Path(directory) / "sealed"
+            hashes = stage_sources(ROOT, sealed, GATEWAY_FILES)
+            self.assertEqual(set(hashes), set(GATEWAY_FILES))
+            for name in GATEWAY_FILES:
+                component_root = ROOT.parents[1] / "services/gateway-agent/src"
+                canonical = (
+                    component_root / name if component_root.is_dir() else ROOT / name
+                )
+                self.assertEqual(source_file(ROOT, name), canonical)
+                self.assertEqual((sealed / name).read_bytes(), canonical.read_bytes())
+            self.assertEqual(len(list(sealed.rglob("*.py"))), 9)
+
+    def test_temporary_or_unknown_sources_cannot_reach_sibling_agent_files(self):
+        from package import source_file
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(
+                source_file(root, "kyrion_gateway_agent/config.py"),
+                root / "kyrion_gateway_agent/config.py",
+            )
+            self.assertEqual(
+                source_file(ROOT, "kyrion_gateway_agent/not_reviewed.py"),
+                ROOT / "kyrion_gateway_agent/not_reviewed.py",
+            )
+            for name in (
+                "../secrets",
+                "kyrion_gateway_agent/.env",
+                "C:/private",
+                "/private",
+            ):
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    source_file(root, name)
+
     def test_mutable_checkout_cannot_change_sealed_compiler_input(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

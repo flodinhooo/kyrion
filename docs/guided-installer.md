@@ -8,6 +8,11 @@ The detailed [binding requirement matrix](installer-requirements.md) supersedes
 the coarse historical stage table below. Continuing source/test work is recorded
 in [the continuation evidence](status/2026-11-11-installer-continuation.md). The
 full product scope remains open; no user acceptance is requested for this state.
+The [embedded-node continuation](status/2026-11-15-installer-embedded-node.md)
+adds the existing gateway implementation to sealed native installer inputs and
+proves actual foreground pairing/target reporting through the frozen Linux
+installer. Service installation, owner-facing code export and full distributed
+task deployment remain implementation work.
 The [device-management continuation](status/2026-11-15-installer-device-management.md)
 adds revision-bound edits, persistent revocation, existing integration/voice task
 permissions and restricted local agent TLS ingress. Verified task authorization
