@@ -60,6 +60,7 @@ def run(
     interval: int = 15,
     command_interval: float = 0.25,
     stop: threading.Event | None = None,
+    report: Callable[[str], None] | None = None,
 ) -> None:
     if not sys.platform.startswith("linux") or not config.local_only:
         raise ValueError("E_AGENT_PLATFORM")
@@ -112,11 +113,15 @@ def run(
                         include_voice=gate.allows("voice"),
                     )
                     client.heartbeat(config, observed)
+                    if report is not None:
+                        report("connected")
                     next_heartbeat = now + interval
                 failures = 0
                 stop.wait(command_interval)
             except client.CoreRequestError as error:
                 gate.update(None)
+                if report is not None:
+                    report("disconnected")
                 if str(error) in {
                     "E_AGENT_URL",
                     "E_AGENT_TLS_REQUIRED",
@@ -147,3 +152,5 @@ def run(
             worker.join(timeout=15)
         if worker.is_alive():
             raise client.CoreRequestError("E_AGENT_EVENT_STOP_PENDING")
+        if report is not None:
+            report("stopped")

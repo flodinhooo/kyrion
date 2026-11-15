@@ -229,6 +229,36 @@ Do not use the old migration scripts as a general updater.
 
 ## Verification and releases
 
+### Prepared-node Linux boot service
+
+`--node-service install --target /var/lib/kyrion-node --node-url https://CORE:PORT
+--node-token-file /private/one-use-code --node-certificate /trusted/local-ca.pem`
+reviews the actual target and trust fingerprint before `SERVICE`. It requires a
+native Linux installer, root and systemd. It installs a system service under a
+dedicated non-login technical OS account, using the existing Core pairing and
+device identity. This does not create a second Kyrion user or Space. The worker
+has no capabilities or direct USB/microphone access; the current service profile
+supports the existing network integration transport.
+
+`--node-service status|repair|disable|remove --target /var/lib/kyrion-node` uses the
+same installation journal, target lock, host binding and recorded worker/unit.
+Repeated installation with the same reviewed enrollment inputs preserves the
+identity. Pending enrollment can resume without the original token arguments.
+Changed credentials, foreign units, worker modifications and copied-host state
+are refused. Service state and fresh acknowledged Core connectivity are separate.
+`remove` removes only the boot service: credentials, technical account and worker
+are retained for repair. It does not revoke the Core identity or constitute a
+complete data/software uninstall. Authorized device revocation is available in
+`--devices`. Node backup/update/data-removal integration remains open source work.
+
+`tests/integration/verify-node-service.py` tests the actual frozen worker,
+dedicated UID, systemd system service, Core/PostgreSQL/TLS, restart, reconnect and
+maintenance in an owned developer environment. It requires root and a separate
+unprivileged fixture user; it never activates real household hardware. Hosted
+execution is prepared in the manual Linux workflow, not implied by source edits.
+
+### Existing platform verification
+
 ```sh
 python -m unittest discover -s tests -v
 python -m compileall -q .

@@ -77,6 +77,7 @@ FILES = (
     "device_management.py",
     "node_transport.py",
     "node_entry.py",
+    "node_service.py",
     "identity_settings.py",
     "bootstrap_maintenance.py",
     "error_guidance.py",

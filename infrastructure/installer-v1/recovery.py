@@ -43,6 +43,8 @@ def load_installation(target: Path, verify: bool = True) -> Installation:
     ):
         raise ValueError("E_STATE")
     state = json.loads(path.read_text(encoding="utf-8"))
+    if state.get("backend") == "linux-prepared-node":
+        raise ValueError("E_NODE_PROFILE_OPERATION")
     config = state["configuration"]
     return Installation(
         target,

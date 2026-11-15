@@ -75,6 +75,16 @@ def main() -> int:
     actions.add_argument("--prepare-node", action="store_true")
     actions.add_argument("--node-heartbeat", action="store_true")
     actions.add_argument("--node-run", action="store_true")
+    actions.add_argument(
+        "--node-service", choices=("install", "repair", "status", "disable", "remove")
+    )
+    actions.add_argument(
+        "--background-node", action="store_true", help=argparse.SUPPRESS
+    )
+    actions.add_argument(
+        "--background-node-enroll", action="store_true", help=argparse.SUPPRESS
+    )
+    parser.add_argument("--node-ca-sha256", help=argparse.SUPPRESS)
     parser.add_argument("--node-config", type=Path)
     parser.add_argument("--node-url")
     parser.add_argument("--node-token-file", type=Path)
@@ -186,7 +196,18 @@ def main() -> int:
             args.node_token_file,
             args.node_certificate,
         )
-    ) and not (args.prepare_node or args.node_heartbeat or args.node_run):
+    ) and not (
+        args.prepare_node
+        or args.node_heartbeat
+        or args.node_run
+        or args.node_service
+        or args.background_node
+        or args.background_node_enroll
+    ):
+        parser.error("E_NODE_ARGUMENT")
+    if args.node_service and args.target is None:
+        parser.error("E_NODE_TARGET_REQUIRED")
+    if args.node_service and args.node_config is not None:
         parser.error("E_NODE_ARGUMENT")
     if args.ollama_model is not None and args.ollama not in {"pull", "remove"}:
         parser.error("E_OLLAMA_MODEL_ARGUMENT")
@@ -202,6 +223,18 @@ def main() -> int:
         else:
             args.target = Path("/var/lib/kyrion-install")
     args.installer_version = build["version"]
+    if args.background_node or args.background_node_enroll:
+        from node_entry import background
+
+        try:
+            return background(args)
+        except (OSError, ValueError, RuntimeError, TypeError, KeyError) as error:
+            code = str(error).split(":", 1)[0]
+            print(
+                code if re.fullmatch(r"E_[A-Z_]{1,77}", code) else "E_NODE_OPERATION",
+                file=sys.stderr,
+            )
+            return 2
     if args.channel_info:
         from release_channel import summary as channel_summary
 
@@ -309,6 +342,31 @@ def main() -> int:
         (ROOT / "locales" / (language + ".json")).read_text(encoding="utf-8")
     )
     print(messages["intro"])
+    if args.node_service:
+        from node_service import guided as guided_node_service
+
+        try:
+            return guided_node_service(args, messages)
+        except KeyboardInterrupt:
+            return 130
+        except (
+            OSError,
+            ValueError,
+            RuntimeError,
+            TypeError,
+            KeyError,
+            subprocess.SubprocessError,
+        ) as error:
+            code = str(error).split(":", 1)[0]
+            advice = guidance(code, messages)
+            if advice:
+                print(advice, file=sys.stderr)
+            print(
+                code if re.fullmatch(r"E_[A-Z_]{1,77}", code) else "E_NODE_OPERATION",
+                file=sys.stderr,
+            )
+            print(messages["failed"], file=sys.stderr)
+            return 2
     if args.prepare_node or args.node_heartbeat or args.node_run:
         from node_entry import run as run_node
 

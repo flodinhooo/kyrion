@@ -117,7 +117,12 @@ def main() -> None:
 
 
 def run_prepared(
-    config: AgentConfig, *, interval: int = 15, command_interval: float = 0.25
+    config: AgentConfig,
+    *,
+    interval: int = 15,
+    command_interval: float = 0.25,
+    stop: threading.Event | None = None,
+    report: Callable[[str], None] | None = None,
 ) -> None:
     from kyrion_gateway_agent.prepared_runtime import run
 
@@ -127,6 +132,8 @@ def run_prepared(
         _forward_button_events,
         interval=interval,
         command_interval=command_interval,
+        stop=stop,
+        report=report,
     )
 
 

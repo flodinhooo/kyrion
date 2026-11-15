@@ -51,6 +51,42 @@ def test_empty_tasks_report_only_basic_health_and_never_poll_commands():
     execute.assert_not_called()
 
 
+def test_service_reports_connection_only_after_acknowledged_heartbeat():
+    stop = threading.Event()
+    states = []
+    with (
+        patch.object(prepared_runtime.sys, "platform", "linux"),
+        patch.object(
+            client, "task_policy", return_value=client.TaskLease(frozenset(), float("inf"))
+        ),
+        patch.object(client, "heartbeat", side_effect=lambda *_: stop.set()),
+        patch.object(prepared_runtime, "collect_health", return_value={}),
+    ):
+        prepared_runtime.run(CONFIG, Mock(), lambda *_: None, stop=stop, report=states.append)
+    assert states == ["connected", "stopped"]
+
+
+def test_failed_heartbeat_never_reports_connected():
+    stop = threading.Event()
+    states = []
+
+    def report(state):
+        states.append(state)
+        stop.set()
+
+    with (
+        patch.object(prepared_runtime.sys, "platform", "linux"),
+        patch.object(
+            client, "task_policy", return_value=client.TaskLease(frozenset(), float("inf"))
+        ),
+        patch.object(client, "heartbeat", side_effect=client.CoreRequestError("synthetic", 403)),
+        patch.object(prepared_runtime, "collect_health", return_value={}),
+        pytest.raises(client.CoreRequestError),
+    ):
+        prepared_runtime.run(CONFIG, Mock(), lambda *_: None, stop=stop, report=report)
+    assert states == ["disconnected", "stopped"]
+
+
 def test_expiring_lease_after_claim_fails_command_without_executing_it():
     stop = threading.Event()
     execute = Mock()

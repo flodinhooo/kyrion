@@ -1,6 +1,20 @@
 """Presentation hints for stable Core/installer error codes; no authority here."""
 
 KEYS = {
+    **dict.fromkeys(
+        (
+            "E_NODE_SERVICE_ACCOUNT",
+            "E_NODE_SERVICE_IDENTITY",
+            "E_NODE_SERVICE_UNIT",
+            "E_NODE_SERVICE_WORKER",
+            "E_NODE_SERVICE_PATH",
+            "E_NODE_SERVICE_STATUS",
+            "E_NODE_SYSTEMD_REQUIRED",
+            "E_NODE_PROFILE_OPERATION",
+            "E_NODE_SERVICE_ENROLLMENT",
+        ),
+        "nodeServiceError",
+    ),
     "E_AGENT_RUNTIME_BUSY": "nodeRuntimeBusy",
     "E_AGENT_ACCESS_REVOKED": "nodeAccessDenied",
     "E_AGENT_TASK_POLICY_UNSUPPORTED": "nodePolicyUnavailable",

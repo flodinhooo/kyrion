@@ -162,6 +162,22 @@ jobs:
               --work "$3/build/isolated-frozen-node-work" \
               --report "$3/build/isolated-frozen-node-report.json"
           ' kyrion-frozen-node "$(id -u)" "$(id -g)" "$PWD" "$jar" "$digest" "$JAVA_HOME/bin/java" "$worker" "$worker_digest" "$version"
+      - name: Exercise prepared-node system service with a real dedicated non-root account
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="/var/lib/kyrion-node-service-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sudo mkdir -m 755 "$work"
+          jar="$PWD/services/core/build/libs/kyrion-core-0.1.0-SNAPSHOT.jar"
+          worker="$PWD/build/native-linux-worker-unpacked/kyrion-installer"
+          sudo "$PWD/build/acceptance-python/bin/python" \
+            "$PWD/infrastructure/installer-v1/tests/integration/verify-node-service.py" \
+            --installer "$worker" --installer-sha256 "$(sha256sum "$worker" | cut -d ' ' -f 1)" \
+            --core-jar "$jar" --core-sha256 "$(sha256sum "$jar" | cut -d ' ' -f 1)" \
+            --java "$JAVA_HOME/bin/java" --postgres-bin /usr/lib/postgresql/17/bin \
+            --fixture-user "$(id -un)" --work "$work" \
+            --report "$PWD/build/linux-node-service-report.json"
       - name: Exercise real Flyway update, interrupted activation and database recovery
         shell: bash
         run: |
@@ -190,6 +206,7 @@ jobs:
             build/isolated-update-report.json
             build/isolated-agent-report.json
             build/isolated-frozen-node-report.json
+            build/linux-node-service-report.json
             build/linux-update-unit-report.json
             build/linux-startup-service-report.json
             build/linux-backup-timer-report.json
