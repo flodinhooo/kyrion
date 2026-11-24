@@ -34,7 +34,7 @@ with patch('sys.stdin.isatty',return_value=True),patch('builtins.input',return_v
             self.assertEqual(result.returncode, 2)
             expected = (
                 "E_NODE_CONFIG_REQUIRED"
-                if sys.platform.startswith("linux")
+                if sys.platform.startswith("linux") or sys.platform == "win32"
                 else "E_AGENT_PLATFORM"
             )
             self.assertIn(expected, result.stderr)

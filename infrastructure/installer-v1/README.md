@@ -10,7 +10,10 @@ before it creates an enrollment code. The target persists and verifies the
 reviewed Space through foreground and Linux service enrollment, including lost
 acknowledgements. Existing unbound configurations remain readable. Native Windows
 transfer parsing/materialization uses the existing agent's private file adapter;
-this does not enable Windows prepared-node services or attest their runtime.
+Windows foreground pairing and an explicit single heartbeat are now available
+on the tested NT 10.0.26300 amd64 target; see the
+[entry acceptance and private artifacts](../../docs/status/2026-11-24-installer-windows-node-entry.md).
+This does not enable Windows prepared-node services or continuous task runtime.
 
 Read [inventory, stages, support matrix and acceptance](../../docs/guided-installer.md)
 and [ADR 0045](../../docs/adr/0045-guided-local-installer.md).

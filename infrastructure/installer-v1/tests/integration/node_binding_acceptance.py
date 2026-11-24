@@ -1,8 +1,13 @@
 """Actual Core/TLS and Windows private enrollment; no SCM or task-runtime claims."""
 
+import contextlib
 import hashlib
+import io
+import json
 import secrets
 import uuid
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -10,8 +15,10 @@ def exercise_node_binding(request, token, root, core_port):
     from node_entry import component
 
     component(require_linux=False)
-    from kyrion_gateway_agent import client, enrollment, windows_storage
+    from kyrion_gateway_agent import client, windows_storage
     from kyrion_gateway_agent.health import platform_identity
+    from node_entry import run
+    from node_pairing import Pairing
 
     space = request("GET", "/v1/space", token=token)["id"]
     before = request("GET", "/v1/gateways", token=token)
@@ -45,10 +52,34 @@ def exercise_node_binding(request, token, root, core_port):
 
     with windows_storage.temporary_directory() as private:
         config = private / "agent.json"
-        source = private / "code"
-        ca = private / "ca.pem"
-        windows_storage.publish(source, code["enrollmentToken"].encode("ascii"))
-        windows_storage.publish(ca, certificate.read_bytes())
+        packet = private / "pairing.json"
+        windows_storage.publish(
+            packet,
+            json.dumps(
+                Pairing(
+                    url,
+                    certificate.read_text(encoding="ascii"),
+                    digest,
+                    code["id"],
+                    code["expiresAt"],
+                    code["enrollmentToken"],
+                    space,
+                    str(uuid.uuid4()),
+                ).document()
+            ).encode("utf-8"),
+        )
+        args = SimpleNamespace(
+            prepare_node=True,
+            node_config=config,
+            node_pairing=packet,
+            node_url=None,
+            node_token_file=None,
+            node_certificate=None,
+            node_run=False,
+        )
+        messages = json.loads(
+            (Path(__file__).resolve().parents[2] / "locales/en.json").read_bytes()
+        )
         original = client.enroll
         observed = []
 
@@ -59,21 +90,31 @@ def exercise_node_binding(request, token, root, core_port):
 
         with patch.object(client, "enroll", side_effect=lost_ack):
             try:
-                enrollment.enroll_prepared(
-                    config,
-                    url=url,
-                    token_file=source,
-                    certificate=ca,
-                    expected_ca_sha256=digest,
-                    expected_space_id=space,
-                    identity=identity,
-                )
+                with (
+                    patch("builtins.input", return_value="PAIR"),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    run(args, messages)
             except client.CoreRequestError as error:
                 if str(error) != "E_SYNTHETIC_LOST_ACK_AFTER_REAL_CORE_COMMIT":
                     raise
             else:
                 raise ValueError("E_NODE_BINDING_FIXTURE_FAULT_NOT_REACHED")
-        result = enrollment.enroll_prepared(config)
+        with (
+            patch("builtins.input", return_value="PAIR"),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            run(args, messages)
+        from kyrion_gateway_agent.config import AgentConfig
+
+        result = AgentConfig.load(config)
+        args.prepare_node = False
+        args.node_pairing = None
+        with (
+            patch("builtins.input", return_value="HEARTBEAT"),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            run(args, messages)
         after = request("GET", "/v1/gateways", token=token)
         if (
             result.space_id != space
@@ -88,6 +129,7 @@ def exercise_node_binding(request, token, root, core_port):
         "wrongSpaceClaimDoesNotConsumeCode": True,
         "lostAckSameNodeAndCredential": True,
         "actualWindowsPrivateAgentStorage": True,
+        "actualWindowsInstallerPairingImportAndHeartbeat": True,
         "nativeTargetIdentity": identity,
         "scmAcceptance": False,
         "fault": "response discarded after actual Core commit",

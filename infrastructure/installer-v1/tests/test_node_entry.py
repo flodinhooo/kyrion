@@ -108,7 +108,8 @@ class NodeEntryTests(unittest.TestCase):
             node_entry.run(self.args, self.messages)
         enroll.assert_not_called()
 
-    def test_windows_prepared_storage_is_not_misrepresented_as_supported(self):
+    def test_windows_task_runtime_is_not_misrepresented_as_supported(self):
+        self.args.node_run = True
         with (
             patch("node_entry.sys.platform", "win32"),
             self.assertRaisesRegex(ValueError, "E_AGENT_PLATFORM"),

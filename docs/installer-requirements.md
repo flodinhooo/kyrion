@@ -23,6 +23,13 @@ visible DE/EN uncertainty in the local interface. Core/PostgreSQL, native Window
 APIs, Linux regressions and eight Chromium UI cases are verified separately.
 Windows prepared-node CLI/runtime/SCM and complete R23-R29 remain open.
 
+The [Windows foreground entry checkpoint](status/2026-11-24-installer-windows-node-entry.md)
+supersedes the CLI portion of that limitation: actual private packet import,
+same-identity recovery and explicit status heartbeat pass on NT 10.0.26300.
+Private native Windows/Linux amd64 artifacts were built and source-verified.
+Continuous Windows runtime, SCM deployment and complete task placement remain
+not implemented; there is no full Windows node-support or release claim.
+
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 

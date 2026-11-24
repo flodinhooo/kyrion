@@ -97,7 +97,7 @@ def background(args) -> int:
 
 
 def run(args, messages: dict[str, str]) -> int:
-    component()
+    component(require_linux=sys.platform != "win32" or getattr(args, "node_run", False))
     if args.node_config is None:
         raise ValueError("E_NODE_CONFIG_REQUIRED")
     from kyrion_gateway_agent import client
@@ -111,8 +111,19 @@ def run(args, messages: dict[str, str]) -> int:
     )
     from kyrion_gateway_agent.health import collect_health, platform_identity
 
+    if sys.platform == "win32":
+        version = sys.getwindowsversion()
+        if (
+            version.major != 10
+            or version.build < 22000
+            or platform_identity()["architecture"] != "amd64"
+        ):
+            raise ValueError("E_AGENT_PLATFORM")
+
     config_path = args.node_config.absolute()
     print(messages["nodeForegroundScope"])
+    if sys.platform == "win32":
+        print(messages["nodeWindowsForegroundScope"])
     print(json.dumps({"configuration": str(config_path)}, ensure_ascii=True))
     if args.prepare_node:
         from host import inventory
@@ -208,7 +219,7 @@ def run(args, messages: dict[str, str]) -> int:
     print(messages["nodeHeartbeatReview"])
     if input("[HEARTBEAT/CANCEL]: ").strip() != "HEARTBEAT":
         return 0
-    client.heartbeat(config, collect_health())
+    client.heartbeat(config, collect_health(storage_path=config_path.parent))
     print(
         json.dumps(
             {
