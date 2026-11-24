@@ -37,7 +37,7 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
   browser,
   request,
 }) => {
-  test.setTimeout(180000);
+  test.setTimeout(240000);
   const response = await request.post(
     `${provider}/realms/master/protocol/openid-connect/token`,
     {
@@ -50,12 +50,33 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     },
   );
   expect(response.status()).toBe(200);
-  const token: string = (await response.json()).access_token;
+  let token: string = (await response.json()).access_token;
   async function admin(path: string, method = "GET", data?: unknown) {
-    const result = await request.fetch(
-      `${provider}/admin/realms/kyrion${path}`,
-      { method, headers: { authorization: `Bearer ${token}` }, data },
-    );
+    let result = await request.fetch(`${provider}/admin/realms/kyrion${path}`, {
+      method,
+      headers: { authorization: `Bearer ${token}` },
+      data,
+    });
+    if (result.status() === 401) {
+      const fresh = await request.post(
+        `${provider}/realms/master/protocol/openid-connect/token`,
+        {
+          form: {
+            client_id: "admin-cli",
+            grant_type: "password",
+            username: "acceptance-admin",
+            password: settings.IDENTITY_ADMIN_PASSWORD,
+          },
+        },
+      );
+      expect(fresh.status()).toBe(200);
+      token = (await fresh.json()).access_token;
+      result = await request.fetch(`${provider}/admin/realms/kyrion${path}`, {
+        method,
+        headers: { authorization: `Bearer ${token}` },
+        data,
+      });
+    }
     expect(result.status()).toBeLessThan(300);
     return result;
   }
@@ -110,6 +131,7 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
       .locator("#kc-totp-secret-key")
       .textContent())!.trim();
     const enrollmentCode = otp(seed);
+    let lastOtp = enrollmentCode;
     await page.locator("#totp").fill(enrollmentCode);
     await page.locator("#userLabel").fill("Isolated test authenticator");
     await submit();
@@ -119,16 +141,23 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     await page
       .getByRole("button", { name: "Save recovery codes", exact: true })
       .click();
-    const recovery = (
-      await page.locator("#kc-recovery-codes-list li").first().innerText()
-    )
-      .replace(/^\d+:\s*/, "")
-      .trim();
+    const recoveryCodes = (
+      await page.locator("#kc-recovery-codes-list li").allTextContents()
+    ).map((value) => value.replace(/^\d+:\s*/, "").trim());
+    const recovery = recoveryCodes[0];
+    let recoveryUsed = 1;
     await page.locator("#kcRecoveryCodesConfirmationCheck").check();
     await page.locator("#saveRecoveryAuthnCodesBtn").click();
     await expect(
       page.getByRole("heading", { name: "My account", exact: true }),
     ).toBeVisible();
+    const firstInventory = await context.request.get(
+      `${website}/api/account/methods`,
+    );
+    expect(firstInventory.status()).toBe(200);
+    const firstMethods = await firstInventory.json();
+    expect(firstMethods.inventory.hasPassword).toBe(true);
+    expect(JSON.stringify(firstMethods)).not.toContain(seed);
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await context.clearCookies();
     await page.reload();
@@ -148,7 +177,11 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
         intervals: [1000],
       })
       .toBe(true);
-    await page.locator("#otp").fill(otp(seed));
+    await expect
+      .poll(() => otp(seed) !== lastOtp, { timeout: 35000, intervals: [1000] })
+      .toBe(true);
+    lastOtp = otp(seed);
+    await page.locator("#otp").fill(lastOtp);
     await submit();
     await expect(
       page.getByRole("heading", { name: "My account", exact: true }),
@@ -177,7 +210,7 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     cdp.on("WebAuthn.credentialAsserted", () => {
       assertions++;
     });
-    await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    const {authenticatorId}=await cdp.send("WebAuthn.addVirtualAuthenticator", {
       options: {
         protocol: "ctap2",
         transport: "internal",
@@ -222,6 +255,193 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
       page.getByRole("heading", { name: "My account", exact: true }),
     ).toBeVisible();
     await expect.poll(() => assertions).toBeGreaterThan(0);
+    const listed = await context.request.get(`${website}/api/account/methods`);
+    expect(listed.status()).toBe(200);
+    const body = await listed.json();
+    const selected: { id: string; label: string } = body.inventory.methods.find(
+      (m: { kind: string }) => m.kind === "passkey",
+    );
+    expect(!!selected).toBe(true);
+    const currentSession = await (
+      await context.request.get(`${website}/api/account/session`)
+    ).json();
+    const invalid = await context.request.post(
+      `${website}/api/account/remove`,
+      {
+        headers: { origin: website },
+        form: {
+          locale: "en",
+          csrf: currentSession.session.csrf,
+          credentialId: selected.id,
+        },
+        maxRedirects: 0,
+      },
+    );
+    expect(invalid.status()).toBe(400);
+    const foreign = await context.request.post(
+      `${website}/api/account/remove`,
+      {
+        headers: { origin: website },
+        form: {
+          locale: "en",
+          csrf: currentSession.session.csrf,
+          credentialId: "11111111-1111-4111-8111-111111111111",
+          confirm: "yes",
+        },
+        maxRedirects: 0,
+      },
+    );
+    expect(foreign.status()).toBe(303);
+    expect(foreign.headers().location).toContain("CREDENTIAL_REMOVAL_BLOCKED");
+    async function removal(
+      cancel: boolean,
+      target: { id: string; label: string } = selected,
+    ) {
+      await page.goto(`${website}/en/account`);
+      const region = page.getByRole("region", {
+        name: "Your sign-in methods",
+        exact: true,
+      });
+      const row = region.locator("li").filter({ hasText: target.label });
+      await row.locator("summary").click();
+      await row.getByRole("checkbox").check();
+      await row
+        .getByRole("button", {
+          name: "Verify identity and remove",
+          exact: true,
+        })
+        .click();
+      await expect
+        .poll(
+          async () =>
+            (await page.locator("#kc-accept").isVisible()) ||
+            (await page.locator("#password").isVisible()) ||
+            (await page.locator("#otp").isVisible()) ||
+            (await page.locator("#recoveryCodeInput").isVisible()),
+        )
+        .toBe(true);
+      if (await page.locator("#password").isVisible()) {
+        if (
+          (await page.locator("#username").count()) &&
+          (await page.locator("#username").isEditable())
+        )
+          await page.locator("#username").fill(username);
+        await page.locator("#password").fill(password);
+        await page.locator("#kc-login").click();
+      }
+      await expect
+        .poll(
+          async () =>
+            (await page.locator("#kc-accept").isVisible()) ||
+            (await page.locator("#otp").isVisible()) ||
+            (await page.locator("#recoveryCodeInput").isVisible()),
+        )
+        .toBe(true);
+      if (await page.locator("#otp").isVisible()) {
+        await expect
+          .poll(() => otp(seed) !== lastOtp, {
+            timeout: 35000,
+            intervals: [1000],
+          })
+          .toBe(true);
+        lastOtp = otp(seed);
+        await page.locator("#otp").fill(lastOtp);
+        await submit();
+      }
+      await expect
+        .poll(
+          async () =>
+            (await page.locator("#kc-accept").isVisible()) ||
+            (await page.locator("#recoveryCodeInput").isVisible()),
+        )
+        .toBe(true);
+      if (await page.locator("#recoveryCodeInput").isVisible()) {
+        await page
+          .locator("#recoveryCodeInput")
+          .fill(recoveryCodes[recoveryUsed++]);
+        await submit();
+      }
+      try {
+        await expect(page.locator("#kc-accept")).toBeVisible();
+      } catch (error) {
+        console.info(
+          JSON.stringify(
+            await page.evaluate(() => ({
+              path: location.pathname,
+              fields: Array.from(document.querySelectorAll("input")).map(
+                (e) => e.id,
+              ),
+              headings: Array.from(document.querySelectorAll("h1,h2")).map(
+                (e) => e.textContent?.trim(),
+              ),
+            })),
+          ),
+        );
+        throw error;
+      }
+      await page.locator(cancel ? "#kc-decline" : "#kc-accept").click();
+      await expect(
+        page.getByRole("heading", { name: "My account", exact: true }),
+      ).toBeVisible();
+    }
+    await removal(true);
+    expect(
+      (
+        await (
+          await context.request.get(`${website}/api/account/methods`)
+        ).json()
+      ).inventory.methods.some((m: { id: string }) => m.id === selected.id),
+    ).toBe(true);
+    await removal(false);
+    // Stop the virtual key from endlessly auto-answering conditional requests
+    // with its intentionally retained, now revoked credential. Use password fallback.
+    await cdp.send("WebAuthn.setAutomaticPresenceSimulation",{authenticatorId,enabled:false});
+    const remaining = await (
+      await context.request.get(`${website}/api/account/methods`)
+    ).json();
+    expect(
+      remaining.inventory.methods.some(
+        (m: { id: string }) => m.id === selected.id,
+      ),
+    ).toBe(false);
+    expect(
+      remaining.inventory.methods.some(
+        (m: { kind: string }) => m.kind === "otp",
+      ),
+    ).toBe(true);
+    const otpMethod = remaining.inventory.methods.find(
+      (m: { kind: string }) => m.kind === "otp",
+    );
+    await removal(false, otpMethod);
+    const afterOtp = await (
+      await context.request.get(`${website}/api/account/methods`)
+    ).json();
+    expect(
+      afterOtp.inventory.methods.some(
+        (m: { kind: string }) => m.kind === "otp",
+      ),
+    ).toBe(false);
+    await removal(
+      false,
+      afterOtp.inventory.methods.find(
+        (m: { kind: string }) => m.kind === "recovery",
+      ),
+    );
+    const afterRecovery = await (
+      await context.request.get(`${website}/api/account/methods`)
+    ).json();
+    expect(afterRecovery.inventory.methods).toEqual([]);
+    expect(afterRecovery.inventory.hasPassword).toBe(true);
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await context.clearCookies();
+    await page.goto(`${website}/en/account`);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.locator("#username").fill(username);
+    await page.locator("#password").fill(password);
+    await page.locator("#kc-login").click();
+    await expect(
+      page.getByRole("heading", { name: "My account", exact: true }),
+    ).toBeVisible();
   } finally {
     await context.close();
     await admin(`/users/${id}`, "DELETE");

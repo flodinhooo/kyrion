@@ -1,3 +1,8 @@
+import type { RemovalAudit } from "@/lib/account/store";
+import {
+  credentialId,
+  fetchInventory,
+} from "@/lib/account/credential-inventory";
 import { isAccountAction } from "@/lib/account/actions";
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
@@ -52,6 +57,17 @@ export async function GET(request: NextRequest, context: Context) {
     );
   const store = new AccountStore(database(config.databaseUrl), config);
   try {
+    if (operation === "methods") {
+      const inventory = await store.credentialInventory(
+        request.cookies.get(sessionCookie)?.value ?? "",
+      );
+      return protect(
+        NextResponse.json(
+          inventory ? { inventory } : { code: "UNAUTHENTICATED" },
+          { status: inventory ? 200 : 401 },
+        ),
+      );
+    }
     if (operation === "session") {
       const session = await store.session(
         request.cookies.get(sessionCookie)?.value ?? "",
@@ -74,11 +90,38 @@ export async function GET(request: NextRequest, context: Context) {
           new URL(config.callback + request.nextUrl.search),
           flow,
         );
+        let removal: RemovalAudit | undefined;
+        if (flow.destination === "remove") {
+          if (
+            !credentialId(flow.credentialId) ||
+            !credentialId(flow.removalCorrelation)
+          )
+            throw Error("Invalid removal audit reference");
+          removal = {
+            credentialId: flow.credentialId,
+            correlationId: flow.removalCorrelation,
+            result: "CREDENTIAL_REMOVAL_RETURNED",
+          };
+          try {
+            const inventory = await fetchInventory(
+              config,
+              identity.accessToken,
+            );
+            removal.result = inventory.methods.some(
+              (method) => method.id === flow.credentialId,
+            )
+              ? "CREDENTIAL_REMOVAL_RETAINED"
+              : "CREDENTIAL_REMOVAL_ABSENT";
+          } catch {
+            /* Do not discard a valid login if a separate inventory read fails. */
+          }
+        }
         const session = await store.issue(
           identity.issuer,
           identity.subject,
           identity.expiresAt,
           identity.refreshToken,
+          removal,
         );
         const previous = request.cookies.get(sessionCookie)?.value;
         if (previous) await store.revoke(previous);
@@ -187,6 +230,7 @@ export async function POST(request: NextRequest, context: Context) {
         config.origin,
       );
       let expectedSubject: string | null = null;
+      let selectedCredential: string | null = null;
       if (isAccountAction(operation)) {
         const token = request.cookies.get(sessionCookie)?.value ?? "";
         const session = await store.session(token);
@@ -201,6 +245,30 @@ export async function POST(request: NextRequest, context: Context) {
           return protect(
             NextResponse.json({ code: "CSRF_INVALID" }, { status: 403 }),
           );
+        if (operation === "remove") {
+          const selected = form.get("credentialId");
+          if (!credentialId(selected) || form.get("confirm") !== "yes")
+            return protect(
+              NextResponse.json(
+                { code: "INVALID_REMOVAL_INTENT" },
+                { status: 400 },
+              ),
+            );
+          const inventory = await store.credentialInventory(token);
+          if (!inventory)
+            return protect(
+              NextResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 }),
+            );
+          const method = inventory.methods.find((item) => item.id === selected);
+          if (!method?.removable) {
+            failureTarget.searchParams.set(
+              "error",
+              "CREDENTIAL_REMOVAL_BLOCKED",
+            );
+            return protect(NextResponse.redirect(failureTarget, 303));
+          }
+          selectedCredential = selected;
+        }
         expectedSubject = await store.actionSubject(token);
         if (!expectedSubject)
           return protect(
@@ -218,6 +286,7 @@ export async function POST(request: NextRequest, context: Context) {
             ? "connect"
             : "account",
         expectedSubject,
+        credentialId: selectedCredential,
       } as const;
       const url = await authorizationUrl(
         config,

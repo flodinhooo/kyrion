@@ -74,8 +74,9 @@ and authenticators were unchanged. DE/EN privacy notices now describe the option
 credential data and its ownership; production build and 19 focused account/privacy
 tests passed after that text-only update.
 
-Real device approval and credential enumeration/removal remain separate acceptance
-and product follow-ups. This result is enrollment/login acceptance, not a claim
+Real device approval remains separate acceptance. The subsequent
+[method-management follow-up](2026-11-24-account-methods.md) implements the inventory
+and removal work. This original result is enrollment/login acceptance, not a claim
 that all security administration or operational recovery work is finished.
 
 See [provider configuration](../../infrastructure/identity/SECURITY.md)

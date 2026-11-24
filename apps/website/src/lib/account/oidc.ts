@@ -1,3 +1,4 @@
+import { credentialId } from "./credential-inventory";
 import { accountActions, isAccountAction } from "./actions";
 import * as oidc from "openid-client";
 import type { AccountConfig } from "./config";
@@ -27,6 +28,8 @@ export async function authorizationUrl(
   flow: Flow,
   register = false,
 ) {
+  if (flow.destination === "remove" && !credentialId(flow.credentialId))
+    throw Error("Invalid removal intent");
   const client = await discover(config);
   return oidc.buildAuthorizationUrl(client, {
     redirect_uri: config.callback,
@@ -40,7 +43,11 @@ export async function authorizationUrl(
     ui_locales: flow.locale,
     ...(isAccountAction(flow.destination)
       ? {
-          kc_action: accountActions[flow.destination],
+          kc_action:
+            flow.destination === "remove"
+              ? `delete_credential:${flow.credentialId}`
+              : accountActions[flow.destination],
+          ...(flow.destination === "remove" ? { max_age: "0" } : {}),
         }
       : {}),
   });
@@ -51,6 +58,8 @@ export async function authenticate(
   callback: URL,
   flow: Flow,
 ) {
+  if (flow.destination === "remove" && !credentialId(flow.credentialId))
+    throw Error("Invalid removal intent");
   const client = await discover(config);
   const result = await oidc.authorizationCodeGrant(client, callback, {
     pkceCodeVerifier: flow.verifier,
@@ -73,11 +82,19 @@ export async function authenticate(
     (!flow.expectedSubject || claims.sub !== flow.expectedSubject)
   )
     throw new Error("Account action identity mismatch");
+  if (
+    flow.destination === "remove" &&
+    (typeof claims.auth_time !== "number" ||
+      claims.auth_time < Date.now() / 1000 - 120 ||
+      claims.auth_time > Date.now() / 1000 + 60)
+  )
+    throw Error("Fresh authentication required");
   return {
     issuer: claims.iss,
     subject: claims.sub,
     expiresAt: claims.exp,
     refreshToken: result.refresh_token,
+    accessToken: result.access_token,
   };
 }
 
@@ -103,6 +120,7 @@ export async function renewIdentity(
       subject: claims.sub,
       expiresAt: claims.exp,
       refreshToken: result.refresh_token ?? refreshToken,
+      accessToken: result.access_token,
     };
   } catch (error) {
     if (

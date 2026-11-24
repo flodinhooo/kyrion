@@ -3,6 +3,7 @@ export const accountActions = {
   password: "UPDATE_PASSWORD",
   otp: "CONFIGURE_TOTP",
   passkey: "webauthn-register-passwordless",
+  remove: "delete_credential",
   recovery: "CONFIGURE_RECOVERY_AUTHN_CODES",
 } as const;
 

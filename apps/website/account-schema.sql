@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS website_oidc_flow (
     locale text NOT NULL CHECK (locale IN ('en','de')),
     destination text NOT NULL DEFAULT 'account',
     expected_subject text,
+    credential_id text,
     expires_at timestamptz NOT NULL
 );
 CREATE TABLE IF NOT EXISTS website_session (
@@ -28,8 +29,9 @@ CREATE TABLE IF NOT EXISTS website_account_event (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id uuid REFERENCES website_account(id) ON DELETE SET NULL,
     event_code text NOT NULL CHECK (event_code IN ('SESSION_CREATED', 'SESSION_REVOKED', 'INSTALLATION_LINKED',
-                                                   'INSTALLATION_UNLINKED')),
+                                                   'INSTALLATION_UNLINKED','CREDENTIAL_REMOVAL_STARTED','CREDENTIAL_REMOVAL_RETURNED','CREDENTIAL_REMOVAL_ABSENT','CREDENTIAL_REMOVAL_RETAINED')),
     correlation_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    credential_id uuid,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS website_installation_link

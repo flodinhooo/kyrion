@@ -577,6 +577,10 @@
           "body": "Die Website-Anmeldung verwendet den zentralen Identitätsanbieter und eine separate Datenbank für Website-Sitzungen. Die Website speichert eine erzeugte Account-Kennung, Aussteller und Subjekt des Identitätsanbieters, Anmelde- und Sitzungsdatensätze, verschlüsselte Erneuerungsdaten sowie Sicherheitsereignisse. Passwörter und E-Mail-Verifizierung verwaltet der Identitätsanbieter. Ein Website-Account gewährt keinen Zugriff auf eine lokale Kyrion-Installation. Website-Abmeldung, Abmeldung beim zentralen Anbieter und lokale Installationssitzungen sind getrennt. Bei einer Verknüpfung speichert die Website außerdem Installations- und lokale Benutzerkennungen, den Namen und Typ des Bereichs, den lokalen Benutzernamen sowie Verknüpfungs- und Bestätigungszeitpunkte. Die lokale Installation speichert die verifizierte zentrale E-Mail-Adresse und den Anzeigenamen. Beim lokalen Trennen wird die Entfernung des Website-Eintrags gemeldet; ohne Verbindung kann sich dies verzögern. Inhalte, Geräte und lokale Passwörter werden dafür nicht übertragen. Bei der optionalen Einrichtung einer Authenticator-App speichert der zentrale Anmeldedienst die geschützte TOTP-Konfiguration. Für Passkeys speichert er öffentliche Schlüssel und Zugangsmittel-Metadaten; private Schlüssel und biometrische Prüfung bleiben beim Authenticator oder Passwortmanager. Wiederherstellungscodes erzeugt und speichert der zentrale Anmeldedienst in geschützter Form. Die Website speichert diese Anmeldegeheimnisse nicht."
         },
         {
+          "title": "Anmeldemethoden verwalten",
+          "body": "Für die Sicherheitsübersicht ruft die Website Namen, Typen und Einrichtungsdaten deiner Anmeldemethoden mit deinen eigenen Kontoberechtigungen beim zentralen Anmeldedienst ab. Anforderungen zum Entfernen und ihre bestätigte Rückkehr werden mit Account-, Methoden- und Vorgangskennungen im Website-Sicherheitsprotokoll erfasst. Passwörter, Authenticator-Geheimnisse, Wiederherstellungscodes und private Schlüssel sind weder in dieser Übersicht noch im Protokoll enthalten. Das Entfernen beendet keine bestehenden Sitzungen und löscht den Eintrag nicht automatisch aus deinem Passwortmanager."
+        },
+        {
           "title": "Sitzungsgültigkeit und gespeicherte Datensätze",
           "body": "Die Website kann dich auf deinem Gerät bis zu 30 Tage angemeldet halten. Die kurze Identitätsprüfung wird im Hintergrund beim zentralen Anmeldedienst erneuert. Dafür speichert die Website einen geschützten Sitzungscookie und verschlüsselte Erneuerungsdaten in ihrer separaten Kontodatenbank. Abmelden beendet diese Website-Sitzung. Die Gültigkeit einer Sitzung ist keine Löschfrist für Konto- und Sicherheitsdaten oder Backups. Kontaktanfragen können im Empfängerpostfach verbleiben. Für Fragen zur Aufbewahrung oder Löschung kontaktiere hello@kyrion.ch."
         },
@@ -785,7 +789,24 @@
     "setupOtp": "Authenticator-App einrichten",
     "addPasskey": "Passkey hinzufügen",
     "securityHelp": "Schütze deinen Account mit einer Authenticator-App oder melde dich bequem mit einem Passkey an. Richte die Methode auf deinem eigenen Gerät ein und bewahre deinen Wiederherstellungszugang sicher auf.",
-    "recoveryCodes": "Wiederherstellungscodes sichern"
+    "recoveryCodes": "Wiederherstellungscodes sichern",
+    "methodsTitle": "Deine Anmeldemethoden",
+    "methodsHelp": "Hier verwaltest du deine eingerichteten Anmeldemethoden. Zum Entfernen bestätigst du deine Identität erneut.",
+    "methodsUnavailable": "Deine Anmeldemethoden konnten nicht geladen werden. Bitte versuche es erneut.",
+    "methodsRetry": "Erneut laden",
+    "methodsLoading": "Anmeldemethoden werden geladen …",
+    "methodsEmpty": "Du hast noch keine zusätzlichen Anmeldemethoden eingerichtet.",
+    "methodPasskey": "Passkey",
+    "methodOtp": "Authenticator-App",
+    "methodSecurityKey": "Sicherheitsschlüssel als zweiter Faktor",
+    "methodRecovery": "Wiederherstellungscodes",
+    "methodCreated": "Eingerichtet am",
+    "methodRemove": "Methode entfernen",
+    "methodRemoveHelp": "Du entfernst nur diese Methode. Das kann deinen Anmeldeschutz verringern. Bestehende Sitzungen bleiben bestehen. Ein gespeicherter Passkey kann im Passwortmanager sichtbar bleiben, funktioniert hier aber nicht mehr.",
+    "methodConfirm": "Ich möchte diese Methode entfernen:",
+    "methodRemoveContinue": "Identität bestätigen und entfernen",
+    "methodProtected": "Diese Methode ist geschützt. Richte zuerst ein Passwort als Ausweichzugang ein oder wende dich an den Support.",
+    "methodsRefresh": "Aktualisieren"
   },
   "connect": {
     "description": "Verbinde deine lokale Kyrion-Installation mit deinem zentralen Account über den angezeigten Code."

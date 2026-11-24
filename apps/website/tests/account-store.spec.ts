@@ -72,6 +72,15 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
     await owner.query(
       readFileSync("migrations/002-remembered-sessions.sql", "utf8"),
     );
+    await owner.query(
+      "ALTER TABLE website_oidc_flow DROP COLUMN credential_id",
+    );
+    await owner.query(
+      readFileSync("migrations/005-credential-removal.sql", "utf8"),
+    );
+    await owner.query(
+      readFileSync("migrations/005-credential-removal.sql", "utf8"),
+    );
     url.username = "kyrion_website_app";
     url.password = "disposable-fixture-only";
     runtime = new Pool({ connectionString: url.href, max: 5 });
@@ -81,6 +90,7 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
       subject: "verified-user",
       expiresAt: Math.floor(Date.now() / 1000) + 300,
       refreshToken: "rotated-renewal",
+      accessToken: "fixture-private-access",
     };
     const store = new AccountStore(
       runtime,
@@ -107,6 +117,7 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
       locale: "en",
       destination: "password",
       expectedSubject: identity.subject,
+      credentialId: null,
     } as const;
     await store.begin(flowId, flow);
     expect(await store.consume(flowId)).toEqual(flow);
@@ -200,6 +211,78 @@ test("real PostgreSQL serializes renewal and logout, preserves transient retries
       [hash(expired.id)],
     );
     expect(await store.session(expired.id)).toBeNull();
+    const inventorySession = await store.issue(
+      identity.issuer,
+      identity.subject,
+      identity.expiresAt,
+      "initial-renewal",
+    );
+    const unavailable = new AccountStore(
+      runtime,
+      config,
+      async () => ({ ...identity, refreshToken: "inventory-rotated" }),
+      async () => {
+        throw Error("Temporary inventory outage");
+      },
+    );
+    await expect(
+      unavailable.credentialInventory(inventorySession.id),
+    ).rejects.toThrow("Credential inventory unavailable");
+    const rotated = await owner.query(
+      "SELECT refresh_credential FROM website_session WHERE token_hash=$1",
+      [hash(inventorySession.id)],
+    );
+    expect(
+      readRefresh(
+        rotated.rows[0].refresh_credential,
+        config.clientSecret,
+        hash(inventorySession.id),
+      ),
+    ).toBe("inventory-rotated");
+    const available = new AccountStore(
+      runtime,
+      config,
+      async (_config, credential) => {
+        expect(credential).toBe("inventory-rotated");
+        return { ...identity, refreshToken: "inventory-next" };
+      },
+      async () => ({ methods: [], hasPassword: true }),
+    );
+    expect(await available.credentialInventory(inventorySession.id)).toEqual({
+      methods: [],
+      hasPassword: true,
+    });
+    expect(await store.forLogout(inventorySession.id)).not.toBeNull();
+    const auditFlow = {
+      ...flow,
+      destination: "remove",
+      credentialId: "11111111-1111-4111-8111-111111111111",
+    } as const;
+    await store.begin("audited-removal-intent", auditFlow);
+    const consumed = await store.consume("audited-removal-intent");
+    expect(consumed?.removalCorrelation).toMatch(/^[0-9a-f-]{36}$/);
+    await store.issue(
+      identity.issuer,
+      identity.subject,
+      identity.expiresAt,
+      "initial-renewal",
+      {
+        credentialId: auditFlow.credentialId,
+        correlationId: consumed!.removalCorrelation!,
+        result: "CREDENTIAL_REMOVAL_ABSENT",
+      },
+    );
+    const audit = await owner.query(
+      "SELECT event_code,credential_id FROM website_account_event WHERE correlation_id=$1 ORDER BY created_at",
+      [consumed!.removalCorrelation],
+    );
+    expect(audit.rows.map((row) => row.event_code)).toEqual([
+      "CREDENTIAL_REMOVAL_STARTED",
+      "CREDENTIAL_REMOVAL_ABSENT",
+    ]);
+    expect(
+      audit.rows.every((row) => row.credential_id === auditFlow.credentialId),
+    ).toBe(true);
   } finally {
     await runtime?.end();
     await owner.end();

@@ -206,6 +206,7 @@ for (const defect of [
   "algorithm",
   "unverified-email",
   "action-subject",
+  "stale-removal-auth",
 ] as const) {
   test(`OIDC validates real RSA signatures and claims: ${defect}`, async () => {
     const key = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -215,7 +216,11 @@ for (const defect of [
       nonce: secret(),
       verifier: secret(),
       locale: "en",
-      destination: "password",
+      destination: defect === "stale-removal-auth" ? "remove" : "password",
+      credentialId:
+        defect === "stale-removal-auth"
+          ? "11111111-1111-4111-8111-111111111111"
+          : null,
       expectedSubject:
         defect === "action-subject" ? "different-subject" : "stable-subject",
     } as const;
@@ -265,7 +270,7 @@ for (const defect of [
           sub: "stable-subject",
           aud: defect === "audience" ? "foreign-client" : "website",
           iat: now,
-          auth_time: now,
+          auth_time: defect === "stale-removal-auth" ? now - 3600 : now,
           email_verified: defect !== "unverified-email",
           exp: defect === "expired" ? now - 100 : now + 300,
           nonce: defect === "nonce" ? "foreign-nonce" : flow.nonce,
@@ -313,8 +318,14 @@ for (const defect of [
         flow.verifier,
       );
       expect(authorize.searchParams.get("redirect_uri")).toBe(config.callback);
-      expect(authorize.searchParams.has("max_age")).toBe(false);
-      expect(authorize.searchParams.get("kc_action")).toBe("UPDATE_PASSWORD");
+      expect(authorize.searchParams.has("max_age")).toBe(
+        defect === "stale-removal-auth",
+      );
+      expect(authorize.searchParams.get("kc_action")).toBe(
+        defect === "stale-removal-auth"
+          ? "delete_credential:11111111-1111-4111-8111-111111111111"
+          : "UPDATE_PASSWORD",
+      );
       for (const [destination, required] of [
         ["otp", "CONFIGURE_TOTP"],
         ["passkey", "webauthn-register-passwordless"],
@@ -330,6 +341,19 @@ for (const defect of [
           await authorizationUrl(config, { ...flow, destination: "profile" })
         ).searchParams.get("kc_action"),
       ).toBe("UPDATE_PROFILE");
+      const removeFlow = {
+        ...flow,
+        destination: "remove",
+        credentialId: "11111111-1111-4111-8111-111111111111",
+      } as const;
+      const removeUrl = await authorizationUrl(config, removeFlow);
+      expect(removeUrl.searchParams.get("kc_action")).toBe(
+        "delete_credential:11111111-1111-4111-8111-111111111111",
+      );
+      expect(removeUrl.searchParams.get("max_age")).toBe("0");
+      await expect(
+        authorizationUrl(config, { ...removeFlow, credentialId: "../other" }),
+      ).rejects.toThrow();
       const registration = await authorizationUrl(config, flow, true);
       expect(registration.searchParams.get("prompt")).toBe("create");
       expect(registration.searchParams.get("state")).toBe(flow.state);
@@ -363,7 +387,8 @@ for (const defect of [
         if (
           defect !== "state" &&
           defect !== "nonce" &&
-          defect !== "action-subject"
+          defect !== "action-subject" &&
+          defect !== "stale-removal-auth"
         )
           await expect(
             renewIdentity(config, "fixture-renewal-credential"),

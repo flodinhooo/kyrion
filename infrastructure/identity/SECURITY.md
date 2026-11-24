@@ -28,6 +28,15 @@ silently clearing its credential; credential removal requires separate verified
 account recovery. This slice adds enrollment and login, not a credential listing
 or removal UI. Advanced provider administration stays operator-only.
 
+The [subsequent method-management implementation](../../docs/status/2026-11-24-account-methods.md)
+adds a website inventory and native removal actions. It reads only through the
+user's own account API, never a provider administrator credential. Apply website
+migration 005 before deploying it. A current password fallback is required before
+primary passkeys can be removed; the website does not offer password removal.
+The provider's native audit event emission is not treated as durable storage when
+event persistence is disabled. Correlated request/return observations are appended
+to the existing protected website security log instead.
+
 ## Verification
 
 `apps/website/full-identity/security.spec.ts` uses only the fixed disposable

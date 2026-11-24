@@ -43,6 +43,8 @@ These are outcome gates, not unmerged work inside the removed build folders.
 
 The [Nov24 security follow-up](2026-11-24-account-security.md) adds optional website TOTP, passkey and recovery enrollment. KY-003 operational recovery and KY-024 remain open; virtual authenticator tests do not close physical-device acceptance.
 
+The [method-management follow-up](2026-11-24-account-methods.md) adds own-account inventory, fresh confirmed removal and protected website audit observations. Existing identity operations and KY-024 retention work remain separate.
+
 These steps require separate owner-controlled operational acceptance. This backlog
 does not authorize live changes, provider spending or hardware actions.
 

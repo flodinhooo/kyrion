@@ -176,6 +176,15 @@ enforces its conditional 2FA policy; website sessions gain no local privileges.
 Credential listing/removal is separate from this enrollment slice. See
 [security acceptance](../../docs/status/2026-11-24-account-security.md) and
 [provider requirements](../../infrastructure/identity/SECURITY.md).
+
+The subsequent [method-management slice](../../docs/status/2026-11-24-account-methods.md)
+implements that inventory/removal follow-up. `GET /api/account/methods` returns
+sanitized per-user metadata using a server-only user token. `POST /api/account/remove`
+requires confirmation, current ownership, a fallback login and an ID-bound fresh
+provider action. Apply migration 005 to the dedicated website database first.
+The UI distinguishes empty/unavailable states and clears inventory on session
+replacement. Correlated request/return observations are append-only website audit
+events; passwords, OTP seeds, recovery secrets and private keys never enter them.
 See [ADR 0068](../../docs/adr/0068-customer-identity-experience.md).
 
 ## Verification details

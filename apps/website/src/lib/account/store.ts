@@ -1,3 +1,8 @@
+import {
+  credentialId,
+  fetchInventory,
+  type CredentialInventory,
+} from "./credential-inventory";
 import type { AccountAction } from "./actions";
 import { createHash, randomBytes } from "node:crypto";
 import { Pool } from "pg";
@@ -15,9 +20,30 @@ export type Flow = {
   locale: "en" | "de";
   destination?: "account" | "connect" | AccountAction;
   expectedSubject?: string | null;
+  credentialId?: string | null;
+  removalCorrelation?: string;
 };
 export type WebsiteSession = { id: string; csrf: string; expiresAt: string };
 export const rememberedLifetime = 30 * 24 * 60 * 60_000;
+export type RemovalAudit = {
+  credentialId: string;
+  correlationId: string;
+  result:
+    | "CREDENTIAL_REMOVAL_RETURNED"
+    | "CREDENTIAL_REMOVAL_ABSENT"
+    | "CREDENTIAL_REMOVAL_RETAINED";
+};
+function removalCorrelation(id: string) {
+  const value = hash(id).slice(0, 32);
+  return [
+    value.slice(0, 8),
+    value.slice(8, 12),
+    value.slice(12, 16),
+    value.slice(16, 20),
+    value.slice(20),
+  ].join("-");
+}
+
 type StoredSession = WebsiteSession & {
   issuer: string;
   subject: string;
@@ -46,32 +72,65 @@ export class AccountStore {
     private pool: Pool,
     private config?: AccountConfig,
     private renew = renewIdentity,
+    private readInventory = fetchInventory,
   ) {}
 
   async begin(id: string, flow: Flow) {
-    await this.pool.query(
-      "DELETE FROM website_oidc_flow WHERE expires_at < now()",
-    );
-    await this.pool.query(
-      "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expected_subject,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,now()+interval '5 minutes')",
-      [
-        hash(id),
-        flow.state,
-        flow.nonce,
-        flow.verifier,
-        flow.locale,
-        flow.destination ?? "account",
-        flow.expectedSubject ?? null,
-      ],
-    );
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        "DELETE FROM website_oidc_flow WHERE expires_at<now()",
+      );
+      await client.query(
+        "INSERT INTO website_oidc_flow (id_hash,state,nonce,verifier,locale,destination,expected_subject,credential_id,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()+interval '5 minutes')",
+        [
+          hash(id),
+          flow.state,
+          flow.nonce,
+          flow.verifier,
+          flow.locale,
+          flow.destination ?? "account",
+          flow.expectedSubject ?? null,
+          flow.credentialId ?? null,
+        ],
+      );
+      if (flow.destination === "remove") {
+        if (
+          !credentialId(flow.credentialId) ||
+          !this.config ||
+          !flow.expectedSubject
+        )
+          throw Error("Invalid removal intent");
+        const event = await client.query(
+          "INSERT INTO website_account_event (account_id,event_code,correlation_id,credential_id) SELECT id,'CREDENTIAL_REMOVAL_STARTED',$3,$4 FROM website_account WHERE issuer=$1 AND subject=$2",
+          [
+            this.config.issuer.href,
+            flow.expectedSubject,
+            removalCorrelation(id),
+            flow.credentialId,
+          ],
+        );
+        if (event.rowCount !== 1) throw Error("Removal account unavailable");
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async consume(id: string): Promise<Flow | null> {
     const result = await this.pool.query<Flow>(
-      'DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale,destination,expected_subject AS "expectedSubject"',
+      'DELETE FROM website_oidc_flow WHERE id_hash=$1 AND expires_at>now() RETURNING state,nonce,verifier,locale,destination,expected_subject AS "expectedSubject",credential_id AS "credentialId"',
       [hash(id)],
     );
-    return result.rows[0] ?? null;
+    const flow = result.rows[0] ?? null;
+    return flow?.destination === "remove"
+      ? { ...flow, removalCorrelation: removalCorrelation(id) }
+      : flow;
   }
 
   async issue(
@@ -79,6 +138,7 @@ export class AccountStore {
     subject: string,
     tokenExpiresAt: number,
     refreshToken?: string,
+    removal?: RemovalAudit,
   ) {
     const id = secret();
     const csrf = secret();
@@ -114,6 +174,16 @@ export class AccountStore {
         "INSERT INTO website_account_event (account_id,event_code) VALUES ($1,'SESSION_CREATED')",
         [account.rows[0].id],
       );
+      if (removal)
+        await client.query(
+          "INSERT INTO website_account_event (account_id,event_code,correlation_id,credential_id) VALUES ($1,$2,$3,$4)",
+          [
+            account.rows[0].id,
+            removal.result,
+            removal.correlationId,
+            removal.credentialId,
+          ],
+        );
       await client.query("COMMIT");
       return { id, csrf, expiresAt: expiresAt.toISOString() };
     } catch (error) {
@@ -140,12 +210,25 @@ export class AccountStore {
     return this.load(token, false);
   }
 
+  async credentialInventory(
+    token: string,
+  ): Promise<CredentialInventory | null> {
+    let inventory: CredentialInventory | null = null;
+    const session = await this.load(token, true, async (accessToken) => {
+      if (!this.config) throw Error("Account configuration unavailable");
+      inventory = await this.readInventory(this.config, accessToken);
+    });
+    return session ? inventory : null;
+  }
+
   private async load(
     token: string,
     verify: boolean,
+    read?: (accessToken: string) => Promise<void>,
   ): Promise<WebsiteSession | null> {
     if (!token) return null;
     const client = await this.pool.connect();
+    let committed = false;
     try {
       await client.query("BEGIN");
       const result = await client.query<StoredSession>(
@@ -153,14 +236,15 @@ export class AccountStore {
         [hash(token)],
       );
       const row = result.rows[0];
-      if (!row) {
+      if (!row || (read && !row.refresh_credential)) {
         await client.query("COMMIT");
         return null;
       }
       if (
         verify &&
         row.refresh_credential &&
-        (!row.verified_until ||
+        (read ||
+          !row.verified_until ||
           new Date(row.verified_until).getTime() <= Date.now())
       ) {
         if (!this.config) throw new Error("Session renewal unavailable");
@@ -196,6 +280,19 @@ export class AccountStore {
               ),
             ],
           );
+          if (read) {
+            try {
+              if (!identity.accessToken)
+                throw Error("User account proof unavailable");
+              await read(identity.accessToken);
+            } catch {
+              // Provider refresh rotation already happened. Preserve its replacement
+              // even when the separate read fails, so retry cannot strand the session.
+              await client.query("COMMIT");
+              committed = true;
+              throw Error("Credential inventory unavailable");
+            }
+          }
         } catch (error) {
           if (!(error instanceof IdentityRevoked)) throw error;
           await client.query(
@@ -213,7 +310,7 @@ export class AccountStore {
       await client.query("COMMIT");
       return { id: row.id, csrf: row.csrf, expiresAt: row.expiresAt };
     } catch (error) {
-      await client.query("ROLLBACK");
+      if (!committed) await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();

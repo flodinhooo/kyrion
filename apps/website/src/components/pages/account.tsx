@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { type Dictionary, type Locale } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { useAccountSession } from "@/components/account-session";
+import { AccountMethods } from "@/components/account-methods";
 import { LinkedInstallations } from "@/components/linked-installations";
 
 export function AccountPage({
@@ -56,15 +57,17 @@ export function AccountPage({
       </p>
       {(error || code) && (
         <p role="alert" className="mt-5">
-          {code === "CONNECT_CODE_INVALID"
-            ? t.account.linkCodeInvalid
-            : code === "CONNECT_SIGN_IN_REQUIRED"
-              ? t.account.linkSignIn
-              : error || code === "ACCOUNT_UNAVAILABLE"
-                ? t.account.unavailable
-                : code === "ACCOUNT_CANCELLED"
-                  ? t.account.cancelled
-                  : t.account.failed}
+          {code === "CREDENTIAL_REMOVAL_BLOCKED"
+            ? t.account.methodProtected
+            : code === "CONNECT_CODE_INVALID"
+              ? t.account.linkCodeInvalid
+              : code === "CONNECT_SIGN_IN_REQUIRED"
+                ? t.account.linkSignIn
+                : error || code === "ACCOUNT_UNAVAILABLE"
+                  ? t.account.unavailable
+                  : code === "ACCOUNT_CANCELLED"
+                    ? t.account.cancelled
+                    : t.account.failed}
         </p>
       )}
       {!status && !error && (
@@ -151,6 +154,14 @@ export function AccountPage({
               ))}
             </div>
           </div>
+          {!connecting && status?.session && (
+            <AccountMethods
+              key={status.session.id + ":" + status.session.csrf}
+              t={t.account}
+              locale={locale}
+              csrf={status.session.csrf}
+            />
+          )}
           <section
             hidden={!connecting}
             id="connect"
