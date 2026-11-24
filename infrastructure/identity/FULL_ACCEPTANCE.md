@@ -67,6 +67,11 @@ used: local login uses the real public client's outbound device grant.
 
 ## What the suite proves
 
+The additional `security.spec.ts` isolates a synthetic account, temporarily
+configures passwordless WebAuthn and recovery in the test realm, tests actual
+TOTP/recovery and virtual authenticator login, then restores provider settings.
+It never configures the public provider or uses personal authenticator data.
+
 - A new central user registers in the actual provider UI, receives a real local
   verification email, follows its action and establishes a website session.
 - Website logout and subsequent login with that existing central account work.

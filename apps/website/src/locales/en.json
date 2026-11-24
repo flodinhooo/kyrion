@@ -781,7 +781,11 @@
     "linkedOn": "Linked on",
     "lastConfirmed": "Last confirmed",
     "editProfile": "Edit profile",
-    "changePassword": "Change password"
+    "changePassword": "Change password",
+    "setupOtp": "Set up authenticator app",
+    "addPasskey": "Add passkey",
+    "securityHelp": "Protect your account with an authenticator app or sign in conveniently with a passkey. Set up the method on your own device and keep your recovery access safe.",
+    "recoveryCodes": "Save recovery codes"
   },
   "connect": {
     "description": "Connect your local Kyrion installation to your central account using its displayed code."

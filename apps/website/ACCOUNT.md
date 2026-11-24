@@ -170,7 +170,12 @@ iframe or provider administrator credential is introduced.
 Apply `migrations/004-account-actions.sql` to the dedicated website database before
 deploying these actions. It adds a nullable flow column; existing flows and
 remembered sessions remain valid. Do not apply it to Core or Keycloak databases.
-This slice covers profile and password editing, not MFA/passkey management.
+The Nov24 extension also supports `otp`, `passkey` and `recovery` enrollment
+through the same protected action flow. The provider validates credentials and
+enforces its conditional 2FA policy; website sessions gain no local privileges.
+Credential listing/removal is separate from this enrollment slice. See
+[security acceptance](../../docs/status/2026-11-24-account-security.md) and
+[provider requirements](../../infrastructure/identity/SECURITY.md).
 See [ADR 0068](../../docs/adr/0068-customer-identity-experience.md).
 
 ## Verification details

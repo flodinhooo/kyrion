@@ -781,7 +781,11 @@
     "linkedOn": "Verknüpft am",
     "lastConfirmed": "Zuletzt bestätigt",
     "editProfile": "Profil bearbeiten",
-    "changePassword": "Passwort ändern"
+    "changePassword": "Passwort ändern",
+    "setupOtp": "Authenticator-App einrichten",
+    "addPasskey": "Passkey hinzufügen",
+    "securityHelp": "Schütze deinen Account mit einer Authenticator-App oder melde dich bequem mit einem Passkey an. Richte die Methode auf deinem eigenen Gerät ein und bewahre deinen Wiederherstellungszugang sicher auf.",
+    "recoveryCodes": "Wiederherstellungscodes sichern"
   },
   "connect": {
     "description": "Verbinde deine lokale Kyrion-Installation mit deinem zentralen Account über den angezeigten Code."

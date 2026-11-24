@@ -26,6 +26,9 @@ Parallel installer work and older platform evidence retain their own scope.
 The [Nov14 identity lifecycle follow-up](docs/status/2026-11-14-identity-lifecycle.md)
 records real public registration, recovery, browser restart, proof renewal and
 logout checks, plus the customer settings implementation.
+The [Nov24 account security follow-up](docs/status/2026-11-24-account-security.md)
+adds optional authenticator-app, passkey and recovery-code enrollment through
+the website, with provider-owned credentials and separate hardware acceptance.
 The account overview now includes linked installations; the dedicated `/connect`
 page accepts local linking codes. Local Profile identifies the verified central
 account. [Directory design and acceptance](docs/adr/0054-account-installation-directory.md)

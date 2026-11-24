@@ -1,3 +1,4 @@
+import { isAccountAction } from "@/lib/account/actions";
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
@@ -177,8 +178,7 @@ export async function POST(request: NextRequest, context: Context) {
     if (
       operation === "login" ||
       operation === "register" ||
-      operation === "profile" ||
-      operation === "password"
+      isAccountAction(operation)
     ) {
       const form = await request.formData();
       const locale = form.get("locale") === "en" ? "en" : "de";
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest, context: Context) {
         config.origin,
       );
       let expectedSubject: string | null = null;
-      if (operation === "profile" || operation === "password") {
+      if (isAccountAction(operation)) {
         const token = request.cookies.get(sessionCookie)?.value ?? "";
         const session = await store.session(token);
         const expected = Buffer.from(session?.csrf ?? "");
@@ -212,12 +212,11 @@ export async function POST(request: NextRequest, context: Context) {
         nonce: secret(),
         verifier: secret(),
         locale,
-        destination:
-          operation === "profile" || operation === "password"
-            ? operation
-            : form.get("destination") === "connect"
-              ? "connect"
-              : "account",
+        destination: isAccountAction(operation)
+          ? operation
+          : form.get("destination") === "connect"
+            ? "connect"
+            : "account",
         expectedSubject,
       } as const;
       const url = await authorizationUrl(

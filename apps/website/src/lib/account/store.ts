@@ -1,3 +1,4 @@
+import type { AccountAction } from "./actions";
 import { createHash, randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import type { AccountConfig } from "./config";
@@ -12,7 +13,7 @@ export type Flow = {
   nonce: string;
   verifier: string;
   locale: "en" | "de";
-  destination?: "account" | "connect" | "profile" | "password";
+  destination?: "account" | "connect" | AccountAction;
   expectedSubject?: string | null;
 };
 export type WebsiteSession = { id: string; csrf: string; expiresAt: string };

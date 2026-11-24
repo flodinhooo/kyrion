@@ -115,8 +115,13 @@ export function AccountPage({
               {t.account.manage}
             </h2>
             <p className="mt-3 text-muted-foreground">{t.account.manageHelp}</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t.account.securityHelp}
+            </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              {(["profile", "password"] as const).map((action) => (
+              {(
+                ["profile", "password", "otp", "passkey", "recovery"] as const
+              ).map((action) => (
                 <form
                   key={action}
                   action={`/api/account/${action}`}
@@ -134,7 +139,13 @@ export function AccountPage({
                   >
                     {action === "profile"
                       ? t.account.editProfile
-                      : t.account.changePassword}
+                      : action === "password"
+                        ? t.account.changePassword
+                        : action === "otp"
+                          ? t.account.setupOtp
+                          : action === "passkey"
+                            ? t.account.addPasskey
+                            : t.account.recoveryCodes}
                   </button>
                 </form>
               ))}

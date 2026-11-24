@@ -1,0 +1,7 @@
+{
+  "webAuthnPolicyPasswordlessRpEntityName": "Kyrion",
+  "webAuthnPolicyPasswordlessRpId": "auth.kyrion.ch",
+  "webAuthnPolicyPasswordlessResidentKey": "required",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "required",
+  "webAuthnPolicyPasswordlessPasskeysEnabled": true
+}

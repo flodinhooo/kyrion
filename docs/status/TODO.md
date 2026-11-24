@@ -41,6 +41,8 @@ These are outcome gates, not unmerged work inside the removed build folders.
 | KY-023 | Release gate / open, linked to KY-006 and KY-015 | Offer actual reviewed installer artifacts in the website release catalog only after their publication/distribution gates pass.                                                    | Published artifact URLs, platform/version/size/hash/notes metadata and usable downloads. Download/Hardware pages are implemented; the catalog is currently empty. No release is inferred from native build outputs.                                                                                 |
 | KY-024 | P1 before wider exposure / open                  | Verify deployed contact request limits and review privacy/provider/retention/deletion operations against the actual Vercel, identity, session database and mailbox configuration. | Evidence of distributed/platform limits, accountable operational procedures and reviewed public privacy text. The source abuse extension point, privacy page existence and expiry fields alone do not establish those controls.                                                                     |
 
+The [Nov24 security follow-up](2026-11-24-account-security.md) adds optional website TOTP, passkey and recovery enrollment. KY-003 operational recovery and KY-024 remain open; virtual authenticator tests do not close physical-device acceptance.
+
 These steps require separate owner-controlled operational acceptance. This backlog
 does not authorize live changes, provider spending or hardware actions.
 

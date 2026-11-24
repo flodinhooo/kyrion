@@ -4,6 +4,8 @@ Website/documentation reviewed: 2026-11-14. Start with the [active backlog](TODO
 and [current website acceptance](2026-11-13-website-acceptance.md).
 The [Nov14 identity follow-up](2026-11-14-identity-lifecycle.md) supersedes the
 earlier open KY-022 lifecycle observations with actual controlled public evidence.
+The [Nov24 account security follow-up](2026-11-24-account-security.md) records
+optional TOTP, passkey and recovery enrollment and its verification limits.
 Development continues on `master`; no additional worktree integration was found
 in the website audit. Unrelated installer work is in progress and is not included
 in the website acceptance. Other platform evidence retains its stated date.

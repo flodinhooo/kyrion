@@ -1,3 +1,4 @@
+import { accountActions, isAccountAction } from "./actions";
 import * as oidc from "openid-client";
 import type { AccountConfig } from "./config";
 import type { Flow } from "./store";
@@ -37,12 +38,9 @@ export async function authorizationUrl(
     nonce: flow.nonce,
     ...(register ? { prompt: "create" } : {}),
     ui_locales: flow.locale,
-    ...(flow.destination === "profile" || flow.destination === "password"
+    ...(isAccountAction(flow.destination)
       ? {
-          kc_action:
-            flow.destination === "profile"
-              ? "UPDATE_PROFILE"
-              : "UPDATE_PASSWORD",
+          kc_action: accountActions[flow.destination],
         }
       : {}),
   });
@@ -71,7 +69,7 @@ export async function authenticate(
   )
     throw new Error("Invalid identity claims");
   if (
-    (flow.destination === "profile" || flow.destination === "password") &&
+    isAccountAction(flow.destination) &&
     (!flow.expectedSubject || claims.sub !== flow.expectedSubject)
   )
     throw new Error("Account action identity mismatch");

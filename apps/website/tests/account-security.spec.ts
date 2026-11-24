@@ -10,6 +10,22 @@ import {
   authorizationUrl,
   renewIdentity,
 } from "../src/lib/account/oidc";
+import { isAccountAction } from "../src/lib/account/actions";
+
+test("security actions reject inherited and unknown provider operation names", () => {
+  expect(isAccountAction("otp")).toBe(true);
+  expect(isAccountAction("passkey")).toBe(true);
+  expect(isAccountAction("recovery")).toBe(true);
+  for (const value of [
+    "__proto__",
+    "constructor",
+    "delete-user",
+    "CONFIGURE_TOTP",
+    null,
+    {},
+  ])
+    expect(isAccountAction(value)).toBe(false);
+});
 import { hash, secret } from "../src/lib/account/store";
 import { dictionaries } from "../src/lib/site";
 
@@ -299,6 +315,16 @@ for (const defect of [
       expect(authorize.searchParams.get("redirect_uri")).toBe(config.callback);
       expect(authorize.searchParams.has("max_age")).toBe(false);
       expect(authorize.searchParams.get("kc_action")).toBe("UPDATE_PASSWORD");
+      for (const [destination, required] of [
+        ["otp", "CONFIGURE_TOTP"],
+        ["passkey", "webauthn-register-passwordless"],
+      ] as const) {
+        expect(
+          (
+            await authorizationUrl(config, { ...flow, destination })
+          ).searchParams.get("kc_action"),
+        ).toBe(required);
+      }
       expect(
         (
           await authorizationUrl(config, { ...flow, destination: "profile" })
@@ -328,6 +354,12 @@ for (const defect of [
         });
       } else {
         await expect(authenticate(config, callback, flow)).rejects.toThrow();
+        if (defect === "action-subject") {
+          for (const destination of ["otp", "passkey", "recovery"] as const)
+            await expect(
+              authenticate(config, callback, { ...flow, destination }),
+            ).rejects.toThrow();
+        }
         if (
           defect !== "state" &&
           defect !== "nonce" &&
@@ -390,7 +422,13 @@ test("customer account menu, browser registration and local help work in both la
       );
       await page.goto(`${prefix}/account`);
       if (signedIn) {
-        for (const action of ["profile", "password"]) {
+        for (const action of [
+          "profile",
+          "password",
+          "otp",
+          "passkey",
+          "recovery",
+        ]) {
           const form = page.locator(`form[action="/api/account/${action}"]`);
           await expect(form).toHaveAttribute("method", "post");
           await expect(form.locator('input[name="csrf"]')).toHaveValue(

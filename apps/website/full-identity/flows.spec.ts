@@ -180,7 +180,7 @@ test("real registration, verified email, website and local login/link/offline/un
   const email = `${centralUsername}@acceptance.invalid`;
   let centralPassword = randomBytes(32).toString("base64url");
 
-  for (const action of ["profile", "password"]) {
+  for (const action of ["profile", "password", "otp", "passkey", "recovery"]) {
     const denied = await context.request.post(
       `${website}/api/account/${action}`,
       {
