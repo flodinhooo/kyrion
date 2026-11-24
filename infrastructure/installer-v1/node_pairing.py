@@ -131,20 +131,29 @@ def validate(value: object) -> Pairing:
 def load(path: Path | None) -> Pairing | None:
     if path is None:
         return None
-    if os.name != "posix":
+    if os.name == "nt":
+        component(require_linux=False)
+        from kyrion_gateway_agent.windows_storage import read_private
+
+        try:
+            raw = read_private(path, LIMIT, inherited=True, current_owner=False)
+        except (OSError, ValueError) as error:
+            raise ValueError("E_NODE_PAIRING_PRIVATE") from error
+    elif os.name != "posix":
         raise ValueError("E_AGENT_PLATFORM")
-    reject_links(path)
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(descriptor, "rb") as stream:
-        metadata = os.fstat(stream.fileno())
-        if (
-            not stat.S_ISREG(metadata.st_mode)
-            or (os.geteuid() != 0 and metadata.st_uid != os.geteuid())
-            or metadata.st_mode & 0o077
-            or metadata.st_nlink != 1
-        ):
-            raise ValueError("E_NODE_PAIRING_PRIVATE")
-        raw = stream.read(LIMIT + 1)
+    else:
+        reject_links(path)
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(descriptor, "rb") as stream:
+            metadata = os.fstat(stream.fileno())
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or (os.geteuid() != 0 and metadata.st_uid != os.geteuid())
+                or metadata.st_mode & 0o077
+                or metadata.st_nlink != 1
+            ):
+                raise ValueError("E_NODE_PAIRING_PRIVATE")
+            raw = stream.read(LIMIT + 1)
     if len(raw) > LIMIT:
         raise ValueError("E_NODE_PAIRING_FORMAT")
     try:
@@ -162,24 +171,36 @@ def materialize(args, pairing: Pairing | None):
     # Materialize only after the caller's explicit PAIR/SERVICE confirmation.
     # Immutable parsed bytes prevent a source-file swap after review.
     validate(pairing.document())
-    with tempfile.TemporaryDirectory(prefix="kyrion-pairing-") as directory:
+    if os.name == "nt":
+        component(require_linux=False)
+        from kyrion_gateway_agent import windows_storage
+
+        temporary = windows_storage.temporary_directory()
+    else:
+        temporary = tempfile.TemporaryDirectory(prefix="kyrion-pairing-")
+    with temporary as directory:
         root = Path(directory)
         for name, raw in (
             ("code", pairing.token.encode("ascii")),
             ("ca.pem", pairing.certificate.encode("ascii")),
         ):
-            with os.fdopen(
-                os.open(root / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"
-            ) as stream:
-                stream.write(raw)
-                stream.flush()
-                os.fsync(stream.fileno())
+            if os.name == "nt":
+                windows_storage.publish(root / name, raw)
+            else:
+                with os.fdopen(
+                    os.open(root / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+                    "wb",
+                ) as stream:
+                    stream.write(raw)
+                    stream.flush()
+                    os.fsync(stream.fileno())
         prepared = SimpleNamespace(**vars(args))
         prepared.node_pairing = None
         prepared.node_url = pairing.core_url
         prepared.node_token_file = root / "code"
         prepared.node_certificate = root / "ca.pem"
         prepared.node_ca_sha256 = pairing.certificate_sha256
+        prepared.node_space_id = pairing.space_id
         yield prepared
 
 
@@ -232,11 +253,18 @@ def export(client, display_name: str) -> tuple[Path, Pairing]:
 
     # No owner/session credential is sent through the externally reachable route.
     try:
-        prepared_capabilities(origin, str(certificate.absolute()), digest)
+        capabilities = prepared_capabilities(
+            origin, str(certificate.absolute()), digest
+        )
     except CoreRequestError as error:
         if error.status in {404, 405}:
             raise ValueError("E_NODE_PAIRING_INGRESS") from error
         raise
+    if (
+        type(capabilities.get("spaceBindingVersion")) is not int
+        or capabilities["spaceBindingVersion"] != 1
+    ):
+        raise ValueError("E_AGENT_SPACE_BINDING_REQUIRED")
     space = client.request("GET", "/v1/space")
     if not isinstance(space, dict) or space.get("status") != "ACTIVE":
         raise ValueError("E_SPACE_UNAVAILABLE")

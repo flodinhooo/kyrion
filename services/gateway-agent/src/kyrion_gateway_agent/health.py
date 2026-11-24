@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any  # noqa: UP035
 
@@ -338,12 +340,40 @@ def _zigbee_device_state(friendly_name: str, model: str = "") -> str:
 
 
 def platform_identity() -> dict[str, str]:
+    if os.name == "nt":
+        return _windows_identity()
     os_release = _os_release()
     return {
         "hostname": socket.gethostname().lower(),
         "osName": os_release.get("PRETTY_NAME", os_release.get("NAME", "Linux")),
         "osVersion": os_release.get("VERSION_ID", "unknown"),
         "architecture": _command(["uname", "-m"], "unknown"),
+    }
+
+
+def _windows_identity() -> dict[str, str]:
+    """Observed NT version and native machine, independent of environment aliases."""
+    import ctypes
+    from ctypes import wintypes as w
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.GetCurrentProcess.argtypes = []
+    kernel.GetCurrentProcess.restype = w.HANDLE
+    kernel.IsWow64Process2.argtypes = [w.HANDLE, ctypes.POINTER(w.USHORT), ctypes.POINTER(w.USHORT)]
+    kernel.IsWow64Process2.restype = w.BOOL
+    process, native = w.USHORT(), w.USHORT()
+    if not kernel.IsWow64Process2(
+        kernel.GetCurrentProcess(), ctypes.byref(process), ctypes.byref(native)
+    ):
+        raise ValueError("E_AGENT_PLATFORM_IDENTITY")
+    version = sys.getwindowsversion()
+    return {
+        "hostname": socket.gethostname().lower(),
+        "osName": "Windows",
+        "osVersion": f"NT {version.major}.{version.minor}.{version.build}",
+        "architecture": {0x8664: "amd64", 0xAA64: "arm64", 0x014C: "x86"}.get(
+            native.value, "unknown"
+        ),
     }
 
 

@@ -27,6 +27,8 @@ BACKEND = "linux-prepared-node"
 def enrollment_input(args) -> tuple[dict, bytes, bytes] | None:
     supplied = (args.node_url, args.node_token_file, args.node_certificate)
     if not any(value is not None for value in supplied):
+        if getattr(args, "node_space_id", None) is not None:
+            raise ValueError("E_NODE_ENROLL_INPUT")
         return None
     if not all(value is not None for value in supplied):
         raise ValueError("E_NODE_ENROLL_INPUT")
@@ -48,11 +50,15 @@ def enrollment_input(args) -> tuple[dict, bytes, bytes] | None:
     if digest != args.node_ca_sha256:
         raise ValueError("E_AGENT_TLS_CONFIGURATION")
     trusted_context(str(args.node_certificate.absolute()), digest)
+    space_id = getattr(args, "node_space_id", None)
+    if space_id is not None and str(uuid.UUID(space_id)) != space_id:
+        raise ValueError("E_NODE_ENROLL_INPUT")
     return (
         {
             "url": core_url(args.node_url),
             "caSha256": digest,
             "codeSha256": hashlib.sha256(code.strip()).hexdigest(),
+            **({"spaceId": space_id} if space_id is not None else {}),
         },
         code,
         certificate,
@@ -412,6 +418,7 @@ def enroll(installation, account, uid, gid, config, supplied):
         str(agent / "enrollment-ca.pem"),
         "--node-ca-sha256",
         proof["caSha256"],
+        *(["--node-space-id", proof["spaceId"]] if "spaceId" in proof else []),
     )
 
 

@@ -415,6 +415,12 @@ def main(
                 raise ValueError("E_NATIVE_FIXTURE_OWNER")
             request("GET", "/v1/space", token=token)
             request("GET", "/v1/devices", token=token)
+            if linked_account:
+                from node_binding_acceptance import exercise_node_binding
+
+                linked_evidence["nodeSpaceBinding"] = exercise_node_binding(
+                    request, token, root, core_port
+                )
             child_web_port = free_port()
             web = start(
                 [runtime / "node/node.exe", payload / "app/web/server.js"],
@@ -514,6 +520,8 @@ https://localhost:PORT {
                 [
                     pg / "pg_ctl.exe",
                     "restart",
+                    "-t",
+                    "180",
                     "-D",
                     data,
                     "-m",

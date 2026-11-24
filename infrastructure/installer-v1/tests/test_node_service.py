@@ -15,6 +15,27 @@ from recovery import load_installation
 
 
 class NodeServiceTests(unittest.TestCase):
+    def test_service_enrollment_forwards_only_the_recorded_expected_space(self):
+        space = str(uuid.uuid4())
+        proof = {
+            "url": "https://localhost:8443",
+            "caSha256": "a" * 64,
+            "spaceId": space,
+        }
+        config = Path("agent") / "agent.json"
+        with (
+            patch.object(node_service, "reject_links"),
+            patch.object(Path, "exists", return_value=True),
+            patch.object(
+                node_service, "read_owned", side_effect=[b"code", b"certificate"]
+            ),
+            patch.object(node_service, "run_as") as run,
+        ):
+            node_service.enroll(
+                object(), "fixture", 123, 123, config, (proof, b"code", b"certificate")
+            )
+        self.assertEqual(run.call_args.args[-2:], ("--node-space-id", space))
+
     @unittest.skipUnless(sys.platform.startswith("linux"), "Linux filesystem fixture")
     def test_new_unit_does_not_reset_unloaded_failure_state(self):
         import os

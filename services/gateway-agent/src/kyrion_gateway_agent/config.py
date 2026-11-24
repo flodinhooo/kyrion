@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -15,6 +16,7 @@ class AgentConfig:
     ca_certificate: str | None = None
     ca_sha256: str | None = None
     local_only: bool = False
+    space_id: str | None = None
 
     @classmethod
     def load(cls, path: Path) -> AgentConfig:
@@ -40,7 +42,17 @@ class AgentConfig:
             or not core_url.startswith("https://")
         ):
             raise ValueError("E_AGENT_TLS_CONFIGURATION")
-        return cls(core_url.rstrip("/"), node_id, gateway_token, certificate, digest, local_only)
+        space_id = value.get("space_id")
+        if space_id is not None:
+            try:
+                valid_space = isinstance(space_id, str) and str(uuid.UUID(space_id)) == space_id
+            except ValueError:
+                valid_space = False
+            if not valid_space:
+                raise ValueError("E_AGENT_SPACE_BINDING_INVALID")
+        return cls(
+            core_url.rstrip("/"), node_id, gateway_token, certificate, digest, local_only, space_id
+        )
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)

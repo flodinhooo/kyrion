@@ -123,7 +123,7 @@ data class GatewayServiceHealth(val id: String, val status: String)
 
 interface GatewayRepository {
     fun createEnrollment(enrollment: GatewayEnrollment)
-    fun consumeEnrollment(tokenHash: String, usedAt: Instant): GatewayEnrollment?
+    fun consumeEnrollment(tokenHash: String, usedAt: Instant, expectedSpaceId: UUID? = null): GatewayEnrollment?
     fun consumedEnrollment(tokenHash: String, now: Instant): GatewayEnrollment?
     fun findByEnrollment(id: UUID): GatewayNode?
     fun create(node: GatewayNode)
@@ -150,12 +150,15 @@ class JdbcGatewayRepository(
             .param("createdAt", Timestamp.from(enrollment.createdAt)).update()
     }
 
-    override fun consumeEnrollment(tokenHash: String, usedAt: Instant): GatewayEnrollment? = jdbc.sql(
-        """UPDATE gateway_enrollment SET used_at = :usedAt
-           WHERE token_hash = :tokenHash AND used_at IS NULL AND expires_at > :usedAt
-           RETURNING *""",
-    ).param("usedAt", Timestamp.from(usedAt)).param("tokenHash", tokenHash)
-        .query { rs, _ ->
+    override fun consumeEnrollment(tokenHash: String, usedAt: Instant, expectedSpaceId: UUID?): GatewayEnrollment? {
+        val ownerCondition = if (expectedSpaceId == null) "" else " AND owner_id = :expectedSpace"
+        val statement = jdbc.sql(
+            """UPDATE gateway_enrollment SET used_at = :usedAt
+               WHERE token_hash = :tokenHash AND used_at IS NULL AND expires_at > :usedAt""" +
+                ownerCondition + " RETURNING *",
+        ).param("usedAt", Timestamp.from(usedAt)).param("tokenHash", tokenHash)
+        if (expectedSpaceId != null) statement.param("expectedSpace", expectedSpaceId)
+        return statement.query { rs, _ ->
             GatewayEnrollment(
                 rs.getObject("id", UUID::class.java), rs.getObject("owner_id", UUID::class.java),
                 rs.getString("token_hash"), rs.getString("display_name"),
@@ -163,6 +166,7 @@ class JdbcGatewayRepository(
                 rs.getTimestamp("created_at").toInstant(),
             )
         }.optional().orElse(null)
+    }
 
     override fun create(node: GatewayNode) {
         try {
@@ -263,7 +267,7 @@ class GatewayService(
     }
 
     @Transactional
-    fun enroll(token: String, hostname: String, agentVersion: String, osName: String, osVersion: String, architecture: String, nodeCredential: String? = null): RegisteredGateway {
+    fun enroll(token: String, hostname: String, agentVersion: String, osName: String, osVersion: String, architecture: String, nodeCredential: String? = null, expectedSpaceId: UUID? = null): RegisteredGateway {
         val now = clock.instant()
         if (nodeCredential != null && (
                 !nodeCredential.matches(Regex("^[A-Za-z0-9_-]{43}$")) ||
@@ -272,12 +276,13 @@ class GatewayService(
         ) {
             throw GatewayEnrollmentInvalidException()
         }
-        val enrollment = repository.consumeEnrollment(tokens.hash(token), now) ?: run {
+        val enrollment = repository.consumeEnrollment(tokens.hash(token), now, expectedSpaceId) ?: run {
             // Only the same protected client credential can acknowledge a lost
             // response. This does not consume the code for another claimant.
             if (nodeCredential == null) throw GatewayEnrollmentInvalidException()
             val used = repository.consumedEnrollment(tokens.hash(token), now)
                 ?: throw GatewayEnrollmentInvalidException()
+            if (expectedSpaceId != null && used.ownerId != expectedSpaceId) throw GatewayEnrollmentInvalidException()
             boundary?.workspace(used.ownerId)
             val existing = repository.findByEnrollment(used.id)
                 ?: throw GatewayEnrollmentInvalidException()

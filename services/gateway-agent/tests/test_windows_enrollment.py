@@ -106,3 +106,60 @@ class WindowsEnrollmentTests(unittest.TestCase):
             self.fail("duplicate runtime acquired configuration")
         with enrollment.runtime_lock(self.config):
             pass
+
+    def test_bound_pending_survives_lost_ack_and_refuses_space_change(self):
+        space = str(uuid.uuid4())
+
+        def lost(*arguments, **options):
+            saved = json.loads(enrollment.read_private(self.pending))
+            self.assertEqual(saved["formatVersion"], 2)
+            self.assertEqual(saved["expected_space_id"], space)
+            self.assertEqual(options["expected_space_id"], space)
+            raise client.CoreRequestError("E_SYNTHETIC_LOST_ACK")
+
+        with (
+            patch.object(client, "enroll", side_effect=lost),
+            self.assertRaises(client.CoreRequestError),
+        ):
+            enrollment.enroll_prepared(
+                self.config,
+                url="https://localhost:8443",
+                token_file=self.code,
+                identity=self.identity,
+                expected_space_id=space,
+            )
+        before = enrollment.read_private(self.pending)
+        with (
+            patch.object(client, "enroll") as request,
+            self.assertRaisesRegex(ValueError, "E_AGENT_ENROLLMENT_CONFLICT"),
+        ):
+            enrollment.enroll_prepared(self.config, expected_space_id=str(uuid.uuid4()))
+        request.assert_not_called()
+        self.assertEqual(enrollment.read_private(self.pending), before)
+
+        def acknowledge(*arguments, **options):
+            self.assertEqual(options["expected_space_id"], space)
+            return client.EnrollmentResult(self.node_id, options["node_credential"], space)
+
+        with patch.object(client, "enroll", side_effect=acknowledge):
+            result = enrollment.enroll_prepared(self.config)
+        self.assertEqual(result.space_id, space)
+        self.assertEqual(result.gateway_token, json.loads(before)["node_credential"])
+        self.assertFalse(self.pending.exists())
+
+    def test_legacy_pending_cannot_silently_gain_new_space_expectation(self):
+        with (
+            patch.object(client, "enroll", side_effect=client.CoreRequestError("E_SYNTHETIC")),
+            self.assertRaises(client.CoreRequestError),
+        ):
+            self.begin()
+        before = enrollment.read_private(self.pending)
+        with (
+            patch.object(client, "enroll") as request,
+            self.assertRaisesRegex(ValueError, "E_AGENT_ENROLLMENT_CONFLICT"),
+        ):
+            enrollment.enroll_prepared(self.config, expected_space_id=str(uuid.uuid4()))
+        request.assert_not_called()
+        self.assertEqual(enrollment.read_private(self.pending), before)
+        with patch.object(client, "enroll", side_effect=self.acknowledge):
+            self.assertIsNone(enrollment.enroll_prepared(self.config).space_id)

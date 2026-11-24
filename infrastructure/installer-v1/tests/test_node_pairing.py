@@ -84,10 +84,24 @@ class NodePairingTests(unittest.TestCase):
             token = prepared.node_token_file
             self.assertEqual(token.read_text(), self.value["enrollmentToken"])
             self.assertEqual(prepared.node_ca_sha256, self.value["certificateSha256"])
+            self.assertEqual(prepared.node_space_id, self.value["spaceId"])
             if os.name == "posix":
                 self.assertEqual(token.stat().st_mode & 0o777, 0o600)
         self.assertFalse(token.exists())
         self.assertEqual(args.node_pairing, self.root / "source.json")
+
+    @unittest.skipUnless(os.name == "nt", "Actual Windows private transfer storage")
+    def test_native_private_packet_loads_without_changing_source(self):
+        node_pairing.component(require_linux=False)
+        from kyrion_gateway_agent import windows_storage
+
+        raw = json.dumps(self.value).encode("utf-8")
+        with windows_storage.temporary_directory() as root:
+            path = root / "pairing.json"
+            windows_storage.publish(path, raw)
+            result = node_pairing.load(path)
+            self.assertEqual(result.space_id, self.value["spaceId"])
+            self.assertEqual(windows_storage.read_private(path), raw)
 
     @unittest.skipUnless(os.name == "posix", "POSIX private transfer storage")
     def test_public_hardlinked_and_duplicate_json_transfers_refused(self):
@@ -163,7 +177,10 @@ class NodePairingTests(unittest.TestCase):
         node_pairing.component(require_linux=False)
         client = self.client()
         with (
-            patch("kyrion_gateway_agent.client.prepared_capabilities") as probe,
+            patch(
+                "kyrion_gateway_agent.client.prepared_capabilities",
+                return_value={"spaceBindingVersion": 1},
+            ) as probe,
             patch.object(
                 node_pairing,
                 "private_directory",
@@ -185,6 +202,21 @@ class NodePairingTests(unittest.TestCase):
         self.assertEqual(pairing.space_id, self.value["spaceId"])
         if os.name == "posix":
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+    def test_old_core_binding_capability_never_issues_owner_code(self):
+        node_pairing.component(require_linux=False)
+        client = self.client()
+        for value in ({}, {"spaceBindingVersion": True}, {"spaceBindingVersion": 2}):
+            with (
+                self.subTest(value=value),
+                patch(
+                    "kyrion_gateway_agent.client.prepared_capabilities",
+                    return_value=value,
+                ),
+                self.assertRaisesRegex(ValueError, "E_AGENT_SPACE_BINDING_REQUIRED"),
+            ):
+                node_pairing.export(client, "Synthetic node")
+            client.request.assert_not_called()
 
     def test_cancelled_export_has_no_core_or_filesystem_action(self):
         client = Mock()

@@ -21,6 +21,26 @@ class GatewayServiceTest {
     )
 
     @Test
+    fun `expected Space cannot redirect or consume another Space code`() {
+        val owner = UUID.randomUUID()
+        val enrollment = service.createEnrollment(owner, "bound")
+        val credential = SessionTokenService().create().rawToken
+        assertThatThrownBy {
+            service.enroll(enrollment.enrollmentToken, "bound", "1", "Windows", "test", "amd64", credential, UUID.randomUUID())
+        }.isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+        assertThat(repository.enrollments.single().usedAt).isNull()
+        assertThat(repository.nodes).isEmpty()
+        val result = service.enroll(enrollment.enrollmentToken, "bound", "1", "Windows", "test", "amd64", credential, owner)
+        assertThat(result.node.ownerId).isEqualTo(owner)
+        assertThatThrownBy {
+            service.enroll(enrollment.enrollmentToken, "bound", "1", "Windows", "test", "amd64", credential, UUID.randomUUID())
+        }.isInstanceOf(GatewayEnrollmentInvalidException::class.java)
+        val acknowledged = service.enroll(enrollment.enrollmentToken, "bound", "1", "Windows", "test", "amd64", credential, owner)
+        assertThat(acknowledged.node.id).isEqualTo(result.node.id)
+        assertThat(repository.nodes).hasSize(1)
+    }
+
+    @Test
     fun `enrollment is one time and stores only token hashes`() {
         val ownerId = UUID.randomUUID()
         val enrollment = service.createEnrollment(ownerId, "kyrion-node")
@@ -177,8 +197,9 @@ class GatewayServiceTest {
         val nodes = mutableListOf<GatewayNode>()
 
         override fun createEnrollment(enrollment: GatewayEnrollment) { enrollments += enrollment }
-        override fun consumeEnrollment(tokenHash: String, usedAt: Instant): GatewayEnrollment? {
-            val index = enrollments.indexOfFirst { it.tokenHash == tokenHash && it.usedAt == null && it.expiresAt > usedAt }
+        override fun consumeEnrollment(tokenHash: String, usedAt: Instant, expectedSpaceId: UUID?): GatewayEnrollment? {
+            val index = enrollments.indexOfFirst { it.tokenHash == tokenHash && it.usedAt == null && it.expiresAt > usedAt &&
+                (expectedSpaceId == null || it.ownerId == expectedSpaceId) }
             if (index < 0) return null
             return enrollments[index].copy(usedAt = usedAt).also { enrollments[index] = it }
         }

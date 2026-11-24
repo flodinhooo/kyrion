@@ -88,6 +88,7 @@ def main() -> int:
         "--background-node-enroll", action="store_true", help=argparse.SUPPRESS
     )
     parser.add_argument("--node-ca-sha256", help=argparse.SUPPRESS)
+    parser.add_argument("--node-space-id", help=argparse.SUPPRESS)
     parser.add_argument("--node-config", type=Path)
     parser.add_argument("--node-pairing", type=Path)
     parser.add_argument("--node-url")
@@ -192,6 +193,8 @@ def main() -> int:
         type=Path,
     )
     args = parser.parse_args()
+    if args.node_space_id is not None and not args.background_node_enroll:
+        parser.error("E_NODE_ARGUMENT")
     if any(
         value is not None
         for value in (
@@ -200,6 +203,7 @@ def main() -> int:
             args.node_url,
             args.node_token_file,
             args.node_certificate,
+            args.node_space_id,
         )
     ) and not (
         args.prepare_node
@@ -218,7 +222,12 @@ def main() -> int:
         not (args.prepare_node or args.node_service in {"install", "repair"})
         or any(
             value is not None
-            for value in (args.node_url, args.node_token_file, args.node_certificate)
+            for value in (
+                args.node_url,
+                args.node_token_file,
+                args.node_certificate,
+                args.node_space_id,
+            )
         )
     ):
         parser.error("E_NODE_ARGUMENT")

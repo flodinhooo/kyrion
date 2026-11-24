@@ -32,10 +32,26 @@ def test_health_contract_contains_bounded_platform_values() -> None:
     assert isinstance(health["services"], list)
     assert isinstance(health["adapters"], list)
     assert {service["id"] for service in health["services"]} == {
-        "home-assistant", "matter", "mqtt", "otbr", "voice", "zigbee"
+        "home-assistant",
+        "matter",
+        "mqtt",
+        "otbr",
+        "voice",
+        "zigbee",
     }
     assert identity["hostname"]
     assert identity["architecture"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Actual Windows native identity API")
+def test_windows_identity_does_not_trust_environment_architecture(monkeypatch):
+    original = platform_identity()
+    monkeypatch.setenv("PROCESSOR_ARCHITECTURE", "invented")
+    monkeypatch.setenv("PROCESSOR_ARCHITEW6432", "invented")
+    assert platform_identity() == original
+    assert original["osName"] == "Windows"
+    assert original["osVersion"].startswith("NT ")
+    assert original["architecture"] in {"amd64", "arm64", "x86", "unknown"}
 
 
 def test_zigbee_health_reports_sensor_values(monkeypatch) -> None:

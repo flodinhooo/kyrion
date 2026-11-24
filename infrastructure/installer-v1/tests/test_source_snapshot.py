@@ -29,7 +29,10 @@ class SourceSnapshot(unittest.TestCase):
                 )
                 self.assertEqual(source_file(ROOT, name), canonical)
                 self.assertEqual((sealed / name).read_bytes(), canonical.read_bytes())
-            self.assertEqual(len(list(sealed.rglob("*.py"))), 10)
+            self.assertEqual(
+                {path.relative_to(sealed).as_posix() for path in sealed.rglob("*.py")},
+                set(GATEWAY_FILES),
+            )
 
     def test_temporary_or_unknown_sources_cannot_reach_sibling_agent_files(self):
         from package import source_file

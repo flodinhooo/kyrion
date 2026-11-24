@@ -51,6 +51,43 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val payload get() = mapOf<String, Any>("deviceId" to address, "on" to true)
     private val human get() = GatewayAuthority(owner, GatewayPrincipalKind.HUMAN, member, "devices:execute", "power.set")
 
+    @Test fun `reviewed Space binding is atomic and reported by the actual enrollment API`() {
+        val enrollment = gateways.createEnrollment(owner, "Bound API fixture")
+        val credential = SessionTokenService().create().rawToken
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        val capabilities = mapper.readTree(mvc.perform(get("/v1/gateway-agent/enrollment-capabilities"))
+            .andExpect(status().isOk).andReturn().response.contentAsString)
+        assertThat(capabilities.get("spaceBindingVersion").asInt()).isEqualTo(1)
+        fun claim(expected: UUID) = mvc.perform(post("/v1/gateway-agent/enroll")
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(mapOf(
+                "enrollmentToken" to enrollment.enrollmentToken, "nodeCredential" to credential,
+                "hostname" to "bound-api", "agentVersion" to "0.2.0", "osName" to "Windows",
+                "osVersion" to "synthetic", "architecture" to "amd64", "expectedSpaceId" to expected,
+            ))))
+        claim(UUID.randomUUID()).andExpect(status().isUnauthorized)
+        assertThat(jdbc.sql("SELECT used_at IS NULL FROM gateway_enrollment WHERE id=:id")
+            .param("id", enrollment.id).query(Boolean::class.java).single()).isTrue()
+        assertThat(jdbc.sql("SELECT count(*) FROM gateway_node WHERE enrollment_id=:id")
+            .param("id", enrollment.id).query(Int::class.java).single()).isZero()
+        val registered = mapper.readTree(claim(owner).andExpect(status().isCreated).andReturn().response.contentAsString)
+        assertThat(registered.get("spaceId").asText()).isEqualTo(owner.toString())
+        claim(UUID.randomUUID()).andExpect(status().isUnauthorized)
+        val acknowledged = mapper.readTree(claim(owner).andExpect(status().isCreated).andReturn().response.contentAsString)
+        assertThat(acknowledged.get("nodeId").asText()).isEqualTo(registered.get("nodeId").asText())
+        assertThat(jdbc.sql("SELECT count(*) FROM gateway_node WHERE enrollment_id=:id")
+            .param("id", enrollment.id).query(Int::class.java).single()).isEqualTo(1)
+    }
+
+    @Test fun `bound lost response acknowledgement still requires an active owner Space`() {
+        val enrollment = gateways.createEnrollment(owner, "Suspended fixture")
+        val credential = SessionTokenService().create().rawToken
+        gateways.enroll(enrollment.enrollmentToken, "bound-suspended", "1", "Windows", "synthetic", "amd64", credential, owner)
+        jdbc.sql("UPDATE user_account SET enabled=false WHERE id=:id").param("id", owner).update()
+        assertThatThrownBy {
+            gateways.enroll(enrollment.enrollmentToken, "bound-suspended", "1", "Windows", "synthetic", "amd64", credential, owner)
+        }.isInstanceOf(ForbiddenException::class.java)
+    }
+
     @Test fun `reported runtime version advances without changing original enrollment acknowledgement identity`() {
         val enrollment = gateways.createEnrollment(owner, "Version fixture")
         val credential = SessionTokenService().create().rawToken

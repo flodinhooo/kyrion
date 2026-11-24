@@ -4,9 +4,10 @@ import hashlib
 import hmac
 import json
 import ssl
+import sys
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from email.message import Message
 from functools import lru_cache
 from http.client import HTTPResponse
@@ -30,6 +31,15 @@ class CoreRequestError(RuntimeError):
 def permission_time() -> float:
     if hasattr(time, "CLOCK_BOOTTIME"):
         return time.clock_gettime(time.CLOCK_BOOTTIME)
+    if sys.platform == "win32":
+        # Native GetTickCount64 includes suspend/hibernate time. A lease must
+        # not remain usable simply because the target was asleep.
+        import ctypes
+
+        clock = ctypes.WinDLL("kernel32", use_last_error=True).GetTickCount64
+        clock.argtypes = []
+        clock.restype = ctypes.c_ulonglong
+        return clock() / 1000
     return time.monotonic()
 
 
@@ -72,7 +82,8 @@ def task_policy(config: AgentConfig) -> TaskLease:
 @dataclass(frozen=True, slots=True)
 class EnrollmentResult:
     node_id: str
-    gateway_token: str
+    gateway_token: str = field(repr=False)
+    space_id: str | None = None
 
 
 def prepared_capabilities(core_url: str, certificate: str, digest: str) -> dict[str, Any]:
@@ -108,7 +119,18 @@ def enroll(
     ca_certificate: str | None = None,
     ca_sha256: str | None = None,
     agent_version: str | None = None,
+    expected_space_id: str | None = None,
 ) -> EnrollmentResult:
+    if expected_space_id is not None:
+        try:
+            valid_space = (
+                isinstance(expected_space_id, str)
+                and str(uuid.UUID(expected_space_id)) == expected_space_id
+            )
+        except ValueError:
+            valid_space = False
+        if not valid_space or node_credential is None:
+            raise CoreRequestError("E_AGENT_SPACE_BINDING_INVALID")
     context = None
     if node_credential is not None or ca_certificate is not None:
         if urlsplit(core_url).scheme != "https":
@@ -132,6 +154,11 @@ def enroll(
             or capability.get("acknowledgementWithinOriginalExpiry") is not True
         ):
             raise CoreRequestError("E_AGENT_ENROLLMENT_UPGRADE_REQUIRED")
+        if expected_space_id is not None and (
+            type(capability.get("spaceBindingVersion")) is not int
+            or capability["spaceBindingVersion"] != 1
+        ):
+            raise CoreRequestError("E_AGENT_SPACE_BINDING_REQUIRED")
     value = _request(
         f"{core_url.rstrip('/')}/v1/gateway-agent/enroll",
         "POST",
@@ -140,6 +167,7 @@ def enroll(
             "enrollmentToken": enrollment_token,
             "agentVersion": agent_version or __version__,
             **({"nodeCredential": node_credential} if node_credential is not None else {}),
+            **({"expectedSpaceId": expected_space_id} if expected_space_id is not None else {}),
         },
         tls=context,
         local_only=node_credential is not None,
@@ -160,7 +188,17 @@ def enroll(
             or not hmac.compare_digest(gateway_token, node_credential)
         ):
             raise CoreRequestError("E_AGENT_ENROLLMENT_RESPONSE")
-    return EnrollmentResult(node_id, gateway_token)
+    space_id = value.get("spaceId")
+    if space_id is not None:
+        try:
+            valid_space = isinstance(space_id, str) and str(uuid.UUID(space_id)) == space_id
+        except ValueError:
+            valid_space = False
+        if not valid_space:
+            raise CoreRequestError("E_AGENT_SPACE_BINDING_RESPONSE")
+    if expected_space_id is not None and space_id != expected_space_id:
+        raise CoreRequestError("E_AGENT_SPACE_BINDING_RESPONSE")
+    return EnrollmentResult(node_id, gateway_token, space_id)
 
 
 def heartbeat(config: AgentConfig, health: dict[str, Any]) -> None:

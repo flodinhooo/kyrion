@@ -10,6 +10,13 @@ outstanding; **external-blocked** = implementation complete but a named external
 prerequisite prevents the specified operation; **not-implemented** = source work
 remains. A prerequisite does not convert missing code into an external blocker.
 
+Current continuation: [Space-bound prepared enrollment](status/2026-11-24-installer-continuation.md)
+implements ADR 0091 through owner export, foreground import and Linux service
+enrollment. The expected Space is immutable across retries; Core checks it while
+consuming the existing code and returns its actual Space. Old Core is refused
+before a bound claim. This strengthens R25 without completing Windows deployment,
+task placement, exclusive task migration or the full assignment.
+
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 

@@ -35,8 +35,9 @@ data class GatewayEnrollRequest(
     @field:NotBlank @field:Size(max = 80) val osVersion: String,
     @field:NotBlank @field:Size(max = 40) val architecture: String,
     @field:Pattern(regexp = "^[A-Za-z0-9_-]{43}$") val nodeCredential: String? = null,
+    val expectedSpaceId: UUID? = null,
 )
-data class GatewayEnrollResponse(val nodeId: UUID, val gatewayToken: String)
+data class GatewayEnrollResponse(val nodeId: UUID, val gatewayToken: String, val spaceId: UUID)
 data class GatewayHeartbeatRequest(@field:Valid val health: GatewayHealth)
 data class ZigbeePairingRequest(@field:Min(0) @field:Max(254) val duration: Int)
 data class ZigbeeCommandRequest(
@@ -155,9 +156,9 @@ class GatewayAgentController(
         val registered = service.enroll(
             body.enrollmentToken, body.hostname.lowercase(), body.agentVersion,
             body.osName, body.osVersion, body.architecture,
-            body.nodeCredential,
+            body.nodeCredential, body.expectedSpaceId,
         )
-        return GatewayEnrollResponse(registered.node.id, registered.gatewayToken)
+        return GatewayEnrollResponse(registered.node.id, registered.gatewayToken, registered.node.ownerId)
     }
 
     @PutMapping("/heartbeat")
@@ -216,6 +217,7 @@ data class GatewayEnrollmentCapabilities(
     val clientCredential: Boolean = true,
     val acknowledgementWithinOriginalExpiry: Boolean = true,
     val taskPolicyVersion: Int = 1,
+    val spaceBindingVersion: Int = 1,
 )
 
 data class GatewayAgentTaskPolicy(

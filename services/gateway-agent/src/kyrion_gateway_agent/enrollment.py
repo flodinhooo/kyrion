@@ -191,21 +191,23 @@ def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def validate_pending(value: object, path: Path) -> dict:
+    fields = {
+        "formatVersion",
+        "core_url",
+        "enrollment_token",
+        "node_credential",
+        "identity",
+        "agent_version",
+        "ca_certificate",
+        "ca_sha256",
+    }
+    if isinstance(value, dict) and value.get("formatVersion") == 2:
+        fields.add("expected_space_id")
     if (
         not isinstance(value, dict)
-        or set(value)
-        != {
-            "formatVersion",
-            "core_url",
-            "enrollment_token",
-            "node_credential",
-            "identity",
-            "agent_version",
-            "ca_certificate",
-            "ca_sha256",
-        }
+        or set(value) != fields
         or type(value.get("formatVersion")) is not int
-        or value["formatVersion"] != 1
+        or value["formatVersion"] not in {1, 2}
         or not isinstance(value.get("core_url"), str)
         or not isinstance(value.get("agent_version"), str)
         or not 1 <= len(value["agent_version"]) <= 40
@@ -223,6 +225,14 @@ def validate_pending(value: object, path: Path) -> dict:
         )
     ):
         raise ValueError("E_AGENT_ENROLLMENT_JOURNAL")
+    if value["formatVersion"] == 2:
+        try:
+            expected = value["expected_space_id"]
+            valid = isinstance(expected, str) and str(uuid.UUID(expected)) == expected
+        except ValueError:
+            valid = False
+        if not valid:
+            raise ValueError("E_AGENT_ENROLLMENT_JOURNAL")
     core_url(value["core_url"])
     if value["ca_certificate"] is not None:
         if value["ca_certificate"] != str(path.with_name(path.name + ".ca.pem")):
@@ -244,7 +254,18 @@ def enroll_prepared(
     certificate: Path | None = None,
     expected_ca_sha256: str | None = None,
     identity: dict[str, str] | None = None,
+    expected_space_id: str | None = None,
 ) -> AgentConfig:
+    if expected_space_id is not None:
+        try:
+            valid = (
+                isinstance(expected_space_id, str)
+                and str(uuid.UUID(expected_space_id)) == expected_space_id
+            )
+        except ValueError:
+            valid = False
+        if not valid:
+            raise ValueError("E_AGENT_SPACE_BINDING_INVALID")
     if expected_ca_sha256 is not None and not re.fullmatch(r"[a-f0-9]{64}", expected_ca_sha256):
         raise ValueError("E_AGENT_TLS_CONFIGURATION")
     path = path.absolute()
@@ -257,6 +278,11 @@ def enroll_prepared(
             value = validate_pending(
                 json.loads(read_private(pending), object_pairs_hook=unique_object), path
             )
+            if (
+                expected_space_id is not None
+                and value.get("expected_space_id") != expected_space_id
+            ):
+                raise ValueError("E_AGENT_ENROLLMENT_CONFLICT")
             if expected_ca_sha256 is not None and value["ca_sha256"] != expected_ca_sha256:
                 raise ValueError("E_AGENT_TLS_CONFIGURATION")
             if url is not None and core_url(url) != value["core_url"]:
@@ -296,7 +322,12 @@ def enroll_prepared(
                     publish(selected, raw)
             value = validate_pending(
                 {
-                    "formatVersion": 1,
+                    "formatVersion": 2 if expected_space_id is not None else 1,
+                    **(
+                        {"expected_space_id": expected_space_id}
+                        if expected_space_id is not None
+                        else {}
+                    ),
                     "core_url": core_url(url),
                     "enrollment_token": token,
                     "node_credential": secrets.token_urlsafe(32),
@@ -319,6 +350,10 @@ def enroll_prepared(
                 or config.ca_certificate != value["ca_certificate"]
                 or config.ca_sha256 != value["ca_sha256"]
                 or not config.local_only
+                or (
+                    value.get("expected_space_id") is not None
+                    and config.space_id != value["expected_space_id"]
+                )
             ):
                 raise ValueError("E_AGENT_ENROLLMENT_CONFLICT")
         else:
@@ -330,7 +365,13 @@ def enroll_prepared(
                 ca_certificate=value["ca_certificate"],
                 ca_sha256=value["ca_sha256"],
                 agent_version=value["agent_version"],
+                expected_space_id=value.get("expected_space_id"),
             )
+            if (
+                value.get("expected_space_id") is not None
+                and result.space_id != value["expected_space_id"]
+            ):
+                raise client.CoreRequestError("E_AGENT_SPACE_BINDING_RESPONSE")
             config = AgentConfig(
                 value["core_url"],
                 result.node_id,
@@ -338,6 +379,7 @@ def enroll_prepared(
                 value["ca_certificate"],
                 value["ca_sha256"],
                 True,
+                result.space_id,
             )
             publish(path, json.dumps(asdict(config), separators=(",", ":")).encode("utf-8"))
         pending.unlink()

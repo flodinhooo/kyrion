@@ -57,6 +57,7 @@ def background(args) -> int:
             certificate=args.node_certificate,
             expected_ca_sha256=args.node_ca_sha256,
             identity=platform_identity(),
+            expected_space_id=getattr(args, "node_space_id", None),
         )
         return 0
     read_private(path)
@@ -160,6 +161,7 @@ def run(args, messages: dict[str, str]) -> int:
                 certificate=prepared.node_certificate,
                 expected_ca_sha256=digest,
                 identity=platform_identity(),
+                expected_space_id=pairing.space_id if pairing is not None else None,
             )
         print(messages["nodePaired"])
         print(
