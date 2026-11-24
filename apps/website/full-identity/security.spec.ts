@@ -141,6 +141,9 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     await page
       .getByRole("button", { name: "Save recovery codes", exact: true })
       .click();
+    await expect(
+      page.locator("#kc-recovery-codes-list li").first(),
+    ).toBeVisible();
     const recoveryCodes = (
       await page.locator("#kc-recovery-codes-list li").allTextContents()
     ).map((value) => value.replace(/^\d+:\s*/, "").trim());
@@ -210,16 +213,19 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     cdp.on("WebAuthn.credentialAsserted", () => {
       assertions++;
     });
-    const {authenticatorId}=await cdp.send("WebAuthn.addVirtualAuthenticator", {
-      options: {
-        protocol: "ctap2",
-        transport: "internal",
-        hasResidentKey: true,
-        hasUserVerification: true,
-        isUserVerified: true,
-        automaticPresenceSimulation: true,
+    const { authenticatorId } = await cdp.send(
+      "WebAuthn.addVirtualAuthenticator",
+      {
+        options: {
+          protocol: "ctap2",
+          transport: "internal",
+          hasResidentKey: true,
+          hasUserVerification: true,
+          isUserVerified: true,
+          automaticPresenceSimulation: true,
+        },
       },
-    });
+    );
     await page
       .getByRole("button", { name: "Add passkey", exact: true })
       .click();
@@ -262,6 +268,58 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
       (m: { kind: string }) => m.kind === "passkey",
     );
     expect(!!selected).toBe(true);
+    // Real passwordless guard, using only this disposable provider user.
+    const providerCredentials = await (
+      await admin(`/users/${id}/credentials`)
+    ).json();
+    const passwordCredential = providerCredentials.find(
+      (credential: { type: string }) => credential.type === "password",
+    );
+    await admin(`/users/${id}/credentials/${passwordCredential.id}`, "DELETE");
+    await context.clearCookies();
+    await page.goto(`${website}/en/account`);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "My account", exact: true }),
+    ).toBeVisible();
+    const protectedInventory = await (
+      await context.request.get(`${website}/api/account/methods`)
+    ).json();
+    expect(protectedInventory.inventory.hasPassword).toBe(false);
+    expect(
+      protectedInventory.inventory.methods.find(
+        (m: { id: string }) => m.id === selected.id,
+      ).removable,
+    ).toBe(false);
+    const protectedSession = await (
+      await context.request.get(`${website}/api/account/session`)
+    ).json();
+    const blocked = await context.request.post(
+      `${website}/api/account/remove`,
+      {
+        headers: { origin: website },
+        form: {
+          locale: "en",
+          csrf: protectedSession.session.csrf,
+          credentialId: selected.id,
+          confirm: "yes",
+        },
+        maxRedirects: 0,
+      },
+    );
+    expect(blocked.status()).toBe(303);
+    expect(blocked.headers().location).toContain("CREDENTIAL_REMOVAL_BLOCKED");
+    await admin(`/users/${id}/reset-password`, "PUT", {
+      type: "password",
+      value: password,
+      temporary: false,
+    });
+    await context.clearCookies();
+    await page.goto(`${website}/en/account`);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "My account", exact: true }),
+    ).toBeVisible();
     const currentSession = await (
       await context.request.get(`${website}/api/account/session`)
     ).json();
@@ -395,7 +453,10 @@ test("website security enrollment enforces TOTP and supports passkey login", asy
     await removal(false);
     // Stop the virtual key from endlessly auto-answering conditional requests
     // with its intentionally retained, now revoked credential. Use password fallback.
-    await cdp.send("WebAuthn.setAutomaticPresenceSimulation",{authenticatorId,enabled:false});
+    await cdp.send("WebAuthn.setAutomaticPresenceSimulation", {
+      authenticatorId,
+      enabled: false,
+    });
     const remaining = await (
       await context.request.get(`${website}/api/account/methods`)
     ).json();
