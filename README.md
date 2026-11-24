@@ -30,7 +30,8 @@ The [Nov24 account security follow-up](docs/status/2026-11-24-account-security.m
 adds optional authenticator-app, passkey and recovery-code enrollment through
 the website, with provider-owned credentials and separate hardware acceptance.
 The [method-management follow-up](docs/status/2026-11-24-account-methods.md) adds
-an own-account inventory and confirmed, freshly authenticated credential removal.
+an own-account inventory and confirmed, freshly authenticated credential removal,
+published and publicly verified at `1447213`.
 The account overview now includes linked installations; the dedicated `/connect`
 page accepts local linking codes. Local Profile identifies the verified central
 account. [Directory design and acceptance](docs/adr/0054-account-installation-directory.md)

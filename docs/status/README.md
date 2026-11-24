@@ -7,7 +7,8 @@ earlier open KY-022 lifecycle observations with actual controlled public evidenc
 The [Nov24 account security follow-up](2026-11-24-account-security.md) records
 optional TOTP, passkey and recovery enrollment and its verification limits.
 The [method-management follow-up](2026-11-24-account-methods.md) records the own-account
-inventory and safe removal implementation, migration and verification.
+inventory and safe removal published at `1447213`, website-only migration,
+and the successful disposable-account public verification.
 Development continues on `master`; no additional worktree integration was found
 in the website audit. Unrelated installer work is in progress and is not included
 in the website acceptance. Other platform evidence retains its stated date.

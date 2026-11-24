@@ -56,7 +56,24 @@ The complete website suite passed 64 tests, with its opt-in database case run
 separately. Lint, TypeScript and production build passed. Light desktop and dark
 mobile inspection confirmed usable layout and no horizontal overflow.
 
-Public deployment verification is recorded below when completed.
+## Published verification
+
+Implementation `799c057` and the additional passwordless guard test `1447213`
+were pushed to `master`. [Vercel deployment](https://vercel.com/florianrogenmosers-projects/kyrion-website/BskyXVw4zevQNqFPfxLq4NsGsUmd)
+completed successfully for `1447213` at `https://www.kyrion.ch`.
+The additional isolated real-provider test passed: after removing only the
+synthetic account's password, passkey login still works and both the UI and a
+direct removal request protect its primary passkey. The test restores its password.
+
+A disposable public account passed all 16 browser/API stages: enrollment cancel,
+TOTP/recovery/passkey enrollment and login, wrong TOTP rejection, own-method
+inventory, missing-confirmation and foreign-ID rejection, removal cancellation,
+targeted passkey/TOTP/recovery removal, remaining password login, and anonymous
+read/action denial. The website audit contains four correlated removal starts,
+one retained-method observation and three observed absences. The provider test
+identity and its unlinked website account/sessions were removed; its generated
+password was discarded. No personal account or method was changed.
+
 Migration 005 has been applied to the verified dedicated website database before
 publication. No Core/provider schema or personal credential was changed.
 
