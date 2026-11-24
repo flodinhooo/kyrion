@@ -112,15 +112,18 @@ export default function GatewaysPage() {
           </div>
           {node.lastSeenAt && <p className="gateway-observed">{t.gatewayLastSeen}: {formatTime(node.lastSeenAt)}</p>}
           {node.health && <>
+            {(node.health.throttled === null || node.health.ipv6 === null || node.health.bluetooth === null
+              || node.health.ethernet.present === null || node.health.wifi.present === null)
+              && <p className="gateway-observed">{t.gatewayObservationsIncomplete}</p>}
             <div className="gateway-metrics">
               <Metric label={t.gatewayTemperature} value={node.health.temperatureCelsius === null ? "–" : `${node.health.temperatureCelsius.toFixed(1)} °C`} />
-              <Metric label={t.gatewayThrottling} value={node.health.throttled ? t.gatewayThrottled : t.gatewayNotThrottled} />
+              <Metric label={t.gatewayThrottling} value={node.health.throttled === null ? t.gatewayServiceStatus_unknown : node.health.throttled ? t.gatewayThrottled : t.gatewayNotThrottled} />
               <Metric label={t.gatewayMemory} value={`${formatBytes(node.health.memoryTotalBytes - node.health.memoryAvailableBytes)} / ${formatBytes(node.health.memoryTotalBytes)}`} />
               <Metric label={t.gatewayStorage} value={`${formatBytes(node.health.storageTotalBytes - node.health.storageAvailableBytes)} / ${formatBytes(node.health.storageTotalBytes)}`} />
-              <Metric label={t.gatewayEthernet} value={node.health.ethernet.connected ? t.gatewayConnected : t.gatewayDisconnected} />
-              <Metric label={t.gatewayWifi} value={node.health.wifi.connected ? t.gatewayConnected : t.gatewayDisconnected} />
-              <Metric label="IPv6" value={node.health.ipv6 ? t.gatewayReady : t.gatewayUnavailable} />
-              <Metric label="Bluetooth" value={node.health.bluetooth ? t.gatewayReady : t.gatewayUnavailable} />
+              <Metric label={t.gatewayEthernet} value={node.health.ethernet.connected === null ? t.gatewayServiceStatus_unknown : node.health.ethernet.connected ? t.gatewayConnected : t.gatewayDisconnected} />
+              <Metric label={t.gatewayWifi} value={node.health.wifi.connected === null ? t.gatewayServiceStatus_unknown : node.health.wifi.connected ? t.gatewayConnected : t.gatewayDisconnected} />
+              <Metric label="IPv6" value={node.health.ipv6 === null ? t.gatewayServiceStatus_unknown : node.health.ipv6 ? t.gatewayReady : t.gatewayUnavailable} />
+              <Metric label="Bluetooth" value={node.health.bluetooth === null ? t.gatewayServiceStatus_unknown : node.health.bluetooth ? t.gatewayReady : t.gatewayUnavailable} />
             </div>
             <h3>{t.gatewayAdapters}</h3>
             {node.health.adapters.length === 0

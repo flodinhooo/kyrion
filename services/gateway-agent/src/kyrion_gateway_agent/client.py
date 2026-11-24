@@ -202,6 +202,25 @@ def enroll(
 
 
 def heartbeat(config: AgentConfig, health: dict[str, Any]) -> None:
+    unknown = any(
+        key in health and health[key] is None for key in ("throttled", "ipv6", "bluetooth")
+    ) or any(
+        isinstance(health.get(key), dict)
+        and any(
+            field in health[key] and health[key][field] is None
+            for field in ("present", "connected")
+        )
+        for key in ("ethernet", "wifi")
+    )
+    if unknown:
+        if not config.local_only:
+            raise CoreRequestError("E_AGENT_HEALTH_UPGRADE_REQUIRED")
+        capability = prepared_capabilities(config.core_url, config.ca_certificate, config.ca_sha256)
+        if (
+            type(capability.get("healthUnknownVersion")) is not int
+            or capability["healthUnknownVersion"] != 1
+        ):
+            raise CoreRequestError("E_AGENT_HEALTH_UPGRADE_REQUIRED")
     _request(
         f"{config.core_url}/v1/gateway-agent/heartbeat",
         "PUT",

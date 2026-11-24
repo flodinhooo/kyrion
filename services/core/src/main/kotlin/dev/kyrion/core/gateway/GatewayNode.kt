@@ -53,15 +53,15 @@ data class GatewayNode(
 
 data class GatewayHealth(
     val temperatureCelsius: Double?,
-    val throttled: Boolean,
+    val throttled: Boolean?,
     val memoryTotalBytes: Long,
     val memoryAvailableBytes: Long,
     val storageTotalBytes: Long,
     val storageAvailableBytes: Long,
     val ethernet: GatewayInterfaceHealth,
     val wifi: GatewayInterfaceHealth,
-    val ipv6: Boolean,
-    val bluetooth: Boolean,
+    val ipv6: Boolean?,
+    val bluetooth: Boolean?,
     val systemState: String,
     val adapters: List<GatewayAdapterHealth>,
     val audio: GatewayAudioHealth? = null,
@@ -71,7 +71,7 @@ data class GatewayHealth(
     @get:JsonInclude(JsonInclude.Include.NON_NULL) val runtimeVersion: String? = null,
 )
 
-data class GatewayInterfaceHealth(val present: Boolean, val connected: Boolean)
+data class GatewayInterfaceHealth(val present: Boolean?, val connected: Boolean?)
 data class GatewayAdapterHealth(
     val id: String,
     val protocol: String,

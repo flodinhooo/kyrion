@@ -22,6 +22,7 @@ KEYS = {
     "E_NODE_PAIRING_INGRESS": "nodePairingIngressRequired",
     "E_AGENT_ENROLLMENT_UPGRADE_REQUIRED": "nodePolicyUnavailable",
     "E_AGENT_SPACE_BINDING_REQUIRED": "nodeSpaceBindingRequired",
+    "E_AGENT_HEALTH_UPGRADE_REQUIRED": "nodeHealthUpgradeRequired",
     "E_AGENT_SPACE_BINDING_INVALID": "nodeSpaceBindingError",
     "E_AGENT_SPACE_BINDING_RESPONSE": "nodeSpaceBindingError",
     "E_AGENT_ENROLLMENT_CONFLICT": "nodeSpaceBindingError",

@@ -24,8 +24,13 @@ NON_RUNTIME_FAILED_UNITS = {"NetworkManager-wait-online.service"}
 
 
 def collect_health(
-    *, include_integrations: bool = True, include_voice: bool = True
+    *,
+    include_integrations: bool = True,
+    include_voice: bool = True,
+    storage_path: Path | None = None,
 ) -> dict[str, Any]:
+    if os.name == "nt":
+        return _windows_health(storage_path, include_integrations, include_voice)
     memory_total, memory_available = _memory()
     storage = shutil.disk_usage("/")
     return {
@@ -58,6 +63,68 @@ def collect_health(
                 ),
             }
             for service_id, unit in SERVICE_UNITS.items()
+            if (service_id == "voice" and include_voice)
+            or (service_id != "voice" and include_integrations)
+        ],
+    }
+
+
+def _windows_health(
+    storage_path: Path | None, include_integrations: bool, include_voice: bool
+) -> dict[str, Any]:
+    import ctypes
+    from ctypes import wintypes as w
+
+    class Memory(ctypes.Structure):
+        _fields_ = [("length", w.DWORD), ("load", w.DWORD)] + [
+            (name, ctypes.c_ulonglong)
+            for name in (
+                "total",
+                "available",
+                "page_total",
+                "page_available",
+                "virtual_total",
+                "virtual_available",
+                "extended",
+            )
+        ]
+
+    memory = Memory()
+    memory.length = ctypes.sizeof(memory)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.GlobalMemoryStatusEx.argtypes = [ctypes.POINTER(Memory)]
+    kernel.GlobalMemoryStatusEx.restype = w.BOOL
+    if (
+        not kernel.GlobalMemoryStatusEx(ctypes.byref(memory))
+        or not 0 <= memory.available <= memory.total
+        or memory.total == 0
+    ):
+        raise ValueError("E_AGENT_PLATFORM_HEALTH")
+    if storage_path is None:
+        from kyrion_gateway_agent.windows_storage import local_data
+
+        storage_path = local_data()
+    storage = shutil.disk_usage(storage_path)
+    return {
+        "runtimeVersion": __version__,
+        "temperatureCelsius": None,
+        "throttled": None,
+        "memoryTotalBytes": memory.total,
+        "memoryAvailableBytes": memory.available,
+        "storageTotalBytes": storage.total,
+        "storageAvailableBytes": storage.free,
+        "ethernet": {"present": None, "connected": None},
+        "wifi": {"present": None, "connected": None},
+        "ipv6": None,
+        "bluetooth": None,
+        "systemState": "unknown",
+        "adapters": [],
+        "audio": None,
+        "zigbee": None,
+        "bluetoothDevices": [],
+        "services": [
+            {"id": service_id, "status": "unknown"}
+            for service_id in SERVICE_UNITS
             if (service_id == "voice" and include_voice)
             or (service_id != "voice" and include_integrations)
         ],

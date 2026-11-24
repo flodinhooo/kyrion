@@ -51,6 +51,27 @@ class GatewayAuthorityIntegrationTest @Autowired constructor(
     private val payload get() = mapOf<String, Any>("deviceId" to address, "on" to true)
     private val human get() = GatewayAuthority(owner, GatewayPrincipalKind.HUMAN, member, "devices:execute", "power.set")
 
+    @Test fun `unknown platform observations survive authenticated API and database round trip`() {
+        val credential = SessionTokenService().create().rawToken
+        val code = gateways.createEnrollment(owner, "Unknown health fixture")
+        val enrolled = gateways.enroll(code.enrollmentToken, "unknown-health", "0.2.0", "Windows", "fixture", "amd64", credential)
+        val health = gateways.all(owner).first { it.id == node }.health!!.copy(
+            throttled = null, ipv6 = null, bluetooth = null,
+            ethernet = GatewayInterfaceHealth(null, null), wifi = GatewayInterfaceHealth(null, null),
+            systemState = "unknown", adapters = emptyList(), audio = null, zigbee = null,
+        )
+        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        mvc.perform(put("/v1/gateway-agent/heartbeat")
+            .header("X-Kyrion-Node-Id", enrolled.node.id).header("Authorization", "Bearer $credential")
+            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(mapOf("health" to health))))
+            .andExpect(status().isNoContent)
+        val saved = gateways.all(owner).first { it.id == enrolled.node.id }
+        assertThat(saved.health!!.throttled).isNull()
+        assertThat(saved.health!!.ethernet.connected).isNull()
+        assertThat(saved.health!!.bluetooth).isNull()
+        assertThat(saved.availability).isEqualTo("online")
+    }
+
     @Test fun `reviewed Space binding is atomic and reported by the actual enrollment API`() {
         val enrollment = gateways.createEnrollment(owner, "Bound API fixture")
         val credential = SessionTokenService().create().rawToken

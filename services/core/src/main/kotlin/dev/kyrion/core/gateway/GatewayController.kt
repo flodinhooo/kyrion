@@ -218,6 +218,7 @@ data class GatewayEnrollmentCapabilities(
     val acknowledgementWithinOriginalExpiry: Boolean = true,
     val taskPolicyVersion: Int = 1,
     val spaceBindingVersion: Int = 1,
+    val healthUnknownVersion: Int = 1,
 )
 
 data class GatewayAgentTaskPolicy(

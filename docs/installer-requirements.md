@@ -17,6 +17,12 @@ consuming the existing code and returns its actual Space. Old Core is refused
 before a bound claim. This strengthens R25 without completing Windows deployment,
 task placement, exclusive task migration or the full assignment.
 
+The [unknown node-health checkpoint](status/2026-11-24-installer-node-health.md)
+adds actual Windows memory/disk probes, capability-gated nullable health and
+visible DE/EN uncertainty in the local interface. Core/PostgreSQL, native Windows
+APIs, Linux regressions and eight Chromium UI cases are verified separately.
+Windows prepared-node CLI/runtime/SCM and complete R23-R29 remain open.
+
 `I` = `infrastructure/installer-v1`; `C` = `services/core`; `W` = `apps/web`;
 `S` = `apps/website`. Tests named here are developer evidence, not release approval.
 

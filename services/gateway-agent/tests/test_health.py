@@ -54,6 +54,24 @@ def test_windows_identity_does_not_trust_environment_architecture(monkeypatch):
     assert original["architecture"] in {"amd64", "arm64", "x86", "unknown"}
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Actual native Windows resource APIs")
+def test_windows_health_preserves_unobserved_capabilities(monkeypatch, tmp_path):
+    def forbidden(*arguments, **options):
+        raise AssertionError("Windows health must not launch Linux/hardware commands")
+
+    monkeypatch.setattr(health_module, "_command", forbidden)
+    health = collect_health(storage_path=tmp_path, include_integrations=False, include_voice=False)
+    assert health["memoryTotalBytes"] > 0
+    assert 0 <= health["memoryAvailableBytes"] <= health["memoryTotalBytes"]
+    assert health["storageTotalBytes"] > 0
+    assert health["throttled"] is None
+    assert health["ethernet"] == {"present": None, "connected": None}
+    assert health["wifi"] == {"present": None, "connected": None}
+    assert health["ipv6"] is None and health["bluetooth"] is None
+    assert health["services"] == []
+    assert health["audio"] is None
+
+
 def test_zigbee_health_reports_sensor_values(monkeypatch) -> None:
     devices = (
         '[{"type":"EndDevice","friendly_name":"hall-motion",'

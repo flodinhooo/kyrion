@@ -15,15 +15,15 @@ export type GatewayBluetoothDevice = {
 
 export type GatewayHealth = {
   temperatureCelsius: number | null;
-  throttled: boolean;
+  throttled: boolean | null;
   memoryTotalBytes: number;
   memoryAvailableBytes: number;
   storageTotalBytes: number;
   storageAvailableBytes: number;
-  ethernet: { present: boolean; connected: boolean };
-  wifi: { present: boolean; connected: boolean };
-  ipv6: boolean;
-  bluetooth: boolean;
+  ethernet: { present: boolean | null; connected: boolean | null };
+  wifi: { present: boolean | null; connected: boolean | null };
+  ipv6: boolean | null;
+  bluetooth: boolean | null;
   systemState: "running" | "degraded" | "maintenance" | "unknown";
   adapters: Array<{
     id: string; protocol: "zigbee" | "thread"; vendor: string; model: string; serial: string; path: string;
@@ -64,18 +64,22 @@ const serviceStatuses = new Set<GatewayServiceStatus>([
 function isInterface(value: unknown): value is GatewayHealth["ethernet"] {
   if (!value || typeof value !== "object") return false;
   const item = value as { present?: unknown; connected?: unknown };
-  return typeof item.present === "boolean" && typeof item.connected === "boolean";
+  return isKnownBoolean(item.present) && isKnownBoolean(item.connected);
+}
+
+function isKnownBoolean(value: unknown): value is boolean | null {
+  return value === null || typeof value === "boolean";
 }
 
 function isHealth(value: unknown): value is GatewayHealth {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<GatewayHealth>;
   return (item.temperatureCelsius === null || typeof item.temperatureCelsius === "number")
-    && typeof item.throttled === "boolean"
+    && isKnownBoolean(item.throttled)
     && typeof item.memoryTotalBytes === "number" && typeof item.memoryAvailableBytes === "number"
     && typeof item.storageTotalBytes === "number" && typeof item.storageAvailableBytes === "number"
     && isInterface(item.ethernet) && isInterface(item.wifi)
-    && typeof item.ipv6 === "boolean" && typeof item.bluetooth === "boolean"
+    && isKnownBoolean(item.ipv6) && isKnownBoolean(item.bluetooth)
     && (item.systemState === "running" || item.systemState === "degraded"
       || item.systemState === "maintenance" || item.systemState === "unknown")
     && Array.isArray(item.adapters) && item.adapters.length <= 16
