@@ -46,6 +46,37 @@ The existing public provider policy and browser execution were privately backed
 up and the reviewed optional passkey/recovery settings activated without restart,
 image upgrade, credential reset or mandatory enrollment.
 
-Public deployment verification is recorded below when completed.
+## Public deployment and acceptance
+
+Source `3c81e5eed52d06bf03ce79498cd5450ad0d6e0c5` was published with
+[successful Vercel deployment](https://vercel.com/florianrogenmosers-projects/kyrion-website/B7LXxv3pPvZ27qpjPuRaMPUUpiSn).
+The existing 26.8.2 provider retained its image, secrets, users and normal browser
+flow. The partial policy and recovery alternative were applied after a private
+snapshot; no restart or mandatory enrollment was needed.
+
+Actual public HTTPS checks passed with one disposable, operator-created verified
+identity and a virtual CTAP2 authenticator:
+
+- Cancel enrollment and return to the website.
+- Enroll TOTP, deny a wrong code and accept a fresh code at password login.
+- Require explicit confirmation before saving recovery codes, then use a code to
+  sign in through the real recovery alternative.
+- Register a discoverable, user-verified passkey and sign in after deleting
+  cookies, with an observed authenticator assertion.
+- Deny anonymous OTP, passkey and recovery actions with 403.
+
+The first fixture login used a generated username; the production realm normalizes
+usernames to email addresses. Correcting the test to use its email resolved that
+fixture issue without changing customer login. No real email was sent by this test.
+The disposable provider identity and its unlinked website account/session records
+were removed afterwards, and its generated password discarded. The owner's account
+and authenticators were unchanged. DE/EN privacy notices now describe the optional
+credential data and its ownership; production build and 19 focused account/privacy
+tests passed after that text-only update.
+
+Real device approval and credential enumeration/removal remain separate acceptance
+and product follow-ups. This result is enrollment/login acceptance, not a claim
+that all security administration or operational recovery work is finished.
+
 See [provider configuration](../../infrastructure/identity/SECURITY.md)
-and [ADR](../adr/0070-website-security-enrollment.md).
+and [ADR](../adr/0094-website-security-enrollment.md).
