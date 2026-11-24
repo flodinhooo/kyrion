@@ -140,30 +140,70 @@ def run_prepared(
 def _scoped_event_lines(
     process: subprocess.Popen[bytes], allowed: Callable[[], bool], stopped: threading.Event
 ) -> Iterator[str]:
-    import selectors
-
-    if process.stdout is None:
+    if process.stdout is None or stopped.is_set() or not allowed():
         return
     pending = b""
+    for block in _scoped_event_blocks(process, allowed, stopped):
+        if not block:
+            return
+        pending += block
+        if len(pending) > 65536:
+            return
+        while b"\n" in pending:
+            line, pending = pending.split(b"\n", 1)
+            if len(line) > 16384:
+                continue
+            if stopped.is_set() or not allowed():
+                return
+            try:
+                yield line.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+
+
+def _scoped_event_blocks(
+    process: subprocess.Popen[bytes], allowed: Callable[[], bool], stopped: threading.Event
+) -> Iterator[bytes]:
+    if process.stdout is None:
+        return
+    if os.name == "nt":
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes as w
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.PeekNamedPipe.argtypes = [
+            w.HANDLE,
+            ctypes.c_void_p,
+            w.DWORD,
+            ctypes.POINTER(w.DWORD),
+            ctypes.POINTER(w.DWORD),
+            ctypes.POINTER(w.DWORD),
+        ]
+        kernel.PeekNamedPipe.restype = w.BOOL
+        handle = msvcrt.get_osfhandle(process.stdout.fileno())
+        # This generator is the sole reader of this owned anonymous pipe. Read
+        # only advertised bytes; no second thread may issue reads on its handle.
+        while not stopped.is_set() and allowed():
+            available = w.DWORD()
+            if not kernel.PeekNamedPipe(handle, None, 0, None, ctypes.byref(available), None):
+                error = ctypes.get_last_error()
+                if error in {109, 232}:  # broken pipe / closing pipe
+                    return
+                raise ctypes.WinError(error)
+            if available.value:
+                yield os.read(process.stdout.fileno(), min(4096, available.value))
+            else:
+                stopped.wait(0.05)
+        return
+    import selectors
+
     with selectors.DefaultSelector() as selector:
         selector.register(process.stdout, selectors.EVENT_READ)
         while not stopped.is_set() and allowed():
             if not selector.select(timeout=0.5):
                 continue
-            block = os.read(process.stdout.fileno(), 4096)
-            if not block:
-                return
-            pending += block
-            if len(pending) > 65536:
-                return
-            while b"\n" in pending:
-                line, pending = pending.split(b"\n", 1)
-                if len(line) > 16384:
-                    continue
-                try:
-                    yield line.decode("utf-8")
-                except UnicodeDecodeError:
-                    continue
+            yield os.read(process.stdout.fileno(), 4096)
 
 
 def _forward_button_events(
